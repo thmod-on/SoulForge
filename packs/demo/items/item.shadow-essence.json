@@ -1,0 +1,11 @@
+{
+  "id": "item.demo.shadow-essence",
+  "type": "item",
+  "packId": "pack.demo.soulforge",
+  "name": "Essencia Sombria",
+  "summary": "Um residuo frio que pulsa quando ninguem esta olhando.",
+  "category": "loot",
+  "weight": 1,
+  "value": 30,
+  "traits": ["Arcano", "Dread"]
+}

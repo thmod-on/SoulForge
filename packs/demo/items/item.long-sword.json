@@ -1,0 +1,12 @@
+{
+  "id": "item.demo.long-sword",
+  "type": "item",
+  "packId": "pack.demo.soulforge",
+  "name": "Espada Longa",
+  "summary": "Uma espada equilibrada, confiavel e versatil.",
+  "category": "arma",
+  "tier": 2,
+  "weight": 3,
+  "value": 25,
+  "traits": ["Uma mao", "Versatil", "Pesada"]
+}

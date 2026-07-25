@@ -1,0 +1,12 @@
+{
+  "id": "card.demo.stalwart-advance",
+  "type": "card",
+  "packId": "pack.demo.soulforge",
+  "name": "Stalwart Advance",
+  "summary": "Avance ate um inimigo e mantenha sua posicao.",
+  "domainId": "domain.demo.guardian",
+  "tier": 1,
+  "cardType": "acao",
+  "cost": "1 Hope",
+  "effect": "Mova-se ate uma ameaca proxima e force-a a lidar com voce antes de perseguir seus aliados."
+}

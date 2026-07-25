@@ -1,0 +1,12 @@
+{
+  "id": "item.demo.vigil-amulet",
+  "type": "item",
+  "packId": "pack.demo.soulforge",
+  "name": "Amuleto da Vigilia",
+  "summary": "Um simbolo pessoal de juramento e memoria.",
+  "category": "equipamento",
+  "tier": 1,
+  "weight": 1,
+  "value": 12,
+  "traits": ["Foco", "Pessoal"]
+}

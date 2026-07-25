@@ -1,0 +1,12 @@
+{
+  "id": "card.demo.inspirational-words",
+  "type": "card",
+  "packId": "pack.demo.soulforge",
+  "name": "Inspirational Words",
+  "summary": "Recupere a firmeza de um aliado com poucas palavras.",
+  "domainId": "domain.demo.grace",
+  "tier": 1,
+  "cardType": "acao",
+  "cost": "1 Hope",
+  "effect": "Um aliado proximo recupera parte de seus recursos e pode se reposicionar sem abrir brecha."
+}

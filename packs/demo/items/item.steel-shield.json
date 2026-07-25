@@ -1,0 +1,12 @@
+{
+  "id": "item.demo.steel-shield",
+  "type": "item",
+  "packId": "pack.demo.soulforge",
+  "name": "Escudo de Aco",
+  "summary": "Protecao confiavel para segurar a linha.",
+  "category": "armadura",
+  "tier": 2,
+  "weight": 4,
+  "value": 18,
+  "traits": ["Defensivo", "Resistente"]
+}

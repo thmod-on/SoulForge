@@ -1,0 +1,11 @@
+{
+  "id": "item.demo.gold",
+  "type": "item",
+  "packId": "pack.demo.soulforge",
+  "name": "Ouro",
+  "summary": "Moedas para compras, promessas e problemas.",
+  "category": "loot",
+  "weight": 0,
+  "value": 128,
+  "traits": ["Moeda"]
+}

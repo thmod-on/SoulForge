@@ -1,0 +1,12 @@
+{
+  "id": "card.demo.shield-block",
+  "type": "card",
+  "packId": "pack.demo.soulforge",
+  "name": "Shield Block",
+  "summary": "Reduza dano quando sua armadura entra em jogo.",
+  "domainId": "domain.demo.guardian",
+  "tier": 1,
+  "cardType": "reacao",
+  "cost": "1 Stress",
+  "effect": "Quando sofrer dano, marque armadura para reduzir o impacto antes de aplicar consequencias."
+}

@@ -1,0 +1,12 @@
+{
+  "id": "item.demo.leather-armor",
+  "type": "item",
+  "packId": "pack.demo.soulforge",
+  "name": "Armadura de Couro",
+  "summary": "Protecao leve para manter mobilidade.",
+  "category": "armadura",
+  "tier": 2,
+  "weight": 5,
+  "value": 20,
+  "traits": ["Leve", "Flexivel"]
+}

@@ -1,0 +1,11 @@
+{
+  "id": "item.demo.torch",
+  "type": "item",
+  "packId": "pack.demo.soulforge",
+  "name": "Tocha",
+  "summary": "Luz portatil para lugares que preferiam ficar esquecidos.",
+  "category": "equipamento",
+  "weight": 1,
+  "value": 1,
+  "traits": ["Luz", "Consumivel"]
+}

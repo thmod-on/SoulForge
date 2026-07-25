@@ -1,0 +1,11 @@
+{
+  "id": "item.demo.healing-potion",
+  "type": "item",
+  "packId": "pack.demo.soulforge",
+  "name": "Pocao de Cura",
+  "summary": "Restaura folego em uma pausa curta.",
+  "category": "consumivel",
+  "weight": 1,
+  "value": 10,
+  "traits": ["Consumivel"]
+}

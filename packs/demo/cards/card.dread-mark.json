@@ -1,0 +1,12 @@
+{
+  "id": "card.demo.dread-mark",
+  "type": "card",
+  "packId": "pack.demo.soulforge",
+  "name": "Dread Mark",
+  "summary": "Marque uma criatura com uma promessa sombria.",
+  "domainId": "domain.demo.dread",
+  "tier": 1,
+  "cardType": "acao",
+  "cost": "1 Hope",
+  "effect": "Escolha uma ameaca visivel. Ate o fim da cena, a primeira vez que ela ferir um aliado, voce ganha 1 Hope."
+}

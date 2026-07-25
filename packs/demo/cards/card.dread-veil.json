@@ -1,0 +1,12 @@
+{
+  "id": "card.demo.dread-veil",
+  "type": "card",
+  "packId": "pack.demo.soulforge",
+  "name": "Dread Veil",
+  "summary": "A sombra ao seu redor torna dificil ler suas intencoes.",
+  "domainId": "domain.demo.dread",
+  "tier": 2,
+  "cardType": "passiva",
+  "cost": "2 Essencia",
+  "effect": "Enquanto a essencia estiver ativa, criaturas hostis sofrem desvantagem narrativa ao tentar prever seu proximo movimento."
+}

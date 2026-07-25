@@ -1,0 +1,11 @@
+{
+  "id": "item.demo.rope",
+  "type": "item",
+  "packId": "pack.demo.soulforge",
+  "name": "Corda (15m)",
+  "summary": "Simples, util e sempre subestimada.",
+  "category": "equipamento",
+  "weight": 2,
+  "value": 3,
+  "traits": ["Ferramenta"]
+}
