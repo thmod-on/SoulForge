@@ -32,13 +32,18 @@ const state: {
   selectedCardId: "card.demo.dread-veil"
 };
 
-const navItems: Array<{ page: Page; label: string; icon: string }> = [
-  { page: "overview", label: "Visao Geral", icon: "◈" },
-  { page: "skills", label: "Habilidades", icon: "✦" },
-  { page: "experiences", label: "Experiencias", icon: "✺" },
-  { page: "inventory", label: "Inventario", icon: "▣" },
-  { page: "progression", label: "Progressao", icon: "⬡" },
-  { page: "notes", label: "Anotacoes", icon: "☷" }
+const topNavItems: Array<{ page: Page; label: string }> = [
+  { page: "overview", label: "Visao Geral" },
+  { page: "skills", label: "Habilidades" },
+  { page: "experiences", label: "Experiencias" },
+  { page: "inventory", label: "Inventario" },
+  { page: "progression", label: "Progressao" },
+  { page: "notes", label: "Anotacoes" }
+];
+
+const sideNavItems: Array<{ page: Page; label: string; icon: string }> = [
+  { page: "compendium", label: "Compendium", icon: "BOOK" },
+  { page: "settings", label: "Configuracoes", icon: "GEAR" }
 ];
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
@@ -63,6 +68,19 @@ function progressPercent(value: number, max: number): number {
   return Math.min(100, Math.round((value / max) * 100));
 }
 
+function attributeTitle(label: string): string {
+  const labels: Record<string, string> = {
+    AGI: "Agilidade",
+    FOR: "Forca",
+    FIN: "Finesse",
+    INS: "Instinto",
+    PRE: "Presenca",
+    CON: "Conhecimento"
+  };
+
+  return labels[label] ?? label;
+}
+
 function getItemEntries(character: Character) {
   return character.inventory.entries
     .map((entry) => {
@@ -76,6 +94,13 @@ function getActiveCards(character: Character): CardDefinition[] {
   return character.deck.activeCardIds
     .map((cardId) => findDefinition(catalog, cardId))
     .filter((definition): definition is CardDefinition => definition?.type === "card");
+}
+
+function getInactiveCardCount(character: Character): number {
+  const learnedCardIds = character.deck.learnedCardIds ?? character.deck.activeCardIds;
+  const activeCardIds = new Set(character.deck.activeCardIds);
+
+  return learnedCardIds.filter((cardId) => !activeCardIds.has(cardId)).length;
 }
 
 function renderSidebar(character: Character): string {
@@ -92,11 +117,34 @@ function renderSidebar(character: Character): string {
         <div class="portrait-art"></div>
         <div>
           <strong>${escapeHtml(character.identity.name)}</strong>
-          <span>${escapeHtml(character.identity.ancestry)} • ${escapeHtml(character.identity.className)}</span>
+          <span>${escapeHtml(character.identity.ancestry)} - ${escapeHtml(character.identity.className)}</span>
+          <small>${escapeHtml(character.identity.community)}</small>
+          <div class="portrait-progress">
+            <div>
+              <span>Nivel ${character.identity.level}</span>
+              <strong>${character.identity.xp} / ${character.identity.nextLevelXp} XP</strong>
+            </div>
+            <div class="bar"><i style="width: ${progressPercent(character.identity.xp, character.identity.nextLevelXp)}%"></i></div>
+          </div>
         </div>
       </div>
-      <nav class="side-nav" aria-label="Menu principal">
-        ${navItems
+      <section class="sidebar-section">
+        <div class="sidebar-section-title">Atributos</div>
+        <div class="sidebar-attribute-grid">
+          ${character.attributes.map((attribute) => `<div><span title="${attributeTitle(attribute.label)}">${attribute.label}</span><strong>${attribute.value}</strong></div>`).join("")}
+        </div>
+      </section>
+      <section class="sidebar-section">
+        <div class="sidebar-section-title">Defesa</div>
+        <div class="sidebar-defense-grid">
+          <div><span>Evasao</span><strong>${character.defense.evasion}</strong></div>
+          <div><span>Armadura</span><strong>${character.defense.armor}</strong></div>
+          <div><span>Dano menor</span><strong>${character.defense.minor}</strong></div>
+          <div><span>Dano maior</span><strong>${character.defense.major}</strong></div>
+        </div>
+      </section>
+      <nav class="side-nav" aria-label="Menu secundario">
+        ${sideNavItems
           .map(
             (item) => `
               <button class="nav-button ${state.page === item.page ? "is-active" : ""}" data-page="${item.page}">
@@ -119,8 +167,11 @@ function renderSidebar(character: Character): string {
 function renderTopbar(): string {
   return `
     <header class="topbar">
-      <button class="top-link ${state.page === "compendium" ? "is-active" : ""}" data-page="compendium">Compendium</button>
-      <button class="top-link ${state.page === "settings" ? "is-active" : ""}" data-page="settings">Configuracoes</button>
+      <nav class="top-nav" aria-label="Menu do personagem">
+        ${topNavItems
+          .map((item) => `<button class="top-link ${state.page === item.page ? "is-active" : ""}" data-page="${item.page}">${item.label}</button>`)
+          .join("")}
+      </nav>
       <span class="offline-pill" title="A PWA instala o app e guarda a casca offline.">Offline-ready</span>
     </header>
   `;
@@ -137,11 +188,11 @@ function renderResources(character: Character): string {
           .map(
             (resource) => `
               <article class="resource-card tone-${resource.tone}">
-                <span>${escapeHtml(resource.label)}</span>
-                <strong>${resource.value} / ${resource.max}</strong>
-                <div class="pips" aria-hidden="true">
-                  ${Array.from({ length: resource.max }, (_, index) => `<i class="${index < resource.value ? "filled" : ""}"></i>`).join("")}
+                <div class="resource-card-header">
+                  <span>${escapeHtml(resource.label)}</span>
+                  <strong>${resource.value} / ${resource.max}</strong>
                 </div>
+                ${renderResourceIndicator(resource.value, resource.max)}
               </article>
             `
           )
@@ -151,43 +202,24 @@ function renderResources(character: Character): string {
   `;
 }
 
+function renderResourceIndicator(value: number, max: number): string {
+  if (max > 10) {
+    return `<div class="resource-meter" aria-hidden="true"><i style="width: ${progressPercent(value, max)}%"></i></div>`;
+  }
+
+  return `
+    <div class="pips" aria-hidden="true">
+      ${Array.from({ length: max }, (_, index) => `<i class="${index < value ? "filled" : ""}"></i>`).join("")}
+    </div>
+  `;
+}
+
 function renderOverview(character: Character): string {
   const activeCards = getActiveCards(character);
+  const inactiveCards = getInactiveCardCount(character);
+
   return `
     <main class="content">
-      <section class="hero-strip">
-        <div>
-          <span>Nivel ${character.identity.level}</span>
-          <h1>${escapeHtml(character.identity.name)}</h1>
-          <p>${escapeHtml(character.identity.community)}</p>
-        </div>
-        <div class="xp-block">
-          <span>Proximo nivel</span>
-          <div class="bar"><i style="width: ${progressPercent(character.identity.xp, character.identity.nextLevelXp)}%"></i></div>
-          <strong>${character.identity.xp} XP</strong>
-        </div>
-      </section>
-      <section class="overview-grid">
-        <div class="band">
-          <div class="section-heading">
-            <h2>Atributos</h2>
-          </div>
-          <div class="attribute-grid">
-            ${character.attributes.map((attribute) => `<div><span>${attribute.label}</span><strong>${attribute.value}</strong></div>`).join("")}
-          </div>
-        </div>
-        <div class="band">
-          <div class="section-heading">
-            <h2>Defesa</h2>
-          </div>
-          <div class="defense-grid">
-            <div><span>Evasao</span><strong>${character.defense.evasion}</strong></div>
-            <div><span>Armadura</span><strong>${character.defense.armor}</strong></div>
-            <div><span>Dano menor</span><strong>${character.defense.minor}</strong></div>
-            <div><span>Dano maior</span><strong>${character.defense.major}</strong></div>
-          </div>
-        </div>
-      </section>
       ${renderResources(character)}
       <section class="band">
         <div class="section-heading">
@@ -197,12 +229,15 @@ function renderOverview(character: Character): string {
         <div class="card-row">
           ${activeCards.map(renderCardTile).join("")}
         </div>
+        <button class="deck-drawer-button" data-action="open-stored-cards">
+          Ver cartas guardadas (${inactiveCards})
+        </button>
       </section>
       <section class="quick-actions">
-        <button data-action="rest-short"><span>☕</span> Descansar breve</button>
-        <button data-action="rest-long"><span>♨</span> Descansar longo</button>
-        <button data-page="experiences"><span>✺</span> Registrar experiencia</button>
-        <button data-page="inventory"><span>▣</span> Abrir inventario</button>
+        <button data-action="rest-short"><span>REST</span> Descansar breve</button>
+        <button data-action="rest-long"><span>FULL</span> Descansar longo</button>
+        <button data-page="experiences"><span>XP</span> Registrar experiencia</button>
+        <button data-page="inventory"><span>BAG</span> Abrir inventario</button>
       </section>
     </main>
   `;
@@ -215,7 +250,7 @@ function renderCardTile(card: CardDefinition): string {
       <div class="card-tier">${card.tier}</div>
       <div class="card-art"></div>
       <h3>${escapeHtml(card.name)}</h3>
-      <span>${escapeHtml(domain?.name ?? "Sem dominio")} • ${escapeHtml(card.cardType)}</span>
+      <span>${escapeHtml(domain?.name ?? "Sem dominio")} - ${escapeHtml(card.cardType)}</span>
       <p>${escapeHtml(card.summary)}</p>
     </article>
   `;
@@ -234,7 +269,7 @@ function renderInventory(character: Character): string {
         <div class="screen-title">
           <h1>Inventario</h1>
           <label class="search-box">
-            <span>⌕</span>
+            <span>BUSCA</span>
             <input type="search" placeholder="Procurar item..." aria-label="Procurar item" />
           </label>
         </div>
@@ -257,10 +292,13 @@ function renderInventory(character: Character): string {
         </div>
         <div class="section-heading">
           <h2>Mochila</h2>
-          <span>${currentWeight} / ${character.inventory.capacity}</span>
         </div>
         <div class="item-grid">
           ${filteredEntries.map(({ entry, item }) => renderItemTile(entry.quantity, item, selectedItem?.id === item.id)).join("")}
+        </div>
+        <div class="capacity-summary">
+          <span>Capacidade</span>
+          <strong>${currentWeight} / ${character.inventory.capacity}</strong>
         </div>
         <div class="capacity-bar"><i style="width: ${progressPercent(currentWeight, character.inventory.capacity)}%"></i></div>
       </section>
@@ -282,11 +320,11 @@ function renderItemTile(quantity: number, item: ItemDefinition, selected: boolea
 
 function itemIcon(category: ItemDefinition["category"]): string {
   const icons: Record<ItemDefinition["category"], string> = {
-    arma: "⚔",
-    armadura: "⬟",
-    consumivel: "◉",
-    equipamento: "◎",
-    loot: "◆"
+    arma: "WPN",
+    armadura: "ARM",
+    consumivel: "POT",
+    equipamento: "KIT",
+    loot: "LOOT"
   };
 
   return icons[category];
@@ -304,7 +342,7 @@ function renderItemPanel(item?: ItemDefinition): string {
           <h2>${escapeHtml(item.name)}</h2>
           <span>${item.tier ? `Tier ${item.tier}` : itemFilterLabels[item.category]}</span>
         </div>
-        <button aria-label="Fechar detalhes">×</button>
+        <button aria-label="Fechar detalhes">x</button>
       </div>
       <div class="feature-art item-detail-art">${itemIcon(item.category)}</div>
       <p>${escapeHtml(item.summary)}</p>
@@ -336,7 +374,7 @@ function renderCompendium(): string {
             <p>Cartas filtradas pelo dominio Dread</p>
           </div>
           <label class="search-box">
-            <span>⌕</span>
+            <span>BUSCA</span>
             <input type="search" placeholder="Procurar carta..." aria-label="Procurar carta" />
           </label>
         </div>
@@ -364,7 +402,7 @@ function renderCompendiumCard(card: CardDefinition, selected: boolean): string {
     <button class="compendium-card ${selected ? "is-active" : ""}" data-card-id="${card.id}">
       <span>Tier ${card.tier}</span>
       <strong>${escapeHtml(card.name)}</strong>
-      <small>${escapeHtml(domain?.name ?? "Sem dominio")} • ${escapeHtml(card.cardType)}</small>
+      <small>${escapeHtml(domain?.name ?? "Sem dominio")} - ${escapeHtml(card.cardType)}</small>
       <p>${escapeHtml(card.summary)}</p>
     </button>
   `;
@@ -382,11 +420,11 @@ function renderCardPanel(card?: CardDefinition): string {
       <div class="panel-heading">
         <div>
           <h2>${escapeHtml(card.name)}</h2>
-          <span>${escapeHtml(domain?.name ?? "Sem dominio")} • Tier ${card.tier}</span>
+          <span>${escapeHtml(domain?.name ?? "Sem dominio")} - Tier ${card.tier}</span>
         </div>
-        <button aria-label="Fechar detalhes">×</button>
+        <button aria-label="Fechar detalhes">x</button>
       </div>
-      <div class="feature-art card-detail-art">✦</div>
+      <div class="feature-art card-detail-art">CARD</div>
       <p>${escapeHtml(card.summary)}</p>
       <dl class="detail-list">
         <div><dt>Tipo</dt><dd>${escapeHtml(card.cardType)}</dd></div>
@@ -414,7 +452,7 @@ function renderPlaceholder(page: Page): string {
   return `
     <main class="content">
       <section class="empty-state">
-        <span>◇</span>
+        <span>...</span>
         <h1>${labels[page]}</h1>
         <p>Esta tela ja esta ligada na navegacao e sera preenchida no proximo ciclo.</p>
       </section>

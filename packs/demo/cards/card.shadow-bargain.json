@@ -1,0 +1,12 @@
+{
+  "id": "card.demo.shadow-bargain",
+  "type": "card",
+  "packId": "pack.demo.soulforge",
+  "name": "Shadow Bargain",
+  "summary": "Aceite um custo narrativo para abrir uma vantagem perigosa.",
+  "domainId": "domain.demo.dread",
+  "tier": 2,
+  "cardType": "acao",
+  "cost": "1 Stress",
+  "effect": "Ganhe uma oportunidade imediata contra uma ameaca marcada, mas registre uma consequencia sombria para a cena."
+}

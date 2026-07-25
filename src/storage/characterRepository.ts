@@ -53,9 +53,22 @@ export async function ensureDemoCharacter(): Promise<Character> {
   const existingCharacter = await loadCharacter(demoCharacter.id);
 
   if (existingCharacter) {
-    return existingCharacter;
+    const migratedCharacter = migrateDemoCharacter(existingCharacter);
+    await saveCharacter(migratedCharacter);
+    return migratedCharacter;
   }
 
   await saveCharacter(demoCharacter);
   return demoCharacter;
+}
+
+function migrateDemoCharacter(character: Character): Character {
+  return {
+    ...character,
+    attributes: demoCharacter.attributes,
+    deck: {
+      ...character.deck,
+      learnedCardIds: character.deck.learnedCardIds ?? demoCharacter.deck.learnedCardIds
+    }
+  };
 }

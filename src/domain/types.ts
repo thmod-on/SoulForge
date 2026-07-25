@@ -84,6 +84,7 @@ export type Character = {
   resources: ResourceTrack[];
   deck: {
     activeCardIds: string[];
+    learnedCardIds: string[];
   };
   inventory: {
     capacity: number;

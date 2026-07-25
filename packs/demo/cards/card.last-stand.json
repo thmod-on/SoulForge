@@ -1,0 +1,12 @@
+{
+  "id": "card.demo.last-stand",
+  "type": "card",
+  "packId": "pack.demo.soulforge",
+  "name": "Last Stand",
+  "summary": "Segure a linha quando todos precisam de mais um instante.",
+  "domainId": "domain.demo.guardian",
+  "tier": 2,
+  "cardType": "reacao",
+  "cost": "1 Hope",
+  "effect": "Quando um aliado proximo seria pressionado, coloque-se entre ele e a ameaca e reduza o impacto narrativo."
+}

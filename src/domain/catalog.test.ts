@@ -8,7 +8,7 @@ describe("catalog", () => {
     const dreadCards = catalog.cards.filter((card) => card.domainId === dread?.id);
 
     expect(dread).toBeDefined();
-    expect(dreadCards).toHaveLength(2);
+    expect(dreadCards).toHaveLength(3);
     expect(dreadCards.map((card) => card.name)).toContain("Dread Veil");
   });
 

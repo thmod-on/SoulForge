@@ -13,12 +13,12 @@ export const demoCharacter: Character = {
     quote: "Protejo para que outros possam ter um amanha."
   },
   attributes: [
+    { id: "dex", label: "AGI", value: 1 },
     { id: "for", label: "FOR", value: 2 },
-    { id: "dex", label: "DEX", value: 1 },
-    { id: "con", label: "CON", value: 3 },
-    { id: "int", label: "INT", value: 0 },
-    { id: "wil", label: "WIL", value: 1 },
-    { id: "cha", label: "CHA", value: 1 }
+    { id: "cha", label: "FIN", value: 1 },
+    { id: "wil", label: "INS", value: 1 },
+    { id: "con", label: "PRE", value: 3 },
+    { id: "int", label: "CON", value: 0 }
   ],
   defense: {
     evasion: 12,
@@ -40,6 +40,15 @@ export const demoCharacter: Character = {
       "card.demo.dread-veil",
       "card.demo.dread-mark",
       "card.demo.inspirational-words"
+    ],
+    learnedCardIds: [
+      "card.demo.shield-block",
+      "card.demo.stalwart-advance",
+      "card.demo.dread-veil",
+      "card.demo.dread-mark",
+      "card.demo.inspirational-words",
+      "card.demo.shadow-bargain",
+      "card.demo.last-stand"
     ]
   },
   inventory: {
