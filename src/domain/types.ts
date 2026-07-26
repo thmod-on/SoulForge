@@ -53,6 +53,7 @@ export type CardDefinition = BaseDefinition & {
 export type ItemDefinition = BaseDefinition & {
   type: "item";
   category: "arma" | "armadura" | "consumivel" | "equipamento" | "loot";
+  image?: string;
   tier?: number;
   weight: number;
   value?: number;

@@ -1,7 +1,7 @@
 import { catalog } from "./content/installedPacks";
 import { findDefinition, findDomain } from "./domain/catalog";
 import type { CardDefinition, Character, ItemDefinition } from "./domain/types";
-import { ensureDemoCharacter } from "./storage/characterRepository";
+import { ensureDemoCharacter, saveCharacter } from "./storage/characterRepository";
 import "./styles.css";
 
 type Page = "overview" | "skills" | "experiences" | "inventory" | "progression" | "notes" | "compendium" | "settings";
@@ -25,6 +25,7 @@ const state: {
   selectedItemId?: string;
   selectedCardId: string;
   modalCardId?: string;
+  resourceModalId?: string;
   character?: Character;
 } = {
   page: "overview",
@@ -131,16 +132,26 @@ function renderSidebar(character: Character): string {
       <section class="sidebar-section">
         <div class="sidebar-section-title">Atributos</div>
         <div class="sidebar-attribute-grid">
-          ${character.attributes.map((attribute) => `<div><span title="${attributeTitle(attribute.label)}">${attribute.label}</span><strong>${attribute.value}</strong></div>`).join("")}
+          ${character.attributes
+            .map(
+              (attribute) => `
+                <div class="attribute-badge">
+                  <span title="${attribute.label}">${attributeTitle(attribute.label)}</span>
+                  <i class="attribute-upgrade-dot" aria-hidden="true"></i>
+                  <strong>${attribute.value}</strong>
+                </div>
+              `
+            )
+            .join("")}
         </div>
       </section>
       <section class="sidebar-section">
         <div class="sidebar-section-title">Defesa</div>
         <div class="sidebar-defense-grid">
-          <div><span>Evasao</span><strong>${character.defense.evasion}</strong></div>
-          <div><span>Armadura</span><strong>${character.defense.armor}</strong></div>
-          <div><span>Dano menor</span><strong>${character.defense.minor}</strong></div>
-          <div><span>Dano maior</span><strong>${character.defense.major}</strong></div>
+          <div class="defense-badge defense-evasion"><strong>${character.defense.evasion}</strong><span>Evasao</span></div>
+          <div class="defense-badge defense-armor"><strong>${character.defense.armor}</strong><span>Armadura</span></div>
+          <div class="defense-badge defense-minor"><strong>${character.defense.minor}</strong><span>Dano menor</span></div>
+          <div class="defense-badge defense-major"><strong>${character.defense.major}</strong><span>Dano maior</span></div>
         </div>
       </section>
       <nav class="side-nav" aria-label="Menu secundario">
@@ -187,13 +198,13 @@ function renderResources(character: Character): string {
         ${character.resources
           .map(
             (resource) => `
-              <article class="resource-card tone-${resource.tone}">
+              <button class="resource-card tone-${resource.tone}" data-resource-id="${resource.id}">
                 <div class="resource-card-header">
                   <span>${escapeHtml(resource.label)}</span>
                   <strong>${resource.value} / ${resource.max}</strong>
                 </div>
                 ${renderResourceIndicator(resource)}
-              </article>
+              </button>
             `
           )
           .join("")}
@@ -295,6 +306,7 @@ function renderInventory(character: Character): string {
             )
             .join("")}
         </div>
+        ${selectedItem ? renderItemPanel(selectedItem, "inline") : ""}
         <div class="section-heading">
           <h2>Equipados</h2>
         </div>
@@ -313,7 +325,7 @@ function renderInventory(character: Character): string {
         </div>
         <div class="capacity-bar"><i style="width: ${progressPercent(currentWeight, character.inventory.capacity)}%"></i></div>
       </section>
-      ${selectedItem ? renderItemPanel(selectedItem) : ""}
+      ${selectedItem ? renderItemPanel(selectedItem, "side") : ""}
     </main>
   `;
 }
@@ -321,8 +333,8 @@ function renderInventory(character: Character): string {
 function renderItemTile(quantity: number, item: ItemDefinition, selected: boolean, equipped: boolean): string {
   return `
     <button class="item-tile ${selected ? "is-active" : ""}" data-item-id="${item.id}">
-      <span class="item-tile-top">
-        <span class="item-icon">${itemIcon(item.category)}</span>
+      <span class="item-media">
+        ${renderItemVisual(item, "tile")}
         <span class="item-quantity">x${quantity}</span>
       </span>
       <strong>${escapeHtml(item.name)}</strong>
@@ -330,6 +342,14 @@ function renderItemTile(quantity: number, item: ItemDefinition, selected: boolea
       ${equipped ? `<em>Equipado</em>` : ""}
     </button>
   `;
+}
+
+function renderItemVisual(item: ItemDefinition, variant: "tile" | "detail"): string {
+  if (item.image) {
+    return `<img src="${escapeHtml(item.image)}" alt="" />`;
+  }
+
+  return `<span class="item-icon item-icon-${variant}">${itemIcon(item.category)}</span>`;
 }
 
 function itemIcon(category: ItemDefinition["category"]): string {
@@ -344,21 +364,21 @@ function itemIcon(category: ItemDefinition["category"]): string {
   return icons[category];
 }
 
-function renderItemPanel(item?: ItemDefinition): string {
+function renderItemPanel(item: ItemDefinition, placement: "side" | "inline"): string {
   if (!item) {
     return `<aside class="detail-panel"><p>Nenhum item selecionado.</p></aside>`;
   }
 
   return `
-    <aside class="detail-panel">
+    <aside class="detail-panel detail-panel-${placement}">
       <div class="panel-heading">
         <div>
-          <h2>${escapeHtml(item.name)}</h2>
+          <h2 tabindex="-1" data-panel-title>${escapeHtml(item.name)}</h2>
           <span>${item.tier ? `Tier ${item.tier}` : itemFilterLabels[item.category]}</span>
         </div>
         <button data-item-panel-close aria-label="Fechar detalhes">x</button>
       </div>
-      <div class="feature-art item-detail-art">${itemIcon(item.category)}</div>
+      <div class="feature-art item-detail-art">${renderItemVisual(item, "detail")}</div>
       <p>${escapeHtml(item.summary)}</p>
       <dl class="detail-list">
         <div><dt>Valor</dt><dd>${item.value ?? "-"}</dd></div>
@@ -371,6 +391,34 @@ function renderItemPanel(item?: ItemDefinition): string {
       <button class="secondary-action">Mover para mochila</button>
       <button class="danger-action">Descartar</button>
     </aside>
+  `;
+}
+
+function renderResourceModal(resourceId?: string): string {
+  const character = state.character;
+  if (!character || !resourceId) {
+    return "";
+  }
+
+  const resource = character.resources.find((entry) => entry.id === resourceId);
+  if (!resource) {
+    return "";
+  }
+
+  return `
+    <div class="modal-backdrop resource-modal-backdrop" data-modal-backdrop>
+      <section class="resource-modal" role="dialog" aria-modal="true" aria-labelledby="resource-modal-title">
+        <button class="modal-close" data-modal-close aria-label="Fechar recurso">x</button>
+        <span class="resource-modal-label">Recurso</span>
+        <h2 id="resource-modal-title">${escapeHtml(resource.label)}</h2>
+        <div class="resource-stepper">
+          <button data-resource-adjust="-1" aria-label="Diminuir ${escapeHtml(resource.label)}">-</button>
+          <strong>${resource.value} / ${resource.max}</strong>
+          <button data-resource-adjust="1" aria-label="Aumentar ${escapeHtml(resource.label)}">+</button>
+        </div>
+        ${renderResourceIndicator(resource)}
+      </section>
+    </div>
   `;
 }
 
@@ -535,7 +583,46 @@ function render(): void {
       </div>
     </div>
     ${renderCardModal(state.modalCardId)}
+    ${renderResourceModal(state.resourceModalId)}
   `;
+}
+
+function focusInlineItemPanel(): void {
+  if (!window.matchMedia("(max-width: 1180px)").matches) {
+    return;
+  }
+
+  requestAnimationFrame(() => {
+    const panel = document.querySelector<HTMLElement>(".detail-panel-inline");
+    const title = panel?.querySelector<HTMLElement>("[data-panel-title]");
+    panel?.scrollIntoView({ behavior: "smooth", block: "start" });
+    title?.focus({ preventScroll: true });
+  });
+}
+
+async function adjustResource(delta: number): Promise<void> {
+  const character = state.character;
+  const resourceId = state.resourceModalId;
+
+  if (!character || !resourceId) {
+    return;
+  }
+
+  const resources = character.resources.map((resource) => {
+    if (resource.id !== resourceId) {
+      return resource;
+    }
+
+    return {
+      ...resource,
+      value: Math.min(resource.max, Math.max(0, resource.value + delta))
+    };
+  });
+
+  const updatedCharacter = { ...character, resources };
+  state.character = updatedCharacter;
+  await saveCharacter(updatedCharacter);
+  render();
 }
 
 function bindEvents(): void {
@@ -553,13 +640,22 @@ function bindEvents(): void {
 
     if (target.closest("[data-modal-close]")) {
       state.modalCardId = undefined;
+      state.resourceModalId = undefined;
       render();
       return;
     }
 
     if (target.matches("[data-modal-backdrop]")) {
       state.modalCardId = undefined;
+      state.resourceModalId = undefined;
       render();
+      return;
+    }
+
+    const resourceAdjustButton = target.closest<HTMLElement>("[data-resource-adjust]");
+    if (resourceAdjustButton) {
+      const delta = Number(resourceAdjustButton.dataset.resourceAdjust);
+      void adjustResource(delta);
       return;
     }
 
@@ -581,6 +677,14 @@ function bindEvents(): void {
     if (itemButton) {
       state.selectedItemId = itemButton.dataset.itemId;
       render();
+      focusInlineItemPanel();
+      return;
+    }
+
+    const resourceButton = target.closest<HTMLElement>("[data-resource-id]");
+    if (resourceButton) {
+      state.resourceModalId = resourceButton.dataset.resourceId;
+      render();
       return;
     }
 
@@ -601,6 +705,11 @@ function bindEvents(): void {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && state.modalCardId) {
       state.modalCardId = undefined;
+      render();
+    }
+
+    if (event.key === "Escape" && state.resourceModalId) {
+      state.resourceModalId = undefined;
       render();
     }
   });
