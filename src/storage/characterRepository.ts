@@ -66,6 +66,7 @@ function migrateDemoCharacter(character: Character): Character {
   return {
     ...character,
     attributes: demoCharacter.attributes,
+    resources: demoCharacter.resources,
     deck: {
       ...character.deck,
       learnedCardIds: character.deck.learnedCardIds ?? demoCharacter.deck.learnedCardIds

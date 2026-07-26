@@ -1,10 +1,20 @@
 :root {
+  --color-bg: #080511;
+  --color-panel: rgba(12, 8, 20, 0.78);
+  --color-panel-soft: rgba(18, 11, 28, 0.68);
+  --color-text: #f4eadb;
+  --color-muted: #c8b8a6;
+  --color-hope: #f3eadc;
+  --color-gold: #d99a3d;
+  --color-fear: #c92e42;
+  --color-essence: #8e4fc4;
+  --color-border: rgba(244, 234, 219, 0.11);
   color-scheme: dark;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
-  color: #f6efe2;
-  background: #070b10;
+  color: var(--color-text);
+  background: var(--color-bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -19,8 +29,9 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background:
-    radial-gradient(circle at 18% 8%, rgba(41, 117, 126, 0.18), transparent 28rem),
-    linear-gradient(135deg, #070b10 0%, #0d1721 52%, #08090c 100%);
+    radial-gradient(circle at 18% 8%, rgba(142, 79, 196, 0.2), transparent 28rem),
+    radial-gradient(circle at 86% 18%, rgba(201, 46, 66, 0.08), transparent 24rem),
+    linear-gradient(135deg, #080511 0%, #120b1c 52%, #07050d 100%);
 }
 
 button,
@@ -43,13 +54,15 @@ button {
   display: grid;
   grid-template-columns: 20rem minmax(0, 1fr);
   min-height: 100vh;
+  --shell-gutter: 1.25rem;
+  --brand-height: 5.2rem;
 }
 
 .sidebar {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  padding: 1.25rem;
+  padding: var(--shell-gutter);
   border-right: 1px solid rgba(255, 255, 255, 0.09);
   background: rgba(7, 12, 18, 0.86);
 }
@@ -63,7 +76,7 @@ button {
 .quick-actions button,
 .empty-state {
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(8, 15, 22, 0.72);
+  background: var(--color-panel);
   box-shadow: 0 20px 70px rgba(0, 0, 0, 0.22);
 }
 
@@ -72,7 +85,7 @@ button {
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem;
-  min-height: 5.2rem;
+  min-height: var(--brand-height);
 }
 
 .brand-mark {
@@ -80,9 +93,17 @@ button {
   width: 3.4rem;
   height: 3.4rem;
   place-items: center;
-  border: 1px solid rgba(242, 165, 22, 0.7);
-  color: #f2a516;
+  overflow: hidden;
+  border: 1px solid rgba(217, 154, 61, 0.7);
+  background: #090511;
+  color: var(--color-gold);
   font-weight: 800;
+}
+
+.brand-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .brand strong,
@@ -105,7 +126,7 @@ button {
 .compendium-card small,
 .compendium-card p,
 .item-tile small {
-  color: #c8c0b4;
+  color: var(--color-muted);
 }
 
 .portrait {
@@ -116,7 +137,7 @@ button {
   min-height: 11rem;
   background:
     linear-gradient(145deg, transparent 0 46%, rgba(0, 0, 0, 0.22) 46% 100%),
-    radial-gradient(circle at 50% 28%, #395667, #111923 58%, #070b10);
+    radial-gradient(circle at 50% 28%, #322449, #140d20 58%, #080511);
 }
 
 .portrait > div:last-child {
@@ -148,8 +169,8 @@ button {
 }
 
 .sidebar-section {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(8, 15, 22, 0.58);
+  border: 1px solid var(--color-border);
+  background: var(--color-panel-soft);
   padding: 0.85rem;
 }
 
@@ -232,9 +253,9 @@ button {
 .top-link.is-active,
 .chip.is-active,
 .domain-chip.is-active {
-  border-color: #f2a516;
-  color: #f2a516;
-  background: rgba(242, 165, 22, 0.12);
+  border-color: var(--color-gold);
+  color: var(--color-gold);
+  background: rgba(217, 154, 61, 0.13);
 }
 
 .pack-status {
@@ -257,9 +278,10 @@ button {
   display: flex;
   align-items: center;
   gap: 1rem;
-  min-height: 4.2rem;
-  padding: 0 1.5rem;
-  border-width: 0 0 1px;
+  min-height: var(--brand-height);
+  margin: var(--shell-gutter) var(--shell-gutter) 0;
+  padding: 0 1rem;
+  border-width: 1px;
 }
 
 .top-nav {
@@ -284,7 +306,7 @@ button {
   display: grid;
   gap: 1rem;
   align-content: start;
-  padding: 1.5rem;
+  padding: var(--shell-gutter);
   overflow: auto;
 }
 
@@ -325,7 +347,7 @@ button {
 .capacity-bar i {
   display: block;
   height: 100%;
-  background: #f2a516;
+  background: var(--color-gold);
 }
 
 .band,
@@ -386,16 +408,36 @@ button {
 }
 
 .resource-grid {
-  grid-template-columns: repeat(5, minmax(8.5rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(10.25rem, 1fr));
 }
 
-.resource-card {
+.resource-card,
+.resource-add-card {
   display: grid;
   align-content: space-between;
   gap: 0.85rem;
   min-height: 6.4rem;
   padding: 0.9rem;
   border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.resource-add-card {
+  place-items: center;
+  align-content: center;
+  border-style: dashed;
+  color: #c8c0b4;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.resource-add-card span {
+  color: #f2a516;
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.resource-add-card:hover {
+  border-color: rgba(242, 165, 22, 0.5);
+  color: #f2a516;
 }
 
 .resource-card-header {
@@ -416,16 +458,19 @@ button {
 }
 
 .tone-hope {
-  border-color: rgba(242, 165, 22, 0.5);
+  border-color: rgba(243, 234, 220, 0.55);
 }
 
-.tone-stress,
-.tone-shadow {
-  border-color: rgba(142, 92, 247, 0.55);
+.tone-stress {
+  border-color: rgba(201, 46, 66, 0.58);
 }
 
 .tone-hp {
-  border-color: rgba(246, 64, 91, 0.55);
+  border-color: rgba(201, 46, 66, 0.68);
+}
+
+.tone-shadow {
+  border-color: rgba(142, 79, 196, 0.62);
 }
 
 .tone-focus {
@@ -448,14 +493,18 @@ button {
 }
 
 .pips i.filled {
-  background: #f2a516;
-  border-color: #f2a516;
+  background: var(--color-hope);
+  border-color: var(--color-hope);
 }
 
-.tone-stress .pips i.filled,
+.tone-stress .pips i.filled {
+  background: var(--color-fear);
+  border-color: var(--color-fear);
+}
+
 .tone-shadow .pips i.filled {
-  background: #a985ff;
-  border-color: #a985ff;
+  background: var(--color-essence);
+  border-color: var(--color-essence);
 }
 
 .tone-focus .pips i.filled {
@@ -472,16 +521,19 @@ button {
 .resource-meter i {
   display: block;
   height: 100%;
-  background: #f6405b;
+  background: var(--color-fear);
 }
 
 .tone-hope .resource-meter i {
-  background: #f2a516;
+  background: var(--color-hope);
 }
 
-.tone-stress .resource-meter i,
+.tone-stress .resource-meter i {
+  background: var(--color-fear);
+}
+
 .tone-shadow .resource-meter i {
-  background: #a985ff;
+  background: var(--color-essence);
 }
 
 .tone-focus .resource-meter i {
@@ -489,25 +541,33 @@ button {
 }
 
 .card-row {
-  grid-template-columns: repeat(5, minmax(10rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(9.75rem, 1fr));
 }
 
 .ability-card {
   position: relative;
-  min-height: 17rem;
-  padding: 7.5rem 0.85rem 0.85rem;
+  min-height: 15.75rem;
+  padding: 6.8rem 0.75rem 0.75rem;
   overflow: hidden;
-  border: 1px solid rgba(242, 165, 22, 0.42);
-  background: rgba(12, 14, 20, 0.82);
+  border: 1px solid rgba(217, 154, 61, 0.42);
+  color: var(--color-text);
+  text-align: left;
+  background: rgba(14, 9, 20, 0.84);
+}
+
+.ability-card:hover {
+  border-color: rgba(217, 154, 61, 0.78);
+  transform: translateY(-1px);
 }
 
 .card-art {
   position: absolute;
   inset: 0 0 auto;
-  height: 7.2rem;
+  height: 6.5rem;
   background:
-    radial-gradient(circle at 70% 30%, rgba(242, 165, 22, 0.46), transparent 5rem),
-    linear-gradient(135deg, #233341, #121019);
+    radial-gradient(circle at 70% 30%, rgba(217, 154, 61, 0.42), transparent 5rem),
+    radial-gradient(circle at 24% 42%, rgba(142, 79, 196, 0.35), transparent 4rem),
+    linear-gradient(135deg, #251729, #110915);
 }
 
 .card-tier {
@@ -519,8 +579,8 @@ button {
   width: 2.6rem;
   height: 2.6rem;
   place-items: center;
-  border: 1px solid #f2a516;
-  background: #081018;
+  border: 1px solid var(--color-gold);
+  background: #090511;
   font-weight: 800;
 }
 
@@ -537,15 +597,15 @@ button {
 
 .deck-drawer-button {
   width: 100%;
-  min-height: 3.4rem;
-  margin-top: 0.85rem;
-  border: 1px solid rgba(242, 165, 22, 0.65);
-  color: #f2a516;
-  background: rgba(242, 165, 22, 0.1);
+  min-height: 2.35rem;
+  margin-top: 0.65rem;
+  border: 1px solid rgba(217, 154, 61, 0.62);
+  color: var(--color-gold);
+  background: rgba(217, 154, 61, 0.08);
 }
 
 .deck-drawer-button:hover {
-  background: rgba(242, 165, 22, 0.16);
+  background: rgba(217, 154, 61, 0.14);
 }
 
 .quick-actions {
@@ -764,13 +824,98 @@ button {
 }
 
 .empty-state span {
-  color: #f2a516;
+  color: var(--color-gold);
   font-size: 2.5rem;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background: rgba(4, 2, 8, 0.78);
+  backdrop-filter: blur(8px);
+}
+
+.card-modal {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(16rem, 0.85fr) minmax(20rem, 1.15fr);
+  width: min(58rem, 92vw);
+  max-height: min(42rem, 90vh);
+  overflow: hidden;
+  border: 1px solid rgba(217, 154, 61, 0.65);
+  background: #0d0715;
+  box-shadow: 0 28px 110px rgba(0, 0, 0, 0.65);
+}
+
+.modal-close {
+  position: absolute;
+  z-index: 1;
+  top: 0.8rem;
+  right: 0.8rem;
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 1px solid rgba(244, 234, 219, 0.16);
+  color: var(--color-muted);
+  background: rgba(8, 5, 17, 0.86);
+}
+
+.modal-card-art {
+  min-height: 26rem;
+  background:
+    radial-gradient(circle at 50% 24%, rgba(217, 154, 61, 0.38), transparent 8rem),
+    radial-gradient(circle at 45% 54%, rgba(142, 79, 196, 0.48), transparent 10rem),
+    linear-gradient(145deg, #241027, #090511);
+}
+
+.modal-card-body {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+  padding: 2rem;
+  overflow: auto;
+}
+
+.modal-card-kicker,
+.modal-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.modal-card-kicker span,
+.modal-card-meta span {
+  border: 1px solid rgba(244, 234, 219, 0.13);
+  padding: 0.38rem 0.55rem;
+  color: var(--color-muted);
+}
+
+.modal-card-body h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 2rem;
+}
+
+.modal-card-body h3 {
+  margin: 0.4rem 0 0;
+  color: var(--color-gold);
+  text-transform: uppercase;
+}
+
+.modal-card-body p {
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.55;
 }
 
 @media (max-width: 1180px) {
   .app-shell {
-    grid-template-columns: 17rem minmax(0, 1fr);
+    grid-template-columns: 16.5rem minmax(0, 1fr);
+    --shell-gutter: 0.85rem;
+    --brand-height: 4.7rem;
   }
 
   .content-with-panel {
@@ -781,10 +926,86 @@ button {
     position: static;
   }
 
-  .resource-grid,
-  .card-row,
   .quick-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .brand {
+    padding: 0.6rem;
+  }
+
+  .brand-mark {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .sidebar {
+    gap: 0.75rem;
+  }
+
+  .portrait-art {
+    min-height: 8rem;
+  }
+
+  .portrait > div:last-child,
+  .sidebar-section,
+  .pack-status {
+    padding: 0.65rem;
+  }
+
+  .sidebar-attribute-grid div,
+  .sidebar-defense-grid div {
+    min-height: 3.05rem;
+    padding: 0.4rem;
+  }
+
+  .sidebar-attribute-grid span,
+  .sidebar-defense-grid span {
+    font-size: 0.62rem;
+  }
+
+  .sidebar-attribute-grid strong,
+  .sidebar-defense-grid strong {
+    font-size: 1rem;
+  }
+
+  .nav-button {
+    padding: 0.68rem 0.7rem;
+  }
+
+  .topbar {
+    padding: 0 0.7rem;
+  }
+
+  .top-link {
+    padding: 0.58rem 0.72rem;
+  }
+
+  .resource-grid {
+    grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  }
+
+  .card-row {
+    grid-template-columns: repeat(auto-fit, minmax(9.1rem, 1fr));
+  }
+
+  .resource-card,
+  .resource-add-card {
+    min-height: 5.85rem;
+    padding: 0.75rem;
+  }
+
+  .ability-card {
+    min-height: 14.8rem;
+    padding-top: 6.2rem;
+  }
+
+  .card-art {
+    height: 5.9rem;
+  }
+
+  .card-modal {
+    grid-template-columns: minmax(12rem, 0.75fr) minmax(18rem, 1.25fr);
   }
 }
 
@@ -829,5 +1050,18 @@ button {
   .quick-actions,
   .equipped-grid {
     grid-template-columns: 1fr;
+  }
+
+  .modal-backdrop {
+    padding: 1rem;
+  }
+
+  .card-modal {
+    grid-template-columns: 1fr;
+    max-height: 92vh;
+  }
+
+  .modal-card-art {
+    min-height: 12rem;
   }
 }

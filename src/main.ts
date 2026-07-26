@@ -24,6 +24,7 @@ const state: {
   inventoryFilter: InventoryFilter;
   selectedItemId: string;
   selectedCardId: string;
+  modalCardId?: string;
   character?: Character;
 } = {
   page: "overview",
@@ -107,7 +108,7 @@ function renderSidebar(character: Character): string {
   return `
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-mark">SF</div>
+        <div class="brand-mark"><img src="assets/brand/soulforge-symbol.png" alt="" /></div>
         <div>
           <strong>SOULFORGE</strong>
           <span>Daggerheart Companion</span>
@@ -197,6 +198,10 @@ function renderResources(character: Character): string {
             `
           )
           .join("")}
+        <button class="resource-add-card" data-action="add-resource">
+          <span>+</span>
+          Adicionar recurso
+        </button>
       </div>
     </section>
   `;
@@ -246,13 +251,13 @@ function renderOverview(character: Character): string {
 function renderCardTile(card: CardDefinition): string {
   const domain = findDomain(catalog, card.domainId);
   return `
-    <article class="ability-card" data-card-id="${card.id}">
+    <button class="ability-card" data-card-modal-id="${card.id}">
       <div class="card-tier">${card.tier}</div>
       <div class="card-art"></div>
       <h3>${escapeHtml(card.name)}</h3>
       <span>${escapeHtml(domain?.name ?? "Sem dominio")} - ${escapeHtml(card.cardType)}</span>
       <p>${escapeHtml(card.summary)}</p>
-    </article>
+    </button>
   `;
 }
 
@@ -437,6 +442,42 @@ function renderCardPanel(card?: CardDefinition): string {
   `;
 }
 
+function renderCardModal(cardId?: string): string {
+  if (!cardId) {
+    return "";
+  }
+
+  const definition = findDefinition(catalog, cardId);
+  if (definition?.type !== "card") {
+    return "";
+  }
+
+  const domain = findDomain(catalog, definition.domainId);
+
+  return `
+    <div class="modal-backdrop" data-modal-backdrop>
+      <section class="card-modal" role="dialog" aria-modal="true" aria-labelledby="card-modal-title">
+        <button class="modal-close" data-modal-close aria-label="Fechar carta">x</button>
+        <div class="modal-card-art"></div>
+        <div class="modal-card-body">
+          <div class="modal-card-kicker">
+            <span>${escapeHtml(domain?.name ?? "Sem dominio")}</span>
+            <span>Tier ${definition.tier}</span>
+          </div>
+          <h2 id="card-modal-title">${escapeHtml(definition.name)}</h2>
+          <div class="modal-card-meta">
+            <span>${escapeHtml(definition.cardType)}</span>
+            <span>${escapeHtml(definition.cost ?? "Sem custo")}</span>
+          </div>
+          <p>${escapeHtml(definition.summary)}</p>
+          <h3>Efeito</h3>
+          <p>${escapeHtml(definition.effect)}</p>
+        </div>
+      </section>
+    </div>
+  `;
+}
+
 function renderPlaceholder(page: Page): string {
   const labels: Record<Page, string> = {
     overview: "Visao Geral",
@@ -484,6 +525,7 @@ function render(): void {
         ${screen}
       </div>
     </div>
+    ${renderCardModal(state.modalCardId)}
   `;
 }
 
@@ -491,6 +533,18 @@ function bindEvents(): void {
   document.addEventListener("click", (event) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) {
+      return;
+    }
+
+    if (target.closest("[data-modal-close]")) {
+      state.modalCardId = undefined;
+      render();
+      return;
+    }
+
+    if (target.matches("[data-modal-backdrop]")) {
+      state.modalCardId = undefined;
+      render();
       return;
     }
 
@@ -515,12 +569,23 @@ function bindEvents(): void {
       return;
     }
 
+    const cardModalButton = target.closest<HTMLElement>("[data-card-modal-id]");
+    if (cardModalButton) {
+      state.modalCardId = cardModalButton.dataset.cardModalId;
+      render();
+      return;
+    }
+
     const cardButton = target.closest<HTMLElement>("[data-card-id]");
     if (cardButton) {
       state.selectedCardId = cardButton.dataset.cardId ?? state.selectedCardId;
-      if (state.page !== "compendium") {
-        state.page = "compendium";
-      }
+      render();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && state.modalCardId) {
+      state.modalCardId = undefined;
       render();
     }
   });
