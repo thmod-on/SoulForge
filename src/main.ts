@@ -22,14 +22,13 @@ const appRoot = getAppRoot();
 const state: {
   page: Page;
   inventoryFilter: InventoryFilter;
-  selectedItemId: string;
+  selectedItemId?: string;
   selectedCardId: string;
   modalCardId?: string;
   character?: Character;
 } = {
   page: "overview",
   inventoryFilter: "todos",
-  selectedItemId: "item.demo.long-sword",
   selectedCardId: "card.demo.dread-veil"
 };
 
@@ -193,7 +192,7 @@ function renderResources(character: Character): string {
                   <span>${escapeHtml(resource.label)}</span>
                   <strong>${resource.value} / ${resource.max}</strong>
                 </div>
-                ${renderResourceIndicator(resource.value, resource.max)}
+                ${renderResourceIndicator(resource)}
               </article>
             `
           )
@@ -207,14 +206,22 @@ function renderResources(character: Character): string {
   `;
 }
 
-function renderResourceIndicator(value: number, max: number): string {
-  if (max > 10) {
-    return `<div class="resource-meter" aria-hidden="true"><i style="width: ${progressPercent(value, max)}%"></i></div>`;
+function renderResourceIndicator(resource: Character["resources"][number]): string {
+  if (resource.max > 10) {
+    return `<div class="resource-meter" aria-hidden="true"><i style="width: ${progressPercent(resource.value, resource.max)}%"></i></div>`;
+  }
+
+  if (resource.id === "armor-slots") {
+    return `
+      <div class="shield-pips" aria-hidden="true">
+        ${Array.from({ length: resource.max }, (_, index) => `<i class="${index < resource.value ? "filled" : ""}"></i>`).join("")}
+      </div>
+    `;
   }
 
   return `
     <div class="pips" aria-hidden="true">
-      ${Array.from({ length: max }, (_, index) => `<i class="${index < value ? "filled" : ""}"></i>`).join("")}
+      ${Array.from({ length: resource.max }, (_, index) => `<i class="${index < resource.value ? "filled" : ""}"></i>`).join("")}
     </div>
   `;
 }
@@ -242,7 +249,6 @@ function renderOverview(character: Character): string {
         <button data-action="rest-short"><span>REST</span> Descansar breve</button>
         <button data-action="rest-long"><span>FULL</span> Descansar longo</button>
         <button data-page="experiences"><span>XP</span> Registrar experiencia</button>
-        <button data-page="inventory"><span>BAG</span> Abrir inventario</button>
       </section>
     </main>
   `;
@@ -264,12 +270,12 @@ function renderCardTile(card: CardDefinition): string {
 function renderInventory(character: Character): string {
   const entries = getItemEntries(character);
   const filteredEntries = entries.filter(({ item }) => state.inventoryFilter === "todos" || item.category === state.inventoryFilter);
-  const selectedItem = entries.find(({ item }) => item.id === state.selectedItemId)?.item ?? filteredEntries[0]?.item ?? entries[0]?.item;
+  const selectedItem = entries.find(({ item }) => item.id === state.selectedItemId)?.item;
   const equipped = entries.filter(({ entry }) => entry.equipped);
   const currentWeight = entries.reduce((total, { entry, item }) => total + entry.quantity * item.weight, 0);
 
   return `
-    <main class="content content-with-panel">
+    <main class="content inventory-layout ${selectedItem ? "has-detail-panel" : ""}">
       <section class="inventory-main">
         <div class="screen-title">
           <h1>Inventario</h1>
@@ -293,13 +299,13 @@ function renderInventory(character: Character): string {
           <h2>Equipados</h2>
         </div>
         <div class="item-grid equipped-grid">
-          ${equipped.map(({ entry, item }) => renderItemTile(entry.quantity, item, selectedItem?.id === item.id)).join("")}
+          ${equipped.map(({ entry, item }) => renderItemTile(entry.quantity, item, selectedItem?.id === item.id, Boolean(entry.equipped))).join("")}
         </div>
         <div class="section-heading">
           <h2>Mochila</h2>
         </div>
         <div class="item-grid">
-          ${filteredEntries.map(({ entry, item }) => renderItemTile(entry.quantity, item, selectedItem?.id === item.id)).join("")}
+          ${filteredEntries.map(({ entry, item }) => renderItemTile(entry.quantity, item, selectedItem?.id === item.id, Boolean(entry.equipped))).join("")}
         </div>
         <div class="capacity-summary">
           <span>Capacidade</span>
@@ -307,18 +313,21 @@ function renderInventory(character: Character): string {
         </div>
         <div class="capacity-bar"><i style="width: ${progressPercent(currentWeight, character.inventory.capacity)}%"></i></div>
       </section>
-      ${renderItemPanel(selectedItem)}
+      ${selectedItem ? renderItemPanel(selectedItem) : ""}
     </main>
   `;
 }
 
-function renderItemTile(quantity: number, item: ItemDefinition, selected: boolean): string {
+function renderItemTile(quantity: number, item: ItemDefinition, selected: boolean, equipped: boolean): string {
   return `
     <button class="item-tile ${selected ? "is-active" : ""}" data-item-id="${item.id}">
-      <span class="item-icon">${itemIcon(item.category)}</span>
+      <span class="item-tile-top">
+        <span class="item-icon">${itemIcon(item.category)}</span>
+        <span class="item-quantity">x${quantity}</span>
+      </span>
       <strong>${escapeHtml(item.name)}</strong>
-      <small>${item.tier ? `Tier ${item.tier}` : itemFilterLabels[item.category]}</small>
-      <em>${quantity}</em>
+      <small>${item.tier ? `Tier ${item.tier}` : itemFilterLabels[item.category]} - ${itemFilterLabels[item.category]}</small>
+      ${equipped ? `<em>Equipado</em>` : ""}
     </button>
   `;
 }
@@ -347,7 +356,7 @@ function renderItemPanel(item?: ItemDefinition): string {
           <h2>${escapeHtml(item.name)}</h2>
           <span>${item.tier ? `Tier ${item.tier}` : itemFilterLabels[item.category]}</span>
         </div>
-        <button aria-label="Fechar detalhes">x</button>
+        <button data-item-panel-close aria-label="Fechar detalhes">x</button>
       </div>
       <div class="feature-art item-detail-art">${itemIcon(item.category)}</div>
       <p>${escapeHtml(item.summary)}</p>
@@ -536,6 +545,12 @@ function bindEvents(): void {
       return;
     }
 
+    if (target.closest("[data-item-panel-close]")) {
+      state.selectedItemId = undefined;
+      render();
+      return;
+    }
+
     if (target.closest("[data-modal-close]")) {
       state.modalCardId = undefined;
       render();
@@ -564,7 +579,7 @@ function bindEvents(): void {
 
     const itemButton = target.closest<HTMLElement>("[data-item-id]");
     if (itemButton) {
-      state.selectedItemId = itemButton.dataset.itemId ?? state.selectedItemId;
+      state.selectedItemId = itemButton.dataset.itemId;
       render();
       return;
     }
