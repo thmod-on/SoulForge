@@ -4,7 +4,7 @@ import type { CardDefinition, Character, ItemDefinition } from "./domain/types";
 import { ensureDemoCharacter, saveCharacter } from "./storage/characterRepository";
 import "./styles.css";
 
-type Page = "overview" | "skills" | "experiences" | "inventory" | "progression" | "notes" | "compendium" | "settings";
+type Page = "overview" | "skills" | "experiences" | "inventory" | "progression" | "notes" | "compendium" | "settings" | "storedCards";
 type InventoryFilter = "todos" | ItemDefinition["category"];
 
 function getAppRoot(): HTMLDivElement {
@@ -56,6 +56,18 @@ const itemFilterLabels: Record<InventoryFilter, string> = {
   loot: "Loot"
 };
 
+const skillSourceLabels: Record<Character["skills"][number]["source"], string> = {
+  class: "Classe",
+  ancestry: "Ancestralidade",
+  community: "Comunidade"
+};
+
+const skillTierLabels: Record<NonNullable<Character["skills"][number]["tier"]>, string> = {
+  foundation: "Fundamento",
+  specialized: "Especializada",
+  mastery: "Maestria"
+};
+
 function escapeHtml(value: string): string {
   return value
     .replaceAll("&", "&amp;")
@@ -102,6 +114,16 @@ function getInactiveCardCount(character: Character): number {
   const activeCardIds = new Set(character.deck.activeCardIds);
 
   return learnedCardIds.filter((cardId) => !activeCardIds.has(cardId)).length;
+}
+
+function getStoredCards(character: Character): CardDefinition[] {
+  const activeCardIds = new Set(character.deck.activeCardIds);
+  const learnedCardIds = character.deck.learnedCardIds ?? character.deck.activeCardIds;
+
+  return learnedCardIds
+    .filter((cardId) => !activeCardIds.has(cardId))
+    .map((cardId) => findDefinition(catalog, cardId))
+    .filter((definition): definition is CardDefinition => definition?.type === "card");
 }
 
 function renderSidebar(character: Character): string {
@@ -263,6 +285,157 @@ function renderOverview(character: Character): string {
       </section>
     </main>
   `;
+}
+
+function renderStoredCards(character: Character): string {
+  const storedCards = getStoredCards(character);
+
+  return `
+    <main class="content">
+      <section class="band">
+        <div class="screen-title">
+          <div>
+            <h1>Cartas guardadas</h1>
+            <p>Cartas aprendidas pelo personagem, mas que nao estao ativas no momento.</p>
+          </div>
+        </div>
+        <div class="section-heading">
+          <h2>Deck reserva</h2>
+          <span>${storedCards.length} guardadas</span>
+        </div>
+        ${
+          storedCards.length
+            ? `<div class="card-row stored-card-row">${storedCards.map(renderStoredCardTile).join("")}</div>`
+            : renderEmptyInline("Nenhuma carta guardada por enquanto.")
+        }
+      </section>
+    </main>
+  `;
+}
+
+function renderStoredCardTile(card: CardDefinition): string {
+  return `
+    <article class="stored-card">
+      ${renderCardTile(card)}
+      <button class="stored-card-action" type="button" data-action="activate-stored-card" data-card-id="${card.id}">
+        Ativar carta
+      </button>
+    </article>
+  `;
+}
+
+function renderSkills(character: Character): string {
+  const classSkills = character.skills.filter((skill) => skill.source === "class");
+  const ancestrySkills = character.skills.filter((skill) => skill.source === "ancestry");
+  const communitySkills = character.skills.filter((skill) => skill.source === "community");
+
+  return `
+    <main class="content">
+      <section class="band">
+        <div class="screen-title">
+          <div>
+            <h1>Habilidades</h1>
+            <p>Recursos narrativos e mecanicos do personagem, agrupados pela origem.</p>
+          </div>
+        </div>
+        <div class="skill-layout">
+          <section class="skill-column skill-column-wide">
+            <div class="section-heading">
+              <h2>${skillSourceLabels.class}</h2>
+            </div>
+            ${renderClassSkillGroup("foundation", classSkills)}
+            ${renderClassSkillGroup("specialized", classSkills)}
+            ${renderClassSkillGroup("mastery", classSkills)}
+          </section>
+          <section class="skill-column">
+            <div class="section-heading">
+              <h2>${skillSourceLabels.ancestry}</h2>
+            </div>
+            ${renderSkillList(ancestrySkills)}
+          </section>
+          <section class="skill-column">
+            <div class="section-heading">
+              <h2>${skillSourceLabels.community}</h2>
+            </div>
+            ${renderSkillList(communitySkills)}
+          </section>
+        </div>
+      </section>
+    </main>
+  `;
+}
+
+function renderClassSkillGroup(tier: NonNullable<Character["skills"][number]["tier"]>, skills: Character["skills"]): string {
+  const filteredSkills = skills.filter((skill) => skill.tier === tier);
+
+  return `
+    <div class="skill-group">
+      <h3>${skillTierLabels[tier]}</h3>
+      ${renderSkillList(filteredSkills)}
+    </div>
+  `;
+}
+
+function renderSkillList(skills: Character["skills"]): string {
+  if (!skills.length) {
+    return renderEmptyInline("Nenhuma habilidade registrada.");
+  }
+
+  return `
+    <div class="info-list">
+      ${skills
+        .map(
+          (skill) => `
+            <article class="info-card">
+              <div>
+                <strong>${escapeHtml(skill.name)}</strong>
+                <span>${skill.tier ? skillTierLabels[skill.tier] : skillSourceLabels[skill.source]}</span>
+              </div>
+              <p>${escapeHtml(skill.description)}</p>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderExperiences(character: Character): string {
+  return `
+    <main class="content">
+      <section class="band">
+        <div class="screen-title">
+          <div>
+            <h1>Experiencias</h1>
+            <p>Marcadores narrativos que podem apoiar testes quando fizer sentido na ficcao.</p>
+          </div>
+        </div>
+        ${
+          character.experiences.length
+            ? `<div class="experience-grid">
+                ${character.experiences
+                  .map(
+                    (experience) => `
+                      <article class="experience-card">
+                        <div>
+                          <strong>${escapeHtml(experience.name)}</strong>
+                          ${experience.description ? `<p>${escapeHtml(experience.description)}</p>` : ""}
+                        </div>
+                        <span>+${experience.value}</span>
+                      </article>
+                    `
+                  )
+                  .join("")}
+              </div>`
+            : renderEmptyInline("Nenhuma experiencia registrada.")
+        }
+      </section>
+    </main>
+  `;
+}
+
+function renderEmptyInline(message: string): string {
+  return `<p class="empty-inline">${escapeHtml(message)}</p>`;
 }
 
 function renderCardTile(card: CardDefinition): string {
@@ -544,7 +717,8 @@ function renderPlaceholder(page: Page): string {
     progression: "Progressao",
     notes: "Anotacoes",
     compendium: "Compendium",
-    settings: "Configuracoes"
+    settings: "Configuracoes",
+    storedCards: "Cartas guardadas"
   };
 
   return `
@@ -568,6 +742,12 @@ function render(): void {
 
   const screen = state.page === "overview"
     ? renderOverview(character)
+    : state.page === "skills"
+      ? renderSkills(character)
+      : state.page === "experiences"
+        ? renderExperiences(character)
+        : state.page === "storedCards"
+          ? renderStoredCards(character)
     : state.page === "inventory"
       ? renderInventory(character)
       : state.page === "compendium"
@@ -666,6 +846,13 @@ function bindEvents(): void {
       return;
     }
 
+    const storedCardsButton = target.closest<HTMLElement>('[data-action="open-stored-cards"]');
+    if (storedCardsButton) {
+      state.page = "storedCards";
+      render();
+      return;
+    }
+
     const filterButton = target.closest<HTMLElement>("[data-inventory-filter]");
     if (filterButton) {
       state.inventoryFilter = filterButton.dataset.inventoryFilter as InventoryFilter;
@@ -692,6 +879,11 @@ function bindEvents(): void {
     if (cardModalButton) {
       state.modalCardId = cardModalButton.dataset.cardModalId;
       render();
+      return;
+    }
+
+    const activateStoredCardButton = target.closest<HTMLElement>('[data-action="activate-stored-card"]');
+    if (activateStoredCardButton) {
       return;
     }
 

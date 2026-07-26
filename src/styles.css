@@ -754,6 +754,45 @@ button {
   background: rgba(217, 154, 61, 0.14);
 }
 
+.stored-card-row {
+  margin-top: 0.25rem;
+}
+
+.stored-card {
+  display: grid;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.stored-card .ability-card {
+  width: 100%;
+}
+
+.stored-card-action {
+  min-height: 2.4rem;
+  border: 1px solid rgba(217, 154, 61, 0.48);
+  color: var(--color-gold);
+  background: rgba(217, 154, 61, 0.08);
+}
+
+.stored-card-action:hover {
+  border-color: rgba(217, 154, 61, 0.78);
+  background: rgba(217, 154, 61, 0.14);
+}
+
+.secondary-inline-action {
+  min-height: 2.7rem;
+  border: 1px solid rgba(244, 234, 219, 0.14);
+  color: var(--color-muted);
+  background: rgba(255, 255, 255, 0.035);
+  padding: 0 0.9rem;
+}
+
+.secondary-inline-action:hover {
+  border-color: rgba(217, 154, 61, 0.46);
+  color: var(--color-gold);
+}
+
 .quick-actions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -764,6 +803,127 @@ button {
   min-height: 4.4rem;
   border-radius: 0;
   color: #f6efe2;
+}
+
+.skill-layout {
+  display: grid;
+  grid-template-columns: minmax(18rem, 1.2fr) repeat(2, minmax(13rem, 0.8fr));
+  gap: 1rem;
+}
+
+.skill-column {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.025);
+  padding: 1rem;
+}
+
+.skill-column .section-heading {
+  margin-bottom: 0;
+}
+
+.skill-group {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.skill-group h3 {
+  margin: 0;
+  color: var(--color-gold);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.info-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.info-card,
+.experience-card,
+.empty-inline {
+  border: 1px solid rgba(244, 234, 219, 0.1);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(217, 154, 61, 0.08), transparent 8rem),
+    rgba(8, 5, 17, 0.34);
+}
+
+.info-card {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.85rem;
+}
+
+.info-card div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.info-card strong,
+.experience-card strong {
+  color: var(--color-text);
+}
+
+.info-card span {
+  color: var(--color-muted);
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+.info-card p,
+.experience-card p,
+.empty-inline {
+  color: var(--color-muted);
+  line-height: 1.45;
+}
+
+.info-card p,
+.experience-card p {
+  margin: 0;
+}
+
+.experience-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.75rem;
+}
+
+.experience-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 6rem;
+  padding: 0.9rem;
+}
+
+.experience-card div {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.experience-card span {
+  display: grid;
+  flex: 0 0 auto;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border: 1px solid rgba(217, 154, 61, 0.5);
+  color: var(--color-gold);
+  background: rgba(217, 154, 61, 0.08);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.empty-inline {
+  margin: 0;
+  padding: 0.85rem;
 }
 
 .screen-title {
@@ -1205,6 +1365,14 @@ button {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .skill-layout {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .skill-column-wide {
+    grid-column: 1 / -1;
+  }
+
   .brand {
     padding: 0.6rem;
   }
@@ -1338,8 +1506,13 @@ button {
   .resource-grid,
   .card-row,
   .quick-actions,
+  .skill-layout,
   .equipped-grid {
     grid-template-columns: 1fr;
+  }
+
+  .skill-column-wide {
+    grid-column: auto;
   }
 
   .modal-backdrop {

@@ -34,6 +34,61 @@ export const demoCharacter: Character = {
     { id: "shadow", label: "Essencia Sombria", value: 2, max: 4, tone: "shadow" },
     { id: "focus", label: "Determinacao", value: 1, max: 3, tone: "focus" }
   ],
+  skills: [
+    {
+      id: "skill.demo.guardian-oath",
+      name: "Juramento do Guardiao",
+      source: "class",
+      tier: "foundation",
+      description: "Quando um aliado proximo estiver em perigo, voce pode se colocar entre ele e a ameaca."
+    },
+    {
+      id: "skill.demo.hold-the-line",
+      name: "Segurar a Linha",
+      source: "class",
+      tier: "specialized",
+      description: "Ao resistir a uma investida, aumente sua presenca narrativa na cena e proteja uma rota de fuga."
+    },
+    {
+      id: "skill.demo.iron-heart",
+      name: "Coracao de Ferro",
+      source: "class",
+      tier: "mastery",
+      description: "Uma vez por sessao, transforme uma consequencia severa em uma oportunidade heroica."
+    },
+    {
+      id: "skill.demo.human-resolve",
+      name: "Resolucao Humana",
+      source: "ancestry",
+      description: "Quando tudo parece perdido, recupere o folego ao se agarrar a uma memoria importante."
+    },
+    {
+      id: "skill.demo.vigil-bonds",
+      name: "Lacos da Vigilia",
+      source: "community",
+      description: "Voce conhece sinais, rotas e juramentos usados por guardas de fronteira e sentinelas."
+    }
+  ],
+  experiences: [
+    {
+      id: "experience.demo.border-watch",
+      name: "Vigia de fronteira",
+      value: 2,
+      description: "Patrulhas longas, noites ruins e olhos atentos."
+    },
+    {
+      id: "experience.demo.monster-lore",
+      name: "Historias de monstros",
+      value: 1,
+      description: "Contos de taverna que as vezes salvam vidas."
+    },
+    {
+      id: "experience.demo.oathkeeper",
+      name: "Cumpridor de juramentos",
+      value: 2,
+      description: "Promessas pesam, mas tambem guiam."
+    }
+  ],
   deck: {
     activeCardIds: [
       "card.demo.shield-block",

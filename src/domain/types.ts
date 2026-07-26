@@ -21,6 +21,21 @@ export type Defense = {
   major: number;
 };
 
+export type CharacterSkill = {
+  id: string;
+  name: string;
+  source: "class" | "ancestry" | "community";
+  tier?: "foundation" | "specialized" | "mastery";
+  description: string;
+};
+
+export type CharacterExperience = {
+  id: string;
+  name: string;
+  value: number;
+  description?: string;
+};
+
 export type PackManifest = {
   id: string;
   name: string;
@@ -83,6 +98,8 @@ export type Character = {
   attributes: Attribute[];
   defense: Defense;
   resources: ResourceTrack[];
+  skills: CharacterSkill[];
+  experiences: CharacterExperience[];
   deck: {
     activeCardIds: string[];
     learnedCardIds: string[];
