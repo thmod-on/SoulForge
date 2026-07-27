@@ -6,6 +6,7 @@ import "./styles.css";
 
 type Page = "overview" | "skills" | "experiences" | "inventory" | "progression" | "notes" | "compendium" | "settings" | "storedCards";
 type InventoryFilter = "todos" | ItemDefinition["category"];
+type ProgressionTierNumber = 2 | 3 | 4;
 
 function getAppRoot(): HTMLDivElement {
   const element = document.querySelector<HTMLDivElement>("#app");
@@ -24,13 +25,17 @@ const state: {
   inventoryFilter: InventoryFilter;
   selectedItemId?: string;
   selectedCardId: string;
+  selectedProgressionTier: ProgressionTierNumber;
   modalCardId?: string;
   resourceModalId?: string;
+  progressionHistoryOpen: boolean;
   character?: Character;
 } = {
   page: "overview",
   inventoryFilter: "todos",
-  selectedCardId: "card.demo.dread-veil"
+  selectedCardId: "card.demo.dread-veil",
+  selectedProgressionTier: 2,
+  progressionHistoryOpen: false
 };
 
 const topNavItems: Array<{ page: Page; label: string }> = [
@@ -67,6 +72,61 @@ const skillTierLabels: Record<NonNullable<Character["skills"][number]["tier"]>, 
   specialized: "Especializada",
   mastery: "Maestria"
 };
+
+const progressionTiers = [
+  {
+    tier: 2,
+    levels: "2-4",
+    status: "available",
+    headline: "Ao nivel 2, ganhe uma Experiencia adicional em +2 e +1 em Proficiencia.",
+    choices: 2,
+    options: [
+      "Ganhe +1 em dois atributos ainda nao marcados.",
+      "Ganhe permanentemente um slot de PV.",
+      "Ganhe permanentemente um slot de Estresse.",
+      "Ganhe +1 em duas Experiencias.",
+      "Escolha uma carta de dominio adicional do seu nivel ou menor.",
+      "Ganhe permanentemente +1 em Evasao."
+    ],
+    footer: "Atualize seu nivel e ajuste os limiares de dano quando aplicar a evolucao."
+  },
+  {
+    tier: 3,
+    levels: "5-7",
+    status: "locked",
+    headline: "Ao nivel 5, ganhe uma Experiencia adicional em +2, limpe marcacoes de atributos e ganhe +1 em Proficiencia.",
+    choices: 2,
+    options: [
+      "Ganhe +1 em dois atributos ainda nao marcados.",
+      "Ganhe permanentemente um slot de PV.",
+      "Ganhe permanentemente um slot de Estresse.",
+      "Ganhe +1 em duas Experiencias.",
+      "Escolha uma carta de dominio adicional do seu nivel ou menor.",
+      "Ganhe permanentemente +1 em Evasao.",
+      "Escolha uma subclasse aprimorada.",
+      "Multiclasse: escolha uma classe adicional."
+    ],
+    footer: "Opcoes de subclasse e multiclasse aparecem aqui como estrutura visual."
+  },
+  {
+    tier: 4,
+    levels: "8-10",
+    status: "locked",
+    headline: "Ao nivel 8, ganhe uma Experiencia adicional em +2, limpe marcacoes de atributos e ganhe +1 em Proficiencia.",
+    choices: 2,
+    options: [
+      "Ganhe +1 em dois atributos ainda nao marcados.",
+      "Ganhe permanentemente um slot de PV.",
+      "Ganhe permanentemente um slot de Estresse.",
+      "Ganhe +1 em duas Experiencias.",
+      "Escolha uma carta de dominio adicional do seu nivel ou menor.",
+      "Ganhe permanentemente +1 em Evasao.",
+      "Escolha uma subclasse aprimorada.",
+      "Multiclasse: escolha uma classe adicional."
+    ],
+    footer: "Esta area sera ligada futuramente as configuracoes de progressao."
+  }
+] as const;
 
 function escapeHtml(value: string): string {
   return value
@@ -434,6 +494,110 @@ function renderExperiences(character: Character): string {
   `;
 }
 
+function renderProgression(character: Character): string {
+  const selectedTier = progressionTiers.find((tier) => tier.tier === state.selectedProgressionTier) ?? progressionTiers[0];
+
+  return `
+    <main class="content progression-content">
+      <section class="band">
+        <div class="screen-title">
+          <div>
+            <h1>Progressao</h1>
+          </div>
+        </div>
+        <div class="progression-bar" aria-label="Resumo da progressao">
+          <div class="progression-bar-summary">
+            <span><strong>Proxima etapa</strong> Nivel ${character.identity.level + 1}</span>
+            <span><strong>Escolhas</strong> 2 opcoes</span>
+          </div>
+          <div class="progression-tabs" role="tablist" aria-label="Tiers de progressao">
+            ${progressionTiers
+              .map(
+                (tier) => `
+                  <button class="${state.selectedProgressionTier === tier.tier ? "is-active" : ""}" type="button" data-progression-tier="${tier.tier}">
+                    <strong>Tier ${tier.tier}</strong>
+                    <span>Niveis ${tier.levels}</span>
+                  </button>
+                `
+              )
+              .join("")}
+          </div>
+        </div>
+      </section>
+      <section class="progression-board">
+        ${renderProgressionTier(selectedTier, character.identity.level)}
+      </section>
+    </main>
+  `;
+}
+
+function renderProgressionTier(tier: (typeof progressionTiers)[number], currentLevel: number): string {
+  const startLevel = Number(tier.levels.split("-")[0]);
+  const endLevel = Number(tier.levels.split("-")[1]);
+  const isCurrentTier = currentLevel >= startLevel && currentLevel <= endLevel;
+  const isPastTier = currentLevel > endLevel;
+  const statusLabel = isPastTier ? "Concluido" : isCurrentTier ? "Atual" : "Bloqueado";
+
+  return `
+    <article class="progression-tier ${isCurrentTier ? "is-current" : ""} ${isPastTier ? "is-complete" : ""}">
+      <div class="progression-tier-header">
+        <p class="progression-tier-headline">${escapeHtml(tier.headline)}</p>
+        <button class="progression-history-button" type="button" data-action="open-progression-history">Ver historico</button>
+      </div>
+      <div class="progression-tier-meta">
+        <span>${tier.choices} escolhas</span>
+        <span>${statusLabel}</span>
+      </div>
+      <div class="progression-option-list">
+        ${tier.options.map((option, index) => renderProgressionOption(option, index, isCurrentTier)).join("")}
+      </div>
+      <p class="progression-tier-footer">${escapeHtml(tier.footer)}</p>
+    </article>
+  `;
+}
+
+function renderProgressionHistoryModal(): string {
+  if (!state.progressionHistoryOpen) {
+    return "";
+  }
+
+  return `
+    <div class="modal-backdrop" data-modal-backdrop>
+      <section class="progression-history-modal" role="dialog" aria-modal="true" aria-labelledby="progression-history-title">
+        <button class="modal-close" data-modal-close aria-label="Fechar historico">x</button>
+        <span class="resource-modal-label">Progressao</span>
+        <h2 id="progression-history-title">Historico de escolhas</h2>
+        <ol>
+          <li>
+            <strong>Nivel 2</strong>
+            <span>Experiencia adicional +2 registrada.</span>
+          </li>
+          <li>
+            <strong>Nivel 3</strong>
+            <span>Escolhas permanentes pendentes de confirmacao.</span>
+          </li>
+          <li>
+            <strong>Nivel 4</strong>
+            <span>Aguardando nova progressao.</span>
+          </li>
+        </ol>
+        <p>Este historico ainda e visual. Futuramente ele sera preenchido pelas escolhas aplicadas durante a evolucao.</p>
+      </section>
+    </div>
+  `;
+}
+
+function renderProgressionOption(option: string, index: number, isCurrentTier: boolean): string {
+  const selected = isCurrentTier && index < 2;
+
+  return `
+    <button class="progression-option ${selected ? "is-selected" : ""}" type="button" data-action="progression-option">
+      <i aria-hidden="true"></i>
+      <span>${escapeHtml(option)}</span>
+    </button>
+  `;
+}
+
 function renderEmptyInline(message: string): string {
   return `<p class="empty-inline">${escapeHtml(message)}</p>`;
 }
@@ -748,11 +912,13 @@ function render(): void {
         ? renderExperiences(character)
         : state.page === "storedCards"
           ? renderStoredCards(character)
-    : state.page === "inventory"
-      ? renderInventory(character)
-      : state.page === "compendium"
-        ? renderCompendium()
-        : renderPlaceholder(state.page);
+          : state.page === "progression"
+            ? renderProgression(character)
+            : state.page === "inventory"
+              ? renderInventory(character)
+              : state.page === "compendium"
+                ? renderCompendium()
+                : renderPlaceholder(state.page);
 
   appRoot.innerHTML = `
     <div class="app-shell">
@@ -764,6 +930,7 @@ function render(): void {
     </div>
     ${renderCardModal(state.modalCardId)}
     ${renderResourceModal(state.resourceModalId)}
+    ${renderProgressionHistoryModal()}
   `;
 }
 
@@ -821,6 +988,7 @@ function bindEvents(): void {
     if (target.closest("[data-modal-close]")) {
       state.modalCardId = undefined;
       state.resourceModalId = undefined;
+      state.progressionHistoryOpen = false;
       render();
       return;
     }
@@ -828,6 +996,7 @@ function bindEvents(): void {
     if (target.matches("[data-modal-backdrop]")) {
       state.modalCardId = undefined;
       state.resourceModalId = undefined;
+      state.progressionHistoryOpen = false;
       render();
       return;
     }
@@ -849,6 +1018,20 @@ function bindEvents(): void {
     const storedCardsButton = target.closest<HTMLElement>('[data-action="open-stored-cards"]');
     if (storedCardsButton) {
       state.page = "storedCards";
+      render();
+      return;
+    }
+
+    const progressionHistoryButton = target.closest<HTMLElement>('[data-action="open-progression-history"]');
+    if (progressionHistoryButton) {
+      state.progressionHistoryOpen = true;
+      render();
+      return;
+    }
+
+    const progressionTierButton = target.closest<HTMLElement>("[data-progression-tier]");
+    if (progressionTierButton) {
+      state.selectedProgressionTier = Number(progressionTierButton.dataset.progressionTier) as ProgressionTierNumber;
       render();
       return;
     }
@@ -887,6 +1070,11 @@ function bindEvents(): void {
       return;
     }
 
+    const progressionOptionButton = target.closest<HTMLElement>('[data-action="progression-option"]');
+    if (progressionOptionButton) {
+      return;
+    }
+
     const cardButton = target.closest<HTMLElement>("[data-card-id]");
     if (cardButton) {
       state.selectedCardId = cardButton.dataset.cardId ?? state.selectedCardId;
@@ -902,6 +1090,11 @@ function bindEvents(): void {
 
     if (event.key === "Escape" && state.resourceModalId) {
       state.resourceModalId = undefined;
+      render();
+    }
+
+    if (event.key === "Escape" && state.progressionHistoryOpen) {
+      state.progressionHistoryOpen = false;
       render();
     }
   });
