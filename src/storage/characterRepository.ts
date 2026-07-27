@@ -63,6 +63,12 @@ export async function ensureDemoCharacter(): Promise<Character> {
 }
 
 function migrateDemoCharacter(character: Character): Character {
+  const compartments = character.inventory.compartments ?? demoCharacter.inventory.compartments;
+  const entries = character.inventory.entries.map((entry) => ({
+    ...entry,
+    compartmentId: entry.compartmentId ?? (entry.equipped ? "equipped" : "backpack")
+  }));
+
   return {
     ...character,
     attributes: demoCharacter.attributes,
@@ -72,6 +78,12 @@ function migrateDemoCharacter(character: Character): Character {
     deck: {
       ...character.deck,
       learnedCardIds: character.deck.learnedCardIds ?? demoCharacter.deck.learnedCardIds
+    },
+    inventory: {
+      ...character.inventory,
+      capacity: character.inventory.capacity ?? demoCharacter.inventory.capacity,
+      compartments,
+      entries
     }
   };
 }

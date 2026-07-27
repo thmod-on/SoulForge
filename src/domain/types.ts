@@ -80,7 +80,16 @@ export type Definition = DomainDefinition | CardDefinition | ItemDefinition;
 export type InventoryEntry = {
   definitionId: string;
   quantity: number;
+  compartmentId?: string;
   equipped?: boolean;
+};
+
+export type InventoryCompartment = {
+  id: string;
+  name: string;
+  capacity?: number;
+  accepts?: Array<ItemDefinition["category"]>;
+  source?: "character" | "item" | "custom";
 };
 
 export type Character = {
@@ -106,6 +115,7 @@ export type Character = {
   };
   inventory: {
     capacity: number;
+    compartments: InventoryCompartment[];
     entries: InventoryEntry[];
   };
 };

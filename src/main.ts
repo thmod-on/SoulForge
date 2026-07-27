@@ -1,6 +1,6 @@
 import { catalog } from "./content/installedPacks";
 import { findDefinition, findDomain } from "./domain/catalog";
-import type { CardDefinition, Character, ItemDefinition } from "./domain/types";
+import type { CardDefinition, Character, InventoryCompartment, ItemDefinition } from "./domain/types";
 import { ensureDemoCharacter, saveCharacter } from "./storage/characterRepository";
 import "./styles.css";
 
@@ -20,6 +20,23 @@ function getAppRoot(): HTMLDivElement {
 
 const appRoot = getAppRoot();
 
+const dragState: {
+  itemId?: string;
+  sourceCompartmentId?: string;
+  pointerId?: number;
+  startX: number;
+  startY: number;
+  dragging: boolean;
+  ghost?: HTMLDivElement;
+  currentDropTargetId?: string;
+  suppressNextClick: boolean;
+} = {
+  startX: 0,
+  startY: 0,
+  dragging: false,
+  suppressNextClick: false
+};
+
 const state: {
   page: Page;
   inventoryFilter: InventoryFilter;
@@ -29,13 +46,16 @@ const state: {
   modalCardId?: string;
   resourceModalId?: string;
   progressionHistoryOpen: boolean;
+  addContainerOpen: boolean;
+  deleteContainerId?: string;
   character?: Character;
 } = {
   page: "overview",
   inventoryFilter: "todos",
   selectedCardId: "card.demo.dread-veil",
   selectedProgressionTier: 2,
-  progressionHistoryOpen: false
+  progressionHistoryOpen: false,
+  addContainerOpen: false
 };
 
 const topNavItems: Array<{ page: Page; label: string }> = [
@@ -161,6 +181,44 @@ function getItemEntries(character: Character) {
       return definition?.type === "item" ? { entry, item: definition } : undefined;
     })
     .filter((entry): entry is { entry: Character["inventory"]["entries"][number]; item: ItemDefinition } => Boolean(entry));
+}
+
+function getInventoryCompartments(character: Character): InventoryCompartment[] {
+  return character.inventory.compartments?.length
+    ? character.inventory.compartments
+    : [
+        { id: "equipped", name: "Equipados", source: "character" },
+        { id: "backpack", name: "Mochila", capacity: character.inventory.capacity, source: "character" }
+      ];
+}
+
+function getEntryCompartmentId(entry: Character["inventory"]["entries"][number]): string {
+  return entry.compartmentId ?? (entry.equipped ? "equipped" : "backpack");
+}
+
+function getCompartmentWeight(entries: ReturnType<typeof getItemEntries>, compartmentId: string): number {
+  return entries
+    .filter(({ entry }) => getEntryCompartmentId(entry) === compartmentId)
+    .reduce((total, { entry, item }) => total + entry.quantity * item.weight, 0);
+}
+
+function canCompartmentAcceptItem(compartment: InventoryCompartment, item: ItemDefinition): boolean {
+  return !compartment.accepts?.length || compartment.accepts.includes(item.category);
+}
+
+function wouldFitCompartment(
+  compartment: InventoryCompartment,
+  entries: ReturnType<typeof getItemEntries>,
+  item: ItemDefinition,
+  quantity: number,
+  currentCompartmentId: string
+): boolean {
+  if (!compartment.capacity || compartment.id === currentCompartmentId) {
+    return true;
+  }
+
+  const currentWeight = getCompartmentWeight(entries, compartment.id);
+  return currentWeight + item.weight * quantity <= compartment.capacity;
 }
 
 function getActiveCards(character: Character): CardDefinition[] {
@@ -587,6 +645,77 @@ function renderProgressionHistoryModal(): string {
   `;
 }
 
+function renderAddContainerModal(): string {
+  if (!state.addContainerOpen) {
+    return "";
+  }
+
+  return `
+    <div class="modal-backdrop" data-modal-backdrop>
+      <section class="container-modal" role="dialog" aria-modal="true" aria-labelledby="container-modal-title">
+        <div class="container-modal-heading">
+          <h2 id="container-modal-title">Novo container</h2>
+          <button class="modal-close modal-close-inline" data-modal-close aria-label="Fechar novo container">x</button>
+        </div>
+        <p>Defina um compartimento com capacidade propria para organizar os itens do personagem.</p>
+        <p class="form-error" data-container-error hidden></p>
+        <label>
+          <span>Nome</span>
+          <input data-container-name type="text" placeholder="Ex.: Sacola de couro" />
+        </label>
+        <label>
+          <span>Capacidade</span>
+          <input data-container-capacity type="number" min="1" step="1" placeholder="Ex.: 8" />
+        </label>
+        <fieldset>
+          <legend>Tipos aceitos</legend>
+          <label><input type="checkbox" data-container-accepts value="arma" /> Armas</label>
+          <label><input type="checkbox" data-container-accepts value="armadura" /> Armaduras</label>
+          <label><input type="checkbox" data-container-accepts value="consumivel" /> Consumiveis</label>
+          <label><input type="checkbox" data-container-accepts value="equipamento" /> Equipamentos</label>
+          <label><input type="checkbox" data-container-accepts value="loot" /> Loot</label>
+        </fieldset>
+        <p>Se nenhum tipo for marcado, o container aceitara qualquer item.</p>
+        <button class="primary-action" type="button" data-action="create-container">Criar container</button>
+      </section>
+    </div>
+  `;
+}
+
+function renderDeleteContainerModal(): string {
+  const character = state.character;
+  if (!character || !state.deleteContainerId) {
+    return "";
+  }
+
+  const compartment = getInventoryCompartments(character).find((entry) => entry.id === state.deleteContainerId);
+  if (!compartment) {
+    return "";
+  }
+
+  const entriesInside = getItemEntries(character).filter(({ entry }) => getEntryCompartmentId(entry) === compartment.id);
+  const itemCount = entriesInside.reduce((total, { entry }) => total + entry.quantity, 0);
+
+  return `
+    <div class="modal-backdrop" data-modal-backdrop>
+      <section class="container-modal danger-modal" role="dialog" aria-modal="true" aria-labelledby="delete-container-title">
+        <button class="modal-close" data-modal-close aria-label="Cancelar exclusao">x</button>
+        <span class="resource-modal-label">Excluir container</span>
+        <h2 id="delete-container-title">${escapeHtml(compartment.name)}</h2>
+        <p>Esta acao removera o container e todos os itens guardados nele.</p>
+        <div class="danger-summary">
+          <strong>${itemCount}</strong>
+          <span>${itemCount === 1 ? "item sera perdido" : "itens serao perdidos"}</span>
+        </div>
+        <div class="confirmation-actions">
+          <button class="secondary-action" type="button" data-action="cancel-delete-container">Cancelar</button>
+          <button class="danger-action" type="button" data-action="confirm-delete-container">Excluir container e itens</button>
+        </div>
+      </section>
+    </div>
+  `;
+}
+
 function renderProgressionOption(option: string, index: number, isCurrentTier: boolean): string {
   const selected = isCurrentTier && index < 2;
 
@@ -617,10 +746,9 @@ function renderCardTile(card: CardDefinition): string {
 
 function renderInventory(character: Character): string {
   const entries = getItemEntries(character);
-  const filteredEntries = entries.filter(({ item }) => state.inventoryFilter === "todos" || item.category === state.inventoryFilter);
-  const selectedItem = entries.find(({ item }) => item.id === state.selectedItemId)?.item;
-  const equipped = entries.filter(({ entry }) => entry.equipped);
-  const currentWeight = entries.reduce((total, { entry, item }) => total + entry.quantity * item.weight, 0);
+  const selectedEntry = entries.find(({ item }) => item.id === state.selectedItemId);
+  const selectedItem = selectedEntry?.item;
+  const compartments = getInventoryCompartments(character);
 
   return `
     <main class="content inventory-layout ${selectedItem ? "has-detail-panel" : ""}">
@@ -642,34 +770,80 @@ function renderInventory(character: Character): string {
               `
             )
             .join("")}
+          <button class="chip inventory-container-action" data-action="add-container" type="button">Novo container</button>
         </div>
-        ${selectedItem ? renderItemPanel(selectedItem, "inline") : ""}
-        <div class="section-heading">
-          <h2>Equipados</h2>
+        ${selectedItem && selectedEntry ? renderItemPanel(selectedItem, selectedEntry.entry, compartments, entries, "inline") : ""}
+        <div class="inventory-compartments">
+          ${compartments.map((compartment) => renderInventoryCompartment(compartment, entries, selectedItem?.id)).join("")}
         </div>
-        <div class="item-grid equipped-grid">
-          ${equipped.map(({ entry, item }) => renderItemTile(entry.quantity, item, selectedItem?.id === item.id, Boolean(entry.equipped))).join("")}
-        </div>
-        <div class="section-heading">
-          <h2>Mochila</h2>
-        </div>
-        <div class="item-grid">
-          ${filteredEntries.map(({ entry, item }) => renderItemTile(entry.quantity, item, selectedItem?.id === item.id, Boolean(entry.equipped))).join("")}
-        </div>
-        <div class="capacity-summary">
-          <span>Capacidade</span>
-          <strong>${currentWeight} / ${character.inventory.capacity}</strong>
-        </div>
-        <div class="capacity-bar"><i style="width: ${progressPercent(currentWeight, character.inventory.capacity)}%"></i></div>
       </section>
-      ${selectedItem ? renderItemPanel(selectedItem, "side") : ""}
+      ${selectedItem && selectedEntry ? renderItemPanel(selectedItem, selectedEntry.entry, compartments, entries, "side") : ""}
     </main>
   `;
 }
 
-function renderItemTile(quantity: number, item: ItemDefinition, selected: boolean, equipped: boolean): string {
+function renderInventoryCompartment(
+  compartment: InventoryCompartment,
+  entries: ReturnType<typeof getItemEntries>,
+  selectedItemId?: string
+): string {
+  const compartmentEntries = entries.filter(({ entry, item }) => {
+    const sameCompartment = getEntryCompartmentId(entry) === compartment.id;
+    const sameFilter = state.inventoryFilter === "todos" || item.category === state.inventoryFilter;
+    return sameCompartment && sameFilter;
+  });
+  const currentWeight = getCompartmentWeight(entries, compartment.id);
+  const capacityLabel = compartment.capacity ? `${currentWeight} / ${compartment.capacity}` : `${compartmentEntries.length} itens`;
+
   return `
-    <button class="item-tile ${selected ? "is-active" : ""}" data-item-id="${item.id}">
+    <section class="inventory-compartment" data-compartment-id="${compartment.id}">
+      <div class="compartment-heading">
+        <div>
+          <h2>${escapeHtml(compartment.name)}</h2>
+          <span>${renderCompartmentHint(compartment)}</span>
+        </div>
+        <div class="compartment-actions">
+          <strong>${capacityLabel}</strong>
+          <button type="button" data-action="delete-container" data-compartment-id="${compartment.id}" ${compartment.source === "character" ? "disabled" : ""}>
+            Excluir
+          </button>
+        </div>
+      </div>
+      ${
+        compartment.capacity
+          ? `<div class="capacity-bar compartment-capacity"><i style="width: ${progressPercent(currentWeight, compartment.capacity)}%"></i></div>`
+          : ""
+      }
+      ${
+        compartmentEntries.length
+          ? `<div class="item-grid ${compartment.id === "equipped" ? "equipped-grid" : ""}">
+              ${compartmentEntries
+                .map(({ entry, item }) =>
+                  renderItemTile(entry.quantity, item, selectedItemId === item.id, Boolean(entry.equipped), compartment.id)
+                )
+                .join("")}
+            </div>`
+          : renderEmptyInline("Nenhum item neste compartimento.")
+      }
+    </section>
+  `;
+}
+
+function renderCompartmentHint(compartment: InventoryCompartment): string {
+  if (compartment.accepts?.length) {
+    return `Aceita ${compartment.accepts.map((category) => itemFilterLabels[category]).join(", ")}`;
+  }
+
+  if (compartment.capacity) {
+    return "Compartimento com capacidade propria";
+  }
+
+  return "Acesso rapido";
+}
+
+function renderItemTile(quantity: number, item: ItemDefinition, selected: boolean, equipped: boolean, compartmentId: string): string {
+  return `
+    <button class="item-tile ${selected ? "is-active" : ""}" data-item-id="${item.id}" data-item-compartment-id="${compartmentId}" draggable="false">
       <span class="item-media">
         ${renderItemVisual(item, "tile")}
         <span class="item-quantity">x${quantity}</span>
@@ -701,10 +875,18 @@ function itemIcon(category: ItemDefinition["category"]): string {
   return icons[category];
 }
 
-function renderItemPanel(item: ItemDefinition, placement: "side" | "inline"): string {
+function renderItemPanel(
+  item: ItemDefinition,
+  entry: Character["inventory"]["entries"][number],
+  compartments: InventoryCompartment[],
+  entries: ReturnType<typeof getItemEntries>,
+  placement: "side" | "inline"
+): string {
   if (!item) {
     return `<aside class="detail-panel"><p>Nenhum item selecionado.</p></aside>`;
   }
+
+  const currentCompartmentId = getEntryCompartmentId(entry);
 
   return `
     <aside class="detail-panel detail-panel-${placement}">
@@ -724,8 +906,32 @@ function renderItemPanel(item: ItemDefinition, placement: "side" | "inline"): st
       <div class="trait-list">
         ${(item.traits ?? []).map((trait) => `<span>${escapeHtml(trait)}</span>`).join("")}
       </div>
-      <button class="primary-action">Equipar</button>
-      <button class="secondary-action">Mover para mochila</button>
+      <div class="move-list">
+        <span>Mover para</span>
+        ${compartments
+          .map((compartment) => {
+            const isCurrent = compartment.id === currentCompartmentId;
+            const accepts = canCompartmentAcceptItem(compartment, item);
+            const fits = wouldFitCompartment(compartment, entries, item, entry.quantity, currentCompartmentId);
+            const disabled = isCurrent || !accepts || !fits;
+            const reason = isCurrent ? "Atual" : !accepts ? "Incompativel" : !fits ? "Sem espaco" : "Mover";
+
+            return `
+              <button
+                class="move-target ${isCurrent ? "is-current" : ""}"
+                type="button"
+                data-action="move-item"
+                data-item-id="${item.id}"
+                data-target-compartment-id="${compartment.id}"
+                ${disabled ? "disabled" : ""}
+              >
+                <strong>${escapeHtml(compartment.name)}</strong>
+                <small>${reason}</small>
+              </button>
+            `;
+          })
+          .join("")}
+      </div>
       <button class="danger-action">Descartar</button>
     </aside>
   `;
@@ -931,6 +1137,8 @@ function render(): void {
     ${renderCardModal(state.modalCardId)}
     ${renderResourceModal(state.resourceModalId)}
     ${renderProgressionHistoryModal()}
+    ${renderAddContainerModal()}
+    ${renderDeleteContainerModal()}
   `;
 }
 
@@ -972,10 +1180,307 @@ async function adjustResource(delta: number): Promise<void> {
   render();
 }
 
+async function moveItemToCompartment(itemId: string | undefined, targetCompartmentId: string | undefined): Promise<void> {
+  const character = state.character;
+  if (!character || !itemId || !targetCompartmentId) {
+    return;
+  }
+
+  const entries = getItemEntries(character);
+  const targetEntry = entries.find(({ item }) => item.id === itemId);
+  const targetCompartment = getInventoryCompartments(character).find((compartment) => compartment.id === targetCompartmentId);
+
+  if (!targetEntry || !targetCompartment) {
+    return;
+  }
+
+  const currentCompartmentId = getEntryCompartmentId(targetEntry.entry);
+  if (
+    !canCompartmentAcceptItem(targetCompartment, targetEntry.item) ||
+    !wouldFitCompartment(targetCompartment, entries, targetEntry.item, targetEntry.entry.quantity, currentCompartmentId)
+  ) {
+    return;
+  }
+
+  const updatedCharacter: Character = {
+    ...character,
+    inventory: {
+      ...character.inventory,
+      entries: character.inventory.entries.map((entry) =>
+        entry.definitionId === itemId
+          ? {
+              ...entry,
+              compartmentId: targetCompartmentId,
+              equipped: targetCompartmentId === "equipped"
+            }
+          : entry
+      )
+    }
+  };
+
+  state.character = updatedCharacter;
+  await saveCharacter(updatedCharacter);
+  render();
+}
+
+function clearDropTargetStyles(): void {
+  document.querySelectorAll(".inventory-compartment").forEach((element) => {
+    element.classList.remove("is-drop-target", "is-drop-invalid");
+  });
+}
+
+function endItemDrag(): void {
+  dragState.ghost?.remove();
+  dragState.ghost = undefined;
+  dragState.itemId = undefined;
+  dragState.sourceCompartmentId = undefined;
+  dragState.pointerId = undefined;
+  dragState.currentDropTargetId = undefined;
+  dragState.dragging = false;
+  clearDropTargetStyles();
+}
+
+function findCompartmentAtPoint(clientX: number, clientY: number): HTMLElement | undefined {
+  return document
+    .elementsFromPoint(clientX, clientY)
+    .find((element): element is HTMLElement => element instanceof HTMLElement && Boolean(element.closest("[data-compartment-id]")))
+    ?.closest<HTMLElement>("[data-compartment-id]") ?? undefined;
+}
+
+function isValidDropTarget(targetCompartmentId: string | undefined): boolean {
+  const character = state.character;
+  if (!character || !dragState.itemId || !targetCompartmentId || targetCompartmentId === dragState.sourceCompartmentId) {
+    return false;
+  }
+
+  const entries = getItemEntries(character);
+  const draggedEntry = entries.find(({ item }) => item.id === dragState.itemId);
+  const targetCompartment = getInventoryCompartments(character).find((compartment) => compartment.id === targetCompartmentId);
+
+  if (!draggedEntry || !targetCompartment) {
+    return false;
+  }
+
+  return (
+    canCompartmentAcceptItem(targetCompartment, draggedEntry.item) &&
+    wouldFitCompartment(targetCompartment, entries, draggedEntry.item, draggedEntry.entry.quantity, getEntryCompartmentId(draggedEntry.entry))
+  );
+}
+
+function updateDragGhost(clientX: number, clientY: number): void {
+  if (!dragState.ghost) {
+    return;
+  }
+
+  dragState.ghost.style.transform = `translate(${clientX + 12}px, ${clientY + 12}px)`;
+}
+
+function updateDropTarget(clientX: number, clientY: number): void {
+  clearDropTargetStyles();
+
+  const target = findCompartmentAtPoint(clientX, clientY);
+  const targetId = target?.dataset.compartmentId;
+  dragState.currentDropTargetId = targetId;
+
+  if (!target || !targetId) {
+    return;
+  }
+
+  target.classList.add(isValidDropTarget(targetId) ? "is-drop-target" : "is-drop-invalid");
+}
+
+function startItemDrag(tile: HTMLElement, event: PointerEvent): void {
+  dragState.itemId = tile.dataset.itemId;
+  dragState.sourceCompartmentId = tile.dataset.itemCompartmentId;
+  dragState.pointerId = event.pointerId;
+  dragState.startX = event.clientX;
+  dragState.startY = event.clientY;
+  dragState.dragging = false;
+  dragState.currentDropTargetId = undefined;
+}
+
+function createDragGhost(tile: HTMLElement, clientX: number, clientY: number): void {
+  const title = tile.querySelector("strong")?.textContent ?? "Item";
+  const ghost = document.createElement("div");
+  ghost.className = "drag-ghost";
+  ghost.textContent = title;
+  document.body.append(ghost);
+  dragState.ghost = ghost;
+  updateDragGhost(clientX, clientY);
+}
+
+async function finishItemDrag(): Promise<void> {
+  const targetCompartmentId = dragState.currentDropTargetId;
+  const itemId = dragState.itemId;
+  const validDrop = isValidDropTarget(targetCompartmentId);
+
+  endItemDrag();
+
+  if (validDrop) {
+    await moveItemToCompartment(itemId, targetCompartmentId);
+  }
+}
+
+function bindDragEvents(): void {
+  document.addEventListener("pointerdown", (event) => {
+    if (!(event.target instanceof HTMLElement) || event.button !== 0) {
+      return;
+    }
+
+    const tile = event.target.closest<HTMLElement>("[data-item-id]");
+    if (!tile || !tile.dataset.itemCompartmentId) {
+      return;
+    }
+
+    startItemDrag(tile, event);
+  });
+
+  document.addEventListener("pointermove", (event) => {
+    if (!dragState.itemId || dragState.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const distance = Math.hypot(event.clientX - dragState.startX, event.clientY - dragState.startY);
+    if (!dragState.dragging && distance < 8) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (!dragState.dragging) {
+      const tile = document.querySelector<HTMLElement>(`[data-item-id="${CSS.escape(dragState.itemId)}"]`);
+      if (tile) {
+        createDragGhost(tile, event.clientX, event.clientY);
+      }
+      dragState.dragging = true;
+      dragState.suppressNextClick = true;
+    }
+
+    updateDragGhost(event.clientX, event.clientY);
+    updateDropTarget(event.clientX, event.clientY);
+  });
+
+  document.addEventListener("pointerup", (event) => {
+    if (!dragState.itemId || dragState.pointerId !== event.pointerId) {
+      return;
+    }
+
+    if (!dragState.dragging) {
+      endItemDrag();
+      return;
+    }
+
+    event.preventDefault();
+    void finishItemDrag();
+  });
+
+  document.addEventListener("pointercancel", (event) => {
+    if (dragState.pointerId === event.pointerId) {
+      endItemDrag();
+    }
+  });
+}
+
+async function createInventoryContainer(): Promise<void> {
+  const character = state.character;
+  if (!character) {
+    return;
+  }
+
+  const nameInput = document.querySelector<HTMLInputElement>("[data-container-name]");
+  const capacityInput = document.querySelector<HTMLInputElement>("[data-container-capacity]");
+  const acceptInputs = Array.from(document.querySelectorAll<HTMLInputElement>("[data-container-accepts]:checked"));
+  const name = nameInput?.value.trim();
+  const capacity = Number(capacityInput?.value);
+
+  if (!name || !Number.isFinite(capacity) || capacity <= 0) {
+    const error = document.querySelector<HTMLElement>("[data-container-error]");
+    error?.removeAttribute("hidden");
+    if (error) {
+      error.textContent = "Informe um nome e uma capacidade maior que zero.";
+    }
+
+    nameInput?.classList.toggle("is-invalid", !name);
+    capacityInput?.classList.toggle("is-invalid", !Number.isFinite(capacity) || capacity <= 0);
+
+    if (!name) {
+      nameInput?.focus();
+    } else {
+      capacityInput?.focus();
+    }
+
+    return;
+  }
+
+  const accepts = acceptInputs.map((input) => input.value as ItemDefinition["category"]);
+  const id = `container.${crypto.randomUUID()}`;
+  const updatedCharacter: Character = {
+    ...character,
+    inventory: {
+      ...character.inventory,
+      compartments: [
+        ...getInventoryCompartments(character),
+        {
+          id,
+          name,
+          capacity,
+          accepts: accepts.length ? accepts : undefined,
+          source: "custom"
+        }
+      ]
+    }
+  };
+
+  state.character = updatedCharacter;
+  state.addContainerOpen = false;
+  await saveCharacter(updatedCharacter);
+  render();
+}
+
+async function deleteInventoryContainer(compartmentId: string | undefined): Promise<void> {
+  const character = state.character;
+  if (!character || !compartmentId) {
+    return;
+  }
+
+  const compartments = getInventoryCompartments(character);
+  const compartment = compartments.find((entry) => entry.id === compartmentId);
+  if (!compartment || compartment.source === "character") {
+    return;
+  }
+
+  const selectedEntryWasInDeletedCompartment = character.inventory.entries.some(
+    (entry) => entry.definitionId === state.selectedItemId && getEntryCompartmentId(entry) === compartmentId
+  );
+
+  const updatedCharacter: Character = {
+    ...character,
+    inventory: {
+      ...character.inventory,
+      compartments: compartments.filter((entry) => entry.id !== compartmentId),
+      entries: character.inventory.entries.filter((entry) => getEntryCompartmentId(entry) !== compartmentId)
+    }
+  };
+
+  state.character = updatedCharacter;
+  state.deleteContainerId = undefined;
+  if (selectedEntryWasInDeletedCompartment) {
+    state.selectedItemId = undefined;
+  }
+  await saveCharacter(updatedCharacter);
+  render();
+}
+
 function bindEvents(): void {
   document.addEventListener("click", (event) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) {
+      return;
+    }
+
+    if (dragState.suppressNextClick) {
+      dragState.suppressNextClick = false;
+      event.preventDefault();
       return;
     }
 
@@ -989,6 +1494,8 @@ function bindEvents(): void {
       state.modalCardId = undefined;
       state.resourceModalId = undefined;
       state.progressionHistoryOpen = false;
+      state.addContainerOpen = false;
+      state.deleteContainerId = undefined;
       render();
       return;
     }
@@ -997,6 +1504,8 @@ function bindEvents(): void {
       state.modalCardId = undefined;
       state.resourceModalId = undefined;
       state.progressionHistoryOpen = false;
+      state.addContainerOpen = false;
+      state.deleteContainerId = undefined;
       render();
       return;
     }
@@ -1033,6 +1542,41 @@ function bindEvents(): void {
     if (progressionTierButton) {
       state.selectedProgressionTier = Number(progressionTierButton.dataset.progressionTier) as ProgressionTierNumber;
       render();
+      return;
+    }
+
+    if (target.closest('[data-action="add-container"]')) {
+      state.addContainerOpen = true;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="create-container"]')) {
+      void createInventoryContainer();
+      return;
+    }
+
+    const deleteContainerButton = target.closest<HTMLElement>('[data-action="delete-container"]');
+    if (deleteContainerButton) {
+      state.deleteContainerId = deleteContainerButton.dataset.compartmentId;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="cancel-delete-container"]')) {
+      state.deleteContainerId = undefined;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="confirm-delete-container"]')) {
+      void deleteInventoryContainer(state.deleteContainerId);
+      return;
+    }
+
+    const moveItemButton = target.closest<HTMLElement>('[data-action="move-item"]');
+    if (moveItemButton) {
+      void moveItemToCompartment(moveItemButton.dataset.itemId, moveItemButton.dataset.targetCompartmentId);
       return;
     }
 
@@ -1103,6 +1647,7 @@ function bindEvents(): void {
 async function boot(): Promise<void> {
   render();
   bindEvents();
+  bindDragEvents();
   state.character = await ensureDemoCharacter();
   render();
 }

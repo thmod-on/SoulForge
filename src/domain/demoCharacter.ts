@@ -109,16 +109,21 @@ export const demoCharacter: Character = {
   },
   inventory: {
     capacity: 30,
+    compartments: [
+      { id: "equipped", name: "Equipados", source: "character" },
+      { id: "backpack", name: "Mochila", capacity: 30, source: "character" },
+      { id: "utility-belt", name: "Cinto de utilidades", capacity: 6, accepts: ["consumivel", "equipamento", "loot"], source: "item" }
+    ],
     entries: [
-      { definitionId: "item.demo.long-sword", quantity: 1, equipped: true },
-      { definitionId: "item.demo.steel-shield", quantity: 1, equipped: true },
-      { definitionId: "item.demo.leather-armor", quantity: 1, equipped: true },
-      { definitionId: "item.demo.vigil-amulet", quantity: 1, equipped: true },
-      { definitionId: "item.demo.healing-potion", quantity: 2 },
-      { definitionId: "item.demo.rope", quantity: 1 },
-      { definitionId: "item.demo.torch", quantity: 3 },
-      { definitionId: "item.demo.gold", quantity: 128 },
-      { definitionId: "item.demo.shadow-essence", quantity: 3 }
+      { definitionId: "item.demo.long-sword", quantity: 1, compartmentId: "equipped", equipped: true },
+      { definitionId: "item.demo.steel-shield", quantity: 1, compartmentId: "equipped", equipped: true },
+      { definitionId: "item.demo.leather-armor", quantity: 1, compartmentId: "equipped", equipped: true },
+      { definitionId: "item.demo.vigil-amulet", quantity: 1, compartmentId: "equipped", equipped: true },
+      { definitionId: "item.demo.healing-potion", quantity: 2, compartmentId: "utility-belt" },
+      { definitionId: "item.demo.rope", quantity: 1, compartmentId: "backpack" },
+      { definitionId: "item.demo.torch", quantity: 3, compartmentId: "utility-belt" },
+      { definitionId: "item.demo.gold", quantity: 128, compartmentId: "backpack" },
+      { definitionId: "item.demo.shadow-essence", quantity: 3, compartmentId: "utility-belt" }
     ]
   }
 };
