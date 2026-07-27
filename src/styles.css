@@ -921,6 +921,85 @@ button {
   font-weight: 700;
 }
 
+.screen-title-action {
+  width: fit-content;
+  min-width: 10rem;
+}
+
+.notes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: 0.75rem;
+}
+
+.note-card {
+  display: grid;
+  gap: 0.75rem;
+  min-height: 13rem;
+  border: 1px solid rgba(244, 234, 219, 0.1);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(142, 79, 196, 0.1), transparent 10rem),
+    rgba(255, 255, 255, 0.025);
+  padding: 0.9rem;
+}
+
+.note-card-heading,
+.note-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.note-card-heading span {
+  border: 1px solid rgba(217, 154, 61, 0.32);
+  color: var(--color-gold);
+  background: rgba(217, 154, 61, 0.07);
+  padding: 0.25rem 0.45rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.note-card-heading small,
+.note-card p {
+  color: var(--color-muted);
+}
+
+.note-card h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.note-card p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+
+.note-actions {
+  align-self: end;
+}
+
+.note-actions button {
+  min-height: 2.2rem;
+  border: 1px solid rgba(244, 234, 219, 0.12);
+  color: var(--color-muted);
+  background: rgba(255, 255, 255, 0.035);
+  padding: 0.35rem 0.65rem;
+}
+
+.note-actions button:hover {
+  border-color: rgba(217, 154, 61, 0.42);
+  color: var(--color-gold);
+}
+
+.note-actions button:last-child {
+  color: #ff697a;
+}
+
 .empty-inline {
   margin: 0;
   padding: 0.85rem;
@@ -1311,6 +1390,12 @@ button {
   background: rgba(4, 8, 12, 0.68);
 }
 
+.inventory-search {
+  width: min(30rem, 100%);
+  margin-bottom: 0.65rem;
+  padding: 0.55rem 0.75rem;
+}
+
 .search-box input {
   width: 100%;
   border: 0;
@@ -1664,7 +1749,9 @@ button {
   box-shadow: 0 28px 90px rgba(0, 0, 0, 0.56);
 }
 
-.container-modal {
+.container-modal,
+.note-modal,
+.note-view-modal {
   position: relative;
   display: grid;
   gap: 1rem;
@@ -1685,12 +1772,16 @@ button {
   gap: 1rem;
 }
 
-.container-modal h2 {
+.container-modal h2,
+.note-modal h2,
+.note-view-modal h2 {
   margin: 0;
   padding-right: 2.5rem;
 }
 
-.container-modal-heading h2 {
+.container-modal-heading h2,
+.note-modal .container-modal-heading h2,
+.note-view-modal .container-modal-heading h2 {
   padding-right: 0;
 }
 
@@ -1707,20 +1798,56 @@ button {
 }
 
 .container-modal label,
-.container-modal fieldset {
+.container-modal fieldset,
+.note-modal label {
   display: grid;
   gap: 0.45rem;
 }
 
 .container-modal label span,
-.container-modal legend {
+.container-modal legend,
+.note-modal label span,
+.note-category-field > span {
   color: var(--color-muted);
   font-size: 0.78rem;
   text-transform: uppercase;
 }
 
+.note-category-field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.note-category-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.note-category-options button {
+  min-height: 2.2rem;
+  border: 1px solid rgba(244, 234, 219, 0.12);
+  color: var(--color-muted);
+  background: rgba(255, 255, 255, 0.035);
+  padding: 0.35rem 0.65rem;
+}
+
+.note-category-options button:hover {
+  border-color: rgba(217, 154, 61, 0.42);
+  color: var(--color-text);
+}
+
+.note-category-options button.is-active {
+  border-color: rgba(217, 154, 61, 0.62);
+  color: var(--color-gold);
+  background: rgba(217, 154, 61, 0.1);
+}
+
 .container-modal input[type="text"],
-.container-modal input[type="number"] {
+.container-modal input[type="number"],
+.note-modal input,
+.note-modal select,
+.note-modal textarea {
   min-height: 2.7rem;
   border: 1px solid rgba(244, 234, 219, 0.12);
   outline: 0;
@@ -1729,7 +1856,14 @@ button {
   padding: 0.55rem 0.7rem;
 }
 
-.container-modal input.is-invalid {
+.note-modal textarea {
+  min-height: 10rem;
+  resize: vertical;
+}
+
+.container-modal input.is-invalid,
+.note-modal input.is-invalid,
+.note-modal textarea.is-invalid {
   border-color: rgba(201, 46, 66, 0.78);
   background: rgba(201, 46, 66, 0.08);
 }
@@ -1790,6 +1924,17 @@ button {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.65rem;
+}
+
+.note-view-modal small {
+  color: var(--color-muted);
+}
+
+.note-view-modal p {
+  margin: 0;
+  color: var(--color-text);
+  line-height: 1.6;
+  white-space: pre-wrap;
 }
 
 .drag-ghost {

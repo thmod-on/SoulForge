@@ -1,6 +1,6 @@
 import { catalog } from "./content/installedPacks";
 import { findDefinition, findDomain } from "./domain/catalog";
-import type { CardDefinition, Character, InventoryCompartment, ItemDefinition } from "./domain/types";
+import type { CardDefinition, Character, CharacterNote, CharacterNoteCategory, InventoryCompartment, ItemDefinition } from "./domain/types";
 import { ensureDemoCharacter, saveCharacter } from "./storage/characterRepository";
 import "./styles.css";
 
@@ -48,6 +48,10 @@ const state: {
   progressionHistoryOpen: boolean;
   addContainerOpen: boolean;
   deleteContainerId?: string;
+  noteModalOpen: boolean;
+  editingNoteId?: string;
+  viewingNoteId?: string;
+  deletingNoteId?: string;
   character?: Character;
 } = {
   page: "overview",
@@ -55,7 +59,8 @@ const state: {
   selectedCardId: "card.demo.dread-veil",
   selectedProgressionTier: 2,
   progressionHistoryOpen: false,
-  addContainerOpen: false
+  addContainerOpen: false,
+  noteModalOpen: false
 };
 
 const topNavItems: Array<{ page: Page; label: string }> = [
@@ -91,6 +96,15 @@ const skillTierLabels: Record<NonNullable<Character["skills"][number]["tier"]>, 
   foundation: "Fundamento",
   specialized: "Especializada",
   mastery: "Maestria"
+};
+
+const noteCategoryLabels: Record<CharacterNoteCategory, string> = {
+  session: "Sessao",
+  npc: "NPC",
+  place: "Local",
+  quest: "Missao",
+  item: "Item",
+  free: "Livre"
 };
 
 const progressionTiers = [
@@ -449,36 +463,34 @@ function renderSkills(character: Character): string {
 
   return `
     <main class="content">
-      <section class="band">
-        <div class="screen-title">
-          <div>
-            <h1>Habilidades</h1>
-            <p>Recursos narrativos e mecanicos do personagem, agrupados pela origem.</p>
+      <div class="screen-title">
+        <div>
+          <h1>Habilidades</h1>
+          <p>Recursos narrativos e mecanicos do personagem, agrupados pela origem.</p>
+        </div>
+      </div>
+      <div class="skill-layout">
+        <section class="skill-column skill-column-wide">
+          <div class="section-heading">
+            <h2>${skillSourceLabels.class}</h2>
           </div>
-        </div>
-        <div class="skill-layout">
-          <section class="skill-column skill-column-wide">
-            <div class="section-heading">
-              <h2>${skillSourceLabels.class}</h2>
-            </div>
-            ${renderClassSkillGroup("foundation", classSkills)}
-            ${renderClassSkillGroup("specialized", classSkills)}
-            ${renderClassSkillGroup("mastery", classSkills)}
-          </section>
-          <section class="skill-column">
-            <div class="section-heading">
-              <h2>${skillSourceLabels.ancestry}</h2>
-            </div>
-            ${renderSkillList(ancestrySkills)}
-          </section>
-          <section class="skill-column">
-            <div class="section-heading">
-              <h2>${skillSourceLabels.community}</h2>
-            </div>
-            ${renderSkillList(communitySkills)}
-          </section>
-        </div>
-      </section>
+          ${renderClassSkillGroup("foundation", classSkills)}
+          ${renderClassSkillGroup("specialized", classSkills)}
+          ${renderClassSkillGroup("mastery", classSkills)}
+        </section>
+        <section class="skill-column">
+          <div class="section-heading">
+            <h2>${skillSourceLabels.ancestry}</h2>
+          </div>
+          ${renderSkillList(ancestrySkills)}
+        </section>
+        <section class="skill-column">
+          <div class="section-heading">
+            <h2>${skillSourceLabels.community}</h2>
+          </div>
+          ${renderSkillList(communitySkills)}
+        </section>
+      </div>
     </main>
   `;
 }
@@ -521,35 +533,75 @@ function renderSkillList(skills: Character["skills"]): string {
 function renderExperiences(character: Character): string {
   return `
     <main class="content">
-      <section class="band">
-        <div class="screen-title">
-          <div>
-            <h1>Experiencias</h1>
-            <p>Marcadores narrativos que podem apoiar testes quando fizer sentido na ficcao.</p>
-          </div>
+      <div class="screen-title">
+        <div>
+          <h1>Experiencias</h1>
+          <p>Marcadores narrativos que podem apoiar testes quando fizer sentido na ficcao.</p>
         </div>
-        ${
-          character.experiences.length
-            ? `<div class="experience-grid">
-                ${character.experiences
-                  .map(
-                    (experience) => `
-                      <article class="experience-card">
-                        <div>
-                          <strong>${escapeHtml(experience.name)}</strong>
-                          ${experience.description ? `<p>${escapeHtml(experience.description)}</p>` : ""}
-                        </div>
-                        <span>+${experience.value}</span>
-                      </article>
-                    `
-                  )
-                  .join("")}
-              </div>`
-            : renderEmptyInline("Nenhuma experiencia registrada.")
-        }
-      </section>
+      </div>
+      ${
+        character.experiences.length
+          ? `<div class="experience-grid">
+              ${character.experiences
+                .map(
+                  (experience) => `
+                    <article class="experience-card">
+                      <div>
+                        <strong>${escapeHtml(experience.name)}</strong>
+                        ${experience.description ? `<p>${escapeHtml(experience.description)}</p>` : ""}
+                      </div>
+                      <span>+${experience.value}</span>
+                    </article>
+                  `
+                )
+                .join("")}
+            </div>`
+          : renderEmptyInline("Nenhuma experiencia registrada.")
+      }
     </main>
   `;
+}
+
+function renderNotes(character: Character): string {
+  const notes = [...character.notes].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+
+  return `
+    <main class="content">
+      <div class="screen-title">
+        <div>
+          <h1>Anotacoes</h1>
+          <p>Registre lembretes, pistas e detalhes importantes da campanha.</p>
+        </div>
+        <button class="primary-action screen-title-action" type="button" data-action="open-note-modal">Nova anotacao</button>
+      </div>
+      ${
+        notes.length
+          ? `<div class="notes-grid">${notes.map(renderNoteCard).join("")}</div>`
+          : renderEmptyInline("Nenhuma anotacao registrada.")
+      }
+    </main>
+  `;
+}
+
+function renderNoteCard(note: CharacterNote): string {
+  return `
+    <article class="note-card" data-action="view-note" data-note-id="${note.id}">
+      <div class="note-card-heading">
+        <span>${noteCategoryLabels[note.category]}</span>
+        <small>${formatNoteDate(note.updatedAt)}</small>
+      </div>
+      <h2>${escapeHtml(note.title)}</h2>
+      <p>${escapeHtml(note.content)}</p>
+      <div class="note-actions">
+        <button type="button" data-action="edit-note" data-note-id="${note.id}">Editar</button>
+        <button type="button" data-action="delete-note" data-note-id="${note.id}">Excluir</button>
+      </div>
+    </article>
+  `;
+}
+
+function formatNoteDate(value: string): string {
+  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" }).format(new Date(value));
 }
 
 function renderProgression(character: Character): string {
@@ -557,31 +609,29 @@ function renderProgression(character: Character): string {
 
   return `
     <main class="content progression-content">
-      <section class="band">
-        <div class="screen-title">
-          <div>
-            <h1>Progressao</h1>
-          </div>
+      <div class="screen-title">
+        <div>
+          <h1>Progressao</h1>
         </div>
-        <div class="progression-bar" aria-label="Resumo da progressao">
-          <div class="progression-bar-summary">
-            <span><strong>Proxima etapa</strong> Nivel ${character.identity.level + 1}</span>
-            <span><strong>Escolhas</strong> 2 opcoes</span>
-          </div>
-          <div class="progression-tabs" role="tablist" aria-label="Tiers de progressao">
-            ${progressionTiers
-              .map(
-                (tier) => `
-                  <button class="${state.selectedProgressionTier === tier.tier ? "is-active" : ""}" type="button" data-progression-tier="${tier.tier}">
-                    <strong>Tier ${tier.tier}</strong>
-                    <span>Niveis ${tier.levels}</span>
-                  </button>
-                `
-              )
-              .join("")}
-          </div>
+      </div>
+      <div class="progression-bar" aria-label="Resumo da progressao">
+        <div class="progression-bar-summary">
+          <span><strong>Proxima etapa</strong> Nivel ${character.identity.level + 1}</span>
+          <span><strong>Escolhas</strong> 2 opcoes</span>
         </div>
-      </section>
+        <div class="progression-tabs" role="tablist" aria-label="Tiers de progressao">
+          ${progressionTiers
+            .map(
+              (tier) => `
+                <button class="${state.selectedProgressionTier === tier.tier ? "is-active" : ""}" type="button" data-progression-tier="${tier.tier}">
+                  <strong>Tier ${tier.tier}</strong>
+                  <span>Niveis ${tier.levels}</span>
+                </button>
+              `
+            )
+            .join("")}
+        </div>
+      </div>
       <section class="progression-board">
         ${renderProgressionTier(selectedTier, character.identity.level)}
       </section>
@@ -716,6 +766,116 @@ function renderDeleteContainerModal(): string {
   `;
 }
 
+function renderNoteModal(): string {
+  const character = state.character;
+  if (!character || !state.noteModalOpen) {
+    return "";
+  }
+
+  const note = character.notes.find((entry) => entry.id === state.editingNoteId);
+  const selectedCategory = note?.category ?? "session";
+
+  return `
+    <div class="modal-backdrop" data-modal-backdrop>
+      <section class="note-modal" role="dialog" aria-modal="true" aria-labelledby="note-modal-title">
+        <div class="container-modal-heading">
+          <h2 id="note-modal-title">${note ? "Editar anotacao" : "Nova anotacao"}</h2>
+          <button class="modal-close modal-close-inline" data-modal-close aria-label="Fechar anotacao">x</button>
+        </div>
+        <p class="form-error" data-note-error hidden></p>
+        <label>
+          <span>Titulo</span>
+          <input data-note-title type="text" value="${escapeHtml(note?.title ?? "")}" placeholder="Ex.: Nome do contato misterioso" />
+        </label>
+        <div class="note-category-field">
+          <span>Categoria</span>
+          <div class="note-category-options">
+            ${(Object.keys(noteCategoryLabels) as CharacterNoteCategory[])
+              .map(
+                (category) => `
+                  <button
+                    class="${selectedCategory === category ? "is-active" : ""}"
+                    type="button"
+                    data-note-category-option="${category}"
+                  >
+                    ${noteCategoryLabels[category]}
+                  </button>
+                `
+              )
+              .join("")}
+          </div>
+          <input data-note-category type="hidden" value="${selectedCategory}" />
+        </div>
+        <label>
+          <span>Conteudo</span>
+          <textarea data-note-content rows="8" placeholder="Anote pistas, promessas, NPCs ou ideias da sessao...">${escapeHtml(note?.content ?? "")}</textarea>
+        </label>
+        <button class="primary-action" type="button" data-action="save-note">Salvar anotacao</button>
+      </section>
+    </div>
+  `;
+}
+
+function renderViewNoteModal(): string {
+  const character = state.character;
+  if (!character || !state.viewingNoteId) {
+    return "";
+  }
+
+  const note = character.notes.find((entry) => entry.id === state.viewingNoteId);
+  if (!note) {
+    return "";
+  }
+
+  return `
+    <div class="modal-backdrop" data-modal-backdrop>
+      <section class="note-view-modal" role="dialog" aria-modal="true" aria-labelledby="view-note-title">
+        <div class="container-modal-heading">
+          <div>
+            <span class="resource-modal-label">${noteCategoryLabels[note.category]}</span>
+            <h2 id="view-note-title">${escapeHtml(note.title)}</h2>
+          </div>
+          <button class="modal-close modal-close-inline" data-modal-close aria-label="Fechar anotacao">x</button>
+        </div>
+        <small>Atualizado em ${formatNoteDate(note.updatedAt)}</small>
+        <p>${escapeHtml(note.content)}</p>
+        <button class="primary-action" type="button" data-action="edit-note" data-note-id="${note.id}">Editar anotacao</button>
+      </section>
+    </div>
+  `;
+}
+
+function renderDeleteNoteModal(): string {
+  const character = state.character;
+  if (!character || !state.deletingNoteId) {
+    return "";
+  }
+
+  const note = character.notes.find((entry) => entry.id === state.deletingNoteId);
+  if (!note) {
+    return "";
+  }
+
+  return `
+    <div class="modal-backdrop" data-modal-backdrop>
+      <section class="container-modal danger-modal" role="dialog" aria-modal="true" aria-labelledby="delete-note-title">
+        <button class="modal-close" data-modal-close aria-label="Cancelar exclusao">x</button>
+        <span class="resource-modal-label">Excluir anotacao</span>
+        <h2 id="delete-note-title">${escapeHtml(note.title)}</h2>
+        <p>Esta acao removera a anotacao permanentemente.</p>
+        <div class="danger-summary">
+          <strong>!</strong>
+          <span>A anotacao nao podera ser recuperada neste momento.</span>
+        </div>
+        <div class="confirmation-actions">
+          <button class="secondary-action" type="button" data-action="cancel-delete-note">Cancelar</button>
+          <button class="danger-action" type="button" data-action="confirm-delete-note">Excluir anotacao</button>
+        </div>
+      </section>
+    </div>
+  `;
+}
+
 function renderProgressionOption(option: string, index: number, isCurrentTier: boolean): string {
   const selected = isCurrentTier && index < 2;
 
@@ -755,11 +915,11 @@ function renderInventory(character: Character): string {
       <section class="inventory-main">
         <div class="screen-title">
           <h1>Inventario</h1>
-          <label class="search-box">
-            <span>BUSCA</span>
-            <input type="search" placeholder="Procurar item..." aria-label="Procurar item" />
-          </label>
         </div>
+        <label class="search-box inventory-search">
+          <span>BUSCA</span>
+          <input type="search" placeholder="Procurar item..." aria-label="Procurar item" />
+        </label>
         <div class="filter-row">
           ${(Object.keys(itemFilterLabels) as InventoryFilter[])
             .map(
@@ -1120,11 +1280,13 @@ function render(): void {
           ? renderStoredCards(character)
           : state.page === "progression"
             ? renderProgression(character)
-            : state.page === "inventory"
-              ? renderInventory(character)
-              : state.page === "compendium"
-                ? renderCompendium()
-                : renderPlaceholder(state.page);
+            : state.page === "notes"
+              ? renderNotes(character)
+              : state.page === "inventory"
+                ? renderInventory(character)
+                : state.page === "compendium"
+                  ? renderCompendium()
+                  : renderPlaceholder(state.page);
 
   appRoot.innerHTML = `
     <div class="app-shell">
@@ -1139,6 +1301,9 @@ function render(): void {
     ${renderProgressionHistoryModal()}
     ${renderAddContainerModal()}
     ${renderDeleteContainerModal()}
+    ${renderNoteModal()}
+    ${renderViewNoteModal()}
+    ${renderDeleteNoteModal()}
   `;
 }
 
@@ -1471,6 +1636,80 @@ async function deleteInventoryContainer(compartmentId: string | undefined): Prom
   render();
 }
 
+async function saveNoteFromModal(): Promise<void> {
+  const character = state.character;
+  if (!character) {
+    return;
+  }
+
+  const titleInput = document.querySelector<HTMLInputElement>("[data-note-title]");
+  const categoryInput = document.querySelector<HTMLInputElement>("[data-note-category]");
+  const contentInput = document.querySelector<HTMLTextAreaElement>("[data-note-content]");
+  const title = titleInput?.value.trim() ?? "";
+  const content = contentInput?.value.trim() ?? "";
+  const category = (categoryInput?.value ?? "session") as CharacterNoteCategory;
+
+  if (!title || !content) {
+    const error = document.querySelector<HTMLElement>("[data-note-error]");
+    error?.removeAttribute("hidden");
+    if (error) {
+      error.textContent = "Informe um titulo e um conteudo para salvar a anotacao.";
+    }
+
+    titleInput?.classList.toggle("is-invalid", !title);
+    contentInput?.classList.toggle("is-invalid", !content);
+
+    if (!title) {
+      titleInput?.focus();
+    } else {
+      contentInput?.focus();
+    }
+
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const existingNote = character.notes.find((note) => note.id === state.editingNoteId);
+  const note: CharacterNote = {
+    id: existingNote?.id ?? `note.${crypto.randomUUID()}`,
+    title,
+    content,
+    category,
+    createdAt: existingNote?.createdAt ?? now,
+    updatedAt: now
+  };
+  const notes = existingNote
+    ? character.notes.map((entry) => (entry.id === existingNote.id ? note : entry))
+    : [note, ...character.notes];
+
+  const updatedCharacter = { ...character, notes };
+  state.character = updatedCharacter;
+  state.noteModalOpen = false;
+  state.editingNoteId = undefined;
+  await saveCharacter(updatedCharacter);
+  render();
+}
+
+async function deleteNote(noteId: string | undefined): Promise<void> {
+  const character = state.character;
+  if (!character || !noteId) {
+    return;
+  }
+
+  const updatedCharacter = {
+    ...character,
+    notes: character.notes.filter((note) => note.id !== noteId)
+  };
+
+  state.character = updatedCharacter;
+  if (state.viewingNoteId === noteId) {
+    state.viewingNoteId = undefined;
+  }
+  state.deletingNoteId = undefined;
+  await saveCharacter(updatedCharacter);
+  render();
+}
+
 function bindEvents(): void {
   document.addEventListener("click", (event) => {
     const target = event.target;
@@ -1496,6 +1735,10 @@ function bindEvents(): void {
       state.progressionHistoryOpen = false;
       state.addContainerOpen = false;
       state.deleteContainerId = undefined;
+      state.noteModalOpen = false;
+      state.editingNoteId = undefined;
+      state.viewingNoteId = undefined;
+      state.deletingNoteId = undefined;
       render();
       return;
     }
@@ -1506,6 +1749,10 @@ function bindEvents(): void {
       state.progressionHistoryOpen = false;
       state.addContainerOpen = false;
       state.deleteContainerId = undefined;
+      state.noteModalOpen = false;
+      state.editingNoteId = undefined;
+      state.viewingNoteId = undefined;
+      state.deletingNoteId = undefined;
       render();
       return;
     }
@@ -1574,6 +1821,64 @@ function bindEvents(): void {
       return;
     }
 
+    if (target.closest('[data-action="open-note-modal"]')) {
+      state.noteModalOpen = true;
+      state.editingNoteId = undefined;
+      render();
+      return;
+    }
+
+    const editNoteButton = target.closest<HTMLElement>('[data-action="edit-note"]');
+    if (editNoteButton) {
+      state.noteModalOpen = true;
+      state.editingNoteId = editNoteButton.dataset.noteId;
+      state.viewingNoteId = undefined;
+      render();
+      return;
+    }
+
+    const noteCategoryButton = target.closest<HTMLElement>("[data-note-category-option]");
+    if (noteCategoryButton) {
+      const categoryInput = document.querySelector<HTMLInputElement>("[data-note-category]");
+      const category = noteCategoryButton.dataset.noteCategoryOption;
+      if (categoryInput && category) {
+        categoryInput.value = category;
+      }
+      document.querySelectorAll("[data-note-category-option]").forEach((button) => button.classList.remove("is-active"));
+      noteCategoryButton.classList.add("is-active");
+      return;
+    }
+
+    if (target.closest('[data-action="save-note"]')) {
+      void saveNoteFromModal();
+      return;
+    }
+
+    const deleteNoteButton = target.closest<HTMLElement>('[data-action="delete-note"]');
+    if (deleteNoteButton) {
+      state.deletingNoteId = deleteNoteButton.dataset.noteId;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="cancel-delete-note"]')) {
+      state.deletingNoteId = undefined;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="confirm-delete-note"]')) {
+      void deleteNote(state.deletingNoteId);
+      return;
+    }
+
+    const viewNoteCard = target.closest<HTMLElement>('[data-action="view-note"]');
+    if (viewNoteCard) {
+      state.viewingNoteId = viewNoteCard.dataset.noteId;
+      render();
+      return;
+    }
+
     const moveItemButton = target.closest<HTMLElement>('[data-action="move-item"]');
     if (moveItemButton) {
       void moveItemToCompartment(moveItemButton.dataset.itemId, moveItemButton.dataset.targetCompartmentId);
@@ -1639,6 +1944,22 @@ function bindEvents(): void {
 
     if (event.key === "Escape" && state.progressionHistoryOpen) {
       state.progressionHistoryOpen = false;
+      render();
+    }
+
+    if (event.key === "Escape" && state.noteModalOpen) {
+      state.noteModalOpen = false;
+      state.editingNoteId = undefined;
+      render();
+    }
+
+    if (event.key === "Escape" && state.viewingNoteId) {
+      state.viewingNoteId = undefined;
+      render();
+    }
+
+    if (event.key === "Escape" && state.deletingNoteId) {
+      state.deletingNoteId = undefined;
       render();
     }
   });

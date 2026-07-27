@@ -36,6 +36,17 @@ export type CharacterExperience = {
   description?: string;
 };
 
+export type CharacterNoteCategory = "session" | "npc" | "place" | "quest" | "item" | "free";
+
+export type CharacterNote = {
+  id: string;
+  title: string;
+  content: string;
+  category: CharacterNoteCategory;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type PackManifest = {
   id: string;
   name: string;
@@ -109,6 +120,7 @@ export type Character = {
   resources: ResourceTrack[];
   skills: CharacterSkill[];
   experiences: CharacterExperience[];
+  notes: CharacterNote[];
   deck: {
     activeCardIds: string[];
     learnedCardIds: string[];

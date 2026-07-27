@@ -89,6 +89,24 @@ export const demoCharacter: Character = {
       description: "Promessas pesam, mas tambem guiam."
     }
   ],
+  notes: [
+    {
+      id: "note.demo.blacksmith-promise",
+      title: "Promessa do ferreiro",
+      content: "Encontrar pistas sobre o minerio escuro que desapareceu das caravanas ao norte.",
+      category: "quest",
+      createdAt: "2026-07-22T19:00:00.000Z",
+      updatedAt: "2026-07-22T19:00:00.000Z"
+    },
+    {
+      id: "note.demo.tristelo-watch",
+      title: "Vigilia de Tristelo",
+      content: "Os sinais antigos nas torres da fronteira ainda sao usados por alguns veteranos.",
+      category: "place",
+      createdAt: "2026-07-22T19:10:00.000Z",
+      updatedAt: "2026-07-22T19:10:00.000Z"
+    }
+  ],
   deck: {
     activeCardIds: [
       "card.demo.shield-block",
