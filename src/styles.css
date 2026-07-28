@@ -58,6 +58,13 @@ button {
   --brand-height: 5.2rem;
 }
 
+.editor-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 100vh;
+  --shell-gutter: 1.25rem;
+}
+
 .sidebar {
   display: flex;
   flex-direction: column;
@@ -67,11 +74,11 @@ button {
   background: rgba(7, 12, 18, 0.86);
 }
 
-.brand,
 .portrait,
 .band,
 .detail-panel,
 .topbar,
+.editor-header,
 .quick-actions button,
 .empty-state {
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -82,9 +89,16 @@ button {
 .brand {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.75rem;
-  padding: 0.75rem;
-  min-height: var(--brand-height);
+  min-height: auto;
+}
+
+.brand-identity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.65rem;
 }
 
 .brand-mark {
@@ -109,6 +123,11 @@ button {
 .portrait strong {
   display: block;
   letter-spacing: 0.08em;
+}
+
+.brand strong {
+  min-width: 0;
+  font-size: 0.95rem;
 }
 
 .brand span,
@@ -339,6 +358,13 @@ button {
   margin-top: 0.5rem;
 }
 
+.brand-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.35rem;
+  margin-top: 0;
+}
+
 .nav-button,
 .top-link,
 .chip,
@@ -356,11 +382,22 @@ button {
   text-align: left;
 }
 
+.icon-nav-button {
+  justify-content: center;
+  width: 2.35rem;
+  min-height: 2.35rem;
+  padding: 0;
+}
+
 .nav-button span {
   display: grid;
   width: 1.35rem;
   place-items: center;
   color: var(--color-gold);
+}
+
+.icon-nav-button span {
+  font-size: 1.08rem;
 }
 
 .nav-button:hover,
@@ -393,6 +430,79 @@ button {
   margin: var(--shell-gutter) var(--shell-gutter) 0;
   padding: 0 1rem;
   border-width: 1px;
+}
+
+.editor-header {
+  display: grid;
+  grid-template-columns: minmax(12rem, auto) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  min-height: 4.4rem;
+  margin: var(--shell-gutter) var(--shell-gutter) 0;
+  padding: 0.65rem 0.85rem;
+}
+
+.editor-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.editor-brand .brand-mark {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.editor-brand strong {
+  display: block;
+  letter-spacing: 0.08em;
+}
+
+.editor-brand span,
+.editor-context span {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+}
+
+.editor-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.editor-nav-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.65rem;
+  border: 1px solid transparent;
+  color: var(--color-text);
+  background: transparent;
+  padding: 0.45rem 0.75rem;
+}
+
+.editor-nav-button span {
+  color: var(--color-gold);
+}
+
+.editor-nav-button:hover,
+.editor-nav-button.is-active {
+  border-color: var(--color-gold);
+  color: var(--color-gold);
+  background: rgba(217, 154, 61, 0.13);
+}
+
+.editor-context {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.editor-context .secondary-action {
+  min-height: 2.65rem;
+  padding: 0 0.85rem;
 }
 
 .top-nav {
@@ -2164,12 +2274,155 @@ button {
   padding: 0.45rem 0.65rem;
 }
 
+.compendium-actions button:not(:disabled):hover,
+.compendium-card-result-actions button:not(:disabled):hover {
+  border-color: rgba(217, 154, 61, 0.5);
+  color: var(--color-gold);
+  background: rgba(217, 154, 61, 0.08);
+}
+
 .compendium-actions button:disabled,
 .compendium-bookmarks button:disabled,
 .compendium-filter-row button:disabled,
 .compendium-toolbar input:disabled {
   cursor: not-allowed;
   opacity: 0.72;
+}
+
+.compendium-management-panel {
+  display: grid;
+  gap: 0.85rem;
+  border: 1px solid rgba(217, 154, 61, 0.22);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(142, 79, 196, 0.08), transparent 14rem),
+    rgba(255, 255, 255, 0.022);
+  padding: 0.9rem;
+}
+
+.compendium-management-toolbar {
+  display: grid;
+  grid-template-columns: minmax(16rem, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.compendium-management-toolbar .search-box {
+  width: 100%;
+}
+
+.compendium-filter-block {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.compendium-filter-block > span,
+.compendium-results-heading span,
+.compendium-card-result span,
+.compendium-card-result p {
+  color: var(--color-muted);
+}
+
+.compendium-filter-block > span {
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.compendium-results-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  border-top: 1px solid rgba(244, 234, 219, 0.08);
+  padding-top: 0.75rem;
+}
+
+.compendium-results-heading strong {
+  color: var(--color-gold);
+  font-size: 1.15rem;
+}
+
+.compendium-card-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 0.75rem;
+}
+
+.compendium-card-result {
+  display: grid;
+  align-content: space-between;
+  gap: 0.85rem;
+  min-height: 14rem;
+  border: 1px solid rgba(244, 234, 219, 0.12);
+  background:
+    linear-gradient(180deg, rgba(244, 234, 219, 0.025), rgba(244, 234, 219, 0.008)),
+    rgba(8, 15, 22, 0.46);
+  padding: 0.45rem;
+}
+
+.compendium-card-result-open {
+  display: grid;
+  align-content: space-between;
+  gap: 0.85rem;
+  min-height: 11rem;
+  border: 1px solid transparent;
+  color: var(--color-text);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(142, 79, 196, 0.1), transparent 10rem),
+    rgba(8, 15, 22, 0.62);
+  padding: 0.85rem;
+  text-align: left;
+}
+
+.compendium-card-result-open:hover {
+  border-color: rgba(217, 154, 61, 0.48);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(142, 79, 196, 0.14), transparent 10rem),
+    rgba(217, 154, 61, 0.06);
+}
+
+.compendium-card-result h2 {
+  margin: 0.3rem 0 0;
+  font-size: 1.08rem;
+}
+
+.compendium-card-result p {
+  margin: 0.45rem 0 0;
+  line-height: 1.45;
+}
+
+.compendium-card-result-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.compendium-card-result-meta span {
+  border: 1px solid rgba(217, 154, 61, 0.24);
+  color: var(--color-gold);
+  background: rgba(217, 154, 61, 0.07);
+  padding: 0.28rem 0.5rem;
+  font-size: 0.72rem;
+}
+
+.compendium-card-result-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+  border-top: 1px solid rgba(244, 234, 219, 0.08);
+  padding-top: 0.45rem;
+}
+
+.compendium-card-result-actions button {
+  min-height: 2.45rem;
+  border: 1px solid rgba(244, 234, 219, 0.12);
+  color: var(--color-muted);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.4rem 0.5rem;
+}
+
+.compendium-card-result-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
 }
 
 .compendium-filter-row {
@@ -2589,6 +2842,19 @@ button {
     --brand-height: 4.7rem;
   }
 
+  .editor-shell {
+    --shell-gutter: 0.85rem;
+  }
+
+  .editor-header {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .editor-context {
+    grid-column: 1 / -1;
+    justify-content: space-between;
+  }
+
   .content-with-panel {
     grid-template-columns: 1fr;
   }
@@ -2637,10 +2903,6 @@ button {
 
   .skill-column-wide {
     grid-column: 1 / -1;
-  }
-
-  .brand {
-    padding: 0.6rem;
   }
 
   .brand-mark {
@@ -2730,6 +2992,10 @@ button {
     grid-template-columns: 1fr;
   }
 
+  .compendium-management-toolbar {
+    grid-template-columns: 1fr;
+  }
+
   .compendium-actions {
     flex-wrap: wrap;
   }
@@ -2746,6 +3012,16 @@ button {
 @media (max-width: 760px) {
   .app-shell {
     grid-template-columns: 1fr;
+  }
+
+  .editor-header {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .editor-nav,
+  .editor-context {
+    justify-content: start;
   }
 
   .sidebar {
@@ -2793,6 +3069,10 @@ button {
     align-items: stretch;
     grid-template-columns: 1fr;
     flex-direction: column;
+  }
+
+  .compendium-card-result-actions {
+    grid-template-columns: 1fr;
   }
 
   .compendium-spread {

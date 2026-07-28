@@ -4,6 +4,21 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.4.0]
+
+### Adicionado
+
+- modo Editor/Admin em tela cheia para Compendium e Configurações;
+- página interna de gerenciamento de Cartas no Compendium;
+- busca textual, filtros por domínio e tier na página de Cartas;
+- abertura de detalhes da carta ao clicar no resultado inteiro.
+
+### Alterado
+
+- sidebar compactada para melhorar o uso em tablet;
+- ações globais de Compendium e Configurações movidas para ícones na região da marca;
+- resultados de cartas no Compendium refinados para agrupar conteúdo e ações em uma única moldura.
+
 ## [0.3.0]
 
 ### Adicionado

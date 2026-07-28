@@ -8,6 +8,7 @@ type Page = "overview" | "skills" | "experiences" | "inventory" | "progression" 
 type InventoryFilter = "todos" | ItemDefinition["category"];
 type ProgressionTierNumber = 2 | 3 | 4;
 type SettingsSection = "general" | "localData" | "loadRules" | "appearance" | "progression";
+type CompendiumView = "index" | "cards";
 
 function getAppRoot(): HTMLDivElement {
   const element = document.querySelector<HTMLDivElement>("#app");
@@ -42,6 +43,11 @@ const state: {
   page: Page;
   inventoryFilter: InventoryFilter;
   inventorySearch: string;
+  compendiumView: CompendiumView;
+  compendiumCardSearch: string;
+  compendiumDomainFilter: string;
+  compendiumTierFilter: string;
+  lastPlayerPage: Page;
   selectedItemId?: string;
   selectedCardId: string;
   selectedProgressionTier: ProgressionTierNumber;
@@ -61,6 +67,11 @@ const state: {
   page: "overview",
   inventoryFilter: "todos",
   inventorySearch: "",
+  compendiumView: "index",
+  compendiumCardSearch: "",
+  compendiumDomainFilter: "todos",
+  compendiumTierFilter: "todos",
+  lastPlayerPage: "overview",
   selectedCardId: "card.demo.dread-veil",
   selectedProgressionTier: 2,
   progressionHistoryOpen: false,
@@ -85,11 +96,11 @@ const topNavItems: Array<{ page: Page; label: string }> = [
 ];
 
 const sideNavItems: Array<{ page: Page; label: string; icon: string }> = [
-  { page: "compendium", label: "Compendium", icon: "📖" },
-  { page: "settings", label: "Configuracoes", icon: "✒" }
+  { page: "compendium", label: "Compendium", icon: "&#128214;" },
+  { page: "settings", label: "Configuracoes", icon: "&#10002;" }
 ];
 
-const appVersion = "0.3.0";
+const appVersion = "0.4.0";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -120,6 +131,10 @@ const noteCategoryLabels: Record<CharacterNoteCategory, string> = {
   item: "Item",
   free: "Livre"
 };
+
+function isEditorPage(page: Page): boolean {
+  return page === "compendium" || page === "settings";
+}
 
 const progressionTiers = [
   {
@@ -276,18 +291,32 @@ function renderSidebar(character: Character): string {
   return `
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-mark"><img src="assets/brand/soulforge-symbol.png" alt="" /></div>
-        <div>
+        <div class="brand-identity">
+          <div class="brand-mark"><img src="assets/brand/soulforge-symbol.png" alt="" /></div>
           <strong>SOULFORGE</strong>
-          <span>Daggerheart Companion</span>
         </div>
+        <nav class="side-nav brand-actions" aria-label="Menu secundario">
+          ${sideNavItems
+            .map(
+              (item) => `
+                <button
+                  class="nav-button icon-nav-button ${state.page === item.page ? "is-active" : ""}"
+                  data-page="${item.page}"
+                  aria-label="${item.label}"
+                  title="${item.label}"
+                >
+                  <span aria-hidden="true">${item.icon}</span>
+                </button>
+              `
+            )
+            .join("")}
+        </nav>
       </div>
       <div class="portrait">
         <div class="portrait-art"></div>
         <div>
           <strong>${escapeHtml(character.identity.name)}</strong>
           <span>${escapeHtml(character.identity.ancestry)} - ${escapeHtml(character.identity.className)}</span>
-          <small>${escapeHtml(character.identity.community)}</small>
           <div class="portrait-progress">
             <div>
               <span>Nivel ${character.identity.level}</span>
@@ -321,18 +350,6 @@ function renderSidebar(character: Character): string {
           <div class="defense-badge defense-major"><strong>${character.defense.major}</strong><span>Dano maior</span></div>
         </div>
       </section>
-      <nav class="side-nav" aria-label="Menu secundario">
-        ${sideNavItems
-          .map(
-            (item) => `
-              <button class="nav-button ${state.page === item.page ? "is-active" : ""}" data-page="${item.page}">
-                <span aria-hidden="true">${item.icon}</span>
-                ${item.label}
-              </button>
-            `
-          )
-          .join("")}
-      </nav>
     </aside>
   `;
 }
@@ -346,6 +363,38 @@ function renderTopbar(): string {
           .join("")}
       </nav>
       <span class="offline-pill" title="A PWA instala o app e guarda a casca offline.">Offline-ready</span>
+    </header>
+  `;
+}
+
+function renderEditorHeader(): string {
+  const currentLabel = state.page === "compendium" ? "Compendium" : "Configuracoes";
+
+  return `
+    <header class="editor-header">
+      <div class="editor-brand">
+        <div class="brand-mark"><img src="assets/brand/soulforge-symbol.png" alt="" /></div>
+        <div>
+          <strong>SOULFORGE</strong>
+          <span>Modo Editor</span>
+        </div>
+      </div>
+      <nav class="editor-nav" aria-label="Areas globais">
+        ${sideNavItems
+          .map(
+            (item) => `
+              <button class="editor-nav-button ${state.page === item.page ? "is-active" : ""}" type="button" data-page="${item.page}">
+                <span aria-hidden="true">${item.icon}</span>
+                ${item.label}
+              </button>
+            `
+          )
+          .join("")}
+      </nav>
+      <div class="editor-context">
+        <span>${currentLabel}</span>
+        <button class="secondary-action" type="button" data-action="back-player-mode">Voltar a ficha</button>
+      </div>
     </header>
   `;
 }
@@ -1353,6 +1402,10 @@ function renderResourceModal(resourceId?: string): string {
 }
 
 function renderCompendium(): string {
+  if (state.compendiumView === "cards") {
+    return renderCompendiumCardsManager();
+  }
+
   return `
     <main class="content compendium-content">
       <div class="screen-title">
@@ -1393,6 +1446,7 @@ function renderCompendium(): string {
             countLabel: "Definitions cadastradas",
             primaryAction: "Nova carta",
             secondaryAction: "Pesquisar e gerenciar",
+            secondaryActionId: "manage-compendium-cards",
             details: [
               "Primeiro fluxo completo priorizado pelo Compendium.",
               "A pagina interna tera busca por nome/texto e filtros por dominio e tier.",
@@ -1414,6 +1468,7 @@ function renderCompendiumChapterCard(chapter: {
   countLabel: string;
   primaryAction: string;
   secondaryAction: string;
+  secondaryActionId?: string;
   details: string[];
   emphasized?: boolean;
 }): string {
@@ -1430,12 +1485,130 @@ function renderCompendiumChapterCard(chapter: {
       </div>
       <div class="compendium-actions compendium-index-actions">
         <button type="button" disabled>${escapeHtml(chapter.primaryAction)}</button>
-        <button type="button" disabled>${escapeHtml(chapter.secondaryAction)}</button>
+        <button type="button" ${chapter.secondaryActionId ? `data-action="${chapter.secondaryActionId}"` : "disabled"}>${escapeHtml(chapter.secondaryAction)}</button>
       </div>
       <ul class="compendium-chapter-notes">
         ${chapter.details.map((detail) => `<li>${escapeHtml(detail)}</li>`).join("")}
       </ul>
     </div>
+  `;
+}
+
+function renderCompendiumCardsManager(): string {
+  const filteredCards = getFilteredCompendiumCards();
+  const tiers = [...new Set(catalog.cards.map((card) => card.tier))].sort((a, b) => a - b);
+
+  return `
+    <main class="content compendium-content">
+      <div class="screen-title">
+        <div>
+          <h1>Cartas</h1>
+          <p>Pesquise e gerencie cartas do catalogo. Criacao, edicao e exclusao entram no proximo ciclo.</p>
+        </div>
+        <button class="secondary-action screen-title-action" type="button" data-action="back-compendium-index">Voltar ao indice</button>
+      </div>
+
+      <section class="compendium-management-panel">
+        <div class="compendium-management-toolbar">
+          <label class="search-box">
+            <span>BUSCA</span>
+            <input
+              type="search"
+              placeholder="Procurar carta..."
+              aria-label="Procurar carta"
+              data-compendium-card-search
+              value="${escapeHtml(state.compendiumCardSearch)}"
+            />
+          </label>
+          <button class="primary-action" type="button" disabled>Nova carta</button>
+        </div>
+
+        <div class="compendium-filter-block">
+          <span>Dominio</span>
+          <div class="domain-strip compendium-filter-row">
+            <button class="domain-chip ${state.compendiumDomainFilter === "todos" ? "is-active" : ""}" type="button" data-compendium-domain-filter="todos" style="--domain-color: #d99a3d">Todos</button>
+            ${catalog.domains
+              .map(
+                (domain) => `
+                  <button
+                    class="domain-chip ${state.compendiumDomainFilter === domain.id ? "is-active" : ""}"
+                    type="button"
+                    data-compendium-domain-filter="${domain.id}"
+                    style="--domain-color: ${escapeHtml(domain.color)}"
+                  >
+                    ${escapeHtml(domain.name)}
+                  </button>
+                `
+              )
+              .join("")}
+          </div>
+        </div>
+
+        <div class="compendium-filter-block">
+          <span>Tier</span>
+          <div class="filter-row compendium-filter-row">
+            <button class="chip ${state.compendiumTierFilter === "todos" ? "is-active" : ""}" type="button" data-compendium-tier-filter="todos">Todos</button>
+            ${tiers
+              .map(
+                (tier) => `
+                  <button class="chip ${state.compendiumTierFilter === String(tier) ? "is-active" : ""}" type="button" data-compendium-tier-filter="${tier}">
+                    Tier ${tier}
+                  </button>
+                `
+              )
+              .join("")}
+          </div>
+        </div>
+
+        <div class="compendium-results-heading">
+          <strong>${filteredCards.length}</strong>
+          <span>${filteredCards.length === 1 ? "carta encontrada" : "cartas encontradas"}</span>
+        </div>
+
+        ${
+          filteredCards.length
+            ? `<div class="compendium-card-results">${filteredCards.map(renderCompendiumCardResult).join("")}</div>`
+            : renderEmptyInline("Nenhuma carta encontrada com os filtros atuais.")
+        }
+      </section>
+    </main>
+  `;
+}
+
+function getFilteredCompendiumCards(): CardDefinition[] {
+  const search = state.compendiumCardSearch.trim().toLowerCase();
+
+  return catalog.cards.filter((card) => {
+    const domain = findDomain(catalog, card.domainId);
+    const sameDomain = state.compendiumDomainFilter === "todos" || card.domainId === state.compendiumDomainFilter;
+    const sameTier = state.compendiumTierFilter === "todos" || String(card.tier) === state.compendiumTierFilter;
+    const searchableText = [card.name, card.summary, card.effect, card.cardType, card.cost ?? "", domain?.name ?? ""].join(" ").toLowerCase();
+    const sameSearch = !search || searchableText.includes(search);
+
+    return sameDomain && sameTier && sameSearch;
+  });
+}
+
+function renderCompendiumCardResult(card: CardDefinition): string {
+  const domain = findDomain(catalog, card.domainId);
+
+  return `
+    <article class="compendium-card-result">
+      <button class="compendium-card-result-open" type="button" data-card-modal-id="${card.id}" aria-label="Ver detalhes de ${escapeHtml(card.name)}">
+        <div>
+          <span>${escapeHtml(domain?.name ?? "Sem dominio")} - Tier ${card.tier} - ${escapeHtml(card.cardType)}</span>
+          <h2>${escapeHtml(card.name)}</h2>
+          <p>${escapeHtml(card.summary)}</p>
+        </div>
+        <div class="compendium-card-result-meta">
+          <span>${escapeHtml(card.cost ?? "Sem custo")}</span>
+        </div>
+      </button>
+      <div class="compendium-card-result-actions">
+        <button type="button" disabled>Editar</button>
+        <button type="button" disabled>Excluir</button>
+      </div>
+    </article>
   `;
 }
 
@@ -1527,14 +1700,25 @@ function render(): void {
                     ? renderSettings(character)
                     : renderPlaceholder(state.page);
 
-  appRoot.innerHTML = `
-    <div class="app-shell">
-      ${renderSidebar(character)}
-      <div class="main-shell">
-        ${renderTopbar()}
+  const shell = isEditorPage(state.page)
+    ? `
+      <div class="editor-shell">
+        ${renderEditorHeader()}
         ${screen}
       </div>
-    </div>
+    `
+    : `
+      <div class="app-shell">
+        ${renderSidebar(character)}
+        <div class="main-shell">
+          ${renderTopbar()}
+          ${screen}
+        </div>
+      </div>
+    `;
+
+  appRoot.innerHTML = `
+    ${shell}
     ${renderCardModal(state.modalCardId)}
     ${renderItemModal()}
     ${renderDeleteItemModal()}
@@ -1575,6 +1759,14 @@ function exportCharacter(): void {
 function focusInventorySearch(): void {
   requestAnimationFrame(() => {
     const input = document.querySelector<HTMLInputElement>("[data-inventory-search]");
+    input?.focus({ preventScroll: true });
+    input?.setSelectionRange(input.value.length, input.value.length);
+  });
+}
+
+function focusCompendiumCardSearch(): void {
+  requestAnimationFrame(() => {
+    const input = document.querySelector<HTMLInputElement>("[data-compendium-card-search]");
     input?.focus({ preventScroll: true });
     input?.setSelectionRange(input.value.length, input.value.length);
   });
@@ -2056,9 +2248,50 @@ function bindEvents(): void {
       return;
     }
 
+    if (target.closest('[data-action="manage-compendium-cards"]')) {
+      state.compendiumView = "cards";
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="back-compendium-index"]')) {
+      state.compendiumView = "index";
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="back-player-mode"]')) {
+      state.page = state.lastPlayerPage;
+      state.compendiumView = "index";
+      state.modalCardId = undefined;
+      render();
+      return;
+    }
+
+    const compendiumDomainFilterButton = target.closest<HTMLElement>("[data-compendium-domain-filter]");
+    if (compendiumDomainFilterButton) {
+      state.compendiumDomainFilter = compendiumDomainFilterButton.dataset.compendiumDomainFilter ?? "todos";
+      render();
+      return;
+    }
+
+    const compendiumTierFilterButton = target.closest<HTMLElement>("[data-compendium-tier-filter]");
+    if (compendiumTierFilterButton) {
+      state.compendiumTierFilter = compendiumTierFilterButton.dataset.compendiumTierFilter ?? "todos";
+      render();
+      return;
+    }
+
     const pageButton = target.closest<HTMLElement>("[data-page]");
     if (pageButton) {
-      state.page = pageButton.dataset.page as Page;
+      const nextPage = pageButton.dataset.page as Page;
+      if (!isEditorPage(state.page) && !isEditorPage(nextPage)) {
+        state.lastPlayerPage = state.page;
+      }
+      if (!isEditorPage(state.page) && isEditorPage(nextPage)) {
+        state.lastPlayerPage = state.page;
+      }
+      state.page = nextPage;
       state.selectedItemId = undefined;
       state.deletingItemId = undefined;
       render();
@@ -2296,6 +2529,12 @@ function bindEvents(): void {
       state.inventorySearch = target.value;
       render();
       focusInventorySearch();
+    }
+
+    if (target.matches("[data-compendium-card-search]")) {
+      state.compendiumCardSearch = target.value;
+      render();
+      focusCompendiumCardSearch();
     }
   });
 }
