@@ -7,6 +7,7 @@ import "./styles.css";
 type Page = "overview" | "skills" | "experiences" | "inventory" | "progression" | "notes" | "compendium" | "settings" | "storedCards";
 type InventoryFilter = "todos" | ItemDefinition["category"];
 type ProgressionTierNumber = 2 | 3 | 4;
+type SettingsSection = "general" | "localData" | "loadRules" | "appearance" | "progression";
 
 function getAppRoot(): HTMLDivElement {
   const element = document.querySelector<HTMLDivElement>("#app");
@@ -40,6 +41,7 @@ const dragState: {
 const state: {
   page: Page;
   inventoryFilter: InventoryFilter;
+  inventorySearch: string;
   selectedItemId?: string;
   selectedCardId: string;
   selectedProgressionTier: ProgressionTierNumber;
@@ -48,19 +50,29 @@ const state: {
   progressionHistoryOpen: boolean;
   addContainerOpen: boolean;
   deleteContainerId?: string;
+  deletingItemId?: string;
   noteModalOpen: boolean;
   editingNoteId?: string;
   viewingNoteId?: string;
   deletingNoteId?: string;
+  openSettingsSections: Record<SettingsSection, boolean>;
   character?: Character;
 } = {
   page: "overview",
   inventoryFilter: "todos",
+  inventorySearch: "",
   selectedCardId: "card.demo.dread-veil",
   selectedProgressionTier: 2,
   progressionHistoryOpen: false,
   addContainerOpen: false,
-  noteModalOpen: false
+  noteModalOpen: false,
+  openSettingsSections: {
+    general: true,
+    localData: false,
+    loadRules: false,
+    appearance: false,
+    progression: false
+  }
 };
 
 const topNavItems: Array<{ page: Page; label: string }> = [
@@ -72,10 +84,12 @@ const topNavItems: Array<{ page: Page; label: string }> = [
   { page: "notes", label: "Anotacoes" }
 ];
 
-const sideNavItems: Array<{ page: Page; label: string; icon: string }> = [
-  { page: "compendium", label: "Compendium", icon: "BOOK" },
-  { page: "settings", label: "Configuracoes", icon: "GEAR" }
+const sideNavItems: Array<{ page: Page; label: string }> = [
+  { page: "compendium", label: "Compendium" },
+  { page: "settings", label: "Configuracoes" }
 ];
+
+const appVersion = "0.2.0";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -289,9 +303,8 @@ function renderSidebar(character: Character): string {
           ${character.attributes
             .map(
               (attribute) => `
-                <div class="attribute-badge">
+                <div class="attribute-badge ${attribute.upgraded ? "is-upgraded" : ""}">
                   <span title="${attribute.label}">${attributeTitle(attribute.label)}</span>
-                  <i class="attribute-upgrade-dot" aria-hidden="true"></i>
                   <strong>${attribute.value}</strong>
                 </div>
               `
@@ -313,18 +326,12 @@ function renderSidebar(character: Character): string {
           .map(
             (item) => `
               <button class="nav-button ${state.page === item.page ? "is-active" : ""}" data-page="${item.page}">
-                <span>${item.icon}</span>
                 ${item.label}
               </button>
             `
           )
           .join("")}
       </nav>
-      <div class="pack-status">
-        <span>Pack ativo</span>
-        <strong>${escapeHtml(catalog.packs[0]?.name ?? "Sem pack")}</strong>
-        <small>v${escapeHtml(catalog.packs[0]?.version ?? "0.0.0")}</small>
-      </div>
     </aside>
   `;
 }
@@ -602,6 +609,151 @@ function renderNoteCard(note: CharacterNote): string {
 
 function formatNoteDate(value: string): string {
   return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" }).format(new Date(value));
+}
+
+function renderSettings(character: Character): string {
+  const activePack = catalog.packs[0];
+  const offlineStatus = "PWA pronta para uso offline";
+
+  return `
+    <main class="content settings-content">
+      <div class="screen-title">
+        <div>
+          <h1>Configuracoes</h1>
+          <p>Ajustes da aplicacao, dados locais e regras que moldam novos personagens.</p>
+        </div>
+      </div>
+
+      <div class="settings-grid">
+        ${renderSettingsSection(
+          "general",
+          "Geral",
+          "Versao, pacote ativo e disponibilidade offline.",
+          `
+            <dl class="settings-readable-list">
+              ${renderReadableSetting("Versao do app", `v${appVersion}`)}
+              ${renderReadableSetting("Pack ativo", `${activePack?.name ?? "Sem pack"} v${activePack?.version ?? "0.0.0"}`)}
+              ${renderReadableSetting("Status offline/PWA", offlineStatus)}
+            </dl>
+          `
+        )}
+
+        ${renderSettingsSection(
+          "localData",
+          "Dados locais",
+          "Exportar, importar e proteger os dados deste dispositivo.",
+          `
+            <p class="settings-panel-copy">Tudo fica salvo neste dispositivo. Exportar ja funciona; importacao e limpeza entram quando fecharmos o fluxo de seguranca.</p>
+            <div class="settings-actions">
+              <button class="settings-action settings-action-primary" type="button" data-action="export-character">Exportar personagem</button>
+              <button class="settings-action" type="button" disabled>Importar personagem <span>Em breve</span></button>
+              <button class="settings-action" type="button" disabled>Criar backup <span>Em breve</span></button>
+              <button class="settings-action settings-action-danger" type="button" disabled>Apagar dados locais <span>Exige confirmacao</span></button>
+            </div>
+          `
+        )}
+
+        ${renderSettingsSection(
+          "loadRules",
+          "Regras de Carga",
+          "Capacidade, peso e padroes usados por novos personagens.",
+          `
+            <div class="settings-list">
+              ${renderSettingInfo("Containers padrao", "Equipados e Mochila")}
+              ${renderSettingInfo("Capacidade padrao", `${character.inventory.capacity} espacos`)}
+              ${renderSettingInfo("Regra de peso", "Peso por item")}
+              ${renderSettingInfo("Aplicacao", "Novos personagens")}
+            </div>
+          `
+        )}
+
+        ${renderSettingsSection(
+          "appearance",
+          "Aparencia",
+          "Tema, paleta, densidade e tamanho dos componentes.",
+          `
+            <div class="settings-option-grid">
+              ${renderSettingOption("Tema", "Escuro", true)}
+              ${renderSettingOption("Paleta", "SoulForge", true)}
+              ${renderSettingOption("Densidade", "Confortavel", true)}
+              ${renderSettingOption("Cartas e itens", "Medios", true)}
+            </div>
+          `
+        )}
+
+        ${renderSettingsSection(
+          "progression",
+          "Progressao",
+          "Regras de tier e ganhos usados pela tela de Progressao.",
+          `
+            <p class="settings-panel-copy">Esta area vai concentrar quais opcoes existem por tier, ganhos automaticos e regras usadas pela tela de Progressao.</p>
+            <div class="settings-option-grid settings-option-grid-wide">
+              ${renderSettingOption("Tiers", "2, 3 e 4", true)}
+              ${renderSettingOption("Escolhas por nivel", "Configuravel depois", false)}
+              ${renderSettingOption("Ganhos automaticos", "Configuravel depois", false)}
+            </div>
+          `,
+          true
+        )}
+      </div>
+    </main>
+  `;
+}
+
+function renderSettingsSection(section: SettingsSection, title: string, summary: string, content: string, wide = false): string {
+  const isOpen = state.openSettingsSections[section];
+  const contentId = `settings-section-${section}`;
+
+  return `
+    <section class="settings-panel ${wide ? "settings-panel-wide" : ""} ${isOpen ? "is-open" : "is-collapsed"}">
+      <button
+        class="settings-panel-toggle"
+        type="button"
+        data-settings-section="${section}"
+        aria-expanded="${isOpen}"
+        aria-controls="${contentId}"
+      >
+        <span>
+          <strong>${escapeHtml(title)}</strong>
+          <small>${escapeHtml(summary)}</small>
+        </span>
+        <i aria-hidden="true">${isOpen ? "−" : "+"}</i>
+      </button>
+      ${
+        isOpen
+          ? `<div class="settings-panel-body" id="${contentId}">${content}</div>`
+          : ""
+      }
+    </section>
+  `;
+}
+
+function renderReadableSetting(label: string, value: string): string {
+  return `
+    <div>
+      <dt>${escapeHtml(label)}</dt>
+      <dd>${escapeHtml(value)}</dd>
+    </div>
+  `;
+}
+
+function renderSettingInfo(label: string, value: string): string {
+  return `
+    <div class="setting-info">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+    </div>
+  `;
+}
+
+function renderSettingOption(label: string, value: string, active: boolean): string {
+  return `
+    <button class="setting-option ${active ? "is-active" : ""}" type="button" disabled>
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+      <small>${active ? "Atual" : "Em breve"}</small>
+    </button>
+  `;
 }
 
 function renderProgression(character: Character): string {
@@ -911,14 +1063,20 @@ function renderInventory(character: Character): string {
   const compartments = getInventoryCompartments(character);
 
   return `
-    <main class="content inventory-layout ${selectedItem ? "has-detail-panel" : ""}">
+    <main class="content inventory-layout">
       <section class="inventory-main">
         <div class="screen-title">
           <h1>Inventario</h1>
         </div>
         <label class="search-box inventory-search">
           <span>BUSCA</span>
-          <input type="search" placeholder="Procurar item..." aria-label="Procurar item" />
+          <input
+            type="search"
+            placeholder="Procurar item..."
+            aria-label="Procurar item"
+            data-inventory-search
+            value="${escapeHtml(state.inventorySearch)}"
+          />
         </label>
         <div class="filter-row">
           ${(Object.keys(itemFilterLabels) as InventoryFilter[])
@@ -932,12 +1090,10 @@ function renderInventory(character: Character): string {
             .join("")}
           <button class="chip inventory-container-action" data-action="add-container" type="button">Novo container</button>
         </div>
-        ${selectedItem && selectedEntry ? renderItemPanel(selectedItem, selectedEntry.entry, compartments, entries, "inline") : ""}
         <div class="inventory-compartments">
           ${compartments.map((compartment) => renderInventoryCompartment(compartment, entries, selectedItem?.id)).join("")}
         </div>
       </section>
-      ${selectedItem && selectedEntry ? renderItemPanel(selectedItem, selectedEntry.entry, compartments, entries, "side") : ""}
     </main>
   `;
 }
@@ -950,7 +1106,8 @@ function renderInventoryCompartment(
   const compartmentEntries = entries.filter(({ entry, item }) => {
     const sameCompartment = getEntryCompartmentId(entry) === compartment.id;
     const sameFilter = state.inventoryFilter === "todos" || item.category === state.inventoryFilter;
-    return sameCompartment && sameFilter;
+    const sameSearch = matchesInventorySearch(item, state.inventorySearch);
+    return sameCompartment && sameFilter && sameSearch;
   });
   const currentWeight = getCompartmentWeight(entries, compartment.id);
   const capacityLabel = compartment.capacity ? `${currentWeight} / ${compartment.capacity}` : `${compartmentEntries.length} itens`;
@@ -1035,65 +1192,134 @@ function itemIcon(category: ItemDefinition["category"]): string {
   return icons[category];
 }
 
-function renderItemPanel(
-  item: ItemDefinition,
-  entry: Character["inventory"]["entries"][number],
-  compartments: InventoryCompartment[],
-  entries: ReturnType<typeof getItemEntries>,
-  placement: "side" | "inline"
-): string {
-  if (!item) {
-    return `<aside class="detail-panel"><p>Nenhum item selecionado.</p></aside>`;
+function matchesInventorySearch(item: ItemDefinition, search: string): boolean {
+  const normalizedSearch = search.trim().toLowerCase();
+
+  if (!normalizedSearch) {
+    return true;
   }
 
+  const searchableText = [
+    item.name,
+    item.summary,
+    itemFilterLabels[item.category],
+    item.tier ? `tier ${item.tier}` : "",
+    ...(item.traits ?? [])
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  return searchableText.includes(normalizedSearch);
+}
+
+function renderItemModal(): string {
+  const character = state.character;
+
+  if (!character || !state.selectedItemId) {
+    return "";
+  }
+
+  const entries = getItemEntries(character);
+  const selectedEntry = entries.find(({ item }) => item.id === state.selectedItemId);
+
+  if (!selectedEntry) {
+    return "";
+  }
+
+  const { item, entry } = selectedEntry;
+  const compartments = getInventoryCompartments(character);
   const currentCompartmentId = getEntryCompartmentId(entry);
+  const currentCompartment = compartments.find((compartment) => compartment.id === currentCompartmentId);
 
   return `
-    <aside class="detail-panel detail-panel-${placement}">
-      <div class="panel-heading">
-        <div>
-          <h2 tabindex="-1" data-panel-title>${escapeHtml(item.name)}</h2>
-          <span>${item.tier ? `Tier ${item.tier}` : itemFilterLabels[item.category]}</span>
+    <div class="modal-backdrop" data-modal-backdrop>
+      <section class="item-modal" role="dialog" aria-modal="true" aria-labelledby="item-modal-title">
+        <button class="modal-close" data-modal-close aria-label="Fechar item">x</button>
+        <div class="item-modal-art">
+          ${renderItemVisual(item, "detail")}
         </div>
-        <button data-item-panel-close aria-label="Fechar detalhes">x</button>
-      </div>
-      <div class="feature-art item-detail-art">${renderItemVisual(item, "detail")}</div>
-      <p>${escapeHtml(item.summary)}</p>
-      <dl class="detail-list">
-        <div><dt>Valor</dt><dd>${item.value ?? "-"}</dd></div>
-        <div><dt>Peso</dt><dd>${item.weight}</dd></div>
-      </dl>
-      <div class="trait-list">
-        ${(item.traits ?? []).map((trait) => `<span>${escapeHtml(trait)}</span>`).join("")}
-      </div>
-      <div class="move-list">
-        <span>Mover para</span>
-        ${compartments
-          .map((compartment) => {
-            const isCurrent = compartment.id === currentCompartmentId;
-            const accepts = canCompartmentAcceptItem(compartment, item);
-            const fits = wouldFitCompartment(compartment, entries, item, entry.quantity, currentCompartmentId);
-            const disabled = isCurrent || !accepts || !fits;
-            const reason = isCurrent ? "Atual" : !accepts ? "Incompativel" : !fits ? "Sem espaco" : "Mover";
+        <div class="item-modal-body">
+          <span class="resource-modal-label">${itemFilterLabels[item.category]}</span>
+          <div class="item-modal-heading">
+            <div>
+              <h2 id="item-modal-title">${escapeHtml(item.name)}</h2>
+              <span>${item.tier ? `Tier ${item.tier}` : itemFilterLabels[item.category]}</span>
+            </div>
+          </div>
+          <p>${escapeHtml(item.summary)}</p>
+          <dl class="detail-list item-modal-details">
+            <div><dt>Qtd.</dt><dd>${entry.quantity}</dd></div>
+            <div><dt>Valor</dt><dd>${item.value ?? "-"}</dd></div>
+            <div><dt>Peso</dt><dd>${item.weight}</dd></div>
+            <div><dt>Container</dt><dd>${escapeHtml(currentCompartment?.name ?? "Mochila")}</dd></div>
+          </dl>
+          <div class="trait-list">
+            ${(item.traits ?? []).map((trait) => `<span>${escapeHtml(trait)}</span>`).join("")}
+          </div>
+          <div class="move-list">
+            <span>Mover para</span>
+            ${compartments
+              .map((compartment) => {
+                const isCurrent = compartment.id === currentCompartmentId;
+                const accepts = canCompartmentAcceptItem(compartment, item);
+                const fits = wouldFitCompartment(compartment, entries, item, entry.quantity, currentCompartmentId);
+                const disabled = isCurrent || !accepts || !fits;
+                const reason = isCurrent ? "Atual" : !accepts ? "Incompativel" : !fits ? "Sem espaco" : "Mover";
 
-            return `
-              <button
-                class="move-target ${isCurrent ? "is-current" : ""}"
-                type="button"
-                data-action="move-item"
-                data-item-id="${item.id}"
-                data-target-compartment-id="${compartment.id}"
-                ${disabled ? "disabled" : ""}
-              >
-                <strong>${escapeHtml(compartment.name)}</strong>
-                <small>${reason}</small>
-              </button>
-            `;
-          })
-          .join("")}
-      </div>
-      <button class="danger-action">Descartar</button>
-    </aside>
+                return `
+                  <button
+                    class="move-target ${isCurrent ? "is-current" : ""}"
+                    type="button"
+                    data-action="move-item"
+                    data-item-id="${item.id}"
+                    data-target-compartment-id="${compartment.id}"
+                    ${disabled ? "disabled" : ""}
+                  >
+                    <strong>${escapeHtml(compartment.name)}</strong>
+                    <small>${reason}</small>
+                  </button>
+                `;
+              })
+              .join("")}
+          </div>
+          <button class="danger-action" type="button" data-action="delete-item" data-item-id="${item.id}">Descartar</button>
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function renderDeleteItemModal(): string {
+  const character = state.character;
+  if (!character || !state.deletingItemId) {
+    return "";
+  }
+
+  const selectedEntry = getItemEntries(character).find(({ item }) => item.id === state.deletingItemId);
+  if (!selectedEntry) {
+    return "";
+  }
+
+  const { item, entry } = selectedEntry;
+  const compartment = getInventoryCompartments(character).find((container) => container.id === getEntryCompartmentId(entry));
+
+  return `
+    <div class="modal-backdrop" data-modal-backdrop>
+      <section class="container-modal danger-modal" role="dialog" aria-modal="true" aria-labelledby="delete-item-title">
+        <button class="modal-close" data-modal-close aria-label="Cancelar descarte">x</button>
+        <span class="resource-modal-label">Descartar item</span>
+        <h2 id="delete-item-title">${escapeHtml(item.name)}</h2>
+        <p>Esta acao removera o item do inventario do personagem.</p>
+        <div class="danger-summary">
+          <strong>${entry.quantity}</strong>
+          <span>${entry.quantity === 1 ? "unidade sera perdida" : "unidades serao perdidas"} em ${escapeHtml(compartment?.name ?? "Mochila")}</span>
+        </div>
+        <div class="confirmation-actions">
+          <button class="secondary-action" type="button" data-action="cancel-delete-item">Cancelar</button>
+          <button class="danger-action" type="button" data-action="confirm-delete-item">Descartar item</button>
+        </div>
+      </section>
+    </div>
   `;
 }
 
@@ -1286,7 +1512,9 @@ function render(): void {
                 ? renderInventory(character)
                 : state.page === "compendium"
                   ? renderCompendium()
-                  : renderPlaceholder(state.page);
+                  : state.page === "settings"
+                    ? renderSettings(character)
+                    : renderPlaceholder(state.page);
 
   appRoot.innerHTML = `
     <div class="app-shell">
@@ -1297,6 +1525,8 @@ function render(): void {
       </div>
     </div>
     ${renderCardModal(state.modalCardId)}
+    ${renderItemModal()}
+    ${renderDeleteItemModal()}
     ${renderResourceModal(state.resourceModalId)}
     ${renderProgressionHistoryModal()}
     ${renderAddContainerModal()}
@@ -1307,16 +1537,35 @@ function render(): void {
   `;
 }
 
-function focusInlineItemPanel(): void {
-  if (!window.matchMedia("(max-width: 1180px)").matches) {
+function exportCharacter(): void {
+  const character = state.character;
+
+  if (!character) {
     return;
   }
 
+  const serializedCharacter = JSON.stringify(character, null, 2);
+  const blob = new Blob([serializedCharacter], { type: "application/json" });
+  const downloadUrl = URL.createObjectURL(blob);
+  const safeName = character.identity.name
+    .toLowerCase()
+    .replaceAll(/[^a-z0-9]+/g, "-")
+    .replaceAll(/(^-|-$)/g, "");
+  const link = document.createElement("a");
+
+  link.href = downloadUrl;
+  link.download = `soulforge-${safeName || "personagem"}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
+}
+
+function focusInventorySearch(): void {
   requestAnimationFrame(() => {
-    const panel = document.querySelector<HTMLElement>(".detail-panel-inline");
-    const title = panel?.querySelector<HTMLElement>("[data-panel-title]");
-    panel?.scrollIntoView({ behavior: "smooth", block: "start" });
-    title?.focus({ preventScroll: true });
+    const input = document.querySelector<HTMLInputElement>("[data-inventory-search]");
+    input?.focus({ preventScroll: true });
+    input?.setSelectionRange(input.value.length, input.value.length);
   });
 }
 
@@ -1636,6 +1885,27 @@ async function deleteInventoryContainer(compartmentId: string | undefined): Prom
   render();
 }
 
+async function deleteInventoryItem(itemId: string | undefined): Promise<void> {
+  const character = state.character;
+  if (!character || !itemId) {
+    return;
+  }
+
+  const updatedCharacter: Character = {
+    ...character,
+    inventory: {
+      ...character.inventory,
+      entries: character.inventory.entries.filter((entry) => entry.definitionId !== itemId)
+    }
+  };
+
+  state.character = updatedCharacter;
+  state.selectedItemId = undefined;
+  state.deletingItemId = undefined;
+  await saveCharacter(updatedCharacter);
+  render();
+}
+
 async function saveNoteFromModal(): Promise<void> {
   const character = state.character;
   if (!character) {
@@ -1723,18 +1993,14 @@ function bindEvents(): void {
       return;
     }
 
-    if (target.closest("[data-item-panel-close]")) {
-      state.selectedItemId = undefined;
-      render();
-      return;
-    }
-
     if (target.closest("[data-modal-close]")) {
       state.modalCardId = undefined;
+      state.selectedItemId = undefined;
       state.resourceModalId = undefined;
       state.progressionHistoryOpen = false;
       state.addContainerOpen = false;
       state.deleteContainerId = undefined;
+      state.deletingItemId = undefined;
       state.noteModalOpen = false;
       state.editingNoteId = undefined;
       state.viewingNoteId = undefined;
@@ -1745,10 +2011,12 @@ function bindEvents(): void {
 
     if (target.matches("[data-modal-backdrop]")) {
       state.modalCardId = undefined;
+      state.selectedItemId = undefined;
       state.resourceModalId = undefined;
       state.progressionHistoryOpen = false;
       state.addContainerOpen = false;
       state.deleteContainerId = undefined;
+      state.deletingItemId = undefined;
       state.noteModalOpen = false;
       state.editingNoteId = undefined;
       state.viewingNoteId = undefined;
@@ -1764,9 +2032,24 @@ function bindEvents(): void {
       return;
     }
 
+    if (target.closest('[data-action="export-character"]')) {
+      exportCharacter();
+      return;
+    }
+
+    const settingsSectionButton = target.closest<HTMLElement>("[data-settings-section]");
+    if (settingsSectionButton) {
+      const section = settingsSectionButton.dataset.settingsSection as SettingsSection;
+      state.openSettingsSections[section] = !state.openSettingsSections[section];
+      render();
+      return;
+    }
+
     const pageButton = target.closest<HTMLElement>("[data-page]");
     if (pageButton) {
       state.page = pageButton.dataset.page as Page;
+      state.selectedItemId = undefined;
+      state.deletingItemId = undefined;
       render();
       return;
     }
@@ -1818,6 +2101,25 @@ function bindEvents(): void {
 
     if (target.closest('[data-action="confirm-delete-container"]')) {
       void deleteInventoryContainer(state.deleteContainerId);
+      return;
+    }
+
+    const deleteItemButton = target.closest<HTMLElement>('[data-action="delete-item"]');
+    if (deleteItemButton) {
+      state.deletingItemId = deleteItemButton.dataset.itemId;
+      state.selectedItemId = undefined;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="cancel-delete-item"]')) {
+      state.deletingItemId = undefined;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="confirm-delete-item"]')) {
+      void deleteInventoryItem(state.deletingItemId);
       return;
     }
 
@@ -1896,7 +2198,6 @@ function bindEvents(): void {
     if (itemButton) {
       state.selectedItemId = itemButton.dataset.itemId;
       render();
-      focusInlineItemPanel();
       return;
     }
 
@@ -1937,6 +2238,16 @@ function bindEvents(): void {
       render();
     }
 
+    if (event.key === "Escape" && state.selectedItemId) {
+      state.selectedItemId = undefined;
+      render();
+    }
+
+    if (event.key === "Escape" && state.deletingItemId) {
+      state.deletingItemId = undefined;
+      render();
+    }
+
     if (event.key === "Escape" && state.resourceModalId) {
       state.resourceModalId = undefined;
       render();
@@ -1961,6 +2272,19 @@ function bindEvents(): void {
     if (event.key === "Escape" && state.deletingNoteId) {
       state.deletingNoteId = undefined;
       render();
+    }
+  });
+
+  document.addEventListener("input", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+
+    if (target.matches("[data-inventory-search]")) {
+      state.inventorySearch = target.value;
+      render();
+      focusInventorySearch();
     }
   });
 }

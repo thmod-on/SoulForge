@@ -12,6 +12,7 @@ export type Attribute = {
   id: "for" | "dex" | "con" | "int" | "wil" | "cha";
   label: string;
   value: number;
+  upgraded?: boolean;
 };
 
 export type Defense = {

@@ -13,7 +13,7 @@ export const demoCharacter: Character = {
     quote: "Protejo para que outros possam ter um amanha."
   },
   attributes: [
-    { id: "dex", label: "AGI", value: 1 },
+    { id: "dex", label: "AGI", value: 1, upgraded: true },
     { id: "for", label: "FOR", value: 2 },
     { id: "cha", label: "FIN", value: 1 },
     { id: "wil", label: "INS", value: 1 },
