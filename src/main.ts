@@ -1,14 +1,15 @@
-import { catalog } from "./content/installedPacks";
-import { findDefinition, findDomain } from "./domain/catalog";
-import type { CardDefinition, Character, CharacterNote, CharacterNoteCategory, InventoryCompartment, ItemDefinition } from "./domain/types";
+import { baseCatalog } from "./content/installedPacks";
+import { createCatalog, findDefinition, findDomain } from "./domain/catalog";
+import type { CardDefinition, Character, CharacterNote, CharacterNoteCategory, DomainDefinition, InventoryCompartment, ItemDefinition } from "./domain/types";
 import { ensureDemoCharacter, saveCharacter } from "./storage/characterRepository";
+import { deleteCustomDefinition, loadCustomDefinitions, saveCustomDefinition } from "./storage/compendiumRepository";
 import "./styles.css";
 
 type Page = "overview" | "skills" | "experiences" | "inventory" | "progression" | "notes" | "compendium" | "settings" | "storedCards";
 type InventoryFilter = "todos" | ItemDefinition["category"];
 type ProgressionTierNumber = 2 | 3 | 4;
 type SettingsSection = "general" | "localData" | "loadRules" | "appearance" | "progression";
-type CompendiumView = "index" | "cards";
+type CompendiumView = "index" | "cards" | "domains";
 
 function getAppRoot(): HTMLDivElement {
   const element = document.querySelector<HTMLDivElement>("#app");
@@ -21,6 +22,7 @@ function getAppRoot(): HTMLDivElement {
 }
 
 const appRoot = getAppRoot();
+let catalog = baseCatalog;
 
 const dragState: {
   itemId?: string;
@@ -61,6 +63,12 @@ const state: {
   editingNoteId?: string;
   viewingNoteId?: string;
   deletingNoteId?: string;
+  domainModalOpen: boolean;
+  editingDomainId?: string;
+  deletingDomainId?: string;
+  cardModalOpen: boolean;
+  editingCompendiumCardId?: string;
+  deletingCompendiumCardId?: string;
   openSettingsSections: Record<SettingsSection, boolean>;
   character?: Character;
 } = {
@@ -77,6 +85,8 @@ const state: {
   progressionHistoryOpen: false,
   addContainerOpen: false,
   noteModalOpen: false,
+  domainModalOpen: false,
+  cardModalOpen: false,
   openSettingsSections: {
     general: true,
     localData: false,
@@ -97,10 +107,10 @@ const topNavItems: Array<{ page: Page; label: string }> = [
 
 const sideNavItems: Array<{ page: Page; label: string; icon: string }> = [
   { page: "compendium", label: "Compendium", icon: "&#128214;" },
-  { page: "settings", label: "Configuracoes", icon: "&#10002;" }
+  { page: "settings", label: "Configuracoes", icon: "&#128220;" }
 ];
 
-const appVersion = "0.4.0";
+const appVersion = "0.5.0";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -1405,6 +1415,9 @@ function renderCompendium(): string {
   if (state.compendiumView === "cards") {
     return renderCompendiumCardsManager();
   }
+  if (state.compendiumView === "domains") {
+    return renderCompendiumDomainsManager();
+  }
 
   return `
     <main class="content compendium-content">
@@ -1415,15 +1428,54 @@ function renderCompendium(): string {
       </div>
 
       <nav class="compendium-bookmarks" aria-label="Aberturas do Compendium">
-        <button class="is-active" type="button" disabled>Abertura 1 <span>Itens | Cartas</span></button>
-        <button type="button" disabled>Abertura 2 <span>Classes | Ancestralidades</span></button>
+        <button class="is-active" type="button" disabled>Abertura 1 <span>Dominios | Cartas</span></button>
+        <button type="button" disabled>Abertura 2 <span>Itens | Classes</span></button>
         <button type="button" disabled>Abertura 3 <span>Comunidades | Condicoes</span></button>
       </nav>
 
-      <section class="compendium-spread compendium-index-spread" aria-label="Indice inicial do Compendium">
+      <section class="compendium-spread compendium-index-spread" aria-label="Dominios e cartas do Compendium">
         <article class="compendium-page">
           ${renderCompendiumChapterCard({
-            eyebrow: "Pagina esquerda",
+            eyebrow: "",
+            title: "Dominios",
+            summary: "A identidade que organiza as cartas: nome, descricao e cor de cada vertente.",
+            count: catalog.domains.length,
+            countLabel: "Dominios cadastrados",
+            primaryAction: "Novo dominio",
+            primaryActionId: "new-compendium-domain",
+            secondaryAction: "Pesquisar e gerenciar",
+            secondaryActionId: "manage-compendium-domains",
+            details: [
+              "Dominios de packs sao protegidos e apenas podem ser consultados.",
+              "Dominios locais ficam salvos neste dispositivo.",
+              "Uma carta sempre devera pertencer a um dominio."
+            ],
+            emphasized: true
+          })}
+        </article>
+        <article class="compendium-page">
+          ${renderCompendiumChapterCard({
+            eyebrow: "",
+            title: "Cartas",
+            summary: "Cartas utilizaveis por personagens, organizadas por dominio, tier, custo e efeito.",
+            count: catalog.cards.length,
+            countLabel: "Cartas cadastradas",
+            primaryAction: "Nova carta",
+            primaryActionId: "new-compendium-card",
+            secondaryAction: "Pesquisar e gerenciar",
+            secondaryActionId: "manage-compendium-cards",
+            details: [
+              "Toda carta pertence obrigatoriamente a um dominio.",
+              "Cartas locais podem ser criadas, editadas e excluidas.",
+              "Conteudo de packs fica protegido para preservar sua origem."
+            ]
+          })}
+        </article>
+      </section>
+      <section class="compendium-spread compendium-index-spread" aria-label="Outros capitulos do Compendium">
+        <article class="compendium-page">
+          ${renderCompendiumChapterCard({
+            eyebrow: "",
             title: "Itens",
             summary: "Armas, armaduras, consumiveis, equipamentos e loot que podem ser referenciados pelo inventario.",
             count: catalog.items.length,
@@ -1437,24 +1489,7 @@ function renderCompendium(): string {
             ]
           })}
         </article>
-        <article class="compendium-page">
-          ${renderCompendiumChapterCard({
-            eyebrow: "Pagina direita",
-            title: "Cartas",
-            summary: "Cartas utilizaveis por personagens, organizadas principalmente por dominio, tier, tipo, custo e efeito.",
-            count: catalog.cards.length,
-            countLabel: "Definitions cadastradas",
-            primaryAction: "Nova carta",
-            secondaryAction: "Pesquisar e gerenciar",
-            secondaryActionId: "manage-compendium-cards",
-            details: [
-              "Primeiro fluxo completo priorizado pelo Compendium.",
-              "A pagina interna tera busca por nome/texto e filtros por dominio e tier.",
-              "Detalhes extensos, edicao e exclusao serao feitos por modais focados."
-            ],
-            emphasized: true
-          })}
-        </article>
+        <article class="compendium-page compendium-page-blank"><span>O indice crescera conforme novos capitulos forem preparados.</span></article>
       </section>
     </main>
   `;
@@ -1467,6 +1502,7 @@ function renderCompendiumChapterCard(chapter: {
   count: number;
   countLabel: string;
   primaryAction: string;
+  primaryActionId?: string;
   secondaryAction: string;
   secondaryActionId?: string;
   details: string[];
@@ -1475,7 +1511,7 @@ function renderCompendiumChapterCard(chapter: {
   return `
     <div class="compendium-index-card ${chapter.emphasized ? "is-priority" : ""}">
       <div class="compendium-page-heading">
-        <span>${escapeHtml(chapter.eyebrow)}</span>
+        ${chapter.eyebrow ? `<span>${escapeHtml(chapter.eyebrow)}</span>` : ""}
         <h2>${escapeHtml(chapter.title)}</h2>
         <p>${escapeHtml(chapter.summary)}</p>
       </div>
@@ -1484,12 +1520,101 @@ function renderCompendiumChapterCard(chapter: {
         <span>${escapeHtml(chapter.countLabel)}</span>
       </div>
       <div class="compendium-actions compendium-index-actions">
-        <button type="button" disabled>${escapeHtml(chapter.primaryAction)}</button>
+        <button type="button" ${chapter.primaryActionId ? `data-action="${chapter.primaryActionId}"` : "disabled"}>${escapeHtml(chapter.primaryAction)}</button>
         <button type="button" ${chapter.secondaryActionId ? `data-action="${chapter.secondaryActionId}"` : "disabled"}>${escapeHtml(chapter.secondaryAction)}</button>
       </div>
       <ul class="compendium-chapter-notes">
         ${chapter.details.map((detail) => `<li>${escapeHtml(detail)}</li>`).join("")}
       </ul>
+    </div>
+  `;
+}
+
+function isLocalDefinition(definition: DomainDefinition): boolean {
+  return definition.packId === "local";
+}
+
+function renderCompendiumDomainsManager(): string {
+  const sortedDomains = [...catalog.domains].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+
+  return `
+    <main class="content compendium-content">
+      <div class="screen-title">
+        <div>
+          <h1>Dominios</h1>
+          <p>Organize as vertentes que classificam as cartas do seu Compendium.</p>
+        </div>
+        <button class="secondary-action screen-title-action" type="button" data-action="back-compendium-index">Voltar ao indice</button>
+      </div>
+      <section class="compendium-management-panel">
+        <div class="compendium-management-toolbar">
+          <div class="management-copy"><span>BASE DO COMPENDIUM</span><strong>${sortedDomains.length} ${sortedDomains.length === 1 ? "dominio" : "dominios"}</strong></div>
+          <button class="primary-action" type="button" data-action="new-compendium-domain">Novo dominio</button>
+        </div>
+        <div class="compendium-domain-results">
+          ${sortedDomains.map(renderCompendiumDomainResult).join("")}
+        </div>
+      </section>
+    </main>
+  `;
+}
+
+function renderCompendiumDomainResult(domain: DomainDefinition): string {
+  const linkedCards = catalog.cards.filter((card) => card.domainId === domain.id).length;
+  const isLocal = isLocalDefinition(domain);
+  return `
+    <article class="compendium-domain-result" style="--domain-color: ${escapeHtml(domain.color)}">
+      <div class="compendium-domain-swatch" aria-hidden="true"></div>
+      <div>
+        <div class="compendium-domain-result-meta"><span>${isLocal ? "Local" : "Pack"}</span><span>${linkedCards} ${linkedCards === 1 ? "carta" : "cartas"}</span></div>
+        <h2>${escapeHtml(domain.name)}</h2>
+        <p>${escapeHtml(domain.summary || "Sem descricao.")}</p>
+      </div>
+      <div class="compendium-card-result-actions">
+        ${isLocal ? `<button type="button" data-action="edit-compendium-domain" data-domain-id="${domain.id}">Editar</button><button type="button" data-action="delete-compendium-domain" data-domain-id="${domain.id}">Excluir</button>` : `<span class="readonly-label">Conteudo do pack</span>`}
+      </div>
+    </article>
+  `;
+}
+
+function renderDomainModal(): string {
+  if (!state.domainModalOpen) {
+    return "";
+  }
+  const existing = state.editingDomainId ? findDomain(catalog, state.editingDomainId) : undefined;
+  const name = existing?.name ?? "";
+  const summary = existing?.summary ?? "";
+  const color = existing?.color ?? "#8e4fc4";
+  return `
+    <div class="modal-backdrop" data-modal-backdrop>
+      <section class="form-modal" role="dialog" aria-modal="true" aria-labelledby="domain-modal-title">
+        <button class="modal-close" data-modal-close aria-label="Fechar dominio">x</button>
+        <span class="resource-modal-label">Compendium</span>
+        <h2 id="domain-modal-title">${existing ? "Editar dominio" : "Novo dominio"}</h2>
+        <p>O dominio sera oferecido como classificacao obrigatoria ao criar cartas.</p>
+        <label class="form-field"><span>Nome *</span><input data-domain-name value="${escapeHtml(name)}" placeholder="Ex.: Arcano" /></label>
+        <label class="form-field"><span>Descricao *</span><textarea data-domain-summary placeholder="Explique a proposta deste dominio.">${escapeHtml(summary)}</textarea></label>
+        <label class="form-field form-color-field"><span>Cor de identidade</span><input data-domain-color type="color" value="${escapeHtml(color)}" /></label>
+        <p class="form-error" data-domain-error hidden></p>
+        <div class="modal-actions icon-modal-actions"><button class="secondary-action icon-action" type="button" data-modal-close aria-label="Cancelar" title="Cancelar">↩</button><button class="primary-action icon-action" type="button" data-action="save-compendium-domain" aria-label="Gravar dominio" title="Gravar dominio">✒</button></div>
+      </section>
+    </div>
+  `;
+}
+
+function renderDeleteDomainModal(): string {
+  const domain = state.deletingDomainId ? findDomain(catalog, state.deletingDomainId) : undefined;
+  if (!domain) {
+    return "";
+  }
+  const linkedCards = catalog.cards.filter((card) => card.domainId === domain.id).length;
+  return `
+    <div class="modal-backdrop" data-modal-backdrop>
+      <section class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-domain-title">
+        <h2 id="delete-domain-title">Excluir dominio?</h2>
+        <p>${linkedCards ? `O dominio <strong>${escapeHtml(domain.name)}</strong> possui ${linkedCards} ${linkedCards === 1 ? "carta vinculada" : "cartas vinculadas"} e nao pode ser excluido antes de transferi-las.` : `O dominio <strong>${escapeHtml(domain.name)}</strong> sera removido deste dispositivo.`}</p>
+        <div class="modal-actions"><button class="secondary-action" type="button" data-action="cancel-delete-domain">Cancelar</button>${linkedCards ? "" : '<button class="danger-action" type="button" data-action="confirm-delete-domain">Excluir dominio</button>'}</div>
+      </section>
     </div>
   `;
 }
@@ -1503,7 +1628,7 @@ function renderCompendiumCardsManager(): string {
       <div class="screen-title">
         <div>
           <h1>Cartas</h1>
-          <p>Pesquise e gerencie cartas do catalogo. Criacao, edicao e exclusao entram no proximo ciclo.</p>
+          <p>Crie e organize cartas locais, sempre vinculadas a um dominio do Compendium.</p>
         </div>
         <button class="secondary-action screen-title-action" type="button" data-action="back-compendium-index">Voltar ao indice</button>
       </div>
@@ -1520,7 +1645,7 @@ function renderCompendiumCardsManager(): string {
               value="${escapeHtml(state.compendiumCardSearch)}"
             />
           </label>
-          <button class="primary-action" type="button" disabled>Nova carta</button>
+          <button class="primary-action" type="button" data-action="new-compendium-card">Nova carta</button>
         </div>
 
         <div class="compendium-filter-block">
@@ -1591,10 +1716,12 @@ function getFilteredCompendiumCards(): CardDefinition[] {
 
 function renderCompendiumCardResult(card: CardDefinition): string {
   const domain = findDomain(catalog, card.domainId);
+  const isLocal = card.packId === "local";
 
   return `
     <article class="compendium-card-result">
       <button class="compendium-card-result-open" type="button" data-card-modal-id="${card.id}" aria-label="Ver detalhes de ${escapeHtml(card.name)}">
+        ${card.image ? `<span class="compendium-card-result-image" style="background-image: url('${escapeHtml(card.image)}')" aria-hidden="true"></span>` : ""}
         <div>
           <span>${escapeHtml(domain?.name ?? "Sem dominio")} - Tier ${card.tier} - ${escapeHtml(card.cardType)}</span>
           <h2>${escapeHtml(card.name)}</h2>
@@ -1605,10 +1732,55 @@ function renderCompendiumCardResult(card: CardDefinition): string {
         </div>
       </button>
       <div class="compendium-card-result-actions">
-        <button type="button" disabled>Editar</button>
-        <button type="button" disabled>Excluir</button>
+        ${isLocal ? `<button type="button" data-action="edit-compendium-card" data-card-id="${card.id}">Editar</button><button type="button" data-action="delete-compendium-card" data-card-id="${card.id}">Excluir</button>` : '<span class="readonly-label">Conteudo do pack</span>'}
       </div>
     </article>
+  `;
+}
+
+function renderCompendiumCardFormModal(): string {
+  if (!state.cardModalOpen) {
+    return "";
+  }
+
+  const existing = state.editingCompendiumCardId ? findDefinition(catalog, state.editingCompendiumCardId) : undefined;
+  const card = existing?.type === "card" ? existing : undefined;
+  const domains = [...catalog.domains].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  return `
+    <div class="modal-backdrop" data-modal-backdrop>
+      <section class="form-modal card-form-modal" role="dialog" aria-modal="true" aria-labelledby="card-form-modal-title">
+        <button class="modal-close" data-modal-close aria-label="Fechar carta">x</button>
+        <h2 id="card-form-modal-title">${card ? "Editar carta" : "Nova carta"}</h2>
+        <p>A carta sera salva localmente e podera ser usada no catalogo do personagem futuramente.</p>
+        <div class="form-grid">
+          <label class="form-field"><span>Nome *</span><input data-compendium-card-name value="${escapeHtml(card?.name ?? "")}" placeholder="Ex.: Passo Sombrio" /></label>
+          <label class="form-field"><span>Dominio *</span><select data-compendium-card-domain>${domains.map((domain) => `<option value="${domain.id}" ${domain.id === card?.domainId ? "selected" : ""}>${escapeHtml(domain.name)}</option>`).join("")}</select></label>
+          <label class="form-field"><span>Tier *</span><select data-compendium-card-tier>${[1, 2, 3, 4].map((tier) => `<option value="${tier}" ${tier === (card?.tier ?? 1) ? "selected" : ""}>Tier ${tier}</option>`).join("")}</select></label>
+          <label class="form-field"><span>Custo</span><input data-compendium-card-cost value="${escapeHtml(card?.cost ?? "")}" placeholder="Ex.: 1 Esperanca" /></label>
+        </div>
+        <label class="form-field"><span>Imagem</span><input data-compendium-card-image type="file" accept="image/png,image/jpeg,image/webp" /><small>${card?.image ? "Uma imagem ja esta associada; envie outra para substitui-la." : "PNG, JPG ou WebP; ate 1,5 MB."}</small></label>
+        <label class="form-field"><span>Efeito *</span><textarea data-compendium-card-effect placeholder="Descreva a regra e o efeito completo da carta.">${escapeHtml(card?.effect ?? "")}</textarea></label>
+        <p class="form-error" data-compendium-card-error hidden></p>
+        <div class="modal-actions icon-modal-actions"><button class="secondary-action icon-action" type="button" data-modal-close aria-label="Cancelar" title="Cancelar">↩</button><button class="primary-action icon-action" type="button" data-action="save-compendium-card" aria-label="Gravar carta" title="Gravar carta">✒</button></div>
+      </section>
+    </div>
+  `;
+}
+
+function renderDeleteCompendiumCardModal(): string {
+  const definition = state.deletingCompendiumCardId ? findDefinition(catalog, state.deletingCompendiumCardId) : undefined;
+  if (definition?.type !== "card") {
+    return "";
+  }
+  const isInDeck = state.character?.deck.learnedCardIds.includes(definition.id) || state.character?.deck.activeCardIds.includes(definition.id);
+  return `
+    <div class="modal-backdrop" data-modal-backdrop>
+      <section class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-card-title">
+        <h2 id="delete-card-title">Excluir carta?</h2>
+        <p>${isInDeck ? `A carta <strong>${escapeHtml(definition.name)}</strong> esta vinculada ao personagem atual e nao pode ser excluida antes de ser removida do deck.` : `A carta <strong>${escapeHtml(definition.name)}</strong> sera removida deste dispositivo.`}</p>
+        <div class="modal-actions"><button class="secondary-action" type="button" data-action="cancel-delete-compendium-card">Cancelar</button>${isInDeck ? "" : '<button class="danger-action" type="button" data-action="confirm-delete-compendium-card">Excluir carta</button>'}</div>
+      </section>
+    </div>
   `;
 }
 
@@ -1628,7 +1800,7 @@ function renderCardModal(cardId?: string): string {
     <div class="modal-backdrop" data-modal-backdrop>
       <section class="card-modal" role="dialog" aria-modal="true" aria-labelledby="card-modal-title">
         <button class="modal-close" data-modal-close aria-label="Fechar carta">x</button>
-        <div class="modal-card-art"></div>
+        <div class="modal-card-art" ${definition.image ? `style="background-image: linear-gradient(180deg, transparent, rgba(8, 15, 22, 0.82)), url('${escapeHtml(definition.image)}')"` : ""}></div>
         <div class="modal-card-body">
           <div class="modal-card-kicker">
             <span>${escapeHtml(domain?.name ?? "Sem dominio")}</span>
@@ -1729,6 +1901,10 @@ function render(): void {
     ${renderNoteModal()}
     ${renderViewNoteModal()}
     ${renderDeleteNoteModal()}
+    ${renderDomainModal()}
+    ${renderDeleteDomainModal()}
+    ${renderCompendiumCardFormModal()}
+    ${renderDeleteCompendiumCardModal()}
   `;
 }
 
@@ -1770,6 +1946,154 @@ function focusCompendiumCardSearch(): void {
     input?.focus({ preventScroll: true });
     input?.setSelectionRange(input.value.length, input.value.length);
   });
+}
+
+async function refreshCatalog(): Promise<void> {
+  const customDefinitions = await loadCustomDefinitions();
+  catalog = createCatalog(baseCatalog.packs, [...baseCatalog.definitions, ...customDefinitions]);
+}
+
+async function saveCompendiumDomain(): Promise<void> {
+  const nameInput = document.querySelector<HTMLInputElement>("[data-domain-name]");
+  const summaryInput = document.querySelector<HTMLTextAreaElement>("[data-domain-summary]");
+  const colorInput = document.querySelector<HTMLInputElement>("[data-domain-color]");
+  const name = nameInput?.value.trim() ?? "";
+  const summary = summaryInput?.value.trim() ?? "";
+  const color = colorInput?.value ?? "#8e4fc4";
+  const error = document.querySelector<HTMLElement>("[data-domain-error]");
+  const duplicate = catalog.domains.some((domain) => domain.name.toLocaleLowerCase("pt-BR") === name.toLocaleLowerCase("pt-BR") && domain.id !== state.editingDomainId);
+
+  if (!name || !summary || duplicate) {
+    if (error) {
+      error.hidden = false;
+      error.textContent = duplicate ? "Ja existe um dominio com este nome." : "Informe um nome e uma descricao para o dominio.";
+    }
+    nameInput?.classList.toggle("is-invalid", !name || duplicate);
+    summaryInput?.classList.toggle("is-invalid", !summary);
+    (!name || duplicate ? nameInput : summaryInput)?.focus();
+    return;
+  }
+
+  const existing = state.editingDomainId ? findDomain(catalog, state.editingDomainId) : undefined;
+  if (existing && !isLocalDefinition(existing)) {
+    return;
+  }
+  const definition: DomainDefinition = {
+    id: existing?.id ?? `domain.local.${crypto.randomUUID()}`,
+    type: "domain",
+    packId: "local",
+    name,
+    summary,
+    color
+  };
+  await saveCustomDefinition(definition);
+  await refreshCatalog();
+  state.domainModalOpen = false;
+  state.editingDomainId = undefined;
+  render();
+}
+
+async function removeCompendiumDomain(): Promise<void> {
+  const domainId = state.deletingDomainId;
+  const domain = domainId ? findDomain(catalog, domainId) : undefined;
+  if (!domain || !isLocalDefinition(domain) || catalog.cards.some((card) => card.domainId === domain.id)) {
+    return;
+  }
+  await deleteCustomDefinition(domain.id);
+  await refreshCatalog();
+  state.deletingDomainId = undefined;
+  render();
+}
+
+function getCardFormValue(selector: string): string {
+  const element = document.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(selector);
+  return element?.value.trim() ?? "";
+}
+
+function readCardImage(): Promise<string | undefined> {
+  const input = document.querySelector<HTMLInputElement>("[data-compendium-card-image]");
+  const file = input?.files?.[0];
+  if (!file) {
+    return Promise.resolve(undefined);
+  }
+  if (file.size > 1_500_000) {
+    return Promise.reject(new Error("A imagem deve ter no maximo 1,5 MB."));
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : undefined);
+    reader.onerror = () => reject(new Error("Nao foi possivel ler a imagem."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function saveCompendiumCard(): Promise<void> {
+  const name = getCardFormValue("[data-compendium-card-name]");
+  const domainId = getCardFormValue("[data-compendium-card-domain]");
+  const tier = Number(getCardFormValue("[data-compendium-card-tier]"));
+  const cost = getCardFormValue("[data-compendium-card-cost]");
+  const effect = getCardFormValue("[data-compendium-card-effect]");
+  const error = document.querySelector<HTMLElement>("[data-compendium-card-error]");
+  const existingDefinition = state.editingCompendiumCardId ? findDefinition(catalog, state.editingCompendiumCardId) : undefined;
+  const existing = existingDefinition?.type === "card" ? existingDefinition : undefined;
+  const duplicate = catalog.cards.some((card) => card.name.toLocaleLowerCase("pt-BR") === name.toLocaleLowerCase("pt-BR") && card.id !== existing?.id);
+
+  if (!name || !domainId || !Number.isInteger(tier) || tier < 1 || !effect || duplicate) {
+    if (error) {
+      error.hidden = false;
+      error.textContent = duplicate ? "Ja existe uma carta com este nome." : "Preencha nome, dominio, tier e efeito.";
+    }
+    return;
+  }
+  if (existing && existing.packId !== "local") {
+    return;
+  }
+  let image = existing?.image;
+  try {
+    image = (await readCardImage()) ?? image;
+  } catch (imageError) {
+    if (error) {
+      error.hidden = false;
+      error.textContent = imageError instanceof Error ? imageError.message : "Nao foi possivel usar a imagem.";
+    }
+    return;
+  }
+
+  const definition: CardDefinition = {
+    id: existing?.id ?? `card.local.${crypto.randomUUID()}`,
+    type: "card",
+    packId: "local",
+    name,
+    summary: effect.length > 140 ? `${effect.slice(0, 137).trimEnd()}...` : effect,
+    domainId,
+    tier,
+    cardType: existing?.cardType ?? "acao",
+    cost: cost || undefined,
+    effect,
+    image
+  };
+  await saveCustomDefinition(definition);
+  await refreshCatalog();
+  state.cardModalOpen = false;
+  state.editingCompendiumCardId = undefined;
+  state.compendiumDomainFilter = domainId;
+  render();
+}
+
+async function removeCompendiumCard(): Promise<void> {
+  const cardId = state.deletingCompendiumCardId;
+  const definition = cardId ? findDefinition(catalog, cardId) : undefined;
+  const isInDeck = definition?.type === "card" && (state.character?.deck.learnedCardIds.includes(definition.id) || state.character?.deck.activeCardIds.includes(definition.id));
+  if (definition?.type !== "card" || definition.packId !== "local" || isInDeck) {
+    return;
+  }
+  await deleteCustomDefinition(definition.id);
+  await refreshCatalog();
+  state.deletingCompendiumCardId = undefined;
+  if (state.compendiumDomainFilter === definition.domainId) {
+    state.compendiumDomainFilter = "todos";
+  }
+  render();
 }
 
 async function adjustResource(delta: number): Promise<void> {
@@ -2208,6 +2532,12 @@ function bindEvents(): void {
       state.editingNoteId = undefined;
       state.viewingNoteId = undefined;
       state.deletingNoteId = undefined;
+      state.domainModalOpen = false;
+      state.editingDomainId = undefined;
+      state.deletingDomainId = undefined;
+      state.cardModalOpen = false;
+      state.editingCompendiumCardId = undefined;
+      state.deletingCompendiumCardId = undefined;
       render();
       return;
     }
@@ -2224,6 +2554,12 @@ function bindEvents(): void {
       state.editingNoteId = undefined;
       state.viewingNoteId = undefined;
       state.deletingNoteId = undefined;
+      state.domainModalOpen = false;
+      state.editingDomainId = undefined;
+      state.deletingDomainId = undefined;
+      state.cardModalOpen = false;
+      state.editingCompendiumCardId = undefined;
+      state.deletingCompendiumCardId = undefined;
       render();
       return;
     }
@@ -2251,6 +2587,88 @@ function bindEvents(): void {
     if (target.closest('[data-action="manage-compendium-cards"]')) {
       state.compendiumView = "cards";
       render();
+      return;
+    }
+
+    if (target.closest('[data-action="manage-compendium-domains"]')) {
+      state.compendiumView = "domains";
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="new-compendium-domain"]')) {
+      state.domainModalOpen = true;
+      state.editingDomainId = undefined;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="new-compendium-card"]')) {
+      state.cardModalOpen = true;
+      state.editingCompendiumCardId = undefined;
+      render();
+      return;
+    }
+
+    const editCompendiumCardButton = target.closest<HTMLElement>('[data-action="edit-compendium-card"]');
+    if (editCompendiumCardButton) {
+      state.cardModalOpen = true;
+      state.editingCompendiumCardId = editCompendiumCardButton.dataset.cardId;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="save-compendium-card"]')) {
+      void saveCompendiumCard();
+      return;
+    }
+
+    const deleteCompendiumCardButton = target.closest<HTMLElement>('[data-action="delete-compendium-card"]');
+    if (deleteCompendiumCardButton) {
+      state.deletingCompendiumCardId = deleteCompendiumCardButton.dataset.cardId;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="cancel-delete-compendium-card"]')) {
+      state.deletingCompendiumCardId = undefined;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="confirm-delete-compendium-card"]')) {
+      void removeCompendiumCard();
+      return;
+    }
+
+    const editDomainButton = target.closest<HTMLElement>('[data-action="edit-compendium-domain"]');
+    if (editDomainButton) {
+      state.domainModalOpen = true;
+      state.editingDomainId = editDomainButton.dataset.domainId;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="save-compendium-domain"]')) {
+      void saveCompendiumDomain();
+      return;
+    }
+
+    const deleteDomainButton = target.closest<HTMLElement>('[data-action="delete-compendium-domain"]');
+    if (deleteDomainButton) {
+      state.deletingDomainId = deleteDomainButton.dataset.domainId;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="cancel-delete-domain"]')) {
+      state.deletingDomainId = undefined;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="confirm-delete-domain"]')) {
+      void removeCompendiumDomain();
       return;
     }
 
@@ -2517,6 +2935,20 @@ function bindEvents(): void {
       state.deletingNoteId = undefined;
       render();
     }
+
+    if (event.key === "Escape" && (state.domainModalOpen || state.deletingDomainId)) {
+      state.domainModalOpen = false;
+      state.editingDomainId = undefined;
+      state.deletingDomainId = undefined;
+      render();
+    }
+
+    if (event.key === "Escape" && (state.cardModalOpen || state.deletingCompendiumCardId)) {
+      state.cardModalOpen = false;
+      state.editingCompendiumCardId = undefined;
+      state.deletingCompendiumCardId = undefined;
+      render();
+    }
   });
 
   document.addEventListener("input", (event) => {
@@ -2543,6 +2975,7 @@ async function boot(): Promise<void> {
   render();
   bindEvents();
   bindDragEvents();
+  await refreshCatalog();
   state.character = await ensureDemoCharacter();
   render();
 }

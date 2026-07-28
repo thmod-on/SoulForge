@@ -3,7 +3,7 @@ import type { Character } from "../domain/types";
 
 const databaseName = "soulforge";
 const storeName = "characters";
-const databaseVersion = 1;
+const databaseVersion = 2;
 
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -13,6 +13,9 @@ function openDatabase(): Promise<IDBDatabase> {
       const database = request.result;
       if (!database.objectStoreNames.contains(storeName)) {
         database.createObjectStore(storeName, { keyPath: "id" });
+      }
+      if (!database.objectStoreNames.contains("customDefinitions")) {
+        database.createObjectStore("customDefinitions", { keyPath: "id" });
       }
     };
 

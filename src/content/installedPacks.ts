@@ -19,7 +19,7 @@ import vigilAmulet from "../../packs/demo/items/item.vigil-amulet.json";
 import { createCatalog } from "../domain/catalog";
 import type { Definition, PackManifest } from "../domain/types";
 
-export const catalog = createCatalog([manifest as PackManifest], [
+export const baseCatalog = createCatalog([manifest as PackManifest], [
   dread,
   shieldBlock,
   stalwartAdvance,
@@ -38,3 +38,6 @@ export const catalog = createCatalog([manifest as PackManifest], [
   gold,
   shadowEssence
 ] as Definition[]);
+
+// Compatibilidade para consumidores que precisam apenas do catalogo dos packs instalados.
+export const catalog = baseCatalog;

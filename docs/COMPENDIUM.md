@@ -56,8 +56,8 @@ As aberturas iniciais do livro são:
 
 | Abertura | Página esquerda | Página direita |
 | --- | --- | --- |
-| 1 | Itens | Cartas |
-| 2 | Classes e subclasses | Ancestralidades |
+| 1 | Domínios | Cartas |
+| 2 | Itens | Classes e subclasses |
 | 3 | Comunidades | Condições e características futuras |
 
 Essa organização pode crescer conforme novos Packs forem instalados, sem alterar a responsabilidade de cada Definition.
@@ -80,7 +80,7 @@ A página de gerenciamento oferece busca, filtros por tipo e ações para criar,
 
 Reúne as cartas utilizáveis por personagens.
 
-Domínios são a principal forma de organizar e filtrar cartas, portanto não precisam ser uma página principal no primeiro momento. A página de gerenciamento de Cartas deve permitir:
+Domínios são a principal forma de organizar e filtrar cartas. A página de gerenciamento de Cartas permite:
 
 - consultar todas as cartas;
 - filtrar por domínio;
@@ -88,6 +88,12 @@ Domínios são a principal forma de organizar e filtrar cartas, portanto não pr
 - criar, editar e excluir cartas.
 
 No índice, o capítulo mostra apenas seu resumo, `Nova carta` e `Pesquisar e gerenciar`.
+
+### Domínios
+
+Domínios são Definitions que classificam as Cartas. Cada carta deve pertencer a exatamente um domínio.
+
+A página de gerenciamento permite criar, editar e excluir domínios locais com nome, descrição e cor. Um domínio com cartas vinculadas não pode ser removido sem antes transferir ou excluir essas cartas.
 
 ### Classes e subclasses
 
@@ -131,11 +137,11 @@ O gerenciamento de instalação, atualização e remoção de Packs pertence às
 
 ## Escopo inicial
 
-O primeiro recorte visual implementa um índice de livro com os capítulos **Itens** e **Cartas**, usando o conteúdo atualmente disponível no pacote demo.
+O primeiro recorte visual implementa um índice de livro com os capítulos **Domínios**, **Cartas** e **Itens**, usando o conteúdo atualmente disponível no pacote demo.
 
 O primeiro fluxo completo priorizado é Cartas:
 
-1. `Nova carta` abre um modal de cadastro com imagem, nome, descrição, domínio, tier, tipo, custo e efeitos;
+1. `Nova carta` abre um modal de cadastro com imagem opcional, nome, domínio, tier, custo e efeito;
 2. `Pesquisar e gerenciar` abre a página interna de Cartas;
 3. a página permite buscar por nome ou texto e filtrar por domínio e tier;
 4. cada resultado permite visualizar detalhes, editar e excluir com confirmação.

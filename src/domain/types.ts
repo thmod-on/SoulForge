@@ -75,6 +75,7 @@ export type CardDefinition = BaseDefinition & {
   cardType: "acao" | "reacao" | "passiva";
   cost?: string;
   effect: string;
+  image?: string;
 };
 
 export type ItemDefinition = BaseDefinition & {

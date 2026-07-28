@@ -4,6 +4,22 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.5.0]
+
+### Adicionado
+
+- CRUD local de Domínios no Compendium, com nome, descrição e cor de identidade;
+- CRUD local de Cartas, com domínio obrigatório, tier, custo, efeito e imagem opcional;
+- persistência offline de Definitions locais no IndexedDB;
+- proteção para o conteúdo importado por Packs;
+- confirmação de exclusão e bloqueio de remoção quando houver cartas ou deck vinculados.
+
+### Alterado
+
+- índice do Compendium reorganizado para manter Domínios e Cartas na mesma abertura;
+- formulários de Cartas simplificados e comandos de salvar/cancelar padronizados por ícones temáticos;
+- Configurações passa a usar o símbolo de pergaminho na navegação.
+
 ## [0.4.0]
 
 ### Adicionado

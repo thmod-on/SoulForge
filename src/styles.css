@@ -2425,6 +2425,194 @@ button {
   opacity: 0.58;
 }
 
+.compendium-domain-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 0.75rem;
+}
+
+.compendium-domain-result {
+  display: grid;
+  grid-template-columns: 0.45rem minmax(0, 1fr);
+  gap: 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--domain-color) 34%, rgba(244, 234, 219, 0.1));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--domain-color) 11%, transparent), rgba(8, 15, 22, 0.56));
+  padding: 0.85rem;
+}
+
+.compendium-domain-swatch {
+  border-radius: 99px;
+  background: var(--domain-color);
+  box-shadow: 0 0 1rem color-mix(in srgb, var(--domain-color) 45%, transparent);
+}
+
+.compendium-domain-result h2 {
+  margin: 0.25rem 0;
+  font-size: 1.1rem;
+}
+
+.compendium-domain-result p {
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.45;
+}
+
+.compendium-domain-result-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.compendium-domain-result-meta span,
+.readonly-label,
+.management-copy span {
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.compendium-domain-result .compendium-card-result-actions {
+  grid-column: 2;
+  margin-top: 0.1rem;
+}
+
+.readonly-label {
+  display: block;
+  padding: 0.55rem 0.2rem;
+}
+
+.management-copy {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.management-copy strong {
+  color: var(--color-text);
+}
+
+.form-modal {
+  display: grid;
+  gap: 0.85rem;
+  width: min(31rem, calc(100vw - 2rem));
+  max-height: min(44rem, calc(100vh - 2rem));
+  overflow: auto;
+  position: relative;
+  border: 1px solid rgba(217, 154, 61, 0.42);
+  background: var(--color-panel);
+  padding: 1.25rem;
+}
+
+.form-modal h2,
+.form-modal p {
+  margin: 0;
+}
+
+.form-modal > p:not(.form-error) {
+  color: var(--color-muted);
+  line-height: 1.45;
+}
+
+.form-field {
+  display: grid;
+  gap: 0.38rem;
+}
+
+.form-field > span {
+  color: var(--color-muted);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+}
+
+.form-field input,
+.form-field textarea {
+  width: 100%;
+  border: 1px solid rgba(244, 234, 219, 0.18);
+  color: var(--color-text);
+  background: rgba(5, 11, 17, 0.78);
+  padding: 0.7rem;
+  font: inherit;
+}
+
+.form-field small {
+  color: var(--color-muted);
+  font-size: 0.76rem;
+}
+
+.form-field select {
+  width: 100%;
+  border: 1px solid rgba(244, 234, 219, 0.18);
+  color: var(--color-text);
+  background: rgba(5, 11, 17, 0.96);
+  padding: 0.7rem;
+  font: inherit;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.card-form-modal {
+  width: min(43rem, calc(100vw - 2rem));
+}
+
+.icon-modal-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.7rem;
+}
+
+.icon-action {
+  display: grid;
+  place-items: center;
+  width: 2.9rem;
+  min-height: 2.7rem;
+  padding: 0.3rem;
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.compendium-card-result-image {
+  display: block;
+  min-height: 6.5rem;
+  margin: -0.15rem -0.15rem 0.1rem;
+  border: 1px solid rgba(244, 234, 219, 0.11);
+  background-position: center;
+  background-size: cover;
+}
+
+.form-field textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+.form-field input.is-invalid,
+.form-field textarea.is-invalid {
+  border-color: #db5964;
+}
+
+.form-color-field input {
+  min-height: 2.8rem;
+  padding: 0.2rem;
+}
+
+.form-error {
+  color: #ff8990;
+  margin: 0;
+}
+
+.compendium-page-blank {
+  display: grid;
+  place-items: center;
+  color: var(--color-muted);
+  text-align: center;
+  font-style: italic;
+}
+
 .compendium-filter-row {
   margin-bottom: 0;
 }
