@@ -84,12 +84,12 @@ const topNavItems: Array<{ page: Page; label: string }> = [
   { page: "notes", label: "Anotacoes" }
 ];
 
-const sideNavItems: Array<{ page: Page; label: string }> = [
-  { page: "compendium", label: "Compendium" },
-  { page: "settings", label: "Configuracoes" }
+const sideNavItems: Array<{ page: Page; label: string; icon: string }> = [
+  { page: "compendium", label: "Compendium", icon: "📖" },
+  { page: "settings", label: "Configuracoes", icon: "✒" }
 ];
 
-const appVersion = "0.2.0";
+const appVersion = "0.3.0";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -326,6 +326,7 @@ function renderSidebar(character: Character): string {
           .map(
             (item) => `
               <button class="nav-button ${state.page === item.page ? "is-active" : ""}" data-page="${item.page}">
+                <span aria-hidden="true">${item.icon}</span>
                 ${item.label}
               </button>
             `
@@ -1352,79 +1353,89 @@ function renderResourceModal(resourceId?: string): string {
 }
 
 function renderCompendium(): string {
-  const dreadDomain = catalog.domains.find((domain) => domain.name.toLowerCase() === "dread");
-  const dreadCards = catalog.cards.filter((card) => card.domainId === dreadDomain?.id);
-  const selectedCard = dreadCards.find((card) => card.id === state.selectedCardId) ?? dreadCards[0];
-
   return `
-    <main class="content content-with-panel">
-      <section class="inventory-main">
-        <div class="screen-title">
-          <div>
-            <h1>Compendium</h1>
-            <p>Cartas filtradas pelo dominio Dread</p>
-          </div>
-          <label class="search-box">
-            <span>BUSCA</span>
-            <input type="search" placeholder="Procurar carta..." aria-label="Procurar carta" />
-          </label>
+    <main class="content compendium-content">
+      <div class="screen-title">
+        <div>
+          <h1>Compendium</h1>
         </div>
-        <div class="filter-row">
-          <button class="chip is-active">Cartas</button>
-          <button class="chip">Dominios</button>
-          <button class="chip">Itens</button>
-          <button class="chip">Regras</button>
-        </div>
-        <div class="domain-strip">
-          <button class="domain-chip is-active" style="--domain-color: ${dreadDomain?.color ?? "#8e5cf7"}">Dread</button>
-        </div>
-        <div class="card-browser">
-          ${dreadCards.map((card) => renderCompendiumCard(card, selectedCard?.id === card.id)).join("")}
-        </div>
+      </div>
+
+      <nav class="compendium-bookmarks" aria-label="Aberturas do Compendium">
+        <button class="is-active" type="button" disabled>Abertura 1 <span>Itens | Cartas</span></button>
+        <button type="button" disabled>Abertura 2 <span>Classes | Ancestralidades</span></button>
+        <button type="button" disabled>Abertura 3 <span>Comunidades | Condicoes</span></button>
+      </nav>
+
+      <section class="compendium-spread compendium-index-spread" aria-label="Indice inicial do Compendium">
+        <article class="compendium-page">
+          ${renderCompendiumChapterCard({
+            eyebrow: "Pagina esquerda",
+            title: "Itens",
+            summary: "Armas, armaduras, consumiveis, equipamentos e loot que podem ser referenciados pelo inventario.",
+            count: catalog.items.length,
+            countLabel: "Definitions cadastradas",
+            primaryAction: "Novo item",
+            secondaryAction: "Pesquisar e gerenciar",
+            details: [
+              "Busca e filtros por tipo ficam na pagina interna.",
+              "Exclusao futura sempre exige confirmacao.",
+              "Itens continuam sendo Definitions, nao copias do personagem."
+            ]
+          })}
+        </article>
+        <article class="compendium-page">
+          ${renderCompendiumChapterCard({
+            eyebrow: "Pagina direita",
+            title: "Cartas",
+            summary: "Cartas utilizaveis por personagens, organizadas principalmente por dominio, tier, tipo, custo e efeito.",
+            count: catalog.cards.length,
+            countLabel: "Definitions cadastradas",
+            primaryAction: "Nova carta",
+            secondaryAction: "Pesquisar e gerenciar",
+            details: [
+              "Primeiro fluxo completo priorizado pelo Compendium.",
+              "A pagina interna tera busca por nome/texto e filtros por dominio e tier.",
+              "Detalhes extensos, edicao e exclusao serao feitos por modais focados."
+            ],
+            emphasized: true
+          })}
+        </article>
       </section>
-      ${renderCardPanel(selectedCard)}
     </main>
   `;
 }
 
-function renderCompendiumCard(card: CardDefinition, selected: boolean): string {
-  const domain = findDomain(catalog, card.domainId);
+function renderCompendiumChapterCard(chapter: {
+  eyebrow: string;
+  title: string;
+  summary: string;
+  count: number;
+  countLabel: string;
+  primaryAction: string;
+  secondaryAction: string;
+  details: string[];
+  emphasized?: boolean;
+}): string {
   return `
-    <button class="compendium-card ${selected ? "is-active" : ""}" data-card-id="${card.id}">
-      <span>Tier ${card.tier}</span>
-      <strong>${escapeHtml(card.name)}</strong>
-      <small>${escapeHtml(domain?.name ?? "Sem dominio")} - ${escapeHtml(card.cardType)}</small>
-      <p>${escapeHtml(card.summary)}</p>
-    </button>
-  `;
-}
-
-function renderCardPanel(card?: CardDefinition): string {
-  if (!card) {
-    return `<aside class="detail-panel"><p>Nenhuma carta encontrada.</p></aside>`;
-  }
-
-  const domain = findDomain(catalog, card.domainId);
-
-  return `
-    <aside class="detail-panel">
-      <div class="panel-heading">
-        <div>
-          <h2>${escapeHtml(card.name)}</h2>
-          <span>${escapeHtml(domain?.name ?? "Sem dominio")} - Tier ${card.tier}</span>
-        </div>
-        <button aria-label="Fechar detalhes">x</button>
+    <div class="compendium-index-card ${chapter.emphasized ? "is-priority" : ""}">
+      <div class="compendium-page-heading">
+        <span>${escapeHtml(chapter.eyebrow)}</span>
+        <h2>${escapeHtml(chapter.title)}</h2>
+        <p>${escapeHtml(chapter.summary)}</p>
       </div>
-      <div class="feature-art card-detail-art">CARD</div>
-      <p>${escapeHtml(card.summary)}</p>
-      <dl class="detail-list">
-        <div><dt>Tipo</dt><dd>${escapeHtml(card.cardType)}</dd></div>
-        <div><dt>Custo</dt><dd>${escapeHtml(card.cost ?? "-")}</dd></div>
-      </dl>
-      <h3>Efeito</h3>
-      <p>${escapeHtml(card.effect)}</p>
-      <button class="primary-action">Adicionar ao deck</button>
-    </aside>
+      <div class="compendium-chapter-count">
+        <strong>${chapter.count}</strong>
+        <span>${escapeHtml(chapter.countLabel)}</span>
+      </div>
+      <div class="compendium-actions compendium-index-actions">
+        <button type="button" disabled>${escapeHtml(chapter.primaryAction)}</button>
+        <button type="button" disabled>${escapeHtml(chapter.secondaryAction)}</button>
+      </div>
+      <ul class="compendium-chapter-notes">
+        ${chapter.details.map((detail) => `<li>${escapeHtml(detail)}</li>`).join("")}
+      </ul>
+    </div>
   `;
 }
 
