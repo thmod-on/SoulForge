@@ -4,6 +4,25 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.6.0]
+
+### Adicionado
+
+- CRUD local de Itens no Compendium, com categoria, tier, peso, valor, propriedades e imagem opcional;
+- segunda abertura navegável do Compendium, reunindo Itens e o capítulo preparado de Classes;
+- ação para adicionar itens do Compendium diretamente a cada container do Inventário, com quantidade e validação de peso/categoria;
+- proteção contra excluir itens locais que estejam presentes no inventário atual.
+
+### Alterado
+
+- tiles de itens padronizados entre Inventário, Compendium e seletor de adição;
+- modal de adição de itens ampliado, com altura estável e uma única região rolável;
+- busca removida do Inventário da ficha;
+- arrastar e soltar passou a considerar também o container de origem e funciona sobre imagens;
+- criação de Cartas volta a permitir selecionar o tipo; miniaturas do deck exibem apenas esse tipo;
+- imagem no detalhe de uma carta passa a ser exibida inteira, sem recorte;
+- cabeçalho do modo Editor simplificado.
+
 ## [0.5.0]
 
 ### Adicionado

@@ -20,6 +20,22 @@
   -webkit-font-smoothing: antialiased;
 }
 
+/* O seletor de itens usa uma única região rolável: a lista interna. */
+.container-modal.add-item-modal {
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  width: min(68rem, calc(100vw - 3rem));
+  height: min(46rem, calc(100svh - 3rem));
+  max-height: min(46rem, calc(100svh - 3rem));
+  overflow: hidden;
+}
+
+.container-modal.add-item-modal .add-item-catalog {
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -1689,6 +1705,12 @@ button {
   opacity: 0.42;
 }
 
+.compartment-actions .add-item-to-container {
+  border-color: rgba(217, 154, 61, 0.4);
+  color: var(--color-gold);
+  background: rgba(217, 154, 61, 0.08);
+}
+
 .compartment-capacity {
   margin-top: -0.35rem;
 }
@@ -1707,6 +1729,65 @@ button {
   width: min(30rem, 100%);
   margin-bottom: 0.65rem;
   padding: 0.55rem 0.75rem;
+}
+
+body.has-modal {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.add-item-modal {
+  width: min(68rem, calc(100vw - 2rem));
+}
+
+.add-item-filter-row {
+  margin: 0;
+}
+
+.add-item-catalog {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10.25rem, 1fr));
+  gap: 0.55rem;
+  max-height: min(42vh, 24rem);
+  overflow: auto;
+  padding-right: 0.25rem;
+}
+
+.add-item-choice {
+  width: 100%;
+}
+
+.add-item-choice:hover,
+.add-item-choice.is-active {
+  border-color: rgba(217, 154, 61, 0.62);
+  background: rgba(217, 154, 61, 0.09);
+}
+.add-item-confirm > span {
+  margin-top: 0.2rem;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+}
+
+.add-item-confirm {
+  display: flex;
+  align-items: end;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.add-item-confirm label {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.add-item-confirm label span {
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.add-item-confirm input {
+  width: 5rem;
 }
 
 .search-box input {
@@ -1795,6 +1876,12 @@ button {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.item-media img {
+  pointer-events: none;
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 .item-icon {
@@ -2558,6 +2645,10 @@ button {
   width: min(43rem, calc(100vw - 2rem));
 }
 
+.item-form-modal {
+  width: min(43rem, calc(100vw - 2rem));
+}
+
 .icon-modal-actions {
   display: flex;
   flex-direction: row;
@@ -2583,6 +2674,24 @@ button {
   border: 1px solid rgba(244, 234, 219, 0.11);
   background-position: center;
   background-size: cover;
+}
+
+.compendium-item-results {
+  grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
+}
+
+.compendium-item-result {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.compendium-item-tile {
+  width: 100%;
+  text-align: left;
+}
+
+.compendium-item-tile:hover {
+  border-color: rgba(217, 154, 61, 0.48);
 }
 
 .form-field textarea {
@@ -2981,6 +3090,13 @@ button {
     radial-gradient(circle at 50% 24%, rgba(217, 154, 61, 0.38), transparent 8rem),
     radial-gradient(circle at 45% 54%, rgba(142, 79, 196, 0.48), transparent 10rem),
     linear-gradient(145deg, #241027, #090511);
+}
+
+.modal-card-art.has-image {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-color: #090511;
 }
 
 .modal-card-body {

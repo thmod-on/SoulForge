@@ -74,7 +74,7 @@ Reúne itens que podem ser referenciados pelo inventário de um personagem:
 - equipamentos;
 - demais itens definidos por Packs.
 
-A página de gerenciamento oferece busca, filtros por tipo e ações para criar, editar e excluir itens. No índice, o capítulo mostra apenas seu resumo, `Novo item` e `Pesquisar e gerenciar`.
+A página de gerenciamento oferece busca, filtros por tipo e ações para criar, editar e excluir itens locais. Cada item pode definir categoria, tier, peso, valor, propriedades, descrição e imagem opcional. No índice, o capítulo mostra apenas seu resumo, `Novo item` e `Pesquisar e gerenciar`.
 
 ### Cartas
 
@@ -139,11 +139,13 @@ O gerenciamento de instalação, atualização e remoção de Packs pertence às
 
 O primeiro recorte visual implementa um índice de livro com os capítulos **Domínios**, **Cartas** e **Itens**, usando o conteúdo atualmente disponível no pacote demo.
 
-O primeiro fluxo completo priorizado é Cartas:
+Os primeiros fluxos completos são Domínios, Cartas e Itens:
 
 1. `Nova carta` abre um modal de cadastro com imagem opcional, nome, domínio, tier, custo e efeito;
 2. `Pesquisar e gerenciar` abre a página interna de Cartas;
 3. a página permite buscar por nome ou texto e filtrar por domínio e tier;
 4. cada resultado permite visualizar detalhes, editar e excluir com confirmação.
 
-Itens deve reutilizar o mesmo padrão. Os capítulos seguintes devem manter a estrutura de índice, página de gerenciamento e modais focados, sem exigir uma mudança de arquitetura.
+Itens seguem o mesmo padrão de gerenciamento. Além disso, a ficha do personagem permite selecionar uma Definition do Compendium e adicioná-la diretamente a um container compatível, respeitando categoria, peso e capacidade.
+
+Os capítulos seguintes devem manter a estrutura de índice, página de gerenciamento e modais focados, sem exigir uma mudança de arquitetura.

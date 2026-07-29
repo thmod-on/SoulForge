@@ -9,7 +9,8 @@ type Page = "overview" | "skills" | "experiences" | "inventory" | "progression" 
 type InventoryFilter = "todos" | ItemDefinition["category"];
 type ProgressionTierNumber = 2 | 3 | 4;
 type SettingsSection = "general" | "localData" | "loadRules" | "appearance" | "progression";
-type CompendiumView = "index" | "cards" | "domains";
+type CompendiumView = "index" | "cards" | "domains" | "items";
+type CompendiumSpread = 1 | 2;
 
 function getAppRoot(): HTMLDivElement {
   const element = document.querySelector<HTMLDivElement>("#app");
@@ -46,9 +47,12 @@ const state: {
   inventoryFilter: InventoryFilter;
   inventorySearch: string;
   compendiumView: CompendiumView;
+  compendiumSpread: CompendiumSpread;
   compendiumCardSearch: string;
   compendiumDomainFilter: string;
   compendiumTierFilter: string;
+  compendiumItemSearch: string;
+  compendiumItemFilter: InventoryFilter;
   lastPlayerPage: Page;
   selectedItemId?: string;
   selectedCardId: string;
@@ -69,6 +73,14 @@ const state: {
   cardModalOpen: boolean;
   editingCompendiumCardId?: string;
   deletingCompendiumCardId?: string;
+  itemDefinitionModalOpen: boolean;
+  editingCompendiumItemId?: string;
+  deletingCompendiumItemId?: string;
+  compendiumItemPreviewId?: string;
+  addItemToCompartmentId?: string;
+  addingDefinitionItemId?: string;
+  addItemCatalogFilter: InventoryFilter;
+  addItemError?: string;
   openSettingsSections: Record<SettingsSection, boolean>;
   character?: Character;
 } = {
@@ -76,9 +88,12 @@ const state: {
   inventoryFilter: "todos",
   inventorySearch: "",
   compendiumView: "index",
+  compendiumSpread: 1,
   compendiumCardSearch: "",
   compendiumDomainFilter: "todos",
   compendiumTierFilter: "todos",
+  compendiumItemSearch: "",
+  compendiumItemFilter: "todos",
   lastPlayerPage: "overview",
   selectedCardId: "card.demo.dread-veil",
   selectedProgressionTier: 2,
@@ -87,6 +102,8 @@ const state: {
   noteModalOpen: false,
   domainModalOpen: false,
   cardModalOpen: false,
+  itemDefinitionModalOpen: false,
+  addItemCatalogFilter: "todos",
   openSettingsSections: {
     general: true,
     localData: false,
@@ -110,7 +127,7 @@ const sideNavItems: Array<{ page: Page; label: string; icon: string }> = [
   { page: "settings", label: "Configuracoes", icon: "&#128220;" }
 ];
 
-const appVersion = "0.5.0";
+const appVersion = "0.6.0";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -378,8 +395,6 @@ function renderTopbar(): string {
 }
 
 function renderEditorHeader(): string {
-  const currentLabel = state.page === "compendium" ? "Compendium" : "Configuracoes";
-
   return `
     <header class="editor-header">
       <div class="editor-brand">
@@ -402,7 +417,6 @@ function renderEditorHeader(): string {
           .join("")}
       </nav>
       <div class="editor-context">
-        <span>${currentLabel}</span>
         <button class="secondary-action" type="button" data-action="back-player-mode">Voltar a ficha</button>
       </div>
     </header>
@@ -1104,13 +1118,12 @@ function renderEmptyInline(message: string): string {
 }
 
 function renderCardTile(card: CardDefinition): string {
-  const domain = findDomain(catalog, card.domainId);
   return `
     <button class="ability-card" data-card-modal-id="${card.id}">
       <div class="card-tier">${card.tier}</div>
       <div class="card-art"></div>
       <h3>${escapeHtml(card.name)}</h3>
-      <span>${escapeHtml(domain?.name ?? "Sem dominio")} - ${escapeHtml(card.cardType)}</span>
+      <span>${escapeHtml(card.cardType)}</span>
       <p>${escapeHtml(card.summary)}</p>
     </button>
   `;
@@ -1128,16 +1141,6 @@ function renderInventory(character: Character): string {
         <div class="screen-title">
           <h1>Inventario</h1>
         </div>
-        <label class="search-box inventory-search">
-          <span>BUSCA</span>
-          <input
-            type="search"
-            placeholder="Procurar item..."
-            aria-label="Procurar item"
-            data-inventory-search
-            value="${escapeHtml(state.inventorySearch)}"
-          />
-        </label>
         <div class="filter-row">
           ${(Object.keys(itemFilterLabels) as InventoryFilter[])
             .map(
@@ -1166,8 +1169,7 @@ function renderInventoryCompartment(
   const compartmentEntries = entries.filter(({ entry, item }) => {
     const sameCompartment = getEntryCompartmentId(entry) === compartment.id;
     const sameFilter = state.inventoryFilter === "todos" || item.category === state.inventoryFilter;
-    const sameSearch = matchesInventorySearch(item, state.inventorySearch);
-    return sameCompartment && sameFilter && sameSearch;
+    return sameCompartment && sameFilter;
   });
   const currentWeight = getCompartmentWeight(entries, compartment.id);
   const capacityLabel = compartment.capacity ? `${currentWeight} / ${compartment.capacity}` : `${compartmentEntries.length} itens`;
@@ -1181,6 +1183,7 @@ function renderInventoryCompartment(
         </div>
         <div class="compartment-actions">
           <strong>${capacityLabel}</strong>
+          <button class="add-item-to-container" type="button" data-action="open-add-item-to-container" data-compartment-id="${compartment.id}">Adicionar item</button>
           <button type="button" data-action="delete-container" data-compartment-id="${compartment.id}" ${compartment.source === "character" ? "disabled" : ""}>
             Excluir
           </button>
@@ -1203,6 +1206,45 @@ function renderInventoryCompartment(
           : renderEmptyInline("Nenhum item neste compartimento.")
       }
     </section>
+  `;
+}
+
+function canAddItemToCompartment(compartment: InventoryCompartment, entries: ReturnType<typeof getItemEntries>, item: ItemDefinition, quantity: number): boolean {
+  if (!canCompartmentAcceptItem(compartment, item)) {
+    return false;
+  }
+  if (!compartment.capacity) {
+    return true;
+  }
+  return getCompartmentWeight(entries, compartment.id) + item.weight * quantity <= compartment.capacity;
+}
+
+function renderAddItemToContainerModal(): string {
+  const character = state.character;
+  const compartment = character && state.addItemToCompartmentId ? getInventoryCompartments(character).find((entry) => entry.id === state.addItemToCompartmentId) : undefined;
+  if (!character || !compartment) {
+    return "";
+  }
+  const entries = getItemEntries(character);
+  const availableItems = catalog.items.filter((item) => canCompartmentAcceptItem(compartment, item) && (state.addItemCatalogFilter === "todos" || item.category === state.addItemCatalogFilter));
+  const selectedDefinition = state.addingDefinitionItemId ? findDefinition(catalog, state.addingDefinitionItemId) : undefined;
+  const selectedItem = selectedDefinition?.type === "item" ? selectedDefinition : undefined;
+  const quantity = 1;
+  const fitsSelected = selectedItem ? canAddItemToCompartment(compartment, entries, selectedItem, quantity) : false;
+  return `
+    <div class="modal-backdrop" data-modal-backdrop>
+      <section class="container-modal add-item-modal" role="dialog" aria-modal="true" aria-labelledby="add-item-title">
+        <div class="container-modal-heading"><h2 id="add-item-title">Adicionar item</h2><button class="modal-close modal-close-inline" data-modal-close aria-label="Fechar adicionar item">x</button></div>
+        <p>Escolha um item do Compendium para adicionar em <strong>${escapeHtml(compartment.name)}</strong>.</p>
+        <div class="filter-row add-item-filter-row">
+          ${(Object.keys(itemFilterLabels) as InventoryFilter[]).map((category) => `<button class="chip ${state.addItemCatalogFilter === category ? "is-active" : ""}" type="button" data-add-item-filter="${category}">${itemFilterLabels[category]}</button>`).join("")}
+        </div>
+        <div class="add-item-catalog">
+          ${availableItems.length ? availableItems.map((item) => `<button class="item-tile add-item-choice ${state.addingDefinitionItemId === item.id ? "is-active" : ""}" type="button" data-add-item-definition-id="${item.id}"><span class="item-media">${renderItemVisual(item, "tile")}</span><strong>${escapeHtml(item.name)}</strong><small>${item.tier ? `Tier ${item.tier} - ` : ""}${itemFilterLabels[item.category]} · Peso ${item.weight}</small></button>`).join("") : renderEmptyInline("Nenhum item compativel com este container.")}
+        </div>
+        ${selectedItem ? `<div class="add-item-confirm"><label><span>Quantidade</span><input type="number" min="1" step="1" value="1" data-add-item-quantity /></label><span>${fitsSelected ? "O item cabe neste container." : "Nao ha capacidade suficiente neste container."}</span><button class="primary-action" type="button" data-action="confirm-add-item-to-container">Adicionar</button></div>${state.addItemError ? `<p class="form-error">${escapeHtml(state.addItemError)}</p>` : ""}` : ""}
+      </section>
+    </div>
   `;
 }
 
@@ -1250,26 +1292,6 @@ function itemIcon(category: ItemDefinition["category"]): string {
   };
 
   return icons[category];
-}
-
-function matchesInventorySearch(item: ItemDefinition, search: string): boolean {
-  const normalizedSearch = search.trim().toLowerCase();
-
-  if (!normalizedSearch) {
-    return true;
-  }
-
-  const searchableText = [
-    item.name,
-    item.summary,
-    itemFilterLabels[item.category],
-    item.tier ? `tier ${item.tier}` : "",
-    ...(item.traits ?? [])
-  ]
-    .join(" ")
-    .toLowerCase();
-
-  return searchableText.includes(normalizedSearch);
 }
 
 function renderItemModal(): string {
@@ -1333,6 +1355,7 @@ function renderItemModal(): string {
                     data-action="move-item"
                     data-item-id="${item.id}"
                     data-target-compartment-id="${compartment.id}"
+                    data-source-compartment-id="${currentCompartmentId}"
                     ${disabled ? "disabled" : ""}
                   >
                     <strong>${escapeHtml(compartment.name)}</strong>
@@ -1418,6 +1441,9 @@ function renderCompendium(): string {
   if (state.compendiumView === "domains") {
     return renderCompendiumDomainsManager();
   }
+  if (state.compendiumView === "items") {
+    return renderCompendiumItemsManager();
+  }
 
   return `
     <main class="content compendium-content">
@@ -1428,11 +1454,18 @@ function renderCompendium(): string {
       </div>
 
       <nav class="compendium-bookmarks" aria-label="Aberturas do Compendium">
-        <button class="is-active" type="button" disabled>Abertura 1 <span>Dominios | Cartas</span></button>
-        <button type="button" disabled>Abertura 2 <span>Itens | Classes</span></button>
+        <button class="${state.compendiumSpread === 1 ? "is-active" : ""}" type="button" data-compendium-spread="1" aria-current="${state.compendiumSpread === 1 ? "page" : "false"}">Abertura 1 <span>Dominios | Cartas</span></button>
+        <button class="${state.compendiumSpread === 2 ? "is-active" : ""}" type="button" data-compendium-spread="2" aria-current="${state.compendiumSpread === 2 ? "page" : "false"}">Abertura 2 <span>Itens | Classes</span></button>
         <button type="button" disabled>Abertura 3 <span>Comunidades | Condicoes</span></button>
       </nav>
 
+      ${state.compendiumSpread === 1 ? renderCompendiumFirstSpread() : renderCompendiumSecondSpread()}
+    </main>
+  `;
+}
+
+function renderCompendiumFirstSpread(): string {
+  return `
       <section class="compendium-spread compendium-index-spread" aria-label="Dominios e cartas do Compendium">
         <article class="compendium-page">
           ${renderCompendiumChapterCard({
@@ -1472,7 +1505,12 @@ function renderCompendium(): string {
           })}
         </article>
       </section>
-      <section class="compendium-spread compendium-index-spread" aria-label="Outros capitulos do Compendium">
+  `;
+}
+
+function renderCompendiumSecondSpread(): string {
+  return `
+      <section class="compendium-spread compendium-index-spread" aria-label="Itens e classes do Compendium">
         <article class="compendium-page">
           ${renderCompendiumChapterCard({
             eyebrow: "",
@@ -1481,17 +1519,24 @@ function renderCompendium(): string {
             count: catalog.items.length,
             countLabel: "Definitions cadastradas",
             primaryAction: "Novo item",
+            primaryActionId: "new-compendium-item",
             secondaryAction: "Pesquisar e gerenciar",
+            secondaryActionId: "manage-compendium-items",
             details: [
               "Busca e filtros por tipo ficam na pagina interna.",
-              "Exclusao futura sempre exige confirmacao.",
+              "Itens locais podem ser criados, editados e excluidos.",
               "Itens continuam sendo Definitions, nao copias do personagem."
             ]
           })}
         </article>
-        <article class="compendium-page compendium-page-blank"><span>O indice crescera conforme novos capitulos forem preparados.</span></article>
+        <article class="compendium-page compendium-page-blank">
+          <div class="compendium-page-heading">
+            <h2>Classes</h2>
+            <p>Classes e suas especializacoes serao organizadas aqui, preservando a relacao com as habilidades do personagem.</p>
+          </div>
+          <span>Capitulo em preparacao</span>
+        </article>
       </section>
-    </main>
   `;
 }
 
@@ -1700,6 +1745,129 @@ function renderCompendiumCardsManager(): string {
   `;
 }
 
+function renderCompendiumItemsManager(): string {
+  const filteredItems = getFilteredCompendiumItems();
+  return `
+    <main class="content compendium-content">
+      <div class="screen-title">
+        <div>
+          <h1>Itens</h1>
+          <p>Crie e organize os itens que poderao ser usados nos inventarios.</p>
+        </div>
+        <button class="secondary-action screen-title-action" type="button" data-action="back-compendium-index">Voltar ao indice</button>
+      </div>
+      <section class="compendium-management-panel">
+        <div class="compendium-management-toolbar">
+          <label class="search-box">
+            <span>BUSCA</span>
+            <input type="search" placeholder="Procurar item..." aria-label="Procurar item" data-compendium-item-search value="${escapeHtml(state.compendiumItemSearch)}" />
+          </label>
+          <button class="primary-action" type="button" data-action="new-compendium-item">Novo item</button>
+        </div>
+        <div class="compendium-filter-block">
+          <span>Categoria</span>
+          <div class="filter-row compendium-filter-row">
+            ${(Object.keys(itemFilterLabels) as InventoryFilter[]).map((category) => `<button class="chip ${state.compendiumItemFilter === category ? "is-active" : ""}" type="button" data-compendium-item-filter="${category}">${itemFilterLabels[category]}</button>`).join("")}
+          </div>
+        </div>
+        <div class="compendium-results-heading"><strong>${filteredItems.length}</strong><span>${filteredItems.length === 1 ? "item encontrado" : "itens encontrados"}</span></div>
+        ${filteredItems.length ? `<div class="item-grid compendium-item-results">${filteredItems.map(renderCompendiumItemResult).join("")}</div>` : renderEmptyInline("Nenhum item encontrado com os filtros atuais.")}
+      </section>
+    </main>
+  `;
+}
+
+function getFilteredCompendiumItems(): ItemDefinition[] {
+  const search = state.compendiumItemSearch.trim().toLowerCase();
+  return catalog.items.filter((item) => {
+    const sameCategory = state.compendiumItemFilter === "todos" || item.category === state.compendiumItemFilter;
+    const searchableText = [item.name, item.summary, itemFilterLabels[item.category], item.tier ?? "", item.weight, item.value ?? "", ...(item.traits ?? [])].join(" ").toLowerCase();
+    return sameCategory && (!search || searchableText.includes(search));
+  });
+}
+
+function renderCompendiumItemResult(item: ItemDefinition): string {
+  const isLocal = item.packId === "local";
+  return `
+    <article class="compendium-item-result">
+      <button class="item-tile compendium-item-tile" type="button" data-compendium-item-preview-id="${item.id}" aria-label="Ver detalhes de ${escapeHtml(item.name)}">
+        <span class="item-media">${renderItemVisual(item, "tile")}</span>
+        <strong>${escapeHtml(item.name)}</strong>
+        <small>${item.tier ? `Tier ${item.tier} - ` : ""}${itemFilterLabels[item.category]} · Peso ${item.weight}</small>
+      </button>
+      <div class="compendium-card-result-actions">${isLocal ? `<button type="button" data-action="edit-compendium-item" data-item-id="${item.id}">Editar</button><button type="button" data-action="delete-compendium-item" data-item-id="${item.id}">Excluir</button>` : '<span class="readonly-label">Conteudo do pack</span>'}</div>
+    </article>
+  `;
+}
+
+function renderCompendiumItemFormModal(): string {
+  if (!state.itemDefinitionModalOpen) {
+    return "";
+  }
+  const existing = state.editingCompendiumItemId ? findDefinition(catalog, state.editingCompendiumItemId) : undefined;
+  const item = existing?.type === "item" ? existing : undefined;
+  return `
+    <div class="modal-backdrop" data-modal-backdrop>
+      <section class="form-modal item-form-modal" role="dialog" aria-modal="true" aria-labelledby="item-form-modal-title">
+        <button class="modal-close" data-modal-close aria-label="Fechar item">x</button>
+        <h2 id="item-form-modal-title">${item ? "Editar item" : "Novo item"}</h2>
+        <p>O item sera salvo localmente e podera ser adicionado ao inventario em uma proxima etapa.</p>
+        <div class="form-grid">
+          <label class="form-field"><span>Nome *</span><input data-compendium-item-name value="${escapeHtml(item?.name ?? "")}" placeholder="Ex.: Adaga lunar" /></label>
+          <label class="form-field"><span>Categoria *</span><select data-compendium-item-category>${(Object.keys(itemFilterLabels).filter((key) => key !== "todos") as ItemDefinition["category"][]).map((category) => `<option value="${category}" ${category === item?.category ? "selected" : ""}>${itemFilterLabels[category]}</option>`).join("")}</select></label>
+          <label class="form-field"><span>Tier</span><input data-compendium-item-tier type="number" min="1" max="4" value="${item?.tier ?? ""}" placeholder="Opcional" /></label>
+          <label class="form-field"><span>Peso *</span><input data-compendium-item-weight type="number" min="0" step="0.1" value="${item?.weight ?? ""}" placeholder="Ex.: 1" /></label>
+          <label class="form-field"><span>Valor</span><input data-compendium-item-value type="number" min="0" step="1" value="${item?.value ?? ""}" placeholder="Opcional" /></label>
+          <label class="form-field"><span>Propriedades</span><input data-compendium-item-traits value="${escapeHtml((item?.traits ?? []).join(", "))}" placeholder="Ex.: versatil, leve" /></label>
+        </div>
+        <label class="form-field"><span>Imagem</span><input data-compendium-item-image type="file" accept="image/png,image/jpeg,image/webp" /><small>${item?.image ? "Uma imagem ja esta associada; envie outra para substitui-la." : "PNG, JPG ou WebP; ate 1,5 MB."}</small></label>
+        <label class="form-field"><span>Descricao *</span><textarea data-compendium-item-summary placeholder="Descreva o item e seu uso.">${escapeHtml(item?.summary ?? "")}</textarea></label>
+        <p class="form-error" data-compendium-item-error hidden></p>
+        <div class="modal-actions icon-modal-actions"><button class="secondary-action icon-action" type="button" data-modal-close aria-label="Cancelar" title="Cancelar">↩</button><button class="primary-action icon-action" type="button" data-action="save-compendium-item" aria-label="Gravar item" title="Gravar item">✒</button></div>
+      </section>
+    </div>
+  `;
+}
+
+function renderDeleteCompendiumItemModal(): string {
+  const definition = state.deletingCompendiumItemId ? findDefinition(catalog, state.deletingCompendiumItemId) : undefined;
+  if (definition?.type !== "item") {
+    return "";
+  }
+  const isInInventory = state.character?.inventory.entries.some((entry) => entry.definitionId === definition.id);
+  return `
+    <div class="modal-backdrop" data-modal-backdrop>
+      <section class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-compendium-item-title">
+        <h2 id="delete-compendium-item-title">Excluir item?</h2>
+        <p>${isInInventory ? `O item <strong>${escapeHtml(definition.name)}</strong> esta presente no inventario atual e nao pode ser excluido antes de ser removido.` : `O item <strong>${escapeHtml(definition.name)}</strong> sera removido deste dispositivo.`}</p>
+        <div class="modal-actions"><button class="secondary-action" type="button" data-action="cancel-delete-compendium-item">Cancelar</button>${isInInventory ? "" : '<button class="danger-action" type="button" data-action="confirm-delete-compendium-item">Excluir item</button>'}</div>
+      </section>
+    </div>
+  `;
+}
+
+function renderCompendiumItemPreviewModal(): string {
+  const definition = state.compendiumItemPreviewId ? findDefinition(catalog, state.compendiumItemPreviewId) : undefined;
+  if (definition?.type !== "item") {
+    return "";
+  }
+  return `
+    <div class="modal-backdrop" data-modal-backdrop>
+      <section class="item-modal compendium-item-preview" role="dialog" aria-modal="true" aria-labelledby="compendium-item-preview-title">
+        <button class="modal-close" data-modal-close aria-label="Fechar item">x</button>
+        <div class="item-modal-art">${renderItemVisual(definition, "detail")}</div>
+        <div class="item-modal-body">
+          <span class="resource-modal-label">${itemFilterLabels[definition.category]}</span>
+          <h2 id="compendium-item-preview-title">${escapeHtml(definition.name)}</h2>
+          <p>${escapeHtml(definition.summary)}</p>
+          <dl class="detail-list item-modal-details"><div><dt>Tier</dt><dd>${definition.tier ?? "-"}</dd></div><div><dt>Valor</dt><dd>${definition.value ?? "-"}</dd></div><div><dt>Peso</dt><dd>${definition.weight}</dd></div></dl>
+          <div class="trait-list">${(definition.traits ?? []).map((trait) => `<span>${escapeHtml(trait)}</span>`).join("")}</div>
+        </div>
+      </section>
+    </div>
+  `;
+}
+
 function getFilteredCompendiumCards(): CardDefinition[] {
   const search = state.compendiumCardSearch.trim().toLowerCase();
 
@@ -1756,6 +1924,7 @@ function renderCompendiumCardFormModal(): string {
           <label class="form-field"><span>Nome *</span><input data-compendium-card-name value="${escapeHtml(card?.name ?? "")}" placeholder="Ex.: Passo Sombrio" /></label>
           <label class="form-field"><span>Dominio *</span><select data-compendium-card-domain>${domains.map((domain) => `<option value="${domain.id}" ${domain.id === card?.domainId ? "selected" : ""}>${escapeHtml(domain.name)}</option>`).join("")}</select></label>
           <label class="form-field"><span>Tier *</span><select data-compendium-card-tier>${[1, 2, 3, 4].map((tier) => `<option value="${tier}" ${tier === (card?.tier ?? 1) ? "selected" : ""}>Tier ${tier}</option>`).join("")}</select></label>
+          <label class="form-field"><span>Tipo *</span><select data-compendium-card-type>${(["acao", "reacao", "passiva"] as const).map((type) => `<option value="${type}" ${type === (card?.cardType ?? "acao") ? "selected" : ""}>${type}</option>`).join("")}</select></label>
           <label class="form-field"><span>Custo</span><input data-compendium-card-cost value="${escapeHtml(card?.cost ?? "")}" placeholder="Ex.: 1 Esperanca" /></label>
         </div>
         <label class="form-field"><span>Imagem</span><input data-compendium-card-image type="file" accept="image/png,image/jpeg,image/webp" /><small>${card?.image ? "Uma imagem ja esta associada; envie outra para substitui-la." : "PNG, JPG ou WebP; ate 1,5 MB."}</small></label>
@@ -1800,7 +1969,7 @@ function renderCardModal(cardId?: string): string {
     <div class="modal-backdrop" data-modal-backdrop>
       <section class="card-modal" role="dialog" aria-modal="true" aria-labelledby="card-modal-title">
         <button class="modal-close" data-modal-close aria-label="Fechar carta">x</button>
-        <div class="modal-card-art" ${definition.image ? `style="background-image: linear-gradient(180deg, transparent, rgba(8, 15, 22, 0.82)), url('${escapeHtml(definition.image)}')"` : ""}></div>
+        <div class="modal-card-art ${definition.image ? "has-image" : ""}" ${definition.image ? `style="background-image: url('${escapeHtml(definition.image)}')"` : ""}></div>
         <div class="modal-card-body">
           <div class="modal-card-kicker">
             <span>${escapeHtml(domain?.name ?? "Sem dominio")}</span>
@@ -1905,7 +2074,12 @@ function render(): void {
     ${renderDeleteDomainModal()}
     ${renderCompendiumCardFormModal()}
     ${renderDeleteCompendiumCardModal()}
+    ${renderCompendiumItemFormModal()}
+    ${renderDeleteCompendiumItemModal()}
+    ${renderCompendiumItemPreviewModal()}
+    ${renderAddItemToContainerModal()}
   `;
+  document.body.classList.toggle("has-modal", Boolean(appRoot.querySelector(".modal-backdrop")));
 }
 
 function exportCharacter(): void {
@@ -2010,8 +2184,8 @@ function getCardFormValue(selector: string): string {
   return element?.value.trim() ?? "";
 }
 
-function readCardImage(): Promise<string | undefined> {
-  const input = document.querySelector<HTMLInputElement>("[data-compendium-card-image]");
+function readDefinitionImage(selector: string): Promise<string | undefined> {
+  const input = document.querySelector<HTMLInputElement>(selector);
   const file = input?.files?.[0];
   if (!file) {
     return Promise.resolve(undefined);
@@ -2031,17 +2205,19 @@ async function saveCompendiumCard(): Promise<void> {
   const name = getCardFormValue("[data-compendium-card-name]");
   const domainId = getCardFormValue("[data-compendium-card-domain]");
   const tier = Number(getCardFormValue("[data-compendium-card-tier]"));
+  const cardType = getCardFormValue("[data-compendium-card-type]") as CardDefinition["cardType"];
   const cost = getCardFormValue("[data-compendium-card-cost]");
   const effect = getCardFormValue("[data-compendium-card-effect]");
   const error = document.querySelector<HTMLElement>("[data-compendium-card-error]");
   const existingDefinition = state.editingCompendiumCardId ? findDefinition(catalog, state.editingCompendiumCardId) : undefined;
   const existing = existingDefinition?.type === "card" ? existingDefinition : undefined;
   const duplicate = catalog.cards.some((card) => card.name.toLocaleLowerCase("pt-BR") === name.toLocaleLowerCase("pt-BR") && card.id !== existing?.id);
+  const validType = ["acao", "reacao", "passiva"].includes(cardType);
 
-  if (!name || !domainId || !Number.isInteger(tier) || tier < 1 || !effect || duplicate) {
+  if (!name || !domainId || !Number.isInteger(tier) || tier < 1 || !validType || !effect || duplicate) {
     if (error) {
       error.hidden = false;
-      error.textContent = duplicate ? "Ja existe uma carta com este nome." : "Preencha nome, dominio, tier e efeito.";
+      error.textContent = duplicate ? "Ja existe uma carta com este nome." : "Preencha nome, dominio, tier, tipo e efeito.";
     }
     return;
   }
@@ -2050,7 +2226,7 @@ async function saveCompendiumCard(): Promise<void> {
   }
   let image = existing?.image;
   try {
-    image = (await readCardImage()) ?? image;
+    image = (await readDefinitionImage("[data-compendium-card-image]")) ?? image;
   } catch (imageError) {
     if (error) {
       error.hidden = false;
@@ -2067,7 +2243,7 @@ async function saveCompendiumCard(): Promise<void> {
     summary: effect.length > 140 ? `${effect.slice(0, 137).trimEnd()}...` : effect,
     domainId,
     tier,
-    cardType: existing?.cardType ?? "acao",
+    cardType,
     cost: cost || undefined,
     effect,
     image
@@ -2096,6 +2272,75 @@ async function removeCompendiumCard(): Promise<void> {
   render();
 }
 
+async function saveCompendiumItem(): Promise<void> {
+  const name = getCardFormValue("[data-compendium-item-name]");
+  const category = getCardFormValue("[data-compendium-item-category]") as ItemDefinition["category"];
+  const tierText = getCardFormValue("[data-compendium-item-tier]");
+  const weight = Number(getCardFormValue("[data-compendium-item-weight]"));
+  const valueText = getCardFormValue("[data-compendium-item-value]");
+  const summary = getCardFormValue("[data-compendium-item-summary]");
+  const traits = getCardFormValue("[data-compendium-item-traits]").split(",").map((trait) => trait.trim()).filter(Boolean);
+  const error = document.querySelector<HTMLElement>("[data-compendium-item-error]");
+  const existingDefinition = state.editingCompendiumItemId ? findDefinition(catalog, state.editingCompendiumItemId) : undefined;
+  const existing = existingDefinition?.type === "item" ? existingDefinition : undefined;
+  const tier = tierText ? Number(tierText) : undefined;
+  const value = valueText ? Number(valueText) : undefined;
+  const validCategory = ["arma", "armadura", "consumivel", "equipamento", "loot"].includes(category);
+  const duplicate = catalog.items.some((item) => item.name.toLocaleLowerCase("pt-BR") === name.toLocaleLowerCase("pt-BR") && item.id !== existing?.id);
+
+  if (!name || !validCategory || !Number.isFinite(weight) || weight < 0 || !summary || duplicate || (tier !== undefined && (!Number.isInteger(tier) || tier < 1 || tier > 4)) || (value !== undefined && (!Number.isFinite(value) || value < 0))) {
+    if (error) {
+      error.hidden = false;
+      error.textContent = duplicate ? "Ja existe um item com este nome." : "Preencha nome, categoria, peso e descricao. Tier deve ficar entre 1 e 4.";
+    }
+    return;
+  }
+  if (existing && existing.packId !== "local") {
+    return;
+  }
+  let image = existing?.image;
+  try {
+    image = (await readDefinitionImage("[data-compendium-item-image]")) ?? image;
+  } catch (imageError) {
+    if (error) {
+      error.hidden = false;
+      error.textContent = imageError instanceof Error ? imageError.message : "Nao foi possivel usar a imagem.";
+    }
+    return;
+  }
+  const definition: ItemDefinition = {
+    id: existing?.id ?? `item.local.${crypto.randomUUID()}`,
+    type: "item",
+    packId: "local",
+    name,
+    summary,
+    category,
+    tier,
+    weight,
+    value,
+    traits: traits.length ? traits : undefined,
+    image
+  };
+  await saveCustomDefinition(definition);
+  await refreshCatalog();
+  state.itemDefinitionModalOpen = false;
+  state.editingCompendiumItemId = undefined;
+  render();
+}
+
+async function removeCompendiumItem(): Promise<void> {
+  const itemId = state.deletingCompendiumItemId;
+  const definition = itemId ? findDefinition(catalog, itemId) : undefined;
+  const isInInventory = definition?.type === "item" && state.character?.inventory.entries.some((entry) => entry.definitionId === definition.id);
+  if (definition?.type !== "item" || definition.packId !== "local" || isInInventory) {
+    return;
+  }
+  await deleteCustomDefinition(definition.id);
+  await refreshCatalog();
+  state.deletingCompendiumItemId = undefined;
+  render();
+}
+
 async function adjustResource(delta: number): Promise<void> {
   const character = state.character;
   const resourceId = state.resourceModalId;
@@ -2121,14 +2366,14 @@ async function adjustResource(delta: number): Promise<void> {
   render();
 }
 
-async function moveItemToCompartment(itemId: string | undefined, targetCompartmentId: string | undefined): Promise<void> {
+async function moveItemToCompartment(itemId: string | undefined, targetCompartmentId: string | undefined, sourceCompartmentId?: string): Promise<void> {
   const character = state.character;
   if (!character || !itemId || !targetCompartmentId) {
     return;
   }
 
   const entries = getItemEntries(character);
-  const targetEntry = entries.find(({ item }) => item.id === itemId);
+  const targetEntry = entries.find(({ item, entry }) => item.id === itemId && (!sourceCompartmentId || getEntryCompartmentId(entry) === sourceCompartmentId));
   const targetCompartment = getInventoryCompartments(character).find((compartment) => compartment.id === targetCompartmentId);
 
   if (!targetEntry || !targetCompartment) {
@@ -2148,7 +2393,7 @@ async function moveItemToCompartment(itemId: string | undefined, targetCompartme
     inventory: {
       ...character.inventory,
       entries: character.inventory.entries.map((entry) =>
-        entry.definitionId === itemId
+        entry.definitionId === itemId && getEntryCompartmentId(entry) === currentCompartmentId
           ? {
               ...entry,
               compartmentId: targetCompartmentId,
@@ -2160,6 +2405,38 @@ async function moveItemToCompartment(itemId: string | undefined, targetCompartme
   };
 
   state.character = updatedCharacter;
+  await saveCharacter(updatedCharacter);
+  render();
+}
+
+async function addItemToContainer(): Promise<void> {
+  const character = state.character;
+  const compartmentId = state.addItemToCompartmentId;
+  const definitionId = state.addingDefinitionItemId;
+  const quantity = Number(document.querySelector<HTMLInputElement>("[data-add-item-quantity]")?.value ?? 0);
+  if (!character || !compartmentId || !definitionId || !Number.isInteger(quantity) || quantity < 1) {
+    state.addItemError = "Informe uma quantidade inteira maior que zero.";
+    render();
+    return;
+  }
+  const definition = findDefinition(catalog, definitionId);
+  const compartment = getInventoryCompartments(character).find((entry) => entry.id === compartmentId);
+  const entries = getItemEntries(character);
+  if (definition?.type !== "item" || !compartment || !canAddItemToCompartment(compartment, entries, definition, quantity)) {
+    state.addItemError = "Este item nao cabe no container com a quantidade informada.";
+    render();
+    return;
+  }
+  const existingEntry = character.inventory.entries.find((entry) => entry.definitionId === definition.id && getEntryCompartmentId(entry) === compartmentId);
+  const updatedEntries = existingEntry
+    ? character.inventory.entries.map((entry) => entry === existingEntry ? { ...entry, quantity: entry.quantity + quantity } : entry)
+    : [...character.inventory.entries, { definitionId: definition.id, quantity, compartmentId, equipped: compartmentId === "equipped" }];
+  const updatedCharacter: Character = { ...character, inventory: { ...character.inventory, entries: updatedEntries } };
+  state.character = updatedCharacter;
+  state.addItemToCompartmentId = undefined;
+  state.addingDefinitionItemId = undefined;
+  state.addItemCatalogFilter = "todos";
+  state.addItemError = undefined;
   await saveCharacter(updatedCharacter);
   render();
 }
@@ -2195,7 +2472,7 @@ function isValidDropTarget(targetCompartmentId: string | undefined): boolean {
   }
 
   const entries = getItemEntries(character);
-  const draggedEntry = entries.find(({ item }) => item.id === dragState.itemId);
+  const draggedEntry = entries.find(({ item, entry }) => item.id === dragState.itemId && getEntryCompartmentId(entry) === dragState.sourceCompartmentId);
   const targetCompartment = getInventoryCompartments(character).find((compartment) => compartment.id === targetCompartmentId);
 
   if (!draggedEntry || !targetCompartment) {
@@ -2253,12 +2530,13 @@ function createDragGhost(tile: HTMLElement, clientX: number, clientY: number): v
 async function finishItemDrag(): Promise<void> {
   const targetCompartmentId = dragState.currentDropTargetId;
   const itemId = dragState.itemId;
+  const sourceCompartmentId = dragState.sourceCompartmentId;
   const validDrop = isValidDropTarget(targetCompartmentId);
 
   endItemDrag();
 
   if (validDrop) {
-    await moveItemToCompartment(itemId, targetCompartmentId);
+    await moveItemToCompartment(itemId, targetCompartmentId, sourceCompartmentId);
   }
 }
 
@@ -2538,6 +2816,13 @@ function bindEvents(): void {
       state.cardModalOpen = false;
       state.editingCompendiumCardId = undefined;
       state.deletingCompendiumCardId = undefined;
+      state.itemDefinitionModalOpen = false;
+      state.editingCompendiumItemId = undefined;
+      state.deletingCompendiumItemId = undefined;
+      state.compendiumItemPreviewId = undefined;
+      state.addItemToCompartmentId = undefined;
+      state.addingDefinitionItemId = undefined;
+      state.addItemError = undefined;
       render();
       return;
     }
@@ -2560,6 +2845,13 @@ function bindEvents(): void {
       state.cardModalOpen = false;
       state.editingCompendiumCardId = undefined;
       state.deletingCompendiumCardId = undefined;
+      state.itemDefinitionModalOpen = false;
+      state.editingCompendiumItemId = undefined;
+      state.deletingCompendiumItemId = undefined;
+      state.compendiumItemPreviewId = undefined;
+      state.addItemToCompartmentId = undefined;
+      state.addingDefinitionItemId = undefined;
+      state.addItemError = undefined;
       render();
       return;
     }
@@ -2584,6 +2876,13 @@ function bindEvents(): void {
       return;
     }
 
+    const compendiumSpreadButton = target.closest<HTMLElement>("[data-compendium-spread]");
+    if (compendiumSpreadButton) {
+      state.compendiumSpread = Number(compendiumSpreadButton.dataset.compendiumSpread) as CompendiumSpread;
+      render();
+      return;
+    }
+
     if (target.closest('[data-action="manage-compendium-cards"]')) {
       state.compendiumView = "cards";
       render();
@@ -2592,6 +2891,12 @@ function bindEvents(): void {
 
     if (target.closest('[data-action="manage-compendium-domains"]')) {
       state.compendiumView = "domains";
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="manage-compendium-items"]')) {
+      state.compendiumView = "items";
       render();
       return;
     }
@@ -2606,6 +2911,58 @@ function bindEvents(): void {
     if (target.closest('[data-action="new-compendium-card"]')) {
       state.cardModalOpen = true;
       state.editingCompendiumCardId = undefined;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="new-compendium-item"]')) {
+      state.itemDefinitionModalOpen = true;
+      state.editingCompendiumItemId = undefined;
+      render();
+      return;
+    }
+
+    const editCompendiumItemButton = target.closest<HTMLElement>('[data-action="edit-compendium-item"]');
+    if (editCompendiumItemButton) {
+      state.itemDefinitionModalOpen = true;
+      state.editingCompendiumItemId = editCompendiumItemButton.dataset.itemId;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="save-compendium-item"]')) {
+      void saveCompendiumItem();
+      return;
+    }
+
+    const deleteCompendiumItemButton = target.closest<HTMLElement>('[data-action="delete-compendium-item"]');
+    if (deleteCompendiumItemButton) {
+      state.deletingCompendiumItemId = deleteCompendiumItemButton.dataset.itemId;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="cancel-delete-compendium-item"]')) {
+      state.deletingCompendiumItemId = undefined;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="confirm-delete-compendium-item"]')) {
+      void removeCompendiumItem();
+      return;
+    }
+
+    const compendiumItemPreviewButton = target.closest<HTMLElement>("[data-compendium-item-preview-id]");
+    if (compendiumItemPreviewButton) {
+      state.compendiumItemPreviewId = compendiumItemPreviewButton.dataset.compendiumItemPreviewId;
+      render();
+      return;
+    }
+
+    const compendiumItemFilterButton = target.closest<HTMLElement>("[data-compendium-item-filter]");
+    if (compendiumItemFilterButton) {
+      state.compendiumItemFilter = compendiumItemFilterButton.dataset.compendiumItemFilter as InventoryFilter;
       render();
       return;
     }
@@ -2743,6 +3100,38 @@ function bindEvents(): void {
       return;
     }
 
+    const openAddItemButton = target.closest<HTMLElement>('[data-action="open-add-item-to-container"]');
+    if (openAddItemButton) {
+      state.addItemToCompartmentId = openAddItemButton.dataset.compartmentId;
+      state.addingDefinitionItemId = undefined;
+      state.addItemCatalogFilter = "todos";
+      state.addItemError = undefined;
+      render();
+      return;
+    }
+
+    const addItemFilterButton = target.closest<HTMLElement>("[data-add-item-filter]");
+    if (addItemFilterButton) {
+      state.addItemCatalogFilter = addItemFilterButton.dataset.addItemFilter as InventoryFilter;
+      state.addingDefinitionItemId = undefined;
+      state.addItemError = undefined;
+      render();
+      return;
+    }
+
+    const addItemDefinitionButton = target.closest<HTMLElement>("[data-add-item-definition-id]");
+    if (addItemDefinitionButton) {
+      state.addingDefinitionItemId = addItemDefinitionButton.dataset.addItemDefinitionId;
+      state.addItemError = undefined;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="confirm-add-item-to-container"]')) {
+      void addItemToContainer();
+      return;
+    }
+
     if (target.closest('[data-action="create-container"]')) {
       void createInventoryContainer();
       return;
@@ -2845,7 +3234,7 @@ function bindEvents(): void {
 
     const moveItemButton = target.closest<HTMLElement>('[data-action="move-item"]');
     if (moveItemButton) {
-      void moveItemToCompartment(moveItemButton.dataset.itemId, moveItemButton.dataset.targetCompartmentId);
+      void moveItemToCompartment(moveItemButton.dataset.itemId, moveItemButton.dataset.targetCompartmentId, moveItemButton.dataset.sourceCompartmentId);
       return;
     }
 
@@ -2905,6 +3294,13 @@ function bindEvents(): void {
       render();
     }
 
+    if (event.key === "Escape" && state.addItemToCompartmentId) {
+      state.addItemToCompartmentId = undefined;
+      state.addingDefinitionItemId = undefined;
+      state.addItemError = undefined;
+      render();
+    }
+
     if (event.key === "Escape" && state.deletingItemId) {
       state.deletingItemId = undefined;
       render();
@@ -2949,6 +3345,14 @@ function bindEvents(): void {
       state.deletingCompendiumCardId = undefined;
       render();
     }
+
+    if (event.key === "Escape" && (state.itemDefinitionModalOpen || state.deletingCompendiumItemId || state.compendiumItemPreviewId)) {
+      state.itemDefinitionModalOpen = false;
+      state.editingCompendiumItemId = undefined;
+      state.deletingCompendiumItemId = undefined;
+      state.compendiumItemPreviewId = undefined;
+      render();
+    }
   });
 
   document.addEventListener("input", (event) => {
@@ -2967,6 +3371,16 @@ function bindEvents(): void {
       state.compendiumCardSearch = target.value;
       render();
       focusCompendiumCardSearch();
+    }
+
+    if (target.matches("[data-compendium-item-search]")) {
+      state.compendiumItemSearch = target.value;
+      render();
+      requestAnimationFrame(() => {
+        const input = document.querySelector<HTMLInputElement>("[data-compendium-item-search]");
+        input?.focus({ preventScroll: true });
+        input?.setSelectionRange(input.value.length, input.value.length);
+      });
     }
   });
 }
