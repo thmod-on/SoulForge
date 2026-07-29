@@ -1,4 +1,4 @@
-export type DefinitionType = "domain" | "card" | "item";
+export type DefinitionType = "domain" | "card" | "item" | "class" | "subclass" | "feature";
 
 export type ResourceTrack = {
   id: string;
@@ -88,7 +88,34 @@ export type ItemDefinition = BaseDefinition & {
   traits?: string[];
 };
 
-export type Definition = DomainDefinition | CardDefinition | ItemDefinition;
+export type ClassDefinition = BaseDefinition & {
+  type: "class";
+  domainIds: [string, string];
+  startingEvasion: number;
+  startingHitPoints: number;
+  featureIds: string[];
+  hopeFeatureId: string;
+  subclassIds: [string, string];
+  image?: string;
+};
+
+export type SubclassDefinition = BaseDefinition & {
+  type: "subclass";
+  classId: string;
+  foundationFeatureIds: string[];
+  specializationFeatureIds: string[];
+  masteryFeatureIds: string[];
+};
+
+export type FeatureDefinition = BaseDefinition & {
+  type: "feature";
+  sourceType: "class" | "subclass";
+  sourceId: string;
+  tier: "class" | "hope" | "foundation" | "specialization" | "mastery";
+  hopeCost?: number;
+};
+
+export type Definition = DomainDefinition | CardDefinition | ItemDefinition | ClassDefinition | SubclassDefinition | FeatureDefinition;
 
 export type InventoryEntry = {
   definitionId: string;

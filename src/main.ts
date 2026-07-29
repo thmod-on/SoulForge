@@ -1,6 +1,6 @@
 import { baseCatalog } from "./content/installedPacks";
 import { createCatalog, findDefinition, findDomain } from "./domain/catalog";
-import type { CardDefinition, Character, CharacterNote, CharacterNoteCategory, DomainDefinition, InventoryCompartment, ItemDefinition } from "./domain/types";
+import type { CardDefinition, Character, CharacterNote, CharacterNoteCategory, ClassDefinition, DomainDefinition, FeatureDefinition, InventoryCompartment, ItemDefinition, SubclassDefinition } from "./domain/types";
 import { ensureDemoCharacter, saveCharacter } from "./storage/characterRepository";
 import { deleteCustomDefinition, loadCustomDefinitions, saveCustomDefinition } from "./storage/compendiumRepository";
 import "./styles.css";
@@ -9,7 +9,7 @@ type Page = "overview" | "skills" | "experiences" | "inventory" | "progression" 
 type InventoryFilter = "todos" | ItemDefinition["category"];
 type ProgressionTierNumber = 2 | 3 | 4;
 type SettingsSection = "general" | "localData" | "loadRules" | "appearance" | "progression";
-type CompendiumView = "index" | "cards" | "domains" | "items";
+type CompendiumView = "index" | "cards" | "domains" | "items" | "classes";
 type CompendiumSpread = 1 | 2;
 
 function getAppRoot(): HTMLDivElement {
@@ -24,6 +24,7 @@ function getAppRoot(): HTMLDivElement {
 
 const appRoot = getAppRoot();
 let catalog = baseCatalog;
+let modalBackdropPointerDown = false;
 
 const dragState: {
   itemId?: string;
@@ -77,10 +78,14 @@ const state: {
   editingCompendiumItemId?: string;
   deletingCompendiumItemId?: string;
   compendiumItemPreviewId?: string;
+  compendiumClassPreviewId?: string;
   addItemToCompartmentId?: string;
   addingDefinitionItemId?: string;
   addItemCatalogFilter: InventoryFilter;
   addItemError?: string;
+  classModalOpen: boolean;
+  editingCompendiumClassId?: string;
+  deletingCompendiumClassId?: string;
   openSettingsSections: Record<SettingsSection, boolean>;
   character?: Character;
 } = {
@@ -104,6 +109,7 @@ const state: {
   cardModalOpen: false,
   itemDefinitionModalOpen: false,
   addItemCatalogFilter: "todos",
+  classModalOpen: false,
   openSettingsSections: {
     general: true,
     localData: false,
@@ -1444,6 +1450,9 @@ function renderCompendium(): string {
   if (state.compendiumView === "items") {
     return renderCompendiumItemsManager();
   }
+  if (state.compendiumView === "classes") {
+    return renderCompendiumClassesManager();
+  }
 
   return `
     <main class="content compendium-content">
@@ -1529,12 +1538,23 @@ function renderCompendiumSecondSpread(): string {
             ]
           })}
         </article>
-        <article class="compendium-page compendium-page-blank">
-          <div class="compendium-page-heading">
-            <h2>Classes</h2>
-            <p>Classes e suas especializacoes serao organizadas aqui, preservando a relacao com as habilidades do personagem.</p>
-          </div>
-          <span>Capitulo em preparacao</span>
+        <article class="compendium-page">
+          ${renderCompendiumChapterCard({
+            eyebrow: "",
+            title: "Classes",
+            summary: "Classes definem a identidade do personagem e os dominios que podem conceder cartas.",
+            count: catalog.classes.length,
+            countLabel: "Classes cadastradas",
+            primaryAction: "Nova classe",
+            primaryActionId: "new-compendium-class",
+            secondaryAction: "Pesquisar e gerenciar",
+            secondaryActionId: "manage-compendium-classes",
+            details: [
+              "Cada classe libera um ou mais dominios.",
+              "Fundamento, especializacao e maestria serao conectados em seguida.",
+              "Classes locais ficam salvas neste dispositivo."
+            ]
+          })}
         </article>
       </section>
   `;
@@ -1868,6 +1888,120 @@ function renderCompendiumItemPreviewModal(): string {
   `;
 }
 
+function renderCompendiumClassesManager(): string {
+  const classes = [...catalog.classes].sort((first, second) => first.name.localeCompare(second.name, "pt-BR"));
+  return `
+    <main class="content compendium-content">
+      <div class="screen-title">
+        <div><h1>Classes</h1><p>Defina quais dominios cada classe pode usar ao montar o deck de um personagem.</p></div>
+        <button class="secondary-action screen-title-action" type="button" data-action="back-compendium-index">Voltar ao indice</button>
+      </div>
+      <section class="compendium-management-panel">
+        <div class="compendium-management-toolbar"><div class="management-copy"><span>BASE DO COMPENDIUM</span><strong>${classes.length} ${classes.length === 1 ? "classe" : "classes"}</strong></div><button class="primary-action" type="button" data-action="new-compendium-class">Nova classe</button></div>
+        ${classes.length ? `<div class="compendium-class-results">${classes.map(renderCompendiumClassResult).join("")}</div>` : renderEmptyInline("Nenhuma classe cadastrada. Crie a primeira classe para definir seus dominios, valores iniciais e subclasses.")}
+      </section>
+    </main>
+  `;
+}
+
+function renderCompendiumClassResult(classDefinition: ClassDefinition): string {
+  const isLocal = classDefinition.packId === "local";
+  const domains = classDefinition.domainIds.map((domainId) => findDomain(catalog, domainId)).filter((domain): domain is DomainDefinition => Boolean(domain));
+  const subclasses = (classDefinition.subclassIds ?? [])
+    .map((subclassId) => findDefinition(catalog, subclassId))
+    .filter((definition): definition is SubclassDefinition => definition?.type === "subclass");
+  return `
+    <article class="compendium-class-result">
+      <button class="compendium-class-result-open" type="button" data-compendium-class-preview-id="${classDefinition.id}" aria-label="Ver detalhes de ${escapeHtml(classDefinition.name)}">${classDefinition.image ? `<span class="compendium-class-image" style="background-image: url('${escapeHtml(classDefinition.image)}')"></span>` : '<span class="compendium-class-image class-image-placeholder">CLASSE</span>'}<span class="compendium-class-body"><span>${isLocal ? "Local" : "Pack"}</span><h2>${escapeHtml(classDefinition.name)}</h2><p>${escapeHtml(classDefinition.summary)}</p><span class="class-starting-stats"><span>Evasao inicial <strong>${getClassStartingEvasion(classDefinition)}</strong></span><span>HP inicial <strong>${classDefinition.startingHitPoints ?? "-"}</strong></span></span><span class="class-domain-list">${domains.map((domain) => `<i style="--domain-color: ${escapeHtml(domain.color)}">${escapeHtml(domain.name)}</i>`).join("")}</span>${subclasses.length ? `<span class="class-subclass-list"><b>Subclasses</b>${subclasses.map((subclass) => `<span>${escapeHtml(subclass.name)}</span>`).join("")}</span>` : ""}</span></button>
+      <div class="compendium-card-result-actions">${isLocal ? `<button type="button" data-action="edit-compendium-class" data-class-id="${classDefinition.id}">Editar</button><button type="button" data-action="delete-compendium-class" data-class-id="${classDefinition.id}">Excluir</button>` : '<span class="readonly-label">Conteudo do pack</span>'}</div>
+    </article>
+  `;
+}
+
+function renderFeatureDetail(feature: FeatureDefinition | undefined, label: string): string {
+  if (!feature) {
+    return "";
+  }
+  return `<article class="class-detail-feature"><span>${label}</span><h3>${escapeHtml(feature.name)}</h3><p>${escapeHtml(feature.summary)}</p>${feature.hopeCost ? `<small>Custo: ${feature.hopeCost} Esperancas</small>` : ""}</article>`;
+}
+
+function renderCompendiumClassPreviewModal(): string {
+  const definition = state.compendiumClassPreviewId ? findDefinition(catalog, state.compendiumClassPreviewId) : undefined;
+  if (definition?.type !== "class") {
+    return "";
+  }
+  const domains = definition.domainIds.map((domainId) => findDomain(catalog, domainId)).filter((domain): domain is DomainDefinition => Boolean(domain));
+  const subclasses = getClassSubclasses(definition);
+  const subclassTabs = subclasses.length ? `<div class="class-detail-subclass-tabs"><div class="class-detail-subclass-tab-list" role="tablist" aria-label="Subclasses">${subclasses.map((subclass, index) => `<button class="${index === 0 ? "is-active" : ""}" type="button" role="tab" aria-selected="${index === 0}" data-action="select-class-detail-subclass-tab" data-subclass-tab="${index}">${escapeHtml(subclass.name)}</button>`).join("")}</div><div class="class-detail-subclass-panels">${subclasses.map((subclass, index) => `<article class="class-detail-subclass-panel ${index === 0 ? "is-active" : ""}">${subclass.summary ? `<p>${escapeHtml(subclass.summary)}</p>` : ""}<div class="class-detail-feature-grid">${renderFeatureDetail(getFeature(subclass.foundationFeatureIds[0]), "Fundacao")}${renderFeatureDetail(getFeature(subclass.specializationFeatureIds[0]), "Especializacao")}${renderFeatureDetail(getFeature(subclass.masteryFeatureIds[0]), "Maestria")}</div></article>`).join("")}</div></div>` : '<p class="class-detail-summary">Nenhuma subclasse cadastrada.</p>';
+  return `<div class="modal-backdrop" data-modal-backdrop><section class="class-detail-modal" role="dialog" aria-modal="true" aria-labelledby="class-detail-title"><button class="modal-close" data-modal-close aria-label="Fechar detalhes da classe">x</button><div class="class-detail-art ${definition.image ? "has-image" : ""}" ${definition.image ? `style="background-image: url('${escapeHtml(definition.image)}')"` : ""}>${definition.image ? "" : "CLASSE"}</div><div class="class-detail-body"><span class="resource-modal-label">Classe</span><h2 id="class-detail-title">${escapeHtml(definition.name)}</h2><p class="class-detail-summary">${escapeHtml(definition.summary)}</p><div class="class-detail-stats"><span>Evasao inicial <strong>${getClassStartingEvasion(definition)}</strong></span><span>HP inicial <strong>${definition.startingHitPoints}</strong></span></div><section class="class-detail-section"><h3>Dominios</h3><div class="class-domain-list">${domains.map((domain) => `<i style="--domain-color: ${escapeHtml(domain.color)}">${escapeHtml(domain.name)}</i>`).join("")}</div></section><section class="class-detail-section"><h3>Caracteristicas da classe</h3><div class="class-detail-feature-grid">${renderFeatureDetail(getFeature(definition.featureIds[0]), "Caracteristica de classe")}${renderFeatureDetail(getFeature(definition.hopeFeatureId), "Caracteristica de Esperanca")}</div></section><section class="class-detail-section"><h3>Subclasses</h3>${subclassTabs}</section></div></section></div>`;
+}
+
+function getFeature(featureId: string | undefined): FeatureDefinition | undefined {
+  const definition = featureId ? findDefinition(catalog, featureId) : undefined;
+  return definition?.type === "feature" ? definition : undefined;
+}
+
+function getClassStartingEvasion(classDefinition: ClassDefinition): number {
+  return classDefinition.startingEvasion ?? (classDefinition as ClassDefinition & { baseEvasion?: number }).baseEvasion ?? 0;
+}
+
+function getClassSubclasses(classDefinition: ClassDefinition): SubclassDefinition[] {
+  return (classDefinition.subclassIds ?? [])
+    .map((subclassId) => findDefinition(catalog, subclassId))
+    .filter((definition): definition is SubclassDefinition => definition?.type === "subclass");
+}
+
+function renderFeatureFields(key: string, title: string, feature: FeatureDefinition | undefined, required: boolean, note?: string): string {
+  return `<fieldset class="class-feature-field"><legend>${title}${required ? " *" : ""}</legend>${note ? `<small>${note}</small>` : ""}<label class="form-field"><span>Nome${required ? " *" : ""}</span><input data-class-feature-name="${key}" value="${escapeHtml(feature?.name ?? "")}" placeholder="Ex.: Instinto Protetor" /></label><label class="form-field"><span>Descricao${required ? " *" : ""}</span><textarea data-class-feature-summary="${key}" placeholder="Descreva o efeito permanente.">${escapeHtml(feature?.summary ?? "")}</textarea></label></fieldset>`;
+}
+
+function renderSubclassFields(index: number, subclass: SubclassDefinition | undefined): string {
+  const foundation = getFeature(subclass?.foundationFeatureIds[0]);
+  const specialization = getFeature(subclass?.specializationFeatureIds[0]);
+  const mastery = getFeature(subclass?.masteryFeatureIds[0]);
+  return `<section class="class-subclass-editor"><label class="form-field"><span>Nome *</span><input data-class-subclass-name="${index}" value="${escapeHtml(subclass?.name ?? "")}" placeholder="Ex.: Sentinela" /></label><label class="form-field"><span>Descricao</span><textarea data-class-subclass-summary="${index}" placeholder="Sua proposta narrativa e mecanica.">${escapeHtml(subclass?.summary ?? "")}</textarea></label>${renderFeatureFields(`subclass-${index}-foundation`, "Fundacao", foundation, true)}${renderFeatureFields(`subclass-${index}-specialization`, "Especializacao", specialization, false)}${renderFeatureFields(`subclass-${index}-mastery`, "Maestria", mastery, false)}</section>`;
+}
+
+function renderCompendiumClassFormModal(): string {
+  if (!state.classModalOpen) {
+    return "";
+  }
+  const existingDefinition = state.editingCompendiumClassId ? findDefinition(catalog, state.editingCompendiumClassId) : undefined;
+  const classDefinition = existingDefinition?.type === "class" ? existingDefinition : undefined;
+  const selectedDomains = new Set(classDefinition?.domainIds ?? []);
+  const subclasses = classDefinition ? getClassSubclasses(classDefinition) : [];
+  const classFeature = classDefinition ? getFeature(classDefinition.featureIds?.[0]) : undefined;
+  const hopeFeature = classDefinition ? getFeature(classDefinition.hopeFeatureId) : undefined;
+  return `
+    <div class="modal-backdrop" data-modal-backdrop>
+      <section class="form-modal class-form-modal" role="dialog" aria-modal="true" aria-labelledby="class-form-title">
+        <button class="modal-close" data-modal-close aria-label="Fechar classe">x</button>
+        <h2 id="class-form-title">${classDefinition ? "Editar classe" : "Nova classe"}</h2>
+        <p>Defina a identidade inicial e as duas subclasses desta classe.</p>
+        <div class="form-grid class-core-fields"><label class="form-field"><span>Nome *</span><input data-compendium-class-name value="${escapeHtml(classDefinition?.name ?? "")}" placeholder="Ex.: Guardiao" /></label><label class="form-field"><span>Evasao inicial *</span><input data-compendium-class-starting-evasion type="number" min="0" step="1" value="${classDefinition ? getClassStartingEvasion(classDefinition) : ""}" placeholder="Ex.: 10" /></label><label class="form-field"><span>HP inicial *</span><input data-compendium-class-starting-hp type="number" min="1" step="1" value="${classDefinition?.startingHitPoints ?? ""}" placeholder="Ex.: 6" /></label></div>
+        <label class="form-field"><span>Imagem</span><input data-compendium-class-image type="file" accept="image/png,image/jpeg,image/webp" /><small>${classDefinition?.image ? "Uma imagem ja esta associada; envie outra para substitui-la." : "PNG, JPG ou WebP; ate 1,5 MB."}</small></label>
+        <fieldset class="class-domain-field"><legend>Dominios liberados * <small>Escolha exatamente dois.</small></legend><div>${catalog.domains.map((domain) => `<label style="--domain-color: ${escapeHtml(domain.color)}"><input type="checkbox" data-compendium-class-domain value="${domain.id}" ${selectedDomains.has(domain.id) ? "checked" : ""} /><span>${escapeHtml(domain.name)}</span></label>`).join("")}</div></fieldset>
+        <label class="form-field"><span>Descricao *</span><textarea data-compendium-class-summary placeholder="Descreva o papel e a proposta desta classe.">${escapeHtml(classDefinition?.summary ?? "")}</textarea></label>
+        ${renderFeatureFields("class", "Caracteristica de classe", classFeature, true)}
+        ${renderFeatureFields("hope", "Caracteristica de Esperanca", hopeFeature, true, "Ativada ao gastar 3 Esperancas.")}
+        <fieldset class="class-subclasses-field"><legend>Subclasses * <small>Uma classe possui exatamente duas subclasses.</small></legend><div class="class-subclass-tabs"><div class="class-subclass-tab-list" role="tablist" aria-label="Subclasses"><button class="is-active" type="button" role="tab" aria-selected="true" data-action="select-class-subclass-tab" data-subclass-tab="0">Subclasse 1</button><button type="button" role="tab" aria-selected="false" data-action="select-class-subclass-tab" data-subclass-tab="1">Subclasse 2</button></div><div class="class-subclass-panels"><div class="class-subclass-tab-panel class-subclass-tab-panel-0 is-active">${renderSubclassFields(0, subclasses[0])}</div><div class="class-subclass-tab-panel class-subclass-tab-panel-1">${renderSubclassFields(1, subclasses[1])}</div></div></div></fieldset>
+        <p class="form-error" data-compendium-class-error hidden></p>
+        <div class="modal-actions icon-modal-actions"><button class="secondary-action icon-action" type="button" data-modal-close aria-label="Cancelar" title="Cancelar">↩</button><button class="primary-action icon-action" type="button" data-action="save-compendium-class" aria-label="Gravar classe" title="Gravar classe">✒</button></div>
+      </section>
+    </div>
+  `;
+}
+
+function renderDeleteCompendiumClassModal(): string {
+  const definition = state.deletingCompendiumClassId ? findDefinition(catalog, state.deletingCompendiumClassId) : undefined;
+  if (definition?.type !== "class") {
+    return "";
+  }
+  return `
+    <div class="modal-backdrop" data-modal-backdrop><section class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-class-title"><h2 id="delete-class-title">Excluir classe?</h2><p>A classe <strong>${escapeHtml(definition.name)}</strong> sera removida deste dispositivo.</p><div class="modal-actions"><button class="secondary-action" type="button" data-action="cancel-delete-compendium-class">Cancelar</button><button class="danger-action" type="button" data-action="confirm-delete-compendium-class">Excluir classe</button></div></section></div>
+  `;
+}
+
 function getFilteredCompendiumCards(): CardDefinition[] {
   const search = state.compendiumCardSearch.trim().toLowerCase();
 
@@ -2078,6 +2212,9 @@ function render(): void {
     ${renderDeleteCompendiumItemModal()}
     ${renderCompendiumItemPreviewModal()}
     ${renderAddItemToContainerModal()}
+    ${renderCompendiumClassPreviewModal()}
+    ${renderCompendiumClassFormModal()}
+    ${renderDeleteCompendiumClassModal()}
   `;
   document.body.classList.toggle("has-modal", Boolean(appRoot.querySelector(".modal-backdrop")));
 }
@@ -2338,6 +2475,98 @@ async function removeCompendiumItem(): Promise<void> {
   await deleteCustomDefinition(definition.id);
   await refreshCatalog();
   state.deletingCompendiumItemId = undefined;
+  render();
+}
+
+async function saveCompendiumClass(): Promise<void> {
+  const name = getCardFormValue("[data-compendium-class-name]");
+  const summary = getCardFormValue("[data-compendium-class-summary]");
+  const startingEvasion = Number(getCardFormValue("[data-compendium-class-starting-evasion]"));
+  const startingHitPoints = Number(getCardFormValue("[data-compendium-class-starting-hp]"));
+  const domainIds = Array.from(document.querySelectorAll<HTMLInputElement>("[data-compendium-class-domain]:checked")).map((input) => input.value);
+  const error = document.querySelector<HTMLElement>("[data-compendium-class-error]");
+  const existingDefinition = state.editingCompendiumClassId ? findDefinition(catalog, state.editingCompendiumClassId) : undefined;
+  const existing = existingDefinition?.type === "class" ? existingDefinition : undefined;
+  const duplicate = catalog.classes.some((classDefinition) => classDefinition.name.toLocaleLowerCase("pt-BR") === name.toLocaleLowerCase("pt-BR") && classDefinition.id !== existing?.id);
+  const classFeature = readFeatureInput("class", "class", "class", existing?.featureIds?.[0]);
+  const hopeFeature = readFeatureInput("hope", "class", "hope", existing?.hopeFeatureId, 3);
+  const subclassDrafts = [0, 1].map((index) => readSubclassInput(index, existing?.subclassIds?.[index]));
+  const invalidSubclass = subclassDrafts.some((subclass) => !subclass.name || !subclass.foundationFeature);
+  if (!name || !summary || domainIds.length !== 2 || new Set(domainIds).size !== 2 || !Number.isInteger(startingEvasion) || startingEvasion < 0 || !Number.isInteger(startingHitPoints) || startingHitPoints < 1 || !classFeature || !hopeFeature || invalidSubclass || duplicate) {
+    if (error) {
+      error.hidden = false;
+      error.textContent = duplicate ? "Ja existe uma classe com este nome." : "Informe nome, descricao, evasao, HP, duas caracteristicas, exatamente dois dominios e duas subclasses com Fundacao.";
+    }
+    return;
+  }
+  if (existing && existing.packId !== "local") {
+    return;
+  }
+  let image = existing?.image;
+  try {
+    image = (await readDefinitionImage("[data-compendium-class-image]")) ?? image;
+  } catch (imageError) {
+    if (error) {
+      error.hidden = false;
+      error.textContent = imageError instanceof Error ? imageError.message : "Nao foi possivel usar a imagem.";
+    }
+    return;
+  }
+  const classId = existing?.id ?? `class.local.${crypto.randomUUID()}`;
+  const featureDefinitions: FeatureDefinition[] = [{ ...classFeature, sourceId: classId }, { ...hopeFeature, sourceId: classId }];
+  const subclassDefinitions: SubclassDefinition[] = subclassDrafts.map((draft) => {
+    const subclassId = draft.id ?? `subclass.local.${crypto.randomUUID()}`;
+    const foundation = { ...draft.foundationFeature!, sourceId: subclassId };
+    const specialization = draft.specializationFeature ? { ...draft.specializationFeature, sourceId: subclassId } : undefined;
+    const mastery = draft.masteryFeature ? { ...draft.masteryFeature, sourceId: subclassId } : undefined;
+    featureDefinitions.push(foundation, ...(specialization ? [specialization] : []), ...(mastery ? [mastery] : []));
+    return { id: subclassId, type: "subclass", packId: "local", name: draft.name, summary: draft.summary, classId, foundationFeatureIds: [foundation.id], specializationFeatureIds: specialization ? [specialization.id] : [], masteryFeatureIds: mastery ? [mastery.id] : [] };
+  });
+  const definition: ClassDefinition = { id: classId, type: "class", packId: "local", name, summary, domainIds: [domainIds[0], domainIds[1]], startingEvasion, startingHitPoints, featureIds: [classFeature.id], hopeFeatureId: hopeFeature.id, subclassIds: [subclassDefinitions[0].id, subclassDefinitions[1].id], image };
+  await saveCustomDefinition(definition);
+  await Promise.all([...subclassDefinitions, ...featureDefinitions].map((child) => saveCustomDefinition(child)));
+  await refreshCatalog();
+  state.classModalOpen = false;
+  state.editingCompendiumClassId = undefined;
+  render();
+}
+
+function readFeatureInput(key: string, sourceType: FeatureDefinition["sourceType"], tier: FeatureDefinition["tier"], existingId?: string, hopeCost?: number): FeatureDefinition | undefined {
+  const name = getCardFormValue(`[data-class-feature-name="${key}"]`);
+  const summary = getCardFormValue(`[data-class-feature-summary="${key}"]`);
+  if (!name && !summary) {
+    return undefined;
+  }
+  if (!name || !summary) {
+    return undefined;
+  }
+  return { id: existingId ?? `feature.local.${crypto.randomUUID()}`, type: "feature", packId: "local", name, summary, sourceType, sourceId: "", tier, ...(hopeCost ? { hopeCost } : {}) };
+}
+
+function readSubclassInput(index: number, existingId?: string): { id?: string; name: string; summary: string; foundationFeature?: FeatureDefinition; specializationFeature?: FeatureDefinition; masteryFeature?: FeatureDefinition } {
+  const existingDefinition = existingId ? findDefinition(catalog, existingId) : undefined;
+  const existing = existingDefinition?.type === "subclass" ? existingDefinition : undefined;
+  return {
+    id: existing?.id,
+    name: getCardFormValue(`[data-class-subclass-name="${index}"]`),
+    summary: getCardFormValue(`[data-class-subclass-summary="${index}"]`),
+    foundationFeature: readFeatureInput(`subclass-${index}-foundation`, "subclass", "foundation", existing?.foundationFeatureIds[0]),
+    specializationFeature: readFeatureInput(`subclass-${index}-specialization`, "subclass", "specialization", existing?.specializationFeatureIds[0]),
+    masteryFeature: readFeatureInput(`subclass-${index}-mastery`, "subclass", "mastery", existing?.masteryFeatureIds[0])
+  };
+}
+
+async function removeCompendiumClass(): Promise<void> {
+  const classId = state.deletingCompendiumClassId;
+  const definition = classId ? findDefinition(catalog, classId) : undefined;
+  if (definition?.type !== "class" || definition.packId !== "local") {
+    return;
+  }
+  const subclasses = catalog.subclasses.filter((subclass) => subclass.classId === definition.id && subclass.packId === "local");
+  const featureIds = new Set([definition.hopeFeatureId, ...(definition.featureIds ?? []), ...subclasses.flatMap((subclass) => [...subclass.foundationFeatureIds, ...subclass.specializationFeatureIds, ...subclass.masteryFeatureIds])].filter(Boolean));
+  await Promise.all([definition.id, ...subclasses.map((subclass) => subclass.id), ...featureIds].map((id) => deleteCustomDefinition(id)));
+  await refreshCatalog();
+  state.deletingCompendiumClassId = undefined;
   render();
 }
 
@@ -2786,6 +3015,11 @@ async function deleteNote(noteId: string | undefined): Promise<void> {
 }
 
 function bindEvents(): void {
+  document.addEventListener("pointerdown", (event) => {
+    const target = event.target;
+    modalBackdropPointerDown = event.button === 0 && target instanceof HTMLElement && target.matches("[data-modal-backdrop]");
+  });
+
   document.addEventListener("click", (event) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) {
@@ -2795,6 +3029,40 @@ function bindEvents(): void {
     if (dragState.suppressNextClick) {
       dragState.suppressNextClick = false;
       event.preventDefault();
+      return;
+    }
+
+    const subclassTabButton = target.closest<HTMLButtonElement>('[data-action="select-class-subclass-tab"]');
+    if (subclassTabButton) {
+      const tabs = subclassTabButton.closest<HTMLElement>(".class-subclass-tabs");
+      const tabIndex = subclassTabButton.dataset.subclassTab;
+      if (tabs && tabIndex) {
+        tabs.querySelectorAll<HTMLButtonElement>('[data-action="select-class-subclass-tab"]').forEach((button) => {
+          const isActive = button === subclassTabButton;
+          button.classList.toggle("is-active", isActive);
+          button.setAttribute("aria-selected", String(isActive));
+        });
+        tabs.querySelectorAll<HTMLElement>(".class-subclass-tab-panel").forEach((panel) => {
+          panel.classList.toggle("is-active", panel.classList.contains(`class-subclass-tab-panel-${tabIndex}`));
+        });
+      }
+      return;
+    }
+
+    const detailSubclassTabButton = target.closest<HTMLButtonElement>('[data-action="select-class-detail-subclass-tab"]');
+    if (detailSubclassTabButton) {
+      const tabs = detailSubclassTabButton.closest<HTMLElement>(".class-detail-subclass-tabs");
+      const tabIndex = detailSubclassTabButton.dataset.subclassTab;
+      if (tabs && tabIndex) {
+        tabs.querySelectorAll<HTMLButtonElement>('[data-action="select-class-detail-subclass-tab"]').forEach((button) => {
+          const isActive = button === detailSubclassTabButton;
+          button.classList.toggle("is-active", isActive);
+          button.setAttribute("aria-selected", String(isActive));
+        });
+        tabs.querySelectorAll<HTMLElement>(".class-detail-subclass-panel").forEach((panel, index) => {
+          panel.classList.toggle("is-active", index === Number(tabIndex));
+        });
+      }
       return;
     }
 
@@ -2820,14 +3088,19 @@ function bindEvents(): void {
       state.editingCompendiumItemId = undefined;
       state.deletingCompendiumItemId = undefined;
       state.compendiumItemPreviewId = undefined;
+      state.compendiumClassPreviewId = undefined;
       state.addItemToCompartmentId = undefined;
       state.addingDefinitionItemId = undefined;
       state.addItemError = undefined;
+      state.classModalOpen = false;
+      state.editingCompendiumClassId = undefined;
+      state.deletingCompendiumClassId = undefined;
       render();
       return;
     }
 
-    if (target.matches("[data-modal-backdrop]")) {
+    if (target.matches("[data-modal-backdrop]") && modalBackdropPointerDown) {
+      modalBackdropPointerDown = false;
       state.modalCardId = undefined;
       state.selectedItemId = undefined;
       state.resourceModalId = undefined;
@@ -2849,12 +3122,18 @@ function bindEvents(): void {
       state.editingCompendiumItemId = undefined;
       state.deletingCompendiumItemId = undefined;
       state.compendiumItemPreviewId = undefined;
+      state.compendiumClassPreviewId = undefined;
       state.addItemToCompartmentId = undefined;
       state.addingDefinitionItemId = undefined;
       state.addItemError = undefined;
+      state.classModalOpen = false;
+      state.editingCompendiumClassId = undefined;
+      state.deletingCompendiumClassId = undefined;
       render();
       return;
     }
+
+    modalBackdropPointerDown = false;
 
     const resourceAdjustButton = target.closest<HTMLElement>("[data-resource-adjust]");
     if (resourceAdjustButton) {
@@ -2901,6 +3180,12 @@ function bindEvents(): void {
       return;
     }
 
+    if (target.closest('[data-action="manage-compendium-classes"]')) {
+      state.compendiumView = "classes";
+      render();
+      return;
+    }
+
     if (target.closest('[data-action="new-compendium-domain"]')) {
       state.domainModalOpen = true;
       state.editingDomainId = undefined;
@@ -2919,6 +3204,44 @@ function bindEvents(): void {
       state.itemDefinitionModalOpen = true;
       state.editingCompendiumItemId = undefined;
       render();
+      return;
+    }
+
+    if (target.closest('[data-action="new-compendium-class"]')) {
+      state.classModalOpen = true;
+      state.editingCompendiumClassId = undefined;
+      render();
+      return;
+    }
+
+    const editCompendiumClassButton = target.closest<HTMLElement>('[data-action="edit-compendium-class"]');
+    if (editCompendiumClassButton) {
+      state.classModalOpen = true;
+      state.editingCompendiumClassId = editCompendiumClassButton.dataset.classId;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="save-compendium-class"]')) {
+      void saveCompendiumClass();
+      return;
+    }
+
+    const deleteCompendiumClassButton = target.closest<HTMLElement>('[data-action="delete-compendium-class"]');
+    if (deleteCompendiumClassButton) {
+      state.deletingCompendiumClassId = deleteCompendiumClassButton.dataset.classId;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="cancel-delete-compendium-class"]')) {
+      state.deletingCompendiumClassId = undefined;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="confirm-delete-compendium-class"]')) {
+      void removeCompendiumClass();
       return;
     }
 
@@ -2950,6 +3273,13 @@ function bindEvents(): void {
 
     if (target.closest('[data-action="confirm-delete-compendium-item"]')) {
       void removeCompendiumItem();
+      return;
+    }
+
+    const compendiumClassPreviewButton = target.closest<HTMLElement>("[data-compendium-class-preview-id]");
+    if (compendiumClassPreviewButton) {
+      state.compendiumClassPreviewId = compendiumClassPreviewButton.dataset.compendiumClassPreviewId;
+      render();
       return;
     }
 
@@ -3351,6 +3681,14 @@ function bindEvents(): void {
       state.editingCompendiumItemId = undefined;
       state.deletingCompendiumItemId = undefined;
       state.compendiumItemPreviewId = undefined;
+      render();
+    }
+
+    if (event.key === "Escape" && (state.classModalOpen || state.deletingCompendiumClassId || state.compendiumClassPreviewId)) {
+      state.classModalOpen = false;
+      state.editingCompendiumClassId = undefined;
+      state.deletingCompendiumClassId = undefined;
+      state.compendiumClassPreviewId = undefined;
       render();
     }
   });

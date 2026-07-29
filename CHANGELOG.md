@@ -4,6 +4,21 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.7.0]
+
+### Adicionado
+
+- CRUD local de Classes, Subclasses e Características no Compendium;
+- contrato de dados para Classes, com dois Domínios, Evasão e HP iniciais, Característica de Esperança e duas Subclasses;
+- tela de detalhes de Classe, incluindo características, Domínios e Subclasses em abas;
+- documentação de Classes e Progressão do Daggerheart.
+
+### Alterado
+
+- formulário de Classes reorganizado para tablets, com descrições expandidas e abas de Subclasses;
+- modais passam a fechar pelo fundo apenas quando o clique começa nele, evitando fechamentos durante seleção de texto;
+- detalhe de Classe mantém a arte fixa enquanto a coluna de conteúdo é rolada em telas amplas.
+
 ## [0.6.0]
 
 ### Adicionado

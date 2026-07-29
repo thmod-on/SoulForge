@@ -1,9 +1,12 @@
 import type {
   CardDefinition,
+  ClassDefinition,
   Definition,
   DomainDefinition,
+  FeatureDefinition,
   ItemDefinition,
-  PackManifest
+  PackManifest,
+  SubclassDefinition
 } from "./types";
 
 export type Catalog = {
@@ -11,6 +14,9 @@ export type Catalog = {
   definitions: Definition[];
   domains: DomainDefinition[];
   cards: CardDefinition[];
+  classes: ClassDefinition[];
+  subclasses: SubclassDefinition[];
+  features: FeatureDefinition[];
   items: ItemDefinition[];
 };
 
@@ -20,6 +26,9 @@ export function createCatalog(packs: PackManifest[], definitions: Definition[]):
     definitions,
     domains: definitions.filter((definition): definition is DomainDefinition => definition.type === "domain"),
     cards: definitions.filter((definition): definition is CardDefinition => definition.type === "card"),
+    classes: definitions.filter((definition): definition is ClassDefinition => definition.type === "class"),
+    subclasses: definitions.filter((definition): definition is SubclassDefinition => definition.type === "subclass"),
+    features: definitions.filter((definition): definition is FeatureDefinition => definition.type === "feature"),
     items: definitions.filter((definition): definition is ItemDefinition => definition.type === "item")
   };
 }
