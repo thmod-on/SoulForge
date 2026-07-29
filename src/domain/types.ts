@@ -74,6 +74,7 @@ export type CardDefinition = BaseDefinition & {
   tier: number;
   cardType: "acao" | "reacao" | "passiva";
   cost?: string;
+  recallCost?: number;
   effect: string;
   image?: string;
 };

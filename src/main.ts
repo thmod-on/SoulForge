@@ -79,6 +79,8 @@ const state: {
   deletingCompendiumItemId?: string;
   compendiumItemPreviewId?: string;
   compendiumClassPreviewId?: string;
+  activatingStoredCardId?: string;
+  cardActivationError?: string;
   addItemToCompartmentId?: string;
   addingDefinitionItemId?: string;
   addItemCatalogFilter: InventoryFilter;
@@ -133,7 +135,7 @@ const sideNavItems: Array<{ page: Page; label: string; icon: string }> = [
   { page: "settings", label: "Configuracoes", icon: "&#128220;" }
 ];
 
-const appVersion = "0.6.0";
+const appVersion = "0.7.1";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -494,7 +496,7 @@ function renderOverview(character: Character): string {
           ${activeCards.map(renderCardTile).join("")}
         </div>
         <button class="deck-drawer-button" data-action="open-stored-cards">
-          Ver cartas guardadas (${inactiveCards})
+          Ver Vault (${inactiveCards})
         </button>
       </section>
       <section class="quick-actions">
@@ -514,18 +516,18 @@ function renderStoredCards(character: Character): string {
       <section class="band">
         <div class="screen-title">
           <div>
-            <h1>Cartas guardadas</h1>
-            <p>Cartas aprendidas pelo personagem, mas que nao estao ativas no momento.</p>
+            <h1>Vault</h1>
+            <p>Cartas aprendidas pelo personagem que nao estao ativas no Loadout.</p>
           </div>
         </div>
         <div class="section-heading">
-          <h2>Deck reserva</h2>
-          <span>${storedCards.length} guardadas</span>
+          <h2>Cartas no Vault</h2>
+          <span>${storedCards.length} no Vault</span>
         </div>
         ${
           storedCards.length
             ? `<div class="card-row stored-card-row">${storedCards.map(renderStoredCardTile).join("")}</div>`
-            : renderEmptyInline("Nenhuma carta guardada por enquanto.")
+            : renderEmptyInline("O Vault esta vazio por enquanto.")
         }
       </section>
     </main>
@@ -536,9 +538,7 @@ function renderStoredCardTile(card: CardDefinition): string {
   return `
     <article class="stored-card">
       ${renderCardTile(card)}
-      <button class="stored-card-action" type="button" data-action="activate-stored-card" data-card-id="${card.id}">
-        Ativar carta
-      </button>
+      <button class="stored-card-action icon-action" type="button" data-action="activate-stored-card" data-card-id="${card.id}" aria-label="Ativar ${escapeHtml(card.name)} no Loadout" title="Ativar no Loadout">↥</button>
     </article>
   `;
 }
@@ -1126,7 +1126,8 @@ function renderEmptyInline(message: string): string {
 function renderCardTile(card: CardDefinition): string {
   return `
     <button class="ability-card" data-card-modal-id="${card.id}">
-      <div class="card-tier">${card.tier}</div>
+      <div class="card-tier" aria-label="Tier ${card.tier}"><small>Tier</small><strong>${card.tier}</strong></div>
+      <div class="card-recall" aria-label="Custo de recall: ${card.recallCost ?? 0} Stress" title="Custo de recall: ${card.recallCost ?? 0} Stress"><span aria-hidden="true">⚡</span><strong>${card.recallCost ?? 0}</strong></div>
       <div class="card-art"></div>
       <h3>${escapeHtml(card.name)}</h3>
       <span>${escapeHtml(card.cardType)}</span>
@@ -1661,7 +1662,7 @@ function renderDomainModal(): string {
         <label class="form-field"><span>Descricao *</span><textarea data-domain-summary placeholder="Explique a proposta deste dominio.">${escapeHtml(summary)}</textarea></label>
         <label class="form-field form-color-field"><span>Cor de identidade</span><input data-domain-color type="color" value="${escapeHtml(color)}" /></label>
         <p class="form-error" data-domain-error hidden></p>
-        <div class="modal-actions icon-modal-actions"><button class="secondary-action icon-action" type="button" data-modal-close aria-label="Cancelar" title="Cancelar">↩</button><button class="primary-action icon-action" type="button" data-action="save-compendium-domain" aria-label="Gravar dominio" title="Gravar dominio">✒</button></div>
+        <div class="modal-actions icon-modal-actions"><button class="secondary-action icon-action" type="button" data-modal-close aria-label="Cancelar" title="Cancelar">↩</button><button class="primary-action icon-action" type="button" data-action="save-compendium-domain" aria-label="Gravar dominio" title="Gravar dominio">🪶</button></div>
       </section>
     </div>
   `;
@@ -1843,7 +1844,7 @@ function renderCompendiumItemFormModal(): string {
         <label class="form-field"><span>Imagem</span><input data-compendium-item-image type="file" accept="image/png,image/jpeg,image/webp" /><small>${item?.image ? "Uma imagem ja esta associada; envie outra para substitui-la." : "PNG, JPG ou WebP; ate 1,5 MB."}</small></label>
         <label class="form-field"><span>Descricao *</span><textarea data-compendium-item-summary placeholder="Descreva o item e seu uso.">${escapeHtml(item?.summary ?? "")}</textarea></label>
         <p class="form-error" data-compendium-item-error hidden></p>
-        <div class="modal-actions icon-modal-actions"><button class="secondary-action icon-action" type="button" data-modal-close aria-label="Cancelar" title="Cancelar">↩</button><button class="primary-action icon-action" type="button" data-action="save-compendium-item" aria-label="Gravar item" title="Gravar item">✒</button></div>
+        <div class="modal-actions icon-modal-actions"><button class="secondary-action icon-action" type="button" data-modal-close aria-label="Cancelar" title="Cancelar">↩</button><button class="primary-action icon-action" type="button" data-action="save-compendium-item" aria-label="Gravar item" title="Gravar item">🪶</button></div>
       </section>
     </div>
   `;
@@ -1986,7 +1987,7 @@ function renderCompendiumClassFormModal(): string {
         ${renderFeatureFields("hope", "Caracteristica de Esperanca", hopeFeature, true, "Ativada ao gastar 3 Esperancas.")}
         <fieldset class="class-subclasses-field"><legend>Subclasses * <small>Uma classe possui exatamente duas subclasses.</small></legend><div class="class-subclass-tabs"><div class="class-subclass-tab-list" role="tablist" aria-label="Subclasses"><button class="is-active" type="button" role="tab" aria-selected="true" data-action="select-class-subclass-tab" data-subclass-tab="0">Subclasse 1</button><button type="button" role="tab" aria-selected="false" data-action="select-class-subclass-tab" data-subclass-tab="1">Subclasse 2</button></div><div class="class-subclass-panels"><div class="class-subclass-tab-panel class-subclass-tab-panel-0 is-active">${renderSubclassFields(0, subclasses[0])}</div><div class="class-subclass-tab-panel class-subclass-tab-panel-1">${renderSubclassFields(1, subclasses[1])}</div></div></div></fieldset>
         <p class="form-error" data-compendium-class-error hidden></p>
-        <div class="modal-actions icon-modal-actions"><button class="secondary-action icon-action" type="button" data-modal-close aria-label="Cancelar" title="Cancelar">↩</button><button class="primary-action icon-action" type="button" data-action="save-compendium-class" aria-label="Gravar classe" title="Gravar classe">✒</button></div>
+        <div class="modal-actions icon-modal-actions"><button class="secondary-action icon-action" type="button" data-modal-close aria-label="Cancelar" title="Cancelar">↩</button><button class="primary-action icon-action" type="button" data-action="save-compendium-class" aria-label="Gravar classe" title="Gravar classe">🪶</button></div>
       </section>
     </div>
   `;
@@ -2059,12 +2060,13 @@ function renderCompendiumCardFormModal(): string {
           <label class="form-field"><span>Dominio *</span><select data-compendium-card-domain>${domains.map((domain) => `<option value="${domain.id}" ${domain.id === card?.domainId ? "selected" : ""}>${escapeHtml(domain.name)}</option>`).join("")}</select></label>
           <label class="form-field"><span>Tier *</span><select data-compendium-card-tier>${[1, 2, 3, 4].map((tier) => `<option value="${tier}" ${tier === (card?.tier ?? 1) ? "selected" : ""}>Tier ${tier}</option>`).join("")}</select></label>
           <label class="form-field"><span>Tipo *</span><select data-compendium-card-type>${(["acao", "reacao", "passiva"] as const).map((type) => `<option value="${type}" ${type === (card?.cardType ?? "acao") ? "selected" : ""}>${type}</option>`).join("")}</select></label>
-          <label class="form-field"><span>Custo</span><input data-compendium-card-cost value="${escapeHtml(card?.cost ?? "")}" placeholder="Ex.: 1 Esperanca" /></label>
+          <label class="form-field"><span>Custo de uso</span><input data-compendium-card-cost value="${escapeHtml(card?.cost ?? "")}" placeholder="Ex.: 1 Esperanca" /></label>
+          <label class="form-field"><span>Custo de recall</span><input data-compendium-card-recall-cost type="number" min="0" step="1" value="${card?.recallCost ?? 0}" /><small>Stress para trazer esta carta do Vault fora de um descanso.</small></label>
         </div>
         <label class="form-field"><span>Imagem</span><input data-compendium-card-image type="file" accept="image/png,image/jpeg,image/webp" /><small>${card?.image ? "Uma imagem ja esta associada; envie outra para substitui-la." : "PNG, JPG ou WebP; ate 1,5 MB."}</small></label>
         <label class="form-field"><span>Efeito *</span><textarea data-compendium-card-effect placeholder="Descreva a regra e o efeito completo da carta.">${escapeHtml(card?.effect ?? "")}</textarea></label>
         <p class="form-error" data-compendium-card-error hidden></p>
-        <div class="modal-actions icon-modal-actions"><button class="secondary-action icon-action" type="button" data-modal-close aria-label="Cancelar" title="Cancelar">↩</button><button class="primary-action icon-action" type="button" data-action="save-compendium-card" aria-label="Gravar carta" title="Gravar carta">✒</button></div>
+        <div class="modal-actions icon-modal-actions"><button class="secondary-action icon-action" type="button" data-modal-close aria-label="Cancelar" title="Cancelar">↩</button><button class="primary-action icon-action" type="button" data-action="save-compendium-card" aria-label="Gravar carta" title="Gravar carta">🪶</button></div>
       </section>
     </div>
   `;
@@ -2113,6 +2115,7 @@ function renderCardModal(cardId?: string): string {
           <div class="modal-card-meta">
             <span>${escapeHtml(definition.cardType)}</span>
             <span>${escapeHtml(definition.cost ?? "Sem custo")}</span>
+            <span>⚡ Recall: ${definition.recallCost ?? 0} Stress</span>
           </div>
           <p>${escapeHtml(definition.summary)}</p>
           <h3>Efeito</h3>
@@ -2121,6 +2124,19 @@ function renderCardModal(cardId?: string): string {
       </section>
     </div>
   `;
+}
+
+function renderActivateStoredCardModal(): string {
+  const character = state.character;
+  const definition = state.activatingStoredCardId ? findDefinition(catalog, state.activatingStoredCardId) : undefined;
+  if (!character || definition?.type !== "card") {
+    return "";
+  }
+  const activeCards = getActiveCards(character);
+  const recallCost = definition.recallCost ?? 0;
+  const stress = character.resources.find((resource) => resource.id === "stress");
+  const loadoutFull = activeCards.length >= 5;
+  return `<div class="modal-backdrop" data-modal-backdrop><section class="confirm-modal card-activation-modal" role="dialog" aria-modal="true" aria-labelledby="activate-card-title"><button class="modal-close" data-modal-close aria-label="Cancelar ativacao">x</button><span class="resource-modal-label">Vault para Loadout</span><h2 id="activate-card-title">Ativar ${escapeHtml(definition.name)}?</h2><p>Esta carta passara a ficar ativa no Loadout.</p>${loadoutFull ? `<label class="form-field"><span>O Loadout ja possui cinco cartas. Escolha uma para guardar *</span><select data-recall-swap-card><option value="">Selecione uma carta ativa</option>${activeCards.map((card) => `<option value="${card.id}">${escapeHtml(card.name)}</option>`).join("")}</select></label>` : ""}<div class="card-activation-rules"><p><strong>Durante um descanso:</strong> a troca e gratuita.</p><p><strong>Agora:</strong> marque ${recallCost} ${recallCost === 1 ? "Stress" : "Stress"}.${stress ? ` Disponivel: ${stress.value}/${stress.max}.` : ""}</p></div><p class="form-error" data-card-activation-error ${state.cardActivationError ? "" : "hidden"}>${escapeHtml(state.cardActivationError ?? "")}</p><div class="modal-actions"><button class="secondary-action" type="button" data-action="activate-stored-card-free">Ativar no descanso</button><button class="primary-action" type="button" data-action="activate-stored-card-stress">Ativar agora</button></div></section></div>`;
 }
 
 function renderPlaceholder(page: Page): string {
@@ -2133,7 +2149,7 @@ function renderPlaceholder(page: Page): string {
     notes: "Anotacoes",
     compendium: "Compendium",
     settings: "Configuracoes",
-    storedCards: "Cartas guardadas"
+    storedCards: "Vault"
   };
 
   return `
@@ -2195,6 +2211,7 @@ function render(): void {
   appRoot.innerHTML = `
     ${shell}
     ${renderCardModal(state.modalCardId)}
+    ${renderActivateStoredCardModal()}
     ${renderItemModal()}
     ${renderDeleteItemModal()}
     ${renderResourceModal(state.resourceModalId)}
@@ -2344,6 +2361,7 @@ async function saveCompendiumCard(): Promise<void> {
   const tier = Number(getCardFormValue("[data-compendium-card-tier]"));
   const cardType = getCardFormValue("[data-compendium-card-type]") as CardDefinition["cardType"];
   const cost = getCardFormValue("[data-compendium-card-cost]");
+  const recallCost = Number(getCardFormValue("[data-compendium-card-recall-cost]"));
   const effect = getCardFormValue("[data-compendium-card-effect]");
   const error = document.querySelector<HTMLElement>("[data-compendium-card-error]");
   const existingDefinition = state.editingCompendiumCardId ? findDefinition(catalog, state.editingCompendiumCardId) : undefined;
@@ -2351,10 +2369,10 @@ async function saveCompendiumCard(): Promise<void> {
   const duplicate = catalog.cards.some((card) => card.name.toLocaleLowerCase("pt-BR") === name.toLocaleLowerCase("pt-BR") && card.id !== existing?.id);
   const validType = ["acao", "reacao", "passiva"].includes(cardType);
 
-  if (!name || !domainId || !Number.isInteger(tier) || tier < 1 || !validType || !effect || duplicate) {
+  if (!name || !domainId || !Number.isInteger(tier) || tier < 1 || !validType || !Number.isInteger(recallCost) || recallCost < 0 || !effect || duplicate) {
     if (error) {
       error.hidden = false;
-      error.textContent = duplicate ? "Ja existe uma carta com este nome." : "Preencha nome, dominio, tier, tipo e efeito.";
+      error.textContent = duplicate ? "Ja existe uma carta com este nome." : "Preencha nome, dominio, tier, tipo, custo de recall e efeito.";
     }
     return;
   }
@@ -2382,6 +2400,7 @@ async function saveCompendiumCard(): Promise<void> {
     tier,
     cardType,
     cost: cost || undefined,
+    recallCost,
     effect,
     image
   };
@@ -2406,6 +2425,48 @@ async function removeCompendiumCard(): Promise<void> {
   if (state.compendiumDomainFilter === definition.domainId) {
     state.compendiumDomainFilter = "todos";
   }
+  render();
+}
+
+async function activateStoredCard(mode: "rest" | "stress"): Promise<void> {
+  const character = state.character;
+  const definition = state.activatingStoredCardId ? findDefinition(catalog, state.activatingStoredCardId) : undefined;
+  if (!character || definition?.type !== "card") {
+    return;
+  }
+  const activeCardIds = [...character.deck.activeCardIds];
+  const swapCardId = getCardFormValue("[data-recall-swap-card]");
+  if (activeCardIds.length >= 5 && !swapCardId) {
+    state.cardActivationError = "Escolha uma carta ativa para mover ao Vault.";
+    render();
+    return;
+  }
+  const recallCost = definition.recallCost ?? 0;
+  const stress = character.resources.find((resource) => resource.id === "stress");
+  if (mode === "stress" && (!stress || stress.value + recallCost > stress.max)) {
+    state.cardActivationError = "Nao ha espacos de Stress suficientes para ativar esta carta agora.";
+    render();
+    return;
+  }
+  const replacementIndex = swapCardId ? activeCardIds.indexOf(swapCardId) : -1;
+  if (swapCardId && replacementIndex < 0) {
+    state.cardActivationError = "A carta escolhida para guardar nao esta mais ativa.";
+    render();
+    return;
+  }
+  if (replacementIndex >= 0) {
+    activeCardIds[replacementIndex] = definition.id;
+  } else {
+    activeCardIds.push(definition.id);
+  }
+  const resources = mode === "stress" && stress
+    ? character.resources.map((resource) => resource.id === stress.id ? { ...resource, value: resource.value + recallCost } : resource)
+    : character.resources;
+  const updatedCharacter: Character = { ...character, resources, deck: { ...character.deck, activeCardIds } };
+  state.character = updatedCharacter;
+  await saveCharacter(updatedCharacter);
+  state.activatingStoredCardId = undefined;
+  state.cardActivationError = undefined;
   render();
 }
 
@@ -3089,6 +3150,8 @@ function bindEvents(): void {
       state.deletingCompendiumItemId = undefined;
       state.compendiumItemPreviewId = undefined;
       state.compendiumClassPreviewId = undefined;
+      state.activatingStoredCardId = undefined;
+      state.cardActivationError = undefined;
       state.addItemToCompartmentId = undefined;
       state.addingDefinitionItemId = undefined;
       state.addItemError = undefined;
@@ -3123,6 +3186,8 @@ function bindEvents(): void {
       state.deletingCompendiumItemId = undefined;
       state.compendiumItemPreviewId = undefined;
       state.compendiumClassPreviewId = undefined;
+      state.activatingStoredCardId = undefined;
+      state.cardActivationError = undefined;
       state.addItemToCompartmentId = undefined;
       state.addingDefinitionItemId = undefined;
       state.addItemError = undefined;
@@ -3598,6 +3663,19 @@ function bindEvents(): void {
 
     const activateStoredCardButton = target.closest<HTMLElement>('[data-action="activate-stored-card"]');
     if (activateStoredCardButton) {
+      state.activatingStoredCardId = activateStoredCardButton.dataset.cardId;
+      state.cardActivationError = undefined;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="activate-stored-card-free"]')) {
+      void activateStoredCard("rest");
+      return;
+    }
+
+    if (target.closest('[data-action="activate-stored-card-stress"]')) {
+      void activateStoredCard("stress");
       return;
     }
 
@@ -3689,6 +3767,12 @@ function bindEvents(): void {
       state.editingCompendiumClassId = undefined;
       state.deletingCompendiumClassId = undefined;
       state.compendiumClassPreviewId = undefined;
+      render();
+    }
+
+    if (event.key === "Escape" && state.activatingStoredCardId) {
+      state.activatingStoredCardId = undefined;
+      state.cardActivationError = undefined;
       render();
     }
   });

@@ -4,6 +4,20 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.7.1]
+
+### Adicionado
+
+- ativação de cartas do Vault para o Loadout, com troca gratuita no descanso ou Recall Cost em Stress fora dele;
+- campo numérico de Recall Cost no cadastro de Cartas.
+
+### Alterado
+
+- miniaturas e detalhes de Cartas exibem Tier e Recall Cost de forma explícita;
+- terminologia do deck atualizada para Vault e Loadout;
+- ações de salvar do Compendium passam a usar a pena Unicode e ativação do Vault usa ação compacta por ícone;
+- versão exibida nas Configurações sincronizada com a versão da aplicação.
+
 ## [0.7.0]
 
 ### Adicionado
