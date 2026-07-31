@@ -139,6 +139,7 @@ export type Character = {
     name: string;
     ancestry: string;
     className: string;
+    subclassName?: string;
     community: string;
     level: number;
     xp: number;
@@ -147,6 +148,7 @@ export type Character = {
   };
   attributes: Attribute[];
   defense: Defense;
+  proficiency: number;
   resources: ResourceTrack[];
   skills: CharacterSkill[];
   experiences: CharacterExperience[];

@@ -69,7 +69,9 @@ button {
 .app-shell {
   display: grid;
   grid-template-columns: 20rem minmax(0, 1fr);
-  min-height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
   --shell-gutter: 1.25rem;
   --brand-height: 5.2rem;
 }
@@ -88,6 +90,8 @@ button {
   padding: var(--shell-gutter);
   border-right: 1px solid rgba(255, 255, 255, 0.09);
   background: rgba(7, 12, 18, 0.86);
+  min-height: 0;
+  overflow: hidden;
 }
 
 .portrait,
@@ -163,6 +167,7 @@ button {
 
 .portrait {
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .portrait-art {
@@ -368,6 +373,37 @@ button {
   border-color: rgba(201, 46, 66, 0.66);
 }
 
+.proficiency-marker {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.1rem;
+  margin-top: 0.65rem;
+  padding: 0.35rem 0.1rem 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.proficiency-marker > span {
+  color: var(--color-gold);
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.proficiency-marker small {
+  flex: 1;
+  color: var(--color-text);
+  font-size: 0.58rem;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.proficiency-marker strong {
+  color: var(--color-text);
+  font-size: 1.28rem;
+  line-height: 1;
+}
+
 .side-nav {
   display: grid;
   gap: 0.35rem;
@@ -435,6 +471,8 @@ button {
 .main-shell {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  overflow-y: auto;
   min-width: 0;
 }
 
@@ -806,6 +844,78 @@ button {
 
 .card-row {
   grid-template-columns: repeat(auto-fit, minmax(9.75rem, 1fr));
+}
+
+.subclass-track-band .section-heading > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.subclass-track-band .section-heading > div > span {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+}
+
+.subclass-track-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.subclass-track-card {
+  display: grid;
+  align-content: start;
+  gap: 0.45rem;
+  min-height: 8.2rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(244, 234, 219, 0.16);
+  background: rgba(14, 9, 20, 0.68);
+}
+
+.subclass-track-card h3,
+.subclass-track-card p {
+  margin: 0;
+}
+
+.subclass-track-card h3 {
+  font-size: 0.94rem;
+}
+
+.subclass-track-card p {
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  line-height: 1.42;
+}
+
+.subclass-track-stage,
+.subclass-track-card small {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+}
+
+.subclass-track-stage {
+  color: var(--color-gold);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.subclass-track-card small {
+  margin-top: auto;
+  color: var(--color-muted);
+}
+
+.subclass-track-card.is-active {
+  border-color: rgba(217, 154, 61, 0.7);
+  background: linear-gradient(145deg, rgba(217, 154, 61, 0.14), rgba(14, 9, 20, 0.74));
+}
+
+.subclass-track-card.is-active small {
+  color: var(--color-gold);
+}
+
+.subclass-track-card.is-locked {
+  opacity: 0.68;
 }
 
 .ability-card {
@@ -3799,9 +3909,55 @@ body.has-modal {
   }
 }
 
+@media (min-width: 761px) and (max-height: 900px) {
+  .app-shell {
+    --shell-gutter: 0.85rem;
+    --brand-height: 4.7rem;
+  }
+
+  .sidebar {
+    gap: 0.75rem;
+  }
+
+  .portrait-art {
+    min-height: 8rem;
+  }
+
+  .portrait > div:last-child,
+  .sidebar-section {
+    padding: 0.65rem;
+  }
+
+  .attribute-badge {
+    min-height: 3.85rem;
+    padding-top: 0.95rem;
+  }
+
+  .attribute-badge strong {
+    font-size: 1.22rem;
+  }
+
+  .defense-badge {
+    min-height: 4.25rem;
+    padding-top: 0.55rem;
+  }
+
+  .defense-badge strong {
+    font-size: 1.08rem;
+  }
+
+  .proficiency-marker {
+    min-height: 1.8rem;
+    margin-top: 0.45rem;
+  }
+}
+
 @media (max-width: 760px) {
   .app-shell {
     grid-template-columns: 1fr;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
   }
 
   .editor-header {
@@ -3816,8 +3972,13 @@ body.has-modal {
 
   .sidebar {
     position: static;
+    overflow: visible;
     border-right: 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+  }
+
+  .main-shell {
+    overflow: visible;
   }
 
   .portrait {

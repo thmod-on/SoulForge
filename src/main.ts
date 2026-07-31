@@ -1,6 +1,6 @@
 import { baseCatalog } from "./content/installedPacks";
 import { createCatalog, findDefinition, findDomain } from "./domain/catalog";
-import type { CardDefinition, Character, CharacterNote, CharacterNoteCategory, ClassDefinition, DomainDefinition, FeatureDefinition, InventoryCompartment, ItemDefinition, SubclassDefinition } from "./domain/types";
+import type { CardDefinition, Character, CharacterNote, CharacterNoteCategory, CharacterSkill, ClassDefinition, DomainDefinition, FeatureDefinition, InventoryCompartment, ItemDefinition, SubclassDefinition } from "./domain/types";
 import { ensureDemoCharacter, saveCharacter } from "./storage/characterRepository";
 import { deleteCustomDefinition, loadCustomDefinitions, saveCustomDefinition } from "./storage/compendiumRepository";
 import "./styles.css";
@@ -135,7 +135,7 @@ const sideNavItems: Array<{ page: Page; label: string; icon: string }> = [
   { page: "settings", label: "Configuracoes", icon: "&#128220;" }
 ];
 
-const appVersion = "0.7.1";
+const appVersion = "0.7.2";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -377,13 +377,14 @@ function renderSidebar(character: Character): string {
         </div>
       </section>
       <section class="sidebar-section">
-        <div class="sidebar-section-title">Defesa</div>
+        <div class="sidebar-section-title">Combate</div>
         <div class="sidebar-defense-grid">
           <div class="defense-badge defense-evasion"><strong>${character.defense.evasion}</strong><span>Evasao</span></div>
           <div class="defense-badge defense-armor"><strong>${character.defense.armor}</strong><span>Armadura</span></div>
           <div class="defense-badge defense-minor"><strong>${character.defense.minor}</strong><span>Dano menor</span></div>
           <div class="defense-badge defense-major"><strong>${character.defense.major}</strong><span>Dano maior</span></div>
         </div>
+        <div class="proficiency-marker" title="Proficiência"><span aria-hidden="true">⚄</span><small>Proficiência</small><strong>${character.proficiency}</strong></div>
       </section>
     </aside>
   `;
@@ -487,6 +488,7 @@ function renderOverview(character: Character): string {
   return `
     <main class="content">
       ${renderResources(character)}
+      ${renderSubclassTrack(character)}
       <section class="band">
         <div class="section-heading">
           <h2>Cartas ativas</h2>
@@ -506,6 +508,22 @@ function renderOverview(character: Character): string {
       </section>
     </main>
   `;
+}
+
+function renderSubclassTrack(character: Character): string {
+  const stages: Array<{ tier: NonNullable<CharacterSkill["tier"]>; label: string; unlockLevel: number }> = [
+    { tier: "foundation", label: "Fundacao", unlockLevel: 1 },
+    { tier: "specialized", label: "Especializacao", unlockLevel: 2 },
+    { tier: "mastery", label: "Maestria", unlockLevel: 5 }
+  ];
+  const cards = stages.map((stage) => {
+    const skill = character.skills.find((entry) => entry.source === "class" && entry.tier === stage.tier);
+    const isFoundation = stage.tier === "foundation";
+    const isEligible = !isFoundation && character.identity.level >= stage.unlockLevel;
+    const state = isFoundation ? "Ativa" : isEligible ? "Elegivel - requer avanço" : `Bloqueada - Nivel ${stage.unlockLevel}`;
+    return `<article class="subclass-track-card ${isFoundation ? "is-active" : "is-locked"}"><span class="subclass-track-stage">${stage.label}</span><h3>${escapeHtml(skill?.name ?? `Carta de ${stage.label}`)}</h3><p>${escapeHtml(skill?.description ?? "Caracteristica da subclasse ainda nao definida.")}</p><small>${state}</small></article>`;
+  });
+  return `<section class="band subclass-track-band"><div class="section-heading"><div><h2>${escapeHtml(character.identity.subclassName ?? "Subclasse nao definida")}</h2></div></div><div class="subclass-track-grid">${cards.join("")}</div></section>`;
 }
 
 function renderStoredCards(character: Character): string {

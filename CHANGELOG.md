@@ -4,6 +4,20 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.7.2]
+
+### Adicionado
+
+- faixa visual da subclasse na Visão Geral, com Fundação, Especialização e Maestria;
+- marcador de Proficiência na seção Combate da ficha.
+
+### Alterado
+
+- a barra lateral da ficha permanece fixa em telas menores, deixando a rolagem restrita ao conteúdo principal;
+- dados do personagem de demonstração atualizados para o Guardião da subclasse Vengeance;
+- a migração de fichas locais agora preenche a subclasse ausente em dados criados por versões anteriores;
+- refinamentos de tipografia e estados visuais das features de subclasse.
+
 ## [0.7.1]
 
 ### Adicionado

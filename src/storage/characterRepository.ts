@@ -74,7 +74,12 @@ function migrateDemoCharacter(character: Character): Character {
 
   return {
     ...character,
+    identity: {
+      ...character.identity,
+      subclassName: character.identity.subclassName ?? demoCharacter.identity.subclassName
+    },
     attributes: demoCharacter.attributes,
+    proficiency: character.proficiency ?? demoCharacter.proficiency,
     resources: demoCharacter.resources,
     skills: character.skills ?? demoCharacter.skills,
     experiences: character.experiences ?? demoCharacter.experiences,

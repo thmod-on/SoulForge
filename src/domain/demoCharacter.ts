@@ -6,6 +6,7 @@ export const demoCharacter: Character = {
     name: "Kael Ironheart",
     ancestry: "Humano",
     className: "Guardiao",
+    subclassName: "Vengeance",
     community: "Vigilia de Tristelo",
     level: 3,
     xp: 6,
@@ -26,6 +27,7 @@ export const demoCharacter: Character = {
     minor: 12,
     major: 20
   },
+  proficiency: 1,
   resources: [
     { id: "hp", label: "PV", value: 28, max: 28, tone: "hp" },
     { id: "stress", label: "Estresse", value: 2, max: 5, tone: "stress" },
@@ -36,25 +38,25 @@ export const demoCharacter: Character = {
   ],
   skills: [
     {
-      id: "skill.demo.guardian-oath",
-      name: "Juramento do Guardiao",
+      id: "skill.demo.vengeance-revenge",
+      name: "Revenge",
       source: "class",
       tier: "foundation",
-      description: "Quando um aliado proximo estiver em perigo, voce pode se colocar entre ele e a ameaca."
+      description: "Quando um adversario em alcance Corpo a Corpo acerta um ataque contra voce, marque 2 Stress para faze-lo marcar 1 PV."
     },
     {
-      id: "skill.demo.hold-the-line",
-      name: "Segurar a Linha",
+      id: "skill.demo.vengeance-act-of-reprisal",
+      name: "Act of Reprisal",
       source: "class",
       tier: "specialized",
-      description: "Ao resistir a uma investida, aumente sua presenca narrativa na cena e proteja uma rota de fuga."
+      description: "Quando um adversario causa dano a um aliado em alcance Corpo a Corpo, ganhe +1 em Proficiencia no proximo ataque bem-sucedido contra ele."
     },
     {
-      id: "skill.demo.iron-heart",
-      name: "Coracao de Ferro",
+      id: "skill.demo.vengeance-nemesis",
+      name: "Nemesis",
       source: "class",
       tier: "mastery",
-      description: "Uma vez por sessao, transforme uma consequencia severa em uma oportunidade heroica."
+      description: "Gaste 2 Esperanca para Priorizar um adversario ate seu proximo descanso e, ao ataca-lo, poder trocar os resultados dos Dados de Esperanca e Medo."
     },
     {
       id: "skill.demo.human-resolve",
