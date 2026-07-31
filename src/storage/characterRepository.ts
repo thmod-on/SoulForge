@@ -67,6 +67,14 @@ export async function ensureDemoCharacter(): Promise<Character> {
 
 function migrateDemoCharacter(character: Character): Character {
   const compartments = character.inventory.compartments ?? demoCharacter.inventory.compartments;
+  const progression = character.progression
+    ? {
+        ...character.progression,
+        advancementSelections: character.progression.advancementSelections ?? demoCharacter.progression?.advancementSelections ?? []
+      }
+    : demoCharacter.progression;
+  const currentTier = character.identity.level >= 8 ? "4" : character.identity.level >= 5 ? "3" : "2";
+  const markedAttributeIds = new Set(progression?.attributeMarks[currentTier] ?? []);
   const entries = character.inventory.entries.map((entry) => ({
     ...entry,
     compartmentId: entry.compartmentId ?? (entry.equipped ? "equipped" : "backpack")
@@ -78,9 +86,13 @@ function migrateDemoCharacter(character: Character): Character {
       ...character.identity,
       subclassName: character.identity.subclassName ?? demoCharacter.identity.subclassName
     },
-    attributes: demoCharacter.attributes,
+    attributes: (character.attributes ?? demoCharacter.attributes).map((attribute) => ({
+      ...attribute,
+      upgraded: markedAttributeIds.has(attribute.id) ? true : attribute.upgraded
+    })),
     proficiency: character.proficiency ?? demoCharacter.proficiency,
-    resources: demoCharacter.resources,
+    progression,
+    resources: character.resources ?? demoCharacter.resources,
     skills: character.skills ?? demoCharacter.skills,
     experiences: character.experiences ?? demoCharacter.experiences,
     notes: character.notes ?? demoCharacter.notes,

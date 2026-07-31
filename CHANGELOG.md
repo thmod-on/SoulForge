@@ -4,6 +4,19 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.7.3]
+
+### Adicionado
+
+- assistente de Progressão com escolhas temporárias, revisão e confirmação atômica;
+- aplicação persistente de avanços de atributos, PV, Estresse, Evasão, Proficiência e features de Subclasse;
+- histórico detalhado das evoluções e contador de espaços por avanço e por Tier.
+
+### Alterado
+
+- marcadores de atributos evoluídos são sincronizados com a sidebar e preservados ao reabrir a ficha;
+- documentação de regras, Packs e plano técnico de Progressão ampliada.
+
 ## [0.7.2]
 
 ### Adicionado

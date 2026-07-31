@@ -1,6 +1,6 @@
 import { baseCatalog } from "./content/installedPacks";
 import { createCatalog, findDefinition, findDomain } from "./domain/catalog";
-import type { CardDefinition, Character, CharacterNote, CharacterNoteCategory, CharacterSkill, ClassDefinition, DomainDefinition, FeatureDefinition, InventoryCompartment, ItemDefinition, SubclassDefinition } from "./domain/types";
+import type { CardDefinition, Character, CharacterNote, CharacterNoteCategory, CharacterSkill, CharacterProgressionEntry, ClassDefinition, DomainDefinition, FeatureDefinition, InventoryCompartment, ItemDefinition, ProgressionAdvanceKind, SubclassDefinition } from "./domain/types";
 import { ensureDemoCharacter, saveCharacter } from "./storage/characterRepository";
 import { deleteCustomDefinition, loadCustomDefinitions, saveCustomDefinition } from "./storage/compendiumRepository";
 import "./styles.css";
@@ -11,6 +11,13 @@ type ProgressionTierNumber = 2 | 3 | 4;
 type SettingsSection = "general" | "localData" | "loadRules" | "appearance" | "progression";
 type CompendiumView = "index" | "cards" | "domains" | "items" | "classes";
 type CompendiumSpread = 1 | 2;
+type ProgressionPicker = "attributes" | "experiences";
+type ProgressionDraftChoice = {
+  kind: ProgressionAdvanceKind;
+  label: string;
+  attributeIds?: string[];
+  experienceIds?: string[];
+};
 
 function getAppRoot(): HTMLDivElement {
   const element = document.querySelector<HTMLDivElement>("#app");
@@ -61,6 +68,10 @@ const state: {
   modalCardId?: string;
   resourceModalId?: string;
   progressionHistoryOpen: boolean;
+  progressionPicker?: ProgressionPicker;
+  progressionPickerIds: string[];
+  progressionDraft: ProgressionDraftChoice[];
+  progressionConfirmationOpen: boolean;
   addContainerOpen: boolean;
   deleteContainerId?: string;
   deletingItemId?: string;
@@ -105,6 +116,9 @@ const state: {
   selectedCardId: "card.demo.dread-veil",
   selectedProgressionTier: 2,
   progressionHistoryOpen: false,
+  progressionPickerIds: [],
+  progressionDraft: [],
+  progressionConfirmationOpen: false,
   addContainerOpen: false,
   noteModalOpen: false,
   domainModalOpen: false,
@@ -135,7 +149,7 @@ const sideNavItems: Array<{ page: Page; label: string; icon: string }> = [
   { page: "settings", label: "Configuracoes", icon: "&#128220;" }
 ];
 
-const appVersion = "0.7.2";
+const appVersion = "0.7.3";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -518,10 +532,10 @@ function renderSubclassTrack(character: Character): string {
   ];
   const cards = stages.map((stage) => {
     const skill = character.skills.find((entry) => entry.source === "class" && entry.tier === stage.tier);
-    const isFoundation = stage.tier === "foundation";
-    const isEligible = !isFoundation && character.identity.level >= stage.unlockLevel;
-    const state = isFoundation ? "Ativa" : isEligible ? "Elegivel - requer avanço" : `Bloqueada - Nivel ${stage.unlockLevel}`;
-    return `<article class="subclass-track-card ${isFoundation ? "is-active" : "is-locked"}"><span class="subclass-track-stage">${stage.label}</span><h3>${escapeHtml(skill?.name ?? `Carta de ${stage.label}`)}</h3><p>${escapeHtml(skill?.description ?? "Caracteristica da subclasse ainda nao definida.")}</p><small>${state}</small></article>`;
+    const isActive = getProgression(character).acquiredSubclassTiers.includes(stage.tier);
+    const isEligible = !isActive && character.identity.level >= stage.unlockLevel;
+    const status = isActive ? "Ativa" : isEligible ? "Disponivel como avanço" : `Bloqueada - Nivel ${stage.unlockLevel}`;
+    return `<article class="subclass-track-card ${isActive ? "is-active" : "is-locked"}"><span class="subclass-track-stage">${stage.label}</span><h3>${escapeHtml(skill?.name ?? `Carta de ${stage.label}`)}</h3><p>${escapeHtml(skill?.description ?? "Caracteristica da subclasse ainda nao definida.")}</p><small>${status}</small></article>`;
   });
   return `<section class="band subclass-track-band"><div class="section-heading"><div><h2>${escapeHtml(character.identity.subclassName ?? "Subclasse nao definida")}</h2></div></div><div class="subclass-track-grid">${cards.join("")}</div></section>`;
 }
@@ -854,8 +868,64 @@ function renderSettingOption(label: string, value: string, active: boolean): str
   `;
 }
 
+const progressionAdvanceLabels: Record<ProgressionAdvanceKind, string> = {
+  attributes: "Dois atributos +1",
+  hp: "Slot de PV +1",
+  stress: "Slot de Estresse +1",
+  experiences: "Duas Experiencias +1",
+  evasion: "Evasao +1",
+  subclass: "Carta aprimorada da subclasse",
+  proficiency: "Proficiencia +1"
+};
+
+const progressionAdvanceRules: Record<ProgressionAdvanceKind, { minimumTier: ProgressionTierNumber; slotCount: Record<ProgressionTierNumber, number> }> = {
+  attributes: { minimumTier: 2, slotCount: { 2: 3, 3: 3, 4: 3 } },
+  hp: { minimumTier: 2, slotCount: { 2: 3, 3: 3, 4: 3 } },
+  stress: { minimumTier: 2, slotCount: { 2: 3, 3: 3, 4: 3 } },
+  experiences: { minimumTier: 2, slotCount: { 2: 1, 3: 1, 4: 1 } },
+  evasion: { minimumTier: 2, slotCount: { 2: 1, 3: 1, 4: 1 } },
+  subclass: { minimumTier: 2, slotCount: { 2: 1, 3: 1, 4: 1 } },
+  proficiency: { minimumTier: 3, slotCount: { 2: 0, 3: 1, 4: 1 } }
+};
+
+function getTierForLevel(level: number): ProgressionTierNumber {
+  return level >= 8 ? 4 : level >= 5 ? 3 : 2;
+}
+
+function getProgression(character: Character) {
+  return character.progression ?? { attributeMarks: {}, acquiredSubclassTiers: ["foundation" as const], advancementSelections: [], history: [] };
+}
+
+function getAdvanceSlotsUsed(character: Character, tier: ProgressionTierNumber, kind: ProgressionAdvanceKind): number {
+  const stored = getProgression(character).advancementSelections.filter((selection) => selection.tier === tier && selection.kind === kind).length;
+  const draft = state.progressionDraft.filter((choice) => choice.kind === kind).length;
+  return stored + draft;
+}
+
+function getNextSubclassAdvance(character: Character, nextLevel: number): "specialized" | "mastery" | undefined {
+  const acquired = getProgression(character).acquiredSubclassTiers;
+  if (!acquired.includes("specialized") && nextLevel >= 2) {
+    return "specialized";
+  }
+  if (acquired.includes("specialized") && !acquired.includes("mastery") && nextLevel >= 5) {
+    return "mastery";
+  }
+  return undefined;
+}
+
+function getProgressionChoiceCost(choice: ProgressionDraftChoice): number {
+  return choice.kind === "proficiency" ? 2 : 1;
+}
+
+function getProgressionChoiceCount(): number {
+  return state.progressionDraft.reduce((total, choice) => total + getProgressionChoiceCost(choice), 0);
+}
+
 function renderProgression(character: Character): string {
+  const nextLevel = Math.min(character.identity.level + 1, 10);
+  const currentTier = getTierForLevel(nextLevel);
   const selectedTier = progressionTiers.find((tier) => tier.tier === state.selectedProgressionTier) ?? progressionTiers[0];
+  const choiceCount = getProgressionChoiceCount();
 
   return `
     <main class="content progression-content">
@@ -867,7 +937,7 @@ function renderProgression(character: Character): string {
       <div class="progression-bar" aria-label="Resumo da progressao">
         <div class="progression-bar-summary">
           <span><strong>Proxima etapa</strong> Nivel ${character.identity.level + 1}</span>
-          <span><strong>Escolhas</strong> 2 opcoes</span>
+          <span><strong>Escolhas</strong> ${choiceCount} / 2</span>
         </div>
         <div class="progression-tabs" role="tablist" aria-label="Tiers de progressao">
           ${progressionTiers
@@ -883,16 +953,16 @@ function renderProgression(character: Character): string {
         </div>
       </div>
       <section class="progression-board">
-        ${renderProgressionTier(selectedTier, character.identity.level)}
+        ${renderProgressionTier(selectedTier, character, currentTier)}
       </section>
     </main>
   `;
 }
 
-function renderProgressionTier(tier: (typeof progressionTiers)[number], currentLevel: number): string {
-  const startLevel = Number(tier.levels.split("-")[0]);
+function renderProgressionTier(tier: (typeof progressionTiers)[number], character: Character, currentTier: ProgressionTierNumber): string {
+  const currentLevel = character.identity.level;
   const endLevel = Number(tier.levels.split("-")[1]);
-  const isCurrentTier = currentLevel >= startLevel && currentLevel <= endLevel;
+  const isCurrentTier = currentTier === tier.tier;
   const isPastTier = currentLevel > endLevel;
   const statusLabel = isPastTier ? "Concluido" : isCurrentTier ? "Atual" : "Bloqueado";
 
@@ -907,10 +977,44 @@ function renderProgressionTier(tier: (typeof progressionTiers)[number], currentL
         <span>${statusLabel}</span>
       </div>
       <div class="progression-option-list">
-        ${tier.options.map((option, index) => renderProgressionOption(option, index, isCurrentTier)).join("")}
+        ${renderProgressionOptions(character, isCurrentTier)}
       </div>
-      <p class="progression-tier-footer">${escapeHtml(tier.footer)}</p>
+      ${isCurrentTier ? renderProgressionDraft() : ""}
+      <p class="progression-tier-footer">${escapeHtml(isCurrentTier ? "Selecione dois avanços e confirme antes de alterar a ficha." : tier.footer)}</p>
     </article>
+  `;
+}
+
+function renderProgressionOptions(character: Character, isCurrentTier: boolean): string {
+  const usedChoices = getProgressionChoiceCount();
+  const nextLevel = Math.min(character.identity.level + 1, 10);
+  const tier = getTierForLevel(nextLevel);
+  const subclassAdvance = getNextSubclassAdvance(character, nextLevel);
+  const options: Array<{ kind: ProgressionAdvanceKind; description: string; disabled?: boolean }> = [
+    { kind: "attributes", description: "Ganhe +1 em dois atributos ainda nao marcados." },
+    { kind: "hp", description: "Ganhe permanentemente um slot de PV." },
+    { kind: "stress", description: "Ganhe permanentemente um slot de Estresse." },
+    { kind: "experiences", description: "Ganhe +1 em duas Experiencias." },
+    { kind: "evasion", description: "Ganhe permanentemente +1 em Evasao." },
+    { kind: "subclass", description: subclassAdvance ? `Receba ${subclassAdvance === "specialized" ? "a Especializacao" : "a Maestria"} da subclasse.` : "A proxima feature da subclasse ainda nao esta disponivel.", disabled: !subclassAdvance },
+    { kind: "proficiency", description: "Ganhe +1 em Proficiencia. Consome as duas escolhas.", disabled: usedChoices > 0 }
+  ];
+
+  return options.map((option) => renderProgressionOption(option, character, tier, isCurrentTier, usedChoices)).join("");
+}
+
+function renderProgressionDraft(): string {
+  const choiceCount = getProgressionChoiceCount();
+  const choices = state.progressionDraft.length
+    ? state.progressionDraft.map((choice, index) => `<li><span>${escapeHtml(choice.label)}</span><button type="button" data-action="remove-progression-choice" data-progression-choice-index="${index}" aria-label="Remover ${escapeHtml(choice.label)}">x</button></li>`).join("")
+    : "<li><span>Nenhuma escolha preparada.</span></li>";
+
+  return `
+    <section class="progression-draft" aria-label="Avancos preparados">
+      <div><strong>Avancos preparados</strong><span>${choiceCount} / 2 escolhas</span></div>
+      <ul>${choices}</ul>
+      <button class="primary-action" type="button" data-action="open-progression-confirmation" ${choiceCount !== 2 ? "disabled" : ""}>Confirmar evolucao</button>
+    </section>
   `;
 }
 
@@ -919,27 +1023,19 @@ function renderProgressionHistoryModal(): string {
     return "";
   }
 
+  const history = state.character ? getProgression(state.character).history : [];
+  const entries = history.length
+    ? history.map((entry) => `<li class="progression-history-entry"><strong>Nivel ${entry.level}</strong><ul>${entry.tierAchievement ? `<li class="tier-achievement">${escapeHtml(entry.tierAchievement)}</li>` : ""}${entry.choices.map((choice) => `<li>${escapeHtml(choice)}</li>`).join("")}</ul></li>`).join("")
+    : `<li class="progression-history-entry"><strong>Sem evolucoes</strong><span>Nenhuma escolha foi aplicada ainda.</span></li>`;
+
   return `
     <div class="modal-backdrop" data-modal-backdrop>
       <section class="progression-history-modal" role="dialog" aria-modal="true" aria-labelledby="progression-history-title">
         <button class="modal-close" data-modal-close aria-label="Fechar historico">x</button>
         <span class="resource-modal-label">Progressao</span>
         <h2 id="progression-history-title">Historico de escolhas</h2>
-        <ol>
-          <li>
-            <strong>Nivel 2</strong>
-            <span>Experiencia adicional +2 registrada.</span>
-          </li>
-          <li>
-            <strong>Nivel 3</strong>
-            <span>Escolhas permanentes pendentes de confirmacao.</span>
-          </li>
-          <li>
-            <strong>Nivel 4</strong>
-            <span>Aguardando nova progressao.</span>
-          </li>
-        </ol>
-        <p>Este historico ainda e visual. Futuramente ele sera preenchido pelas escolhas aplicadas durante a evolucao.</p>
+        <ol>${entries}</ol>
+        <p>As escolhas confirmadas ficam registradas nesta ficha.</p>
       </section>
     </div>
   `;
@@ -1126,15 +1222,151 @@ function renderDeleteNoteModal(): string {
   `;
 }
 
-function renderProgressionOption(option: string, index: number, isCurrentTier: boolean): string {
-  const selected = isCurrentTier && index < 2;
-
+function renderProgressionOption(option: { kind: ProgressionAdvanceKind; description: string; disabled?: boolean }, character: Character, tier: ProgressionTierNumber, isCurrentTier: boolean, usedChoices: number): string {
+  const cost = option.kind === "proficiency" ? 2 : 1;
+  const rule = progressionAdvanceRules[option.kind];
+  const slots = rule.slotCount[tier];
+  const slotsUsed = getAdvanceSlotsUsed(character, tier, option.kind);
+  const disabled = !isCurrentTier || Boolean(option.disabled) || tier < rule.minimumTier || slotsUsed >= slots || usedChoices + cost > 2;
   return `
-    <button class="progression-option ${selected ? "is-selected" : ""}" type="button" data-action="progression-option">
+    <button class="progression-option" type="button" data-action="select-progression-advance" data-progression-advance="${option.kind}" ${disabled ? "disabled" : ""}>
       <i aria-hidden="true"></i>
-      <span>${escapeHtml(option)}</span>
+      <span><strong>${escapeHtml(progressionAdvanceLabels[option.kind])}</strong>${escapeHtml(option.description)}<small>Espacos: ${slotsUsed} / ${slots}</small></span>
     </button>
   `;
+}
+
+function renderProgressionPickerModal(): string {
+  const character = state.character;
+  const picker = state.progressionPicker;
+  if (!character || !picker) {
+    return "";
+  }
+
+  const nextLevel = Math.min(character.identity.level + 1, 10);
+  const tier = getTierForLevel(nextLevel);
+  const marked = getProgression(character).attributeMarks[String(tier)] ?? [];
+  const draftAttributeIds = state.progressionDraft.flatMap((choice) => choice.attributeIds ?? []);
+  const candidates = picker === "attributes"
+    ? character.attributes.filter((attribute) => !marked.includes(attribute.id) && !draftAttributeIds.includes(attribute.id)).map((attribute) => ({ id: attribute.id, label: attributeTitle(attribute.label), detail: `Atual: ${attribute.value}` }))
+    : character.experiences.map((experience) => ({ id: experience.id, label: experience.name, detail: `Atual: +${experience.value}` }));
+  const title = picker === "attributes" ? "Escolha dois atributos" : "Escolha duas Experiencias";
+
+  return `
+    <div class="modal-backdrop" data-modal-backdrop>
+      <section class="progression-picker-modal" role="dialog" aria-modal="true" aria-labelledby="progression-picker-title">
+        <button class="modal-close" data-modal-close aria-label="Fechar escolha">x</button>
+        <span class="resource-modal-label">Progressao</span>
+        <h2 id="progression-picker-title">${title}</h2>
+        <p>Selecione 2 opcoes para este avanço.</p>
+        <div class="progression-picker-list">${candidates.map((candidate) => `<button type="button" class="${state.progressionPickerIds.includes(candidate.id) ? "is-selected" : ""}" data-action="toggle-progression-picker" data-progression-picker-id="${candidate.id}"><strong>${escapeHtml(candidate.label)}</strong><span>${escapeHtml(candidate.detail)}</span></button>`).join("")}</div>
+        <button class="primary-action" type="button" data-action="confirm-progression-picker" ${state.progressionPickerIds.length !== 2 ? "disabled" : ""}>Adicionar avanço</button>
+      </section>
+    </div>
+  `;
+}
+
+function renderProgressionConfirmationModal(): string {
+  if (!state.progressionConfirmationOpen || !state.character) {
+    return "";
+  }
+  const character = state.character;
+  const nextLevel = Math.min(character.identity.level + 1, 10);
+  const tierAchievement = [2, 5, 8].includes(nextLevel) ? `Conquista do Tier: nova Experiencia +2 e Proficiencia +1.` : "Sem conquista automatica de Tier neste nivel.";
+  return `
+    <div class="modal-backdrop" data-modal-backdrop>
+      <section class="progression-picker-modal" role="dialog" aria-modal="true" aria-labelledby="progression-confirmation-title">
+        <button class="modal-close" data-modal-close aria-label="Cancelar evolucao">x</button>
+        <span class="resource-modal-label">Confirmar evolucao</span>
+        <h2 id="progression-confirmation-title">Nivel ${character.identity.level} para ${nextLevel}</h2>
+        <p>${tierAchievement}</p>
+        <ul class="progression-confirmation-list">${state.progressionDraft.map((choice) => `<li>${escapeHtml(choice.label)}</li>`).join("")}</ul>
+        <div class="confirmation-actions"><button class="secondary-action" type="button" data-modal-close>Voltar</button><button class="primary-action" type="button" data-action="apply-progression">Aplicar evolucao</button></div>
+      </section>
+    </div>
+  `;
+}
+
+function addProgressionChoice(choice: ProgressionDraftChoice): void {
+  if (getProgressionChoiceCount() + getProgressionChoiceCost(choice) > 2) {
+    return;
+  }
+  state.progressionDraft = [...state.progressionDraft, choice];
+}
+
+async function applyProgression(): Promise<void> {
+  const character = state.character;
+  if (!character || getProgressionChoiceCount() !== 2 || character.identity.level >= 10) {
+    return;
+  }
+
+  const nextLevel = character.identity.level + 1;
+  const nextTier = getTierForLevel(nextLevel);
+  const progression = getProgression(character);
+  const choices = state.progressionDraft;
+  const attributeIds = choices.flatMap((choice) => choice.attributeIds ?? []);
+  const experienceIds = choices.flatMap((choice) => choice.experienceIds ?? []);
+  const hpSlots = choices.filter((choice) => choice.kind === "hp").length;
+  const stressSlots = choices.filter((choice) => choice.kind === "stress").length;
+  const evasionBonus = choices.filter((choice) => choice.kind === "evasion").length;
+  const proficiencyBonus = choices.some((choice) => choice.kind === "proficiency") ? 1 : 0;
+  const subclassAdvance = choices.some((choice) => choice.kind === "subclass") ? getNextSubclassAdvance(character, nextLevel) : undefined;
+  const isTierAchievement = [2, 5, 8].includes(nextLevel);
+  const tierAchievement = isTierAchievement ? "Experiencia adicional +2 e Proficiencia +1" : undefined;
+  const historyEntry: CharacterProgressionEntry = {
+    level: nextLevel,
+    appliedAt: new Date().toISOString(),
+    choices: choices.map((choice) => choice.label),
+    advances: choices.map((choice) => ({ kind: choice.kind, label: choice.label })),
+    tierAchievement
+  };
+
+  const resources = character.resources.map((resource) => {
+    if (resource.id === "hp") {
+      return { ...resource, max: resource.max + hpSlots };
+    }
+    if (resource.id === "stress") {
+      return { ...resource, max: resource.max + stressSlots };
+    }
+    return resource;
+  });
+  const markedAttributes = progression.attributeMarks[String(nextTier)] ?? [];
+  const attributeMarks = isTierAchievement
+    ? { [String(nextTier)]: attributeIds }
+    : { ...progression.attributeMarks, [String(nextTier)]: [...new Set([...markedAttributes, ...attributeIds])] };
+
+  const updatedCharacter: Character = {
+    ...character,
+    identity: { ...character.identity, level: nextLevel },
+    attributes: character.attributes.map((attribute) => {
+      const wasSelected = attributeIds.includes(attribute.id);
+      return {
+        ...attribute,
+        value: attribute.value + (wasSelected ? 1 : 0),
+        upgraded: wasSelected ? true : isTierAchievement ? false : attribute.upgraded
+      };
+    }),
+    defense: { ...character.defense, evasion: character.defense.evasion + evasionBonus },
+    proficiency: character.proficiency + proficiencyBonus + (isTierAchievement ? 1 : 0),
+    resources,
+    experiences: character.experiences.map((experience) => experienceIds.includes(experience.id) ? { ...experience, value: experience.value + 1 } : experience).concat(isTierAchievement ? [{ id: `experience.tier.${nextLevel}.${crypto.randomUUID()}`, name: `Experiencia do Tier ${nextTier}`, value: 2, description: "Conquista automatica de tier." }] : []),
+    progression: {
+      attributeMarks,
+      acquiredSubclassTiers: subclassAdvance ? [...progression.acquiredSubclassTiers, subclassAdvance] : progression.acquiredSubclassTiers,
+      advancementSelections: [
+        ...progression.advancementSelections,
+        ...choices.map((choice) => ({ kind: choice.kind, tier: nextTier, level: nextLevel }))
+      ],
+      history: [...progression.history, historyEntry]
+    }
+  };
+
+  await saveCharacter(updatedCharacter);
+  state.character = updatedCharacter;
+  state.progressionDraft = [];
+  state.progressionConfirmationOpen = false;
+  state.selectedProgressionTier = getTierForLevel(Math.min(nextLevel + 1, 10));
+  render();
 }
 
 function renderEmptyInline(message: string): string {
@@ -2234,6 +2466,8 @@ function render(): void {
     ${renderDeleteItemModal()}
     ${renderResourceModal(state.resourceModalId)}
     ${renderProgressionHistoryModal()}
+    ${renderProgressionPickerModal()}
+    ${renderProgressionConfirmationModal()}
     ${renderAddContainerModal()}
     ${renderDeleteContainerModal()}
     ${renderNoteModal()}
@@ -3150,6 +3384,9 @@ function bindEvents(): void {
       state.selectedItemId = undefined;
       state.resourceModalId = undefined;
       state.progressionHistoryOpen = false;
+      state.progressionPicker = undefined;
+      state.progressionPickerIds = [];
+      state.progressionConfirmationOpen = false;
       state.addContainerOpen = false;
       state.deleteContainerId = undefined;
       state.deletingItemId = undefined;
@@ -3186,6 +3423,9 @@ function bindEvents(): void {
       state.selectedItemId = undefined;
       state.resourceModalId = undefined;
       state.progressionHistoryOpen = false;
+      state.progressionPicker = undefined;
+      state.progressionPickerIds = [];
+      state.progressionConfirmationOpen = false;
       state.addContainerOpen = false;
       state.deleteContainerId = undefined;
       state.deletingItemId = undefined;
@@ -3507,6 +3747,79 @@ function bindEvents(): void {
       return;
     }
 
+    const progressionAdvanceButton = target.closest<HTMLElement>('[data-action="select-progression-advance"]');
+    if (progressionAdvanceButton) {
+      const kind = progressionAdvanceButton.dataset.progressionAdvance as ProgressionAdvanceKind;
+      if (kind === "attributes" || kind === "experiences") {
+        state.progressionPicker = kind;
+        state.progressionPickerIds = [];
+      } else if (kind === "subclass") {
+        const character = state.character;
+        if (character) {
+          const next = getNextSubclassAdvance(character, Math.min(character.identity.level + 1, 10));
+          if (next) {
+            addProgressionChoice({ kind, label: `Subclasse: ${next === "specialized" ? "Especializacao" : "Maestria"}` });
+          }
+        }
+      } else {
+        addProgressionChoice({ kind, label: progressionAdvanceLabels[kind] });
+      }
+      render();
+      return;
+    }
+
+    const progressionPickerToggle = target.closest<HTMLElement>('[data-action="toggle-progression-picker"]');
+    if (progressionPickerToggle) {
+      const id = progressionPickerToggle.dataset.progressionPickerId;
+      if (id) {
+        state.progressionPickerIds = state.progressionPickerIds.includes(id)
+          ? state.progressionPickerIds.filter((selectedId) => selectedId !== id)
+          : state.progressionPickerIds.length < 2 ? [...state.progressionPickerIds, id] : state.progressionPickerIds;
+        render();
+      }
+      return;
+    }
+
+    if (target.closest('[data-action="confirm-progression-picker"]')) {
+      const picker = state.progressionPicker;
+      if (picker && state.progressionPickerIds.length === 2) {
+        const character = state.character;
+        const selected = picker === "attributes"
+          ? character?.attributes.filter((attribute) => state.progressionPickerIds.includes(attribute.id)).map((attribute) => attributeTitle(attribute.label)).join(" e ")
+          : character?.experiences.filter((experience) => state.progressionPickerIds.includes(experience.id)).map((experience) => experience.name).join(" e ");
+        addProgressionChoice({
+          kind: picker,
+          label: `${progressionAdvanceLabels[picker]}: ${selected ?? ""}`,
+          ...(picker === "attributes" ? { attributeIds: state.progressionPickerIds } : { experienceIds: state.progressionPickerIds })
+        });
+      }
+      state.progressionPicker = undefined;
+      state.progressionPickerIds = [];
+      render();
+      return;
+    }
+
+    const removeProgressionChoiceButton = target.closest<HTMLElement>('[data-action="remove-progression-choice"]');
+    if (removeProgressionChoiceButton) {
+      const index = Number(removeProgressionChoiceButton.dataset.progressionChoiceIndex);
+      state.progressionDraft = state.progressionDraft.filter((_, choiceIndex) => choiceIndex !== index);
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="open-progression-confirmation"]')) {
+      if (getProgressionChoiceCount() === 2) {
+        state.progressionConfirmationOpen = true;
+        render();
+      }
+      return;
+    }
+
+    if (target.closest('[data-action="apply-progression"]')) {
+      void applyProgression();
+      return;
+    }
+
     if (target.closest('[data-action="add-container"]')) {
       state.addContainerOpen = true;
       render();
@@ -3739,6 +4052,17 @@ function bindEvents(): void {
 
     if (event.key === "Escape" && state.progressionHistoryOpen) {
       state.progressionHistoryOpen = false;
+      render();
+    }
+
+    if (event.key === "Escape" && state.progressionPicker) {
+      state.progressionPicker = undefined;
+      state.progressionPickerIds = [];
+      render();
+    }
+
+    if (event.key === "Escape" && state.progressionConfirmationOpen) {
+      state.progressionConfirmationOpen = false;
       render();
     }
 

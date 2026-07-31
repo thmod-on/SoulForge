@@ -43,6 +43,8 @@ Os arquivos seguem as convenções descritas em [JSON_CONVENTIONS.md](JSON_CONVE
 - conteúdo é declarativo; regras específicas não devem ser codificadas na interface;
 - relações entre Definitions usam IDs.
 
+Quando um Pack acrescentar Classes, Subclasses, Features ou conteúdo de progressão, ele deve ser compatível com o ruleset ativo. As regras comuns do Core são definidas em [PROGRESSION_IMPLEMENTATION.md](PROGRESSION_IMPLEMENTATION.md); um Pack não deve sobrescrevê-las implicitamente.
+
 ## Ciclo de vida
 
 Um Pack pode ser instalado, atualizado ou removido. A administração de Packs pertence a Configurações; o Compendium consulta o conteúdo disponibilizado por eles.

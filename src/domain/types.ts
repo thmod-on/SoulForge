@@ -48,6 +48,23 @@ export type CharacterNote = {
   updatedAt: string;
 };
 
+export type ProgressionAdvanceKind = "attributes" | "hp" | "stress" | "experiences" | "evasion" | "subclass" | "proficiency";
+
+export type CharacterProgressionEntry = {
+  level: number;
+  appliedAt: string;
+  choices: string[];
+  advances?: Array<{ kind: ProgressionAdvanceKind; label: string }>;
+  tierAchievement?: string;
+};
+
+export type CharacterProgression = {
+  attributeMarks: Record<string, string[]>;
+  acquiredSubclassTiers: Array<"foundation" | "specialized" | "mastery">;
+  advancementSelections: Array<{ kind: ProgressionAdvanceKind; tier: number; level: number }>;
+  history: CharacterProgressionEntry[];
+};
+
 export type PackManifest = {
   id: string;
   name: string;
@@ -149,6 +166,7 @@ export type Character = {
   attributes: Attribute[];
   defense: Defense;
   proficiency: number;
+  progression?: CharacterProgression;
   resources: ResourceTrack[];
   skills: CharacterSkill[];
   experiences: CharacterExperience[];

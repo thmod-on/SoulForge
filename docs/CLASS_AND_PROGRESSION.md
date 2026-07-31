@@ -10,8 +10,20 @@ Ele descreve padrões confirmados do SRD oficial, sem reproduzir o livro-base. C
 
 - [Daggerheart SRD 1.0 — setembro de 2025](https://www.daggerheart.com/wp-content/uploads/2025/09/Daggerheart-SRD-9-09-25.pdf): criação de personagem, classes, Evasão, progressão e multiclasses.
 - [Character Sheets and Guides — maio de 2025](https://www.daggerheart.com/wp-content/uploads/2025/05/Character-Sheets-and-Guides-Daggerheart-May212025.pdf): representação visual dos tiers e avanços.
+- [Hope & Fear — página oficial](https://www.daggerheart.com/pre-order/): escopo anunciado da primeira expansão.
 
 Quando houver atualização oficial, este documento deve ser revisado antes de mudar validações ou dados de Packs.
+
+## Hope & Fear
+
+Em 31 de julho de 2026, *Hope & Fear* está anunciado para lançamento em 25 de agosto de 2026. A divulgação oficial confirma quatro novas classes — Witch, Warlock, Brawler e Assassin —, o Domínio Dread, transformações, ancestralidades, comunidades, itens e conteúdo para GM.
+
+Até a data desta documentação, o livro final não disponibiliza publicamente uma alteração confirmada nos tiers ou no fluxo-base de progressão. Portanto:
+
+- as regras deste documento representam o Core e são a fonte de verdade inicial do SoulForge;
+- *Hope & Fear* deve entrar como Pack de conteúdo adicional;
+- nenhuma exceção de progressão da expansão deve ser implementada por suposição;
+- quando o livro final estiver disponível, comparar suas regras com este documento e registrar qualquer diferença em um ADR ou em uma versão atualizada deste contrato.
 
 ## Padrões das classes do Core
 

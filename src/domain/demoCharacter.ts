@@ -28,6 +28,22 @@ export const demoCharacter: Character = {
     major: 20
   },
   proficiency: 1,
+  progression: {
+    attributeMarks: {},
+    acquiredSubclassTiers: ["foundation"],
+    advancementSelections: [
+      { kind: "hp", tier: 2, level: 2 },
+      { kind: "evasion", tier: 2, level: 2 }
+    ],
+    history: [
+      {
+        level: 2,
+        appliedAt: "2026-07-22T19:00:00.000Z",
+        choices: ["Slot de PV", "Evasao +1"],
+        tierAchievement: "Experiencia adicional +2 e Proficiencia +1"
+      }
+    ]
+  },
   resources: [
     { id: "hp", label: "PV", value: 28, max: 28, tone: "hp" },
     { id: "stress", label: "Estresse", value: 2, max: 5, tone: "stress" },
