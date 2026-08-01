@@ -1,0 +1,13 @@
+{
+  "id": "card.demo.guardians-ward",
+  "type": "card",
+  "packId": "pack.demo.soulforge",
+  "name": "Guardian's Ward",
+  "summary": "Erga uma defesa firme para proteger quem luta ao seu lado.",
+  "domainId": "domain.demo.guardian",
+  "tier": 2,
+  "cardType": "reacao",
+  "cost": "1 Stress",
+  "recallCost": 1,
+  "effect": "Quando um aliado Proximo sofrer dano, marque 1 Stress para reduzir a severidade em um limiar."
+}

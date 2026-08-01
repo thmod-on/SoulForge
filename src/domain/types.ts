@@ -48,7 +48,7 @@ export type CharacterNote = {
   updatedAt: string;
 };
 
-export type ProgressionAdvanceKind = "attributes" | "hp" | "stress" | "experiences" | "evasion" | "subclass" | "proficiency";
+export type ProgressionAdvanceKind = "attributes" | "hp" | "stress" | "experiences" | "domain" | "evasion" | "subclass" | "proficiency";
 
 export type CharacterProgressionEntry = {
   level: number;
@@ -59,6 +59,7 @@ export type CharacterProgressionEntry = {
 };
 
 export type CharacterProgression = {
+  demoBaselineVersion?: number;
   attributeMarks: Record<string, string[]>;
   acquiredSubclassTiers: Array<"foundation" | "specialized" | "mastery">;
   advancementSelections: Array<{ kind: ProgressionAdvanceKind; tier: number; level: number }>;
@@ -156,7 +157,10 @@ export type Character = {
     name: string;
     ancestry: string;
     className: string;
+    primaryClassId?: string;
     subclassName?: string;
+    primarySubclassId?: string;
+    primaryDomainIds?: [string, string];
     community: string;
     level: number;
     xp: number;

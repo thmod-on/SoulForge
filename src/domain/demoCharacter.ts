@@ -6,15 +6,18 @@ export const demoCharacter: Character = {
     name: "Kael Ironheart",
     ancestry: "Humano",
     className: "Guardiao",
+    primaryClassId: "class.demo.guardian",
     subclassName: "Vengeance",
+    primarySubclassId: "subclass.demo.vengeance",
+    primaryDomainIds: ["domain.demo.guardian", "domain.demo.dread"],
     community: "Vigilia de Tristelo",
-    level: 3,
-    xp: 6,
+    level: 1,
+    xp: 0,
     nextLevelXp: 10,
     quote: "Protejo para que outros possam ter um amanha."
   },
   attributes: [
-    { id: "dex", label: "AGI", value: 1, upgraded: true },
+    { id: "dex", label: "AGI", value: 1 },
     { id: "for", label: "FOR", value: 2 },
     { id: "cha", label: "FIN", value: 1 },
     { id: "wil", label: "INS", value: 1 },
@@ -27,22 +30,13 @@ export const demoCharacter: Character = {
     minor: 12,
     major: 20
   },
-  proficiency: 1,
+  proficiency: 0,
   progression: {
+    demoBaselineVersion: 2,
     attributeMarks: {},
     acquiredSubclassTiers: ["foundation"],
-    advancementSelections: [
-      { kind: "hp", tier: 2, level: 2 },
-      { kind: "evasion", tier: 2, level: 2 }
-    ],
-    history: [
-      {
-        level: 2,
-        appliedAt: "2026-07-22T19:00:00.000Z",
-        choices: ["Slot de PV", "Evasao +1"],
-        tierAchievement: "Experiencia adicional +2 e Proficiencia +1"
-      }
-    ]
+    advancementSelections: [],
+    history: []
   },
   resources: [
     { id: "hp", label: "PV", value: 28, max: 28, tone: "hp" },
@@ -126,22 +120,8 @@ export const demoCharacter: Character = {
     }
   ],
   deck: {
-    activeCardIds: [
-      "card.demo.shield-block",
-      "card.demo.stalwart-advance",
-      "card.demo.dread-veil",
-      "card.demo.dread-mark",
-      "card.demo.inspirational-words"
-    ],
-    learnedCardIds: [
-      "card.demo.shield-block",
-      "card.demo.stalwart-advance",
-      "card.demo.dread-veil",
-      "card.demo.dread-mark",
-      "card.demo.inspirational-words",
-      "card.demo.shadow-bargain",
-      "card.demo.last-stand"
-    ]
+    activeCardIds: ["card.demo.shield-block", "card.demo.stalwart-advance"],
+    learnedCardIds: ["card.demo.shield-block", "card.demo.stalwart-advance"]
   },
   inventory: {
     capacity: 30,

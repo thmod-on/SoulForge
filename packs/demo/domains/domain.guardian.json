@@ -1,0 +1,8 @@
+{
+  "id": "domain.demo.guardian",
+  "type": "domain",
+  "packId": "pack.demo.soulforge",
+  "name": "Guardiao",
+  "summary": "Tecnicas de defesa, protecao e presenca na linha de frente.",
+  "color": "#d99a3d"
+}

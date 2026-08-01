@@ -1,10 +1,12 @@
 import manifest from "../../packs/demo/manifest.json";
 import dread from "../../packs/demo/domains/domain.dread.json";
+import guardian from "../../packs/demo/domains/domain.guardian.json";
 import dreadMark from "../../packs/demo/cards/card.dread-mark.json";
 import dreadVeil from "../../packs/demo/cards/card.dread-veil.json";
 import inspirationalWords from "../../packs/demo/cards/card.inspirational-words.json";
 import lastStand from "../../packs/demo/cards/card.last-stand.json";
 import shieldBlock from "../../packs/demo/cards/card.shield-block.json";
+import guardiansWard from "../../packs/demo/cards/card.guardians-ward.json";
 import shadowBargain from "../../packs/demo/cards/card.shadow-bargain.json";
 import stalwartAdvance from "../../packs/demo/cards/card.stalwart-advance.json";
 import gold from "../../packs/demo/items/item.gold.json";
@@ -21,7 +23,9 @@ import type { Definition, PackManifest } from "../domain/types";
 
 export const baseCatalog = createCatalog([manifest as PackManifest], [
   dread,
+  guardian,
   shieldBlock,
+  guardiansWard,
   stalwartAdvance,
   dreadVeil,
   dreadMark,

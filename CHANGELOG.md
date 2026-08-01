@@ -4,6 +4,21 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.8.0]
+
+### Adicionado
+
+- seleção da carta obrigatória de Domínio durante a evolução, com destino escolhido entre Loadout e Vault;
+- avanço opcional de carta de Domínio, respeitando os Domínios da classe e o Tier da carta;
+- dados de Domínio Guardião e carta de demonstração para validar a progressão da classe.
+
+### Corrigido
+
+- espaços de avanço de cada Tier alinhados à regra: atributos com três espaços e PV/Estresse com dois;
+- Especialização e Maestria de Subclasse disponibilizadas somente nos Tiers 3 e 4;
+- escolhas de avanços pendentes agora são separadas por Tier;
+- opções de avanço voltam a responder ao clique, sem conflito com a navegação entre Tiers.
+
 ## [0.7.3]
 
 ### Adicionado

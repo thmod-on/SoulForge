@@ -1666,6 +1666,24 @@ button {
   gap: 0.45rem;
 }
 
+.progression-tier-options {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.progression-tier-options + .progression-tier-options {
+  border-top: 1px solid rgba(244, 234, 219, 0.1);
+  padding-top: 0.8rem;
+}
+
+.progression-tier-options h3 {
+  margin: 0;
+  color: var(--color-gold);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .progression-option {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -1787,6 +1805,52 @@ button {
   background: transparent;
 }
 
+.progression-domain-card-step {
+  display: grid;
+  gap: 0.55rem;
+  border-top: 1px solid rgba(244, 234, 219, 0.1);
+  padding-top: 0.7rem;
+}
+
+.progression-domain-card-step > div:first-child {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.progression-domain-card-step > div:first-child span {
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+.progression-card-destination {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.progression-card-destination button {
+  flex: 1;
+  min-height: 2rem;
+  border: 1px solid rgba(244, 234, 219, 0.15);
+  color: var(--color-muted);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.progression-card-destination button.is-selected {
+  border-color: rgba(217, 154, 61, 0.62);
+  color: var(--color-gold);
+  background: rgba(217, 154, 61, 0.1);
+}
+
+.progression-feedback {
+  margin: 0;
+  border-left: 3px solid var(--color-fear);
+  padding: 0.55rem 0.65rem;
+  color: #ffd3d9;
+  background: rgba(201, 46, 66, 0.12);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
 .progression-picker-modal {
   position: relative;
   display: grid;
@@ -1814,6 +1878,65 @@ button {
 .progression-picker-list {
   display: grid;
   gap: 0.45rem;
+}
+
+.progression-card-picker-modal {
+  width: min(42rem, calc(100vw - 2rem));
+}
+
+.progression-card-choice-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.progression-card-choice-list button {
+  display: grid;
+  grid-template-columns: 3.8rem minmax(0, 1fr);
+  gap: 0.6rem;
+  min-height: 6.3rem;
+  border: 1px solid rgba(244, 234, 219, 0.15);
+  padding: 0.5rem;
+  color: var(--color-text);
+  text-align: left;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.progression-card-choice-list button.is-selected {
+  border-color: rgba(217, 154, 61, 0.68);
+  background: rgba(217, 154, 61, 0.1);
+}
+
+.progression-card-choice-art {
+  display: grid;
+  place-items: center;
+  min-height: 5rem;
+  border: 1px solid rgba(217, 154, 61, 0.25);
+  background: radial-gradient(circle, rgba(217, 154, 61, 0.18), transparent 70%);
+}
+
+.progression-card-choice-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.progression-card-choice-list button > span:last-child {
+  display: grid;
+  align-content: start;
+  gap: 0.2rem;
+}
+
+.progression-card-choice-list strong {
+  color: var(--color-text);
+}
+
+.progression-card-choice-list small,
+.progression-card-choice-list em {
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-style: normal;
+  line-height: 1.35;
 }
 
 .progression-picker-list button {

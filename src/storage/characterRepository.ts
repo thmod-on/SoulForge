@@ -56,6 +56,10 @@ export async function ensureDemoCharacter(): Promise<Character> {
   const existingCharacter = await loadCharacter(demoCharacter.id);
 
   if (existingCharacter) {
+    if (existingCharacter.progression?.demoBaselineVersion !== demoCharacter.progression?.demoBaselineVersion) {
+      await saveCharacter(demoCharacter);
+      return demoCharacter;
+    }
     const migratedCharacter = migrateDemoCharacter(existingCharacter);
     await saveCharacter(migratedCharacter);
     return migratedCharacter;
@@ -84,7 +88,10 @@ function migrateDemoCharacter(character: Character): Character {
     ...character,
     identity: {
       ...character.identity,
-      subclassName: character.identity.subclassName ?? demoCharacter.identity.subclassName
+      subclassName: character.identity.subclassName ?? demoCharacter.identity.subclassName,
+      primaryClassId: character.identity.primaryClassId ?? demoCharacter.identity.primaryClassId,
+      primarySubclassId: character.identity.primarySubclassId ?? demoCharacter.identity.primarySubclassId,
+      primaryDomainIds: character.identity.primaryDomainIds ?? demoCharacter.identity.primaryDomainIds
     },
     attributes: (character.attributes ?? demoCharacter.attributes).map((attribute) => ({
       ...attribute,
