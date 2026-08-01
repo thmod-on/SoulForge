@@ -80,6 +80,9 @@ const state: {
   progressionCardPickerTier?: ProgressionTierNumber;
   progressionCardId?: string;
   progressionCardDestination: "loadout" | "vault";
+  progressionTierExperienceOpen: boolean;
+  progressionTierExperience?: { name: string; description: string };
+  progressionTierExperienceError?: string;
   addContainerOpen: boolean;
   deleteContainerId?: string;
   deletingItemId?: string;
@@ -128,6 +131,7 @@ const state: {
   progressionDraft: [],
   progressionConfirmationOpen: false,
   progressionCardDestination: "loadout",
+  progressionTierExperienceOpen: false,
   addContainerOpen: false,
   noteModalOpen: false,
   domainModalOpen: false,
@@ -341,40 +345,11 @@ function getStoredCards(character: Character): CardDefinition[] {
 function renderSidebar(character: Character): string {
   return `
     <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-identity">
-          <div class="brand-mark"><img src="assets/brand/soulforge-symbol.png" alt="" /></div>
-          <strong>SOULFORGE</strong>
-        </div>
-        <nav class="side-nav brand-actions" aria-label="Menu secundario">
-          ${sideNavItems
-            .map(
-              (item) => `
-                <button
-                  class="nav-button icon-nav-button ${state.page === item.page ? "is-active" : ""}"
-                  data-page="${item.page}"
-                  aria-label="${item.label}"
-                  title="${item.label}"
-                >
-                  <span aria-hidden="true">${item.icon}</span>
-                </button>
-              `
-            )
-            .join("")}
-        </nav>
-      </div>
       <div class="portrait">
         <div class="portrait-art"></div>
         <div>
           <strong>${escapeHtml(character.identity.name)}</strong>
           <span>${escapeHtml(character.identity.ancestry)} - ${escapeHtml(character.identity.className)}</span>
-          <div class="portrait-progress">
-            <div>
-              <span>Nivel ${character.identity.level}</span>
-              <strong>${character.identity.xp} / ${character.identity.nextLevelXp} XP</strong>
-            </div>
-            <div class="bar"><i style="width: ${progressPercent(character.identity.xp, character.identity.nextLevelXp)}%"></i></div>
-          </div>
         </div>
       </div>
       <section class="sidebar-section">
@@ -402,6 +377,10 @@ function renderSidebar(character: Character): string {
         </div>
         <div class="proficiency-marker" title="Proficiência"><span aria-hidden="true">⚄</span><small>Proficiência</small><strong>${character.proficiency}</strong></div>
       </section>
+      <footer class="sidebar-footer" title="A PWA instala o app e guarda a interface para uso offline.">
+        <span>v${appVersion}</span>
+        <span class="sidebar-offline-status"><i aria-hidden="true"></i>Pronto offline</span>
+      </footer>
     </aside>
   `;
 }
@@ -414,7 +393,26 @@ function renderTopbar(): string {
           .map((item) => `<button class="top-link ${state.page === item.page ? "is-active" : ""}" data-page="${item.page}">${item.label}</button>`)
           .join("")}
       </nav>
-      <span class="offline-pill" title="A PWA instala o app e guarda a casca offline.">Offline-ready</span>
+      <nav class="topbar-utilities" aria-label="Menu global">
+        ${sideNavItems
+          .map(
+            (item) => `
+              <button
+                class="topbar-utility ${state.page === item.page ? "is-active" : ""}"
+                data-page="${item.page}"
+                aria-label="${item.label}"
+                title="${item.label}"
+              >
+                <span aria-hidden="true">${item.icon}</span>
+              </button>
+            `
+          )
+          .join("")}
+      </nav>
+      <div class="topbar-brand" aria-label="SoulForge">
+        <div class="brand-mark"><img src="assets/brand/soulforge-symbol.png" alt="" /></div>
+        <strong>SOULFORGE</strong>
+      </div>
     </header>
   `;
 }
@@ -912,6 +910,11 @@ function renderProgression(character: Character): string {
         </div>
       </div>
       <div class="progression-bar" aria-label="Tiers de progressao">
+        <div class="progression-character-status" aria-label="Nivel e experiencia do personagem">
+          <strong>Nivel ${character.identity.level}</strong>
+          <span>${character.identity.xp} / ${character.identity.nextLevelXp} XP</span>
+          <div class="progression-xp-bar" aria-hidden="true"><i style="width: ${progressPercent(character.identity.xp, character.identity.nextLevelXp)}%"></i></div>
+        </div>
         <div class="progression-tabs" role="tablist" aria-label="Tiers de progressao">
           ${progressionTiers
             .map(
@@ -950,7 +953,7 @@ function renderProgressionTier(tier: (typeof progressionTiers)[number], characte
         <span>${statusLabel}</span>
       </div>
       ${isCurrentTier ? `<div class="progression-workspace"><div class="progression-elective-panel">${renderProgressionOptions(character, isCurrentTier)}</div>${renderProgressionDomainStep(character)}</div>` : `<div class="progression-elective-panel">${renderProgressionOptions(character, isCurrentTier)}</div>`}
-      ${isCurrentTier ? renderProgressionDraft() : ""}
+      ${isCurrentTier ? renderProgressionDraft(character) : ""}
       <p class="progression-tier-footer">${escapeHtml(isCurrentTier ? "Selecione dois avanços e confirme antes de alterar a ficha." : tier.footer)}</p>
     </article>
   `;
@@ -989,22 +992,44 @@ function getProgressionCardCandidates(character: Character, includeReserved = fa
   return catalog.cards.filter((card) => domainIds.includes(card.domainId) && card.tier <= nextLevel && !character.deck.learnedCardIds.includes(card.id) && (includeReserved || !reservedCardIds.includes(card.id)));
 }
 
-function renderProgressionDraft(): string {
+function requiresTierExperience(character: Character): boolean {
+  return [2, 5, 8].includes(character.identity.level + 1);
+}
+
+function renderProgressionDraft(character: Character): string {
   const choiceCount = getProgressionChoiceCount();
   const choices = state.progressionDraft.length
     ? state.progressionDraft.map((choice, index) => `<li><span>${escapeHtml(choice.label)}</span><button type="button" data-action="remove-progression-choice" data-progression-choice-index="${index}" aria-label="Remover ${escapeHtml(choice.label)}">x</button></li>`).join("")
     : "<li><span>Nenhuma escolha preparada.</span></li>";
 
-  const canConfirm = choiceCount === 2 && Boolean(state.progressionCardId);
+  const needsTierExperience = requiresTierExperience(character);
+  const hasTierExperience = Boolean(state.progressionTierExperience?.name.trim());
+  const canConfirm = choiceCount === 2 && Boolean(state.progressionCardId) && (!needsTierExperience || hasTierExperience);
+  const pendingRequirements = [
+    choiceCount < 2 ? `Falta${2 - choiceCount === 1 ? "" : "m"} ${2 - choiceCount} escolha${2 - choiceCount === 1 ? "" : "s"}` : "",
+    !state.progressionCardId ? "selecione a carta de Dominio" : "",
+    needsTierExperience && !hasTierExperience ? "defina a Experiencia de Tier" : ""
+  ].filter(Boolean);
 
   return `
     <section class="progression-draft" aria-label="Avancos preparados">
       <div><strong>Avancos preparados</strong><span>${choiceCount} / 2 escolhas</span></div>
       <ul>${choices}</ul>
+      ${renderTierExperienceStep(character)}
       ${state.progressionError ? `<p class="progression-feedback" role="alert">${escapeHtml(state.progressionError)}</p>` : ""}
-      <div class="progression-draft-footer"><span>${canConfirm ? "Requisitos preenchidos. Revise antes de confirmar." : `Faltam ${2 - choiceCount} escolha${2 - choiceCount === 1 ? "" : "s"}${state.progressionCardId ? "" : " e a carta obrigatoria"}.`}</span><button class="${canConfirm ? "primary-action" : "secondary-action progression-confirm-action is-incomplete"}" type="button" data-action="open-progression-confirmation">Confirmar evolucao</button></div>
+      <div class="progression-draft-footer"><span>${canConfirm ? "Requisitos preenchidos. Revise antes de confirmar." : `${pendingRequirements.join("; ")}.`}</span><button class="${canConfirm ? "primary-action" : "secondary-action progression-confirm-action is-incomplete"}" type="button" data-action="open-progression-confirmation">Confirmar evolucao</button></div>
     </section>
   `;
+}
+
+function renderTierExperienceStep(character: Character): string {
+  if (!requiresTierExperience(character)) {
+    return "";
+  }
+
+  const experience = state.progressionTierExperience;
+  const isDefined = Boolean(experience?.name.trim());
+  return `<section class="progression-tier-experience-step ${isDefined ? "is-defined" : ""}" aria-label="Experiencia de Tier"><div><strong>Experiencia de Tier +2</strong><span>${isDefined ? escapeHtml(experience?.name ?? "") : "Defina a nova Experiencia recebida ao entrar neste Tier."}</span></div><button class="${isDefined ? "secondary-action" : "primary-action"}" type="button" data-action="open-tier-experience">${isDefined ? "Alterar experiencia" : "Definir experiencia"}</button></section>`;
 }
 
 function renderProgressionDomainStep(character: Character): string {
@@ -1015,7 +1040,7 @@ function renderProgressionDomainStep(character: Character): string {
   const cardStatus = candidates.length ? "Pendente: escolha uma carta elegivel." : "Nenhuma carta elegivel encontrada nos Dominios da classe.";
   const canUseLoadout = activeCards.length < 5;
   const selectedCardPreview = selectedCard
-    ? `<div class="progression-selected-card" aria-label="Carta selecionada: ${escapeHtml(selectedCard.name)}"><span class="progression-selected-card-art">${selectedCard.image ? `<img src="${escapeHtml(selectedCard.image)}" alt="" />` : "DOM"}</span><strong>${escapeHtml(selectedCard.name)}</strong></div>`
+    ? `<div class="progression-selected-card" aria-label="Carta selecionada: ${escapeHtml(selectedCard.name)}"><span class="progression-selected-card-art">${selectedCard.image ? `<img src="${escapeHtml(selectedCard.image)}" alt="" />` : "DOM"}</span><strong title="${escapeHtml(selectedCard.name)}">${escapeHtml(selectedCard.name)}</strong></div>`
     : `<p>${escapeHtml(cardStatus)}</p>`;
 
   return `
@@ -1295,6 +1320,28 @@ function renderProgressionCardPickerModal(): string {
   `;
 }
 
+function renderTierExperienceModal(): string {
+  if (!state.progressionTierExperienceOpen) {
+    return "";
+  }
+
+  const experience = state.progressionTierExperience;
+  return `
+    <div class="modal-backdrop" data-modal-backdrop>
+      <section class="progression-picker-modal tier-experience-modal" role="dialog" aria-modal="true" aria-labelledby="tier-experience-title">
+        <button class="modal-close" data-modal-close aria-label="Fechar experiencia de Tier">x</button>
+        <span class="resource-modal-label">Conquista de Tier</span>
+        <h2 id="tier-experience-title">Nova Experiencia +2</h2>
+        <p>Escolha uma experiencia que represente o marco alcançado pelo personagem.</p>
+        <label class="form-field"><span>Nome *</span><input data-tier-experience-name value="${escapeHtml(experience?.name ?? "")}" placeholder="Ex.: Defensor das muralhas" /></label>
+        <label class="form-field"><span>Descricao</span><textarea data-tier-experience-description placeholder="Como essa experiencia ajuda o personagem?">${escapeHtml(experience?.description ?? "")}</textarea></label>
+        ${state.progressionTierExperienceError ? `<p class="form-error">${escapeHtml(state.progressionTierExperienceError)}</p>` : ""}
+        <button class="primary-action" type="button" data-action="save-tier-experience">Definir experiencia +2</button>
+      </section>
+    </div>
+  `;
+}
+
 function renderProgressionConfirmationModal(): string {
   if (!state.progressionConfirmationOpen || !state.character) {
     return "";
@@ -1302,6 +1349,7 @@ function renderProgressionConfirmationModal(): string {
   const character = state.character;
   const nextLevel = Math.min(character.identity.level + 1, 10);
   const tierAchievement = [2, 5, 8].includes(nextLevel) ? `Conquista do Tier: nova Experiencia +2 e Proficiencia +1.` : "Sem conquista automatica de Tier neste nivel.";
+  const tierExperience = requiresTierExperience(character) ? state.progressionTierExperience : undefined;
   return `
     <div class="modal-backdrop" data-modal-backdrop>
       <section class="progression-picker-modal" role="dialog" aria-modal="true" aria-labelledby="progression-confirmation-title">
@@ -1309,6 +1357,7 @@ function renderProgressionConfirmationModal(): string {
         <span class="resource-modal-label">Confirmar evolucao</span>
         <h2 id="progression-confirmation-title">Nivel ${character.identity.level} para ${nextLevel}</h2>
         <p>${tierAchievement}</p>
+        ${tierExperience ? `<p><strong>Experiencia de Tier +2:</strong> ${escapeHtml(tierExperience.name)}</p>` : ""}
         <ul class="progression-confirmation-list">${state.progressionDraft.map((choice) => `<li>${escapeHtml(choice.label)}</li>`).join("")}${state.progressionCardId ? `<li>Carta de Dominio: ${escapeHtml((findDefinition(catalog, state.progressionCardId) as CardDefinition | undefined)?.name ?? "") } → ${state.progressionCardDestination === "loadout" ? "Loadout" : "Vault"}</li>` : ""}</ul>
         <div class="confirmation-actions"><button class="secondary-action" type="button" data-modal-close>Voltar</button><button class="primary-action" type="button" data-action="apply-progression">Aplicar evolucao</button></div>
       </section>
@@ -1326,12 +1375,11 @@ function addProgressionChoice(choice: ProgressionDraftChoice): void {
 
 async function applyProgression(): Promise<void> {
   const character = state.character;
-  if (!character || getProgressionChoiceCount() !== 2 || !state.progressionCardId || character.identity.level >= 10) {
+  if (!character || getProgressionChoiceCount() !== 2 || !state.progressionCardId || character.identity.level >= 10 || (requiresTierExperience(character) && !state.progressionTierExperience?.name.trim())) {
     return;
   }
 
   const nextLevel = character.identity.level + 1;
-  const nextTier = getTierForLevel(nextLevel);
   const progression = getProgression(character);
   const choices = state.progressionDraft;
   const attributeIds = choices.flatMap((choice) => choice.attributeIds ?? []);
@@ -1344,7 +1392,8 @@ async function applyProgression(): Promise<void> {
   const subclassAdvance = subclassChoice ? getNextSubclassAdvance(character, subclassChoice.tier) : undefined;
   const additionalCardIds = choices.flatMap((choice) => choice.kind === "domain" && choice.cardId ? [choice.cardId] : []);
   const isTierAchievement = [2, 5, 8].includes(nextLevel);
-  const tierAchievement = isTierAchievement ? "Experiencia adicional +2 e Proficiencia +1" : undefined;
+  const tierExperience = isTierAchievement ? state.progressionTierExperience : undefined;
+  const tierAchievement = tierExperience ? `Experiencia +2: ${tierExperience.name}; Proficiencia +1` : undefined;
   const chosenCard = findDefinition(catalog, state.progressionCardId) as CardDefinition | undefined;
   if (!chosenCard || !getProgressionCardCandidates(character, true).some((card) => card.id === chosenCard.id)) {
     return;
@@ -1355,7 +1404,7 @@ async function applyProgression(): Promise<void> {
   const historyEntry: CharacterProgressionEntry = {
     level: nextLevel,
     appliedAt: new Date().toISOString(),
-    choices: [...choices.map((choice) => choice.label), `Carta de Dominio: ${chosenCard.name} → ${state.progressionCardDestination === "loadout" ? "Loadout" : "Vault"}`],
+    choices: [...choices.map((choice) => choice.label), `Carta de Dominio: ${chosenCard.name} → ${state.progressionCardDestination === "loadout" ? "Loadout" : "Vault"}`, ...(tierExperience ? [`Experiencia de Tier +2: ${tierExperience.name}`] : [])],
     advances: choices.map((choice) => ({ kind: choice.kind, label: choice.label })),
     tierAchievement
   };
@@ -1393,7 +1442,7 @@ async function applyProgression(): Promise<void> {
       activeCardIds: state.progressionCardDestination === "loadout" ? [...character.deck.activeCardIds, chosenCard.id] : character.deck.activeCardIds,
       learnedCardIds: [...character.deck.learnedCardIds, chosenCard.id, ...additionalCardIds]
     },
-    experiences: character.experiences.map((experience) => experienceIds.includes(experience.id) ? { ...experience, value: experience.value + 1 } : experience).concat(isTierAchievement ? [{ id: `experience.tier.${nextLevel}.${crypto.randomUUID()}`, name: `Experiencia do Tier ${nextTier}`, value: 2, description: "Conquista automatica de tier." }] : []),
+    experiences: character.experiences.map((experience) => experienceIds.includes(experience.id) ? { ...experience, value: experience.value + 1 } : experience).concat(tierExperience ? [{ id: `experience.tier.${nextLevel}.${crypto.randomUUID()}`, name: tierExperience.name, value: 2, description: tierExperience.description }] : []),
     progression: {
       attributeMarks,
       acquiredSubclassTiers: subclassAdvance ? [...progression.acquiredSubclassTiers, subclassAdvance] : progression.acquiredSubclassTiers,
@@ -1412,6 +1461,8 @@ async function applyProgression(): Promise<void> {
   state.progressionError = undefined;
   state.progressionCardId = undefined;
   state.progressionCardDestination = "loadout";
+  state.progressionTierExperience = undefined;
+  state.progressionTierExperienceError = undefined;
   state.selectedProgressionTier = getTierForLevel(Math.min(nextLevel + 1, 10));
   render();
 }
@@ -1425,7 +1476,7 @@ function renderCardTile(card: CardDefinition): string {
     <button class="ability-card" data-card-modal-id="${card.id}">
       <div class="card-tier" aria-label="Tier ${card.tier}"><small>Tier</small><strong>${card.tier}</strong></div>
       <div class="card-recall" aria-label="Custo de recall: ${card.recallCost ?? 0} Stress" title="Custo de recall: ${card.recallCost ?? 0} Stress"><span aria-hidden="true">⚡</span><strong>${card.recallCost ?? 0}</strong></div>
-      <div class="card-art"></div>
+      <div class="card-art ${card.image ? "has-image" : ""}" ${card.image ? `style="background-image: url('${escapeHtml(card.image)}')"` : ""}></div>
       <h3>${escapeHtml(card.name)}</h3>
       <span>${escapeHtml(card.cardType)}</span>
       <p>${escapeHtml(card.summary)}</p>
@@ -2459,7 +2510,14 @@ function renderPlaceholder(page: Page): string {
   `;
 }
 
-function render(): void {
+function render(options: { preserveMainScroll?: boolean } = {}): void {
+  const previousMainScrollTop = options.preserveMainScroll
+    ? appRoot.querySelector<HTMLElement>(".main-shell")?.scrollTop
+    : undefined;
+  const previousContentScrollTop = options.preserveMainScroll
+    ? appRoot.querySelector<HTMLElement>(".content")?.scrollTop
+    : undefined;
+  const previousDocumentScrollTop = options.preserveMainScroll ? window.scrollY : undefined;
   const character = state.character;
 
   if (!character) {
@@ -2512,6 +2570,7 @@ function render(): void {
     ${renderProgressionHistoryModal()}
     ${renderProgressionPickerModal()}
     ${renderProgressionCardPickerModal()}
+    ${renderTierExperienceModal()}
     ${renderProgressionConfirmationModal()}
     ${renderAddContainerModal()}
     ${renderDeleteContainerModal()}
@@ -2531,6 +2590,21 @@ function render(): void {
     ${renderDeleteCompendiumClassModal()}
   `;
   document.body.classList.toggle("has-modal", Boolean(appRoot.querySelector(".modal-backdrop")));
+  if (previousMainScrollTop !== undefined) {
+    requestAnimationFrame(() => {
+      const mainShell = appRoot.querySelector<HTMLElement>(".main-shell");
+      if (mainShell) {
+        mainShell.scrollTop = previousMainScrollTop;
+      }
+      const content = appRoot.querySelector<HTMLElement>(".content");
+      if (content && previousContentScrollTop !== undefined) {
+        content.scrollTop = previousContentScrollTop;
+      }
+      if (previousDocumentScrollTop !== undefined) {
+        window.scrollTo({ top: previousDocumentScrollTop, behavior: "auto" });
+      }
+    });
+  }
 }
 
 function exportCharacter(): void {
@@ -3434,6 +3508,8 @@ function bindEvents(): void {
       state.progressionConfirmationOpen = false;
       state.progressionCardPickerMode = undefined;
       state.progressionCardPickerTier = undefined;
+      state.progressionTierExperienceOpen = false;
+      state.progressionTierExperienceError = undefined;
       state.addContainerOpen = false;
       state.deleteContainerId = undefined;
       state.deletingItemId = undefined;
@@ -3475,6 +3551,8 @@ function bindEvents(): void {
       state.progressionConfirmationOpen = false;
       state.progressionCardPickerMode = undefined;
       state.progressionCardPickerTier = undefined;
+      state.progressionTierExperienceOpen = false;
+      state.progressionTierExperienceError = undefined;
       state.addContainerOpen = false;
       state.deleteContainerId = undefined;
       state.deletingItemId = undefined;
@@ -3818,7 +3896,7 @@ function bindEvents(): void {
       } else {
         addProgressionChoice({ kind, tier: Number(progressionAdvanceButton.dataset.progressionTier) as ProgressionTierNumber, label: progressionAdvanceLabels[kind] });
       }
-      render();
+      render({ preserveMainScroll: true });
       return;
     }
 
@@ -3829,7 +3907,7 @@ function bindEvents(): void {
         state.progressionPickerIds = state.progressionPickerIds.includes(id)
           ? state.progressionPickerIds.filter((selectedId) => selectedId !== id)
           : state.progressionPickerIds.length < 2 ? [...state.progressionPickerIds, id] : state.progressionPickerIds;
-        render();
+        render({ preserveMainScroll: true });
       }
       return;
     }
@@ -3851,7 +3929,7 @@ function bindEvents(): void {
       state.progressionPicker = undefined;
       state.progressionPickerTier = undefined;
       state.progressionPickerIds = [];
-      render();
+      render({ preserveMainScroll: true });
       return;
     }
 
@@ -3860,14 +3938,36 @@ function bindEvents(): void {
       const index = Number(removeProgressionChoiceButton.dataset.progressionChoiceIndex);
       state.progressionDraft = state.progressionDraft.filter((_, choiceIndex) => choiceIndex !== index);
       state.progressionError = undefined;
-      render();
+      render({ preserveMainScroll: true });
       return;
     }
 
     if (target.closest('[data-action="open-progression-card-picker"]')) {
       state.progressionCardPickerMode = "mandatory";
       state.progressionCardPickerTier = undefined;
-      render();
+      render({ preserveMainScroll: true });
+      return;
+    }
+
+    if (target.closest('[data-action="open-tier-experience"]')) {
+      state.progressionTierExperienceOpen = true;
+      state.progressionTierExperienceError = undefined;
+      render({ preserveMainScroll: true });
+      return;
+    }
+
+    if (target.closest('[data-action="save-tier-experience"]')) {
+      const name = getCardFormValue("[data-tier-experience-name]");
+      const description = getCardFormValue("[data-tier-experience-description]");
+      state.progressionTierExperience = { name, description };
+      if (!name) {
+        state.progressionTierExperienceError = "Informe o nome da nova Experiencia.";
+      } else {
+        state.progressionTierExperienceError = undefined;
+        state.progressionTierExperienceOpen = false;
+        state.progressionError = undefined;
+      }
+      render({ preserveMainScroll: true });
       return;
     }
 
@@ -3882,14 +3982,14 @@ function bindEvents(): void {
       }
       state.progressionCardPickerMode = undefined;
       state.progressionCardPickerTier = undefined;
-      render();
+      render({ preserveMainScroll: true });
       return;
     }
 
     const progressionCardDestination = target.closest<HTMLElement>('[data-action="set-progression-card-destination"]');
     if (progressionCardDestination) {
       state.progressionCardDestination = progressionCardDestination.dataset.progressionCardDestination === "vault" ? "vault" : "loadout";
-      render();
+      render({ preserveMainScroll: true });
       return;
     }
 
@@ -3899,13 +3999,15 @@ function bindEvents(): void {
         state.progressionError = `Escolha ${2 - choiceCount} avanço${2 - choiceCount === 1 ? "" : "s"} antes de confirmar.`;
       } else if (!state.progressionCardId) {
         state.progressionError = "Escolha a carta obrigatoria de Dominio antes de confirmar.";
+      } else if (state.character && requiresTierExperience(state.character) && !state.progressionTierExperience?.name.trim()) {
+        state.progressionError = "Defina a nova Experiencia +2 recebida ao entrar no Tier.";
       } else if (state.progressionCardDestination === "loadout" && state.character && getActiveCards(state.character).length >= 5) {
         state.progressionError = "Seu Loadout esta cheio. Mova uma carta para o Vault ou escolha Vault como destino para a nova carta.";
       } else {
         state.progressionError = undefined;
         state.progressionConfirmationOpen = true;
       }
-      render();
+      render({ preserveMainScroll: true });
       return;
     }
 
@@ -4163,6 +4265,12 @@ function bindEvents(): void {
     if (event.key === "Escape" && state.progressionCardPickerMode) {
       state.progressionCardPickerMode = undefined;
       state.progressionCardPickerTier = undefined;
+      render();
+    }
+
+    if (event.key === "Escape" && state.progressionTierExperienceOpen) {
+      state.progressionTierExperienceOpen = false;
+      state.progressionTierExperienceError = undefined;
       render();
     }
 
