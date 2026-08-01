@@ -5,7 +5,7 @@ import { ensureDemoCharacter, saveCharacter } from "./storage/characterRepositor
 import { deleteCustomDefinition, loadCustomDefinitions, saveCustomDefinition } from "./storage/compendiumRepository";
 import "./styles.css";
 
-type Page = "overview" | "skills" | "experiences" | "inventory" | "progression" | "notes" | "compendium" | "settings" | "storedCards";
+type Page = "overview" | "skills" | "inventory" | "progression" | "notes" | "compendium" | "settings" | "storedCards";
 type InventoryFilter = "todos" | ItemDefinition["category"];
 type ProgressionTierNumber = 2 | 3 | 4;
 type SettingsSection = "general" | "localData" | "loadRules" | "appearance" | "progression";
@@ -146,8 +146,7 @@ const state: {
 
 const topNavItems: Array<{ page: Page; label: string }> = [
   { page: "overview", label: "Visao Geral" },
-  { page: "skills", label: "Habilidades" },
-  { page: "experiences", label: "Experiencias" },
+  { page: "skills", label: "Tracos" },
   { page: "inventory", label: "Inventario" },
   { page: "progression", label: "Progressao" },
   { page: "notes", label: "Anotacoes" }
@@ -158,7 +157,7 @@ const sideNavItems: Array<{ page: Page; label: string; icon: string }> = [
   { page: "settings", label: "Configuracoes", icon: "&#128220;" }
 ];
 
-const appVersion = "0.8.0";
+const appVersion = "0.8.1";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -173,12 +172,6 @@ const skillSourceLabels: Record<Character["skills"][number]["source"], string> =
   class: "Classe",
   ancestry: "Ancestralidade",
   community: "Comunidade"
-};
-
-const skillTierLabels: Record<NonNullable<Character["skills"][number]["tier"]>, string> = {
-  foundation: "Fundamento",
-  specialized: "Especializada",
-  mastery: "Maestria"
 };
 
 const noteCategoryLabels: Record<CharacterNoteCategory, string> = {
@@ -527,7 +520,7 @@ function renderOverview(character: Character): string {
       <section class="quick-actions">
         <button data-action="rest-short"><span>REST</span> Descansar breve</button>
         <button data-action="rest-long"><span>FULL</span> Descansar longo</button>
-        <button data-page="experiences"><span>XP</span> Registrar experiencia</button>
+        <button data-page="skills"><span>XP</span> Registrar experiencia</button>
       </section>
     </main>
   `;
@@ -585,7 +578,6 @@ function renderStoredCardTile(card: CardDefinition): string {
 }
 
 function renderSkills(character: Character): string {
-  const classSkills = character.skills.filter((skill) => skill.source === "class");
   const ancestrySkills = character.skills.filter((skill) => skill.source === "ancestry");
   const communitySkills = character.skills.filter((skill) => skill.source === "community");
 
@@ -593,19 +585,17 @@ function renderSkills(character: Character): string {
     <main class="content">
       <div class="screen-title">
         <div>
-          <h1>Habilidades</h1>
-          <p>Recursos narrativos e mecanicos do personagem, agrupados pela origem.</p>
+          <h1>Tracos</h1>
+          <p>Experiencias e habilidades de origem que definem o personagem fora do Loadout.</p>
         </div>
       </div>
-      <div class="skill-layout">
-        <section class="skill-column skill-column-wide">
-          <div class="section-heading">
-            <h2>${skillSourceLabels.class}</h2>
-          </div>
-          ${renderClassSkillGroup("foundation", classSkills)}
-          ${renderClassSkillGroup("specialized", classSkills)}
-          ${renderClassSkillGroup("mastery", classSkills)}
-        </section>
+      <section class="traits-experience-section">
+        <div class="section-heading">
+          <h2>Experiencias</h2>
+        </div>
+        ${renderExperienceList(character)}
+      </section>
+      <div class="traits-skill-layout">
         <section class="skill-column">
           <div class="section-heading">
             <h2>${skillSourceLabels.ancestry}</h2>
@@ -623,17 +613,6 @@ function renderSkills(character: Character): string {
   `;
 }
 
-function renderClassSkillGroup(tier: NonNullable<Character["skills"][number]["tier"]>, skills: Character["skills"]): string {
-  const filteredSkills = skills.filter((skill) => skill.tier === tier);
-
-  return `
-    <div class="skill-group">
-      <h3>${skillTierLabels[tier]}</h3>
-      ${renderSkillList(filteredSkills)}
-    </div>
-  `;
-}
-
 function renderSkillList(skills: Character["skills"]): string {
   if (!skills.length) {
     return renderEmptyInline("Nenhuma habilidade registrada.");
@@ -647,7 +626,7 @@ function renderSkillList(skills: Character["skills"]): string {
             <article class="info-card">
               <div>
                 <strong>${escapeHtml(skill.name)}</strong>
-                <span>${skill.tier ? skillTierLabels[skill.tier] : skillSourceLabels[skill.source]}</span>
+                <span>${skillSourceLabels[skill.source]}</span>
               </div>
               <p>${escapeHtml(skill.description)}</p>
             </article>
@@ -658,18 +637,9 @@ function renderSkillList(skills: Character["skills"]): string {
   `;
 }
 
-function renderExperiences(character: Character): string {
-  return `
-    <main class="content">
-      <div class="screen-title">
-        <div>
-          <h1>Experiencias</h1>
-          <p>Marcadores narrativos que podem apoiar testes quando fizer sentido na ficcao.</p>
-        </div>
-      </div>
-      ${
-        character.experiences.length
-          ? `<div class="experience-grid">
+function renderExperienceList(character: Character): string {
+  return character.experiences.length
+    ? `<div class="experience-grid">
               ${character.experiences
                 .map(
                   (experience) => `
@@ -684,10 +654,7 @@ function renderExperiences(character: Character): string {
                 )
                 .join("")}
             </div>`
-          : renderEmptyInline("Nenhuma experiencia registrada.")
-      }
-    </main>
-  `;
+    : renderEmptyInline("Nenhuma experiencia registrada.");
 }
 
 function renderNotes(character: Character): string {
@@ -936,7 +903,6 @@ function renderProgression(character: Character): string {
   const nextLevel = Math.min(character.identity.level + 1, 10);
   const currentTier = getTierForLevel(nextLevel);
   const selectedTier = progressionTiers.find((tier) => tier.tier === state.selectedProgressionTier) ?? progressionTiers[0];
-  const choiceCount = getProgressionChoiceCount();
 
   return `
     <main class="content progression-content">
@@ -945,11 +911,7 @@ function renderProgression(character: Character): string {
           <h1>Progressao</h1>
         </div>
       </div>
-      <div class="progression-bar" aria-label="Resumo da progressao">
-        <div class="progression-bar-summary">
-          <span><strong>Proxima etapa</strong> Nivel ${character.identity.level + 1}</span>
-          <span><strong>Escolhas</strong> ${choiceCount} / 2</span>
-        </div>
+      <div class="progression-bar" aria-label="Tiers de progressao">
         <div class="progression-tabs" role="tablist" aria-label="Tiers de progressao">
           ${progressionTiers
             .map(
@@ -987,10 +949,8 @@ function renderProgressionTier(tier: (typeof progressionTiers)[number], characte
         <span>${tier.choices} escolhas</span>
         <span>${statusLabel}</span>
       </div>
-      <div class="progression-option-list">
-        ${renderProgressionOptions(character, isCurrentTier)}
-      </div>
-      ${isCurrentTier ? renderProgressionDraft(character) : ""}
+      ${isCurrentTier ? `<div class="progression-workspace"><div class="progression-elective-panel">${renderProgressionOptions(character, isCurrentTier)}</div>${renderProgressionDomainStep(character)}</div>` : `<div class="progression-elective-panel">${renderProgressionOptions(character, isCurrentTier)}</div>`}
+      ${isCurrentTier ? renderProgressionDraft() : ""}
       <p class="progression-tier-footer">${escapeHtml(isCurrentTier ? "Selecione dois avanços e confirme antes de alterar a ficha." : tier.footer)}</p>
     </article>
   `;
@@ -1029,29 +989,42 @@ function getProgressionCardCandidates(character: Character, includeReserved = fa
   return catalog.cards.filter((card) => domainIds.includes(card.domainId) && card.tier <= nextLevel && !character.deck.learnedCardIds.includes(card.id) && (includeReserved || !reservedCardIds.includes(card.id)));
 }
 
-function renderProgressionDraft(character: Character): string {
+function renderProgressionDraft(): string {
   const choiceCount = getProgressionChoiceCount();
   const choices = state.progressionDraft.length
     ? state.progressionDraft.map((choice, index) => `<li><span>${escapeHtml(choice.label)}</span><button type="button" data-action="remove-progression-choice" data-progression-choice-index="${index}" aria-label="Remover ${escapeHtml(choice.label)}">x</button></li>`).join("")
     : "<li><span>Nenhuma escolha preparada.</span></li>";
 
-  const candidates = getProgressionCardCandidates(character);
-  const activeCards = getActiveCards(character);
-  const selectedCard = state.progressionCardId ? findDefinition(catalog, state.progressionCardId) as CardDefinition | undefined : undefined;
-  const hasRequiredCard = Boolean(selectedCard);
-  const cardStatus = hasRequiredCard
-    ? `${selectedCard?.name} → ${state.progressionCardDestination === "loadout" ? "Loadout" : "Vault"}`
-    : candidates.length ? "Escolha uma carta de Dominio." : "Nenhuma carta elegivel encontrada nos Dominios da classe.";
-  const canUseLoadout = activeCards.length < 5;
+  const canConfirm = choiceCount === 2 && Boolean(state.progressionCardId);
 
   return `
     <section class="progression-draft" aria-label="Avancos preparados">
       <div><strong>Avancos preparados</strong><span>${choiceCount} / 2 escolhas</span></div>
       <ul>${choices}</ul>
-      <div class="progression-domain-card-step"><div><strong>Carta obrigatoria de Dominio</strong><span>${escapeHtml(cardStatus)}</span></div><button class="secondary-action" type="button" data-action="open-progression-card-picker" ${candidates.length ? "" : "disabled"}>${hasRequiredCard ? "Alterar carta" : "Escolher carta"}</button>${hasRequiredCard ? `<div class="progression-card-destination"><button class="${state.progressionCardDestination === "loadout" ? "is-selected" : ""}" type="button" data-action="set-progression-card-destination" data-progression-card-destination="loadout" ${canUseLoadout ? "" : "disabled"}>Loadout</button><button class="${state.progressionCardDestination === "vault" ? "is-selected" : ""}" type="button" data-action="set-progression-card-destination" data-progression-card-destination="vault">Vault</button></div>` : ""}</div>
       ${state.progressionError ? `<p class="progression-feedback" role="alert">${escapeHtml(state.progressionError)}</p>` : ""}
-      <button class="primary-action" type="button" data-action="open-progression-confirmation">Confirmar evolucao</button>
+      <div class="progression-draft-footer"><span>${canConfirm ? "Requisitos preenchidos. Revise antes de confirmar." : `Faltam ${2 - choiceCount} escolha${2 - choiceCount === 1 ? "" : "s"}${state.progressionCardId ? "" : " e a carta obrigatoria"}.`}</span><button class="${canConfirm ? "primary-action" : "secondary-action progression-confirm-action is-incomplete"}" type="button" data-action="open-progression-confirmation">Confirmar evolucao</button></div>
     </section>
+  `;
+}
+
+function renderProgressionDomainStep(character: Character): string {
+  const candidates = getProgressionCardCandidates(character);
+  const activeCards = getActiveCards(character);
+  const selectedCard = state.progressionCardId ? findDefinition(catalog, state.progressionCardId) as CardDefinition | undefined : undefined;
+  const hasRequiredCard = Boolean(selectedCard);
+  const cardStatus = candidates.length ? "Pendente: escolha uma carta elegivel." : "Nenhuma carta elegivel encontrada nos Dominios da classe.";
+  const canUseLoadout = activeCards.length < 5;
+  const selectedCardPreview = selectedCard
+    ? `<div class="progression-selected-card" aria-label="Carta selecionada: ${escapeHtml(selectedCard.name)}"><span class="progression-selected-card-art">${selectedCard.image ? `<img src="${escapeHtml(selectedCard.image)}" alt="" />` : "DOM"}</span><strong>${escapeHtml(selectedCard.name)}</strong></div>`
+    : `<p>${escapeHtml(cardStatus)}</p>`;
+
+  return `
+    <aside class="progression-domain-card-step ${hasRequiredCard ? "is-complete" : "is-pending"}" aria-label="Carta obrigatoria de Dominio">
+      <div class="progression-step-heading"><strong>Carta de Dominio</strong></div>
+      ${selectedCardPreview}
+      <button class="${hasRequiredCard ? "secondary-action" : "primary-action"}" type="button" data-action="open-progression-card-picker" ${candidates.length ? "" : "disabled"}>${hasRequiredCard ? "Alterar carta" : "Selecionar carta"}</button>
+      ${hasRequiredCard ? `<div class="progression-card-destination"><button class="${state.progressionCardDestination === "loadout" ? "is-selected" : ""}" type="button" data-action="set-progression-card-destination" data-progression-card-destination="loadout" ${canUseLoadout ? "" : "disabled"}>Loadout</button><button class="${state.progressionCardDestination === "vault" ? "is-selected" : ""}" type="button" data-action="set-progression-card-destination" data-progression-card-destination="vault">Vault</button></div>` : ""}
+    </aside>
   `;
 }
 
@@ -2466,8 +2439,7 @@ function renderActivateStoredCardModal(): string {
 function renderPlaceholder(page: Page): string {
   const labels: Record<Page, string> = {
     overview: "Visao Geral",
-    skills: "Habilidades",
-    experiences: "Experiencias",
+    skills: "Tracos",
     inventory: "Inventario",
     progression: "Progressao",
     notes: "Anotacoes",
@@ -2499,9 +2471,7 @@ function render(): void {
     ? renderOverview(character)
     : state.page === "skills"
       ? renderSkills(character)
-      : state.page === "experiences"
-        ? renderExperiences(character)
-        : state.page === "storedCards"
+      : state.page === "storedCards"
           ? renderStoredCards(character)
           : state.page === "progression"
             ? renderProgression(character)

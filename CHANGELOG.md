@@ -4,6 +4,19 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.8.1]
+
+### Alterado
+
+- barra superior simplificada com a nova área Traços, reunindo Experiências e habilidades de Ancestralidade e Comunidade;
+- Proficiência inicial da ficha de demonstração corrigida para 1;
+- tela de Progressão reorganizada para aproveitar melhor a largura de tablets, com escolhas eletivas, carta de Domínio e confirmação em áreas distintas;
+- carta obrigatória de Domínio passa a exibir uma miniatura estática quando selecionada.
+
+### Adicionado
+
+- arte original otimizada para a carta de demonstração Guardian's Ward, disponível no cache offline.
+
 ## [0.8.0]
 
 ### Adicionado

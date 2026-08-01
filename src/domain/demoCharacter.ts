@@ -30,9 +30,9 @@ export const demoCharacter: Character = {
     minor: 12,
     major: 20
   },
-  proficiency: 0,
+  proficiency: 1,
   progression: {
-    demoBaselineVersion: 2,
+    demoBaselineVersion: 3,
     attributeMarks: {},
     acquiredSubclassTiers: ["foundation"],
     advancementSelections: [],

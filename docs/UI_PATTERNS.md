@@ -8,7 +8,7 @@ A interface favorece leitura rápida e ações de sessão em tela única, evitan
 
 ## Navegação
 
-- a barra superior contém as áreas de personagem: Visão geral, Habilidades, Experiências, Inventário, Progressão e Anotações;
+- a barra superior contém as áreas de personagem: Visão geral, Traços, Inventário, Progressão e Anotações;
 - a navegação lateral reúne áreas globais, como Compendium e Configurações;
 - áreas secundárias podem usar abas, filtros ou accordions sem duplicar a navegação principal.
 

@@ -1080,6 +1080,22 @@ button {
   gap: 1rem;
 }
 
+.traits-experience-section {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.traits-experience-section .section-heading {
+  margin-bottom: 0;
+}
+
+.traits-skill-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
 .skill-column {
   display: grid;
   align-content: start;
@@ -1504,24 +1520,6 @@ button {
   padding: 0.55rem;
 }
 
-.progression-bar-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem;
-}
-
-.progression-bar-summary span {
-  width: fit-content;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  min-height: 2rem;
-  border: 1px solid rgba(244, 234, 219, 0.08);
-  background: rgba(8, 5, 17, 0.34);
-  padding: 0.35rem 0.55rem;
-  font-size: 0.82rem;
-}
-
 .progression-bar strong {
   color: var(--color-gold);
   font-size: 0.72rem;
@@ -1660,9 +1658,22 @@ button {
   text-transform: uppercase;
 }
 
+.progression-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16.5rem, 0.58fr);
+  align-items: stretch;
+  gap: 0.85rem;
+}
+
+.progression-elective-panel {
+  display: grid;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
 .progression-option-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(12.5rem, 1fr));
   gap: 0.45rem;
 }
 
@@ -1807,19 +1818,87 @@ button {
 
 .progression-domain-card-step {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  align-content: stretch;
   gap: 0.55rem;
-  border-top: 1px solid rgba(244, 234, 219, 0.1);
-  padding-top: 0.7rem;
+  min-height: 100%;
+  border: 1px solid rgba(217, 154, 61, 0.42);
+  padding: 0.8rem;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(217, 154, 61, 0.14), transparent 9rem),
+    rgba(217, 154, 61, 0.055);
 }
 
-.progression-domain-card-step > div:first-child {
+.progression-domain-card-step.is-complete {
+  border-color: rgba(86, 212, 157, 0.42);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(86, 212, 157, 0.12), transparent 9rem),
+    rgba(86, 212, 157, 0.04);
+}
+
+.progression-step-heading {
   display: grid;
   gap: 0.2rem;
 }
 
-.progression-domain-card-step > div:first-child span {
+.progression-step-heading span {
+  color: var(--color-gold);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.progression-step-heading strong {
+  color: var(--color-text);
+}
+
+.progression-selected-card {
+  display: grid;
+  grid-template-columns: 3.15rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 3.65rem;
+  height: 100%;
+  border: 1px solid rgba(244, 234, 219, 0.14);
+  background: rgba(8, 5, 17, 0.34);
+  padding: 0.3rem;
+}
+
+.progression-selected-card-art {
+  display: grid;
+  width: 3.15rem;
+  height: 3.15rem;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(217, 154, 61, 0.36);
+  color: var(--color-gold);
+  background: radial-gradient(circle at 50% 35%, rgba(142, 79, 196, 0.42), rgba(8, 5, 17, 0.74));
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.progression-selected-card-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.progression-selected-card strong {
+  color: var(--color-text);
+  font-size: 0.88rem;
+  line-height: 1.3;
+}
+
+.progression-domain-card-step p {
+  display: grid;
+  align-content: center;
+  min-height: 2.4rem;
+  margin: 0;
   color: var(--color-muted);
   font-size: 0.8rem;
+  line-height: 1.4;
 }
 
 .progression-card-destination {
@@ -1839,6 +1918,36 @@ button {
   border-color: rgba(217, 154, 61, 0.62);
   color: var(--color-gold);
   background: rgba(217, 154, 61, 0.1);
+}
+
+.progression-draft-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-top: 1px solid rgba(244, 234, 219, 0.1);
+  padding-top: 0.65rem;
+}
+
+.progression-draft-footer > span {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.progression-confirm-action.is-incomplete {
+  border-color: rgba(244, 234, 219, 0.2);
+  color: var(--color-muted);
+}
+
+@media (max-width: 960px) {
+  .progression-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .progression-domain-card-step {
+    min-height: auto;
+  }
 }
 
 .progression-feedback {
@@ -4039,6 +4148,10 @@ body.has-modal {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .traits-skill-layout {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .progression-board {
     grid-template-columns: 1fr;
   }
@@ -4053,7 +4166,7 @@ body.has-modal {
   }
 
   .progression-option-list {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(12.5rem, 1fr));
   }
 
   .settings-grid,
@@ -4278,7 +4391,9 @@ body.has-modal {
   .card-row,
   .quick-actions,
   .skill-layout,
+  .traits-skill-layout,
   .progression-board,
+  .progression-option-list,
   .compendium-spread,
   .equipped-grid {
     grid-template-columns: 1fr;
