@@ -226,8 +226,14 @@ button {
 .editor-shell {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  min-height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
   --shell-gutter: 1.25rem;
+}
+
+.editor-shell > .content {
+  min-height: 0;
 }
 
 .sidebar {
@@ -3282,6 +3288,24 @@ body.has-modal {
   cursor: default;
 }
 
+.compendium-ancestry-result {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 3rem;
+}
+
+.compendium-ancestry-result .compendium-card-result-actions {
+  height: 3rem;
+  align-items: stretch;
+}
+
+.compendium-ancestry-result .readonly-label {
+  display: grid;
+  height: 100%;
+  place-items: center;
+  padding: 0.4rem;
+  text-align: center;
+}
+
 .ancestry-feature-pair strong {
   color: var(--color-text);
   font-size: 0.85rem;
@@ -3520,14 +3544,23 @@ body.has-modal {
 }
 
 .compendium-domain-result-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
+  display: grid;
+  justify-items: start;
+  gap: 0.2rem;
 }
 
 .compendium-domain-result-meta span,
 .readonly-label,
 .management-copy span {
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.compendium-domain-card-count {
+  display: block;
+  margin-top: -0.15rem;
   color: var(--color-muted);
   font-size: 0.72rem;
   letter-spacing: 0.04em;

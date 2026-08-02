@@ -185,7 +185,7 @@ const sideNavItems: Array<{ page: Page; label: string; icon: string }> = [
   { page: "settings", label: "Configuracoes", icon: "&#128220;" }
 ];
 
-const appVersion = "0.9.0";
+const appVersion = "0.9.1";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -550,17 +550,18 @@ function renderOverview(character: Character): string {
 }
 
 function renderSubclassTrack(character: Character): string {
-  const stages: Array<{ tier: NonNullable<CharacterSkill["tier"]>; label: string; unlockLevel: number }> = [
-    { tier: "foundation", label: "Fundacao", unlockLevel: 1 },
-    { tier: "specialized", label: "Especializacao", unlockLevel: 2 },
-    { tier: "mastery", label: "Maestria", unlockLevel: 5 }
+  const stages: Array<{ tier: NonNullable<CharacterSkill["tier"]>; label: string; unlockLevel: number; unlockTier: string }> = [
+    { tier: "foundation", label: "Fundacao", unlockLevel: 1, unlockTier: "Tier 1" },
+    { tier: "specialized", label: "Especializacao", unlockLevel: 5, unlockTier: "Tier 3" },
+    { tier: "mastery", label: "Maestria", unlockLevel: 8, unlockTier: "Tier 4" }
   ];
   const cards = stages.map((stage) => {
     const skill = character.skills.find((entry) => entry.source === "class" && entry.tier === stage.tier);
     const isActive = getProgression(character).acquiredSubclassTiers.includes(stage.tier);
     const isEligible = !isActive && character.identity.level >= stage.unlockLevel;
     const status = isActive ? "Ativa" : isEligible ? "Disponivel como avanço" : `Bloqueada - Nivel ${stage.unlockLevel}`;
-    return `<article class="subclass-track-card ${isActive ? "is-active" : "is-locked"}"><span class="subclass-track-stage">${stage.label}</span><h3>${escapeHtml(skill?.name ?? `Carta de ${stage.label}`)}</h3><p>${escapeHtml(skill?.description ?? "Caracteristica da subclasse ainda nao definida.")}</p><small>${status}</small></article>`;
+    const subclassStatus = isActive || isEligible ? status : `Bloqueada - ${stage.unlockTier} (nivel ${stage.unlockLevel})`;
+    return `<article class="subclass-track-card ${isActive ? "is-active" : "is-locked"}"><span class="subclass-track-stage">${stage.label}</span><h3>${escapeHtml(skill?.name ?? `Carta de ${stage.label}`)}</h3><p>${escapeHtml(skill?.description ?? "Caracteristica da subclasse ainda nao definida.")}</p><small>${subclassStatus}</small></article>`;
   });
   return `<section class="band subclass-track-band"><div class="section-heading"><div><h2>${escapeHtml(character.identity.subclassName ?? "Subclasse nao definida")}</h2></div></div><div class="subclass-track-grid">${cards.join("")}</div></section>`;
 }
@@ -762,7 +763,7 @@ function renderSettings(character: Character): string {
             </div>
             <div class="installed-pack-list">
               <h3>Packs instalados neste dispositivo</h3>
-              ${state.installedPacks.length ? state.installedPacks.map((pack) => `<article class="installed-pack"><div><strong>${escapeHtml(pack.name)}</strong><span>v${escapeHtml(pack.version)} · ${escapeHtml(pack.description)}</span></div><button class="icon-action danger-icon-action" type="button" data-action="remove-installed-pack" data-pack-id="${escapeHtml(pack.id)}" aria-label="Remover ${escapeHtml(pack.name)}">×</button></article>`).join("") : '<p class="settings-panel-copy">Nenhum Pack local instalado.</p>'}
+              ${state.installedPacks.length ? state.installedPacks.map((pack) => `<article class="installed-pack"><div><strong>${escapeHtml(getPackDisplayName(pack.id))}</strong><span>v${escapeHtml(pack.version)} · ${escapeHtml(getPackDisplayDescription(pack))}</span></div><button class="icon-action danger-icon-action" type="button" data-action="remove-installed-pack" data-pack-id="${escapeHtml(pack.id)}" aria-label="Remover ${escapeHtml(getPackDisplayName(pack.id))}">×</button></article>`).join("") : '<p class="settings-panel-copy">Nenhum Pack local instalado.</p>'}
             </div>
           `
         )}
@@ -846,7 +847,7 @@ function renderPackImportModal(): string {
           <p>Selecione um arquivo <strong>.soulforge-pack.json</strong>. O SoulForge exibirá uma prévia antes de instalar.</p>
           <button class="primary-action" type="button" data-action="choose-pack-file">Selecionar arquivo</button>
         `}
-        <input class="visually-hidden" type="file" accept="application/json,.json,.soulforge-pack.json" data-pack-file>
+        <input type="file" accept="application/json,.json,.soulforge-pack.json" data-pack-file hidden>
         <p class="form-error" data-pack-import-error ${state.packImportError ? "" : "hidden"}>${escapeHtml(state.packImportError ?? "")}</p>
       </section>
     </div>
@@ -2089,13 +2090,14 @@ function renderCompendiumAncestryResult(ancestry: AncestryDefinition): string {
   const top = getAncestryFeature(ancestry, "top");
   const bottom = getAncestryFeature(ancestry, "bottom");
   const canEdit = isLocalDefinition(ancestry);
+  const sourceLabel = canEdit ? "Local" : getPackDisplayName(ancestry.packId);
   return `
     <article class="compendium-class-result compendium-ancestry-result">
       <div class="compendium-class-result-open compendium-ancestry-result-open">
         ${ancestry.image ? `<span class="compendium-class-image" style="background-image: url('${escapeHtml(ancestry.image)}')"></span>` : '<span class="compendium-class-image class-image-placeholder">ANCESTRALIDADE</span>'}
-        <span class="compendium-class-body"><span>${canEdit ? "Local" : "Pack"}</span><h2>${escapeHtml(ancestry.name)}</h2><p>${escapeHtml(ancestry.summary)}</p><span class="ancestry-feature-pair"><span><b>Top Feature</b><strong>${escapeHtml(top?.name ?? "Feature indisponivel")}</strong><small>${escapeHtml(top?.summary ?? "")}</small></span><span><b>Bottom Feature</b><strong>${escapeHtml(bottom?.name ?? "Feature indisponivel")}</strong><small>${escapeHtml(bottom?.summary ?? "")}</small></span></span></span>
+        <span class="compendium-class-body"><span>${escapeHtml(sourceLabel)}</span><h2>${escapeHtml(ancestry.name)}</h2><p>${escapeHtml(ancestry.summary)}</p><span class="ancestry-feature-pair"><span><b>Top Feature</b><strong>${escapeHtml(top?.name ?? "Feature indisponivel")}</strong><small>${escapeHtml(top?.summary ?? "")}</small></span><span><b>Bottom Feature</b><strong>${escapeHtml(bottom?.name ?? "Feature indisponivel")}</strong><small>${escapeHtml(bottom?.summary ?? "")}</small></span></span></span>
       </div>
-      <div class="compendium-card-result-actions">${canEdit ? `<button type="button" data-action="edit-compendium-ancestry" data-ancestry-id="${escapeHtml(ancestry.id)}">Editar</button><button type="button" data-action="delete-compendium-ancestry" data-ancestry-id="${escapeHtml(ancestry.id)}">Excluir</button>` : '<span class="readonly-label">Conteudo do pack</span>'}</div>
+      <div class="compendium-card-result-actions">${canEdit ? `<button type="button" data-action="edit-compendium-ancestry" data-ancestry-id="${escapeHtml(ancestry.id)}">Editar</button><button type="button" data-action="delete-compendium-ancestry" data-ancestry-id="${escapeHtml(ancestry.id)}">Excluir</button>` : '<span class="readonly-label">Conteúdo não editável</span>'}</div>
     </article>
   `;
 }
@@ -2135,6 +2137,36 @@ function isLocalDefinition(definition: { packId: string }): boolean {
   return definition.packId === "local";
 }
 
+function getPackDisplayName(packId: string): string {
+  const standardNames: Record<string, string> = {
+    "daggerheart-core-ancestries-local": "Core - Ancestralidades",
+    "daggerheart-hope-and-fear-ancestries-local": "Hope & Fear - Ancestralidades",
+    "daggerheart-core-domains-local": "Core - Domínios",
+    "daggerheart-hope-and-fear-domains-local": "Hope & Fear - Domínios"
+  };
+  return standardNames[packId] ?? catalog.packs.find((pack) => pack.id === packId)?.name ?? "Pack indisponível";
+}
+
+function getPackOriginName(packId: string): string {
+  const origins: Record<string, string> = {
+    "daggerheart-core-ancestries-local": "Core",
+    "daggerheart-hope-and-fear-ancestries-local": "Hope & Fear",
+    "daggerheart-core-domains-local": "Core",
+    "daggerheart-hope-and-fear-domains-local": "Hope & Fear"
+  };
+  return origins[packId] ?? getPackDisplayName(packId);
+}
+
+function getPackDisplayDescription(pack: PackManifest): string {
+  const standardDescriptions: Record<string, string> = {
+    "daggerheart-core-ancestries-local": "Ancestralidades do Core disponíveis neste dispositivo.",
+    "daggerheart-hope-and-fear-ancestries-local": "Ancestralidades de Hope & Fear disponíveis neste dispositivo.",
+    "daggerheart-core-domains-local": "Domínios do Core disponíveis neste dispositivo.",
+    "daggerheart-hope-and-fear-domains-local": "Domínios de Hope & Fear disponíveis neste dispositivo."
+  };
+  return standardDescriptions[pack.id] ?? pack.description;
+}
+
 function renderCompendiumDomainsManager(): string {
   const sortedDomains = [...catalog.domains].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 
@@ -2163,16 +2195,18 @@ function renderCompendiumDomainsManager(): string {
 function renderCompendiumDomainResult(domain: DomainDefinition): string {
   const linkedCards = catalog.cards.filter((card) => card.domainId === domain.id).length;
   const isLocal = isLocalDefinition(domain);
+  const sourceLabel = isLocal ? "Local" : getPackOriginName(domain.packId);
   return `
     <article class="compendium-domain-result" style="--domain-color: ${escapeHtml(domain.color)}">
       <div class="compendium-domain-swatch" aria-hidden="true"></div>
       <div>
-        <div class="compendium-domain-result-meta"><span>${isLocal ? "Local" : "Pack"}</span><span>${linkedCards} ${linkedCards === 1 ? "carta" : "cartas"}</span></div>
+        <div class="compendium-domain-result-meta"><span>${escapeHtml(sourceLabel)}</span></div>
         <h2>${escapeHtml(domain.name)}</h2>
+        <span class="compendium-domain-card-count">${linkedCards} ${linkedCards === 1 ? "carta" : "cartas"}</span>
         <p>${escapeHtml(domain.summary || "Sem descricao.")}</p>
       </div>
       <div class="compendium-card-result-actions">
-        ${isLocal ? `<button type="button" data-action="edit-compendium-domain" data-domain-id="${domain.id}">Editar</button><button type="button" data-action="delete-compendium-domain" data-domain-id="${domain.id}">Excluir</button>` : `<span class="readonly-label">Conteudo do pack</span>`}
+        ${isLocal ? `<button type="button" data-action="edit-compendium-domain" data-domain-id="${domain.id}">Editar</button><button type="button" data-action="delete-compendium-domain" data-domain-id="${domain.id}">Excluir</button>` : `<span class="readonly-label">Conteúdo não editável</span>`}
       </div>
     </article>
   `;
@@ -2680,7 +2714,7 @@ const fallbackCharacterClass: ClassDefinition = {
   packId: "demo",
   name: "Guardiao",
   summary: "Defensor firme que protege seus aliados.",
-  domainIds: ["domain.demo.guardian", "domain.demo.dread"],
+  domainIds: ["domain.demo.guardian", "domain.demo.test"],
   startingEvasion: 12,
   startingHitPoints: 28,
   featureIds: [],

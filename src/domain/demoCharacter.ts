@@ -9,7 +9,7 @@ export const demoCharacter: Character = {
     primaryClassId: "class.demo.guardian",
     subclassName: "Vengeance",
     primarySubclassId: "subclass.demo.vengeance",
-    primaryDomainIds: ["domain.demo.guardian", "domain.demo.dread"],
+    primaryDomainIds: ["domain.demo.guardian", "domain.demo.test"],
     community: "Vigilia de Tristelo",
     level: 1,
     xp: 0,
@@ -32,7 +32,7 @@ export const demoCharacter: Character = {
   },
   proficiency: 1,
   progression: {
-    demoBaselineVersion: 3,
+    demoBaselineVersion: 4,
     attributeMarks: {},
     acquiredSubclassTiers: ["foundation"],
     advancementSelections: [],

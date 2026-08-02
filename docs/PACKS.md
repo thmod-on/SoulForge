@@ -1,5 +1,16 @@
 # Packs
 
+## Padrão editorial de Packs
+
+Todo Pack gerado pelo SoulForge deve seguir estas regras:
+
+- o nome visível usa o formato `Origem - Foco`, por exemplo `Core - Ancestralidades` e `Hope & Fear - Domínios`;
+- não incluir a palavra “Daggerheart” no nome visível do Pack;
+- escrever manifestos, Definitions, resumos e instruções em português do Brasil;
+- salvar arquivos JSON em UTF-8 e revisar caracteres especiais, acentos e pontuação antes de gerar o arquivo `.soulforge-pack.json`;
+- preservar, entre parênteses, um nome original em inglês apenas quando ele for necessário para reconhecimento ou quando a tradução não for um nome próprio consolidado;
+- manter a origem, licença e condição de distribuição nos metadados do manifesto, não no nome visível.
+
 > Atualização de importação local: o SoulForge aceita um único arquivo JSON com extensão recomendada `.soulforge-pack.json`. O arquivo usa `format: "soulforge-pack-v1"` e contém `manifest` e `definitions`. Antes da instalação, a aplicação valida formato, manifesto, IDs repetidos e o vínculo de cada Definition ao `packId` do manifesto. Depois da confirmação, o Pack e suas Definitions são persistidos somente no IndexedDB deste navegador. A remoção exige confirmação e também remove as Definitions daquele Pack, podendo deixar referências indisponíveis em personagens existentes.
 
 ## Propósito

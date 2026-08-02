@@ -2,11 +2,11 @@
   "id": "card.demo.dread-veil",
   "type": "card",
   "packId": "pack.demo.soulforge",
-  "name": "Dread Veil",
-  "summary": "A sombra ao seu redor torna dificil ler suas intencoes.",
-  "domainId": "domain.demo.dread",
+  "name": "Véu de Teste",
+  "summary": "Uma proteção fictícia para validar efeitos passivos.",
+  "domainId": "domain.demo.test",
   "tier": 2,
   "cardType": "passiva",
-  "cost": "2 Essencia",
-  "effect": "Enquanto a essencia estiver ativa, criaturas hostis sofrem desvantagem narrativa ao tentar prever seu proximo movimento."
+  "cost": "2 Essência",
+  "effect": "Enquanto o efeito estiver ativo, criaturas hostis sofrem desvantagem narrativa ao tentar prever seu próximo movimento."
 }

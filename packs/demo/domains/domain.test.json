@@ -1,0 +1,8 @@
+{
+  "id": "domain.demo.test",
+  "type": "domain",
+  "packId": "pack.demo.soulforge",
+  "name": "Teste",
+  "summary": "Domínio fictício usado apenas para validar os fluxos do SoulForge.",
+  "color": "#8e5cf7"
+}

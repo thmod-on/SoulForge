@@ -3,18 +3,18 @@ import { catalog } from "../content/installedPacks";
 import { findDomain } from "./catalog";
 
 describe("catalog", () => {
-  it("loads Dread cards from the installed demo pack", () => {
-    const dread = catalog.domains.find((domain) => domain.name === "Dread");
-    const dreadCards = catalog.cards.filter((card) => card.domainId === dread?.id);
+  it("loads test cards from the installed demo pack", () => {
+    const testDomain = catalog.domains.find((domain) => domain.name === "Teste");
+    const testCards = catalog.cards.filter((card) => card.domainId === testDomain?.id);
 
-    expect(dread).toBeDefined();
-    expect(dreadCards).toHaveLength(3);
-    expect(dreadCards.map((card) => card.name)).toContain("Dread Veil");
+    expect(testDomain).toBeDefined();
+    expect(testCards).toHaveLength(3);
+    expect(testCards.map((card) => card.name)).toContain("Véu de Teste");
   });
 
   it("resolves domains by id", () => {
-    const dread = findDomain(catalog, "domain.demo.dread");
+    const testDomain = findDomain(catalog, "domain.demo.test");
 
-    expect(dread?.name).toBe("Dread");
+    expect(testDomain?.name).toBe("Teste");
   });
 });

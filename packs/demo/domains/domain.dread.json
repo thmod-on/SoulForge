@@ -1,8 +1,0 @@
-{
-  "id": "domain.demo.dread",
-  "type": "domain",
-  "packId": "pack.demo.soulforge",
-  "name": "Dread",
-  "summary": "Controle, pressao e presenca sombria em cena.",
-  "color": "#8e5cf7"
-}

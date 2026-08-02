@@ -4,6 +4,21 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.9.1]
+
+### Alterado
+
+- conteúdo demonstrativo separado do Domínio oficial Dread por meio do novo Domínio Teste;
+- listagens de Ancestralidades e Domínios refinadas com origem do Pack, indicação clara de conteúdo não editável e informações reorganizadas;
+- cabeçalho do modo Editor permanece fixo enquanto o conteúdo rola;
+- nomes e descrições de Packs locais padronizados em português do Brasil, com validação de codificação UTF-8;
+- seletor técnico de arquivo ocultado após a prévia de importação de Pack.
+
+### Corrigido
+
+- trilha de subclasse informa corretamente Especialização no Tier 3 e Maestria no Tier 4;
+- caracteres especiais dos arquivos de importação locais revisados e corrigidos.
+
 ## [0.9.0]
 
 ### Adicionado

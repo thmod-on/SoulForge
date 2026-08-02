@@ -1,5 +1,5 @@
 import manifest from "../../packs/demo/manifest.json";
-import dread from "../../packs/demo/domains/domain.dread.json";
+import testDomain from "../../packs/demo/domains/domain.test.json";
 import guardian from "../../packs/demo/domains/domain.guardian.json";
 import dreadMark from "../../packs/demo/cards/card.dread-mark.json";
 import dreadVeil from "../../packs/demo/cards/card.dread-veil.json";
@@ -22,7 +22,7 @@ import { createCatalog } from "../domain/catalog";
 import type { Definition, PackManifest } from "../domain/types";
 
 export const baseCatalog = createCatalog([manifest as PackManifest], [
-  dread,
+  testDomain,
   guardian,
   shieldBlock,
   guardiansWard,
