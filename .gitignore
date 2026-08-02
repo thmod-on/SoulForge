@@ -9,3 +9,4 @@ coverage/
 .env.*
 !.env.example
 .vite-dev.*.log
+/local-packs/

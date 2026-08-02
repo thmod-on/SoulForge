@@ -317,3 +317,5 @@ Ao contribuir com o SoulForge, siga sempre estes princípios:
 - Prefira reutilização a expansão da Engine.
 - Consulte a documentação antes de implementar.
 - Quando houver dúvida, preserve o contrato arquitetural.
+- Consulte e respeite `CONTENT_POLICY.md` antes de adicionar, importar ou publicar conteúdo derivado de Daggerheart.
+- Nunca inclua conteúdo oficial em builds públicos ou no Git sem que a permissão de distribuição tenha sido confirmada.

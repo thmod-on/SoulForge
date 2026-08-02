@@ -3,7 +3,7 @@ import type { Character } from "../domain/types";
 
 const databaseName = "soulforge";
 const storeName = "characters";
-const databaseVersion = 2;
+const databaseVersion = 3;
 
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -16,6 +16,9 @@ function openDatabase(): Promise<IDBDatabase> {
       }
       if (!database.objectStoreNames.contains("customDefinitions")) {
         database.createObjectStore("customDefinitions", { keyPath: "id" });
+      }
+      if (!database.objectStoreNames.contains("installedPacks")) {
+        database.createObjectStore("installedPacks", { keyPath: "id" });
       }
     };
 
@@ -50,6 +53,21 @@ export async function loadCharacter(characterId: string): Promise<Character | un
 
   database.close();
   return character;
+}
+
+export async function listCharacters(): Promise<Character[]> {
+  const database = await openDatabase();
+
+  const characters = await new Promise<Character[]>((resolve, reject) => {
+    const transaction = database.transaction(storeName, "readonly");
+    const request = transaction.objectStore(storeName).getAll();
+
+    request.onsuccess = () => resolve(request.result as Character[]);
+    request.onerror = () => reject(request.error);
+  });
+
+  database.close();
+  return characters;
 }
 
 export async function ensureDemoCharacter(): Promise<Character> {

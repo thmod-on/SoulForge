@@ -58,7 +58,7 @@ As aberturas iniciais do livro são:
 | --- | --- | --- |
 | 1 | Domínios | Cartas |
 | 2 | Itens | Classes e subclasses |
-| 3 | Comunidades | Condições e características futuras |
+| 3 | Ancestralidades | Condições futuras |
 
 Essa organização pode crescer conforme novos Packs forem instalados, sem alterar a responsabilidade de cada Definition.
 
@@ -107,6 +107,8 @@ Reúnem as opções de identidade do personagem:
 
 - ancestralidades definem características inerentes;
 - comunidades representam a origem social e podem conceder características.
+
+Ancestralidades possuem duas features ordenadas — Top e Bottom — para suportar ancestralidade única e mista. O comportamento de criação, seleção e validação está definido em [ANCESTRY.md](ANCESTRY.md).
 
 ### Condições e características
 

@@ -1,16 +1,18 @@
 import { baseCatalog } from "./content/installedPacks";
 import { createCatalog, findDefinition, findDomain } from "./domain/catalog";
-import type { CardDefinition, Character, CharacterNote, CharacterNoteCategory, CharacterSkill, CharacterProgressionEntry, ClassDefinition, DomainDefinition, FeatureDefinition, InventoryCompartment, ItemDefinition, ProgressionAdvanceKind, SubclassDefinition } from "./domain/types";
-import { ensureDemoCharacter, saveCharacter } from "./storage/characterRepository";
+import { demoCharacter } from "./domain/demoCharacter";
+import type { AncestryDefinition, CardDefinition, Character, CharacterNote, CharacterNoteCategory, CharacterSkill, CharacterProgressionEntry, ClassDefinition, Definition, DomainDefinition, FeatureDefinition, InventoryCompartment, ItemDefinition, PackBundle, PackManifest, ProgressionAdvanceKind, SubclassDefinition } from "./domain/types";
+import { ensureDemoCharacter, listCharacters, loadCharacter, saveCharacter } from "./storage/characterRepository";
 import { deleteCustomDefinition, loadCustomDefinitions, saveCustomDefinition } from "./storage/compendiumRepository";
+import { installLocalPack, loadInstalledPacks, removeLocalPack } from "./storage/packRepository";
 import "./styles.css";
 
 type Page = "overview" | "skills" | "inventory" | "progression" | "notes" | "compendium" | "settings" | "storedCards";
 type InventoryFilter = "todos" | ItemDefinition["category"];
 type ProgressionTierNumber = 2 | 3 | 4;
 type SettingsSection = "general" | "localData" | "loadRules" | "appearance" | "progression";
-type CompendiumView = "index" | "cards" | "domains" | "items" | "classes";
-type CompendiumSpread = 1 | 2;
+type CompendiumView = "index" | "cards" | "domains" | "items" | "classes" | "ancestries";
+type CompendiumSpread = 1 | 2 | 3;
 type ProgressionPicker = "attributes" | "experiences";
 type ProgressionDraftChoice = {
   kind: ProgressionAdvanceKind;
@@ -32,6 +34,7 @@ function getAppRoot(): HTMLDivElement {
 }
 
 const appRoot = getAppRoot();
+const activeCharacterStorageKey = "soulforge.active-character-id";
 let catalog = baseCatalog;
 let modalBackdropPointerDown = false;
 
@@ -63,6 +66,7 @@ const state: {
   compendiumTierFilter: string;
   compendiumItemSearch: string;
   compendiumItemFilter: InventoryFilter;
+  compendiumAncestrySearch: string;
   lastPlayerPage: Page;
   selectedItemId?: string;
   selectedCardId: string;
@@ -108,8 +112,21 @@ const state: {
   addItemCatalogFilter: InventoryFilter;
   addItemError?: string;
   classModalOpen: boolean;
+  ancestryModalOpen: boolean;
+  editingCompendiumAncestryId?: string;
+  deletingCompendiumAncestryId?: string;
+  characterSelectionOpen: boolean;
+  characterCreationOpen: boolean;
+  characterCreationClassId?: string;
+  characterCreationError?: string;
+  characters: Character[];
   editingCompendiumClassId?: string;
   deletingCompendiumClassId?: string;
+  installedPacks: PackManifest[];
+  packImportOpen: boolean;
+  pendingPackBundle?: PackBundle;
+  packImportError?: string;
+  deletingInstalledPackId?: string;
   openSettingsSections: Record<SettingsSection, boolean>;
   character?: Character;
 } = {
@@ -123,6 +140,7 @@ const state: {
   compendiumTierFilter: "todos",
   compendiumItemSearch: "",
   compendiumItemFilter: "todos",
+  compendiumAncestrySearch: "",
   lastPlayerPage: "overview",
   selectedCardId: "card.demo.dread-veil",
   selectedProgressionTier: 2,
@@ -139,6 +157,12 @@ const state: {
   itemDefinitionModalOpen: false,
   addItemCatalogFilter: "todos",
   classModalOpen: false,
+  ancestryModalOpen: false,
+  characterSelectionOpen: true,
+  characterCreationOpen: false,
+  characters: [],
+  installedPacks: [],
+  packImportOpen: false,
   openSettingsSections: {
     general: true,
     localData: false,
@@ -161,7 +185,7 @@ const sideNavItems: Array<{ page: Page; label: string; icon: string }> = [
   { page: "settings", label: "Configuracoes", icon: "&#128220;" }
 ];
 
-const appVersion = "0.8.1";
+const appVersion = "0.9.0";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -378,8 +402,9 @@ function renderSidebar(character: Character): string {
         <div class="proficiency-marker" title="Proficiência"><span aria-hidden="true">⚄</span><small>Proficiência</small><strong>${character.proficiency}</strong></div>
       </section>
       <footer class="sidebar-footer" title="A PWA instala o app e guarda a interface para uso offline.">
-        <span>v${appVersion}</span>
+        <button class="sidebar-character-button" type="button" data-action="open-character-select" title="Trocar personagem">Personagens</button>
         <span class="sidebar-offline-status"><i aria-hidden="true"></i>Pronto offline</span>
+        <span>v${appVersion}</span>
       </footer>
     </aside>
   `;
@@ -698,7 +723,6 @@ function formatNoteDate(value: string): string {
 }
 
 function renderSettings(character: Character): string {
-  const activePack = catalog.packs[0];
   const offlineStatus = "PWA pronta para uso offline";
 
   return `
@@ -714,11 +738,10 @@ function renderSettings(character: Character): string {
         ${renderSettingsSection(
           "general",
           "Geral",
-          "Versao, pacote ativo e disponibilidade offline.",
+          "Versao e disponibilidade offline.",
           `
             <dl class="settings-readable-list">
               ${renderReadableSetting("Versao do app", `v${appVersion}`)}
-              ${renderReadableSetting("Pack ativo", `${activePack?.name ?? "Sem pack"} v${activePack?.version ?? "0.0.0"}`)}
               ${renderReadableSetting("Status offline/PWA", offlineStatus)}
             </dl>
           `
@@ -727,14 +750,19 @@ function renderSettings(character: Character): string {
         ${renderSettingsSection(
           "localData",
           "Dados locais",
-          "Exportar, importar e proteger os dados deste dispositivo.",
+          "Importe Packs privados e proteja os dados deste dispositivo.",
           `
-            <p class="settings-panel-copy">Tudo fica salvo neste dispositivo. Exportar ja funciona; importacao e limpeza entram quando fecharmos o fluxo de seguranca.</p>
+            <p class="settings-panel-copy">Packs locais ficam apenas neste navegador. Eles nao sao enviados ao GitHub nem incluidos na versao publicada.</p>
             <div class="settings-actions">
               <button class="settings-action settings-action-primary" type="button" data-action="export-character">Exportar personagem</button>
+              <button class="settings-action settings-action-primary" type="button" data-action="open-pack-import">Importar Pack local</button>
               <button class="settings-action" type="button" disabled>Importar personagem <span>Em breve</span></button>
               <button class="settings-action" type="button" disabled>Criar backup <span>Em breve</span></button>
               <button class="settings-action settings-action-danger" type="button" disabled>Apagar dados locais <span>Exige confirmacao</span></button>
+            </div>
+            <div class="installed-pack-list">
+              <h3>Packs instalados neste dispositivo</h3>
+              ${state.installedPacks.length ? state.installedPacks.map((pack) => `<article class="installed-pack"><div><strong>${escapeHtml(pack.name)}</strong><span>v${escapeHtml(pack.version)} · ${escapeHtml(pack.description)}</span></div><button class="icon-action danger-icon-action" type="button" data-action="remove-installed-pack" data-pack-id="${escapeHtml(pack.id)}" aria-label="Remover ${escapeHtml(pack.name)}">×</button></article>`).join("") : '<p class="settings-panel-copy">Nenhum Pack local instalado.</p>'}
             </div>
           `
         )}
@@ -784,6 +812,51 @@ function renderSettings(character: Character): string {
       </div>
     </main>
   `;
+}
+
+function getPackDefinitionSummary(definitions: Definition[]): string {
+  const counts = new Map<string, number>();
+  definitions.forEach((definition) => counts.set(definition.type, (counts.get(definition.type) ?? 0) + 1));
+  const labels: Record<string, string> = { ancestry: "ancestralidades", feature: "caracteristicas", card: "cartas", item: "itens", class: "classes", subclass: "subclasses", domain: "dominios" };
+  return [...counts.entries()].map(([type, count]) => `${count} ${labels[type] ?? type}`).join(" · ");
+}
+
+function renderPackImportModal(): string {
+  if (!state.packImportOpen) return "";
+  const bundle = state.pendingPackBundle;
+  return `
+    <div class="modal-backdrop" data-modal-backdrop>
+      <section class="modal pack-import-modal" role="dialog" aria-modal="true" aria-labelledby="pack-import-title">
+        <button class="modal-close" type="button" data-modal-close aria-label="Fechar importacao">x</button>
+        <span class="resource-modal-label">Dados locais</span>
+        <h2 id="pack-import-title">Importar Pack local</h2>
+        ${bundle ? `
+          <div class="pack-import-preview">
+            <span>Pronto para instalar</span>
+            <h3>${escapeHtml(bundle.manifest.name)}</h3>
+            <p>v${escapeHtml(bundle.manifest.version)} · ${escapeHtml(bundle.manifest.description)}</p>
+            <strong>${escapeHtml(getPackDefinitionSummary(bundle.definitions))}</strong>
+          </div>
+          <p class="settings-panel-copy">O conteúdo será salvo somente neste navegador e poderá ser removido depois com confirmação.</p>
+          <div class="modal-actions">
+            <button class="secondary-action" type="button" data-action="choose-pack-file">Escolher outro arquivo</button>
+            <button class="primary-action" type="button" data-action="confirm-pack-import">Instalar Pack</button>
+          </div>
+        ` : `
+          <p>Selecione um arquivo <strong>.soulforge-pack.json</strong>. O SoulForge exibirá uma prévia antes de instalar.</p>
+          <button class="primary-action" type="button" data-action="choose-pack-file">Selecionar arquivo</button>
+        `}
+        <input class="visually-hidden" type="file" accept="application/json,.json,.soulforge-pack.json" data-pack-file>
+        <p class="form-error" data-pack-import-error ${state.packImportError ? "" : "hidden"}>${escapeHtml(state.packImportError ?? "")}</p>
+      </section>
+    </div>
+  `;
+}
+
+function renderRemoveInstalledPackModal(): string {
+  const pack = state.installedPacks.find((entry) => entry.id === state.deletingInstalledPackId);
+  if (!pack) return "";
+  return `<div class="modal-backdrop" data-modal-backdrop><section class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="remove-pack-title"><h2 id="remove-pack-title">Remover Pack?</h2><p><strong>${escapeHtml(pack.name)}</strong> e todas as suas Definitions serão removidos deste dispositivo. Personagens que usem esse conteúdo poderão ficar com referências indisponíveis.</p><div class="modal-actions"><button class="secondary-action" type="button" data-action="cancel-remove-installed-pack">Cancelar</button><button class="danger-action" type="button" data-action="confirm-remove-installed-pack">Remover Pack</button></div></section></div>`;
 }
 
 function renderSettingsSection(section: SettingsSection, title: string, summary: string, content: string, wide = false): string {
@@ -1802,6 +1875,9 @@ function renderCompendium(): string {
   if (state.compendiumView === "classes") {
     return renderCompendiumClassesManager();
   }
+  if (state.compendiumView === "ancestries") {
+    return renderCompendiumAncestriesManager();
+  }
 
   return `
     <main class="content compendium-content">
@@ -1814,10 +1890,10 @@ function renderCompendium(): string {
       <nav class="compendium-bookmarks" aria-label="Aberturas do Compendium">
         <button class="${state.compendiumSpread === 1 ? "is-active" : ""}" type="button" data-compendium-spread="1" aria-current="${state.compendiumSpread === 1 ? "page" : "false"}">Abertura 1 <span>Dominios | Cartas</span></button>
         <button class="${state.compendiumSpread === 2 ? "is-active" : ""}" type="button" data-compendium-spread="2" aria-current="${state.compendiumSpread === 2 ? "page" : "false"}">Abertura 2 <span>Itens | Classes</span></button>
-        <button type="button" disabled>Abertura 3 <span>Comunidades | Condicoes</span></button>
+        <button class="${state.compendiumSpread === 3 ? "is-active" : ""}" type="button" data-compendium-spread="3" aria-current="${state.compendiumSpread === 3 ? "page" : "false"}">Abertura 3 <span>Ancestralidades | Condicoes</span></button>
       </nav>
 
-      ${state.compendiumSpread === 1 ? renderCompendiumFirstSpread() : renderCompendiumSecondSpread()}
+      ${state.compendiumSpread === 1 ? renderCompendiumFirstSpread() : state.compendiumSpread === 2 ? renderCompendiumSecondSpread() : renderCompendiumThirdSpread()}
     </main>
   `;
 }
@@ -1909,6 +1985,48 @@ function renderCompendiumSecondSpread(): string {
   `;
 }
 
+function renderCompendiumThirdSpread(): string {
+  return `
+      <section class="compendium-spread compendium-index-spread" aria-label="Ancestralidades e condicoes do Compendium">
+        <article class="compendium-page">
+          ${renderCompendiumChapterCard({
+            eyebrow: "Heranca",
+            title: "Ancestralidades",
+            summary: "Linhagens que concedem duas features permanentes: uma Top Feature e uma Bottom Feature.",
+            count: catalog.ancestries.length,
+            countLabel: "Ancestralidades cadastradas",
+            primaryAction: "Nova ancestralidade",
+            primaryActionId: "new-compendium-ancestry",
+            secondaryAction: "Pesquisar e gerenciar",
+            secondaryActionId: "manage-compendium-ancestries",
+            details: [
+              "Uma ancestralidade unica concede as duas features da mesma Definition.",
+              "Ancestralidades mistas combinam Top e Bottom de origens diferentes.",
+              "A linhagem narrativa e as escolhas mecanicas permanecem separadas na ficha."
+            ],
+            emphasized: true
+          })}
+        </article>
+        <article class="compendium-page">
+          ${renderCompendiumChapterCard({
+            eyebrow: "Em preparacao",
+            title: "Condicoes",
+            summary: "Efeitos oficiais e temporarios que serao introduzidos quando houver conteudo e fluxo de jogo suficientes.",
+            count: 0,
+            countLabel: "Condicoes cadastradas",
+            primaryAction: "Implementacao futura",
+            secondaryAction: "Sem capitulo disponivel",
+            details: [
+              "Condicoes sao reconhecidas pelo modelo de dominio.",
+              "O SoulForge ainda nao oferece cadastro ou uso delas na ficha.",
+              "O capitulo sera aberto com regras e conteudo de Pack adequados."
+            ]
+          })}
+        </article>
+      </section>
+  `;
+}
+
 function renderCompendiumChapterCard(chapter: {
   eyebrow: string;
   title: string;
@@ -1944,7 +2062,76 @@ function renderCompendiumChapterCard(chapter: {
   `;
 }
 
-function isLocalDefinition(definition: DomainDefinition): boolean {
+function getAncestryFeature(ancestry: AncestryDefinition, position: "top" | "bottom"): FeatureDefinition | undefined {
+  const featureId = position === "top" ? ancestry.topFeatureId : ancestry.bottomFeatureId;
+  const definition = findDefinition(catalog, featureId);
+  return definition?.type === "feature" ? definition : undefined;
+}
+
+function renderCompendiumAncestriesManager(): string {
+  const normalizedSearch = state.compendiumAncestrySearch.trim().toLocaleLowerCase("pt-BR");
+  const ancestries = [...catalog.ancestries]
+    .filter((ancestry) => !normalizedSearch || `${ancestry.name} ${ancestry.summary}`.toLocaleLowerCase("pt-BR").includes(normalizedSearch))
+    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+
+  return `
+    <main class="content compendium-content">
+      <div class="screen-title"><div><h1>Ancestralidades</h1><p>Defina linhagens reutilizaveis e as duas features que cada uma concede.</p></div><button class="secondary-action screen-title-action" type="button" data-action="back-compendium-index">Voltar ao indice</button></div>
+      <section class="compendium-management-panel">
+        <div class="compendium-management-toolbar"><div class="management-copy"><span>HERANCA</span><strong>${catalog.ancestries.length} ${catalog.ancestries.length === 1 ? "ancestralidade" : "ancestralidades"}</strong></div><label class="search-box"><span aria-hidden="true">⌕</span><input type="search" data-compendium-ancestry-search value="${escapeHtml(state.compendiumAncestrySearch)}" placeholder="Pesquisar ancestralidade" aria-label="Pesquisar ancestralidade" /></label><button class="primary-action" type="button" data-action="new-compendium-ancestry">Nova ancestralidade</button></div>
+        ${ancestries.length ? `<div class="compendium-ancestry-results">${ancestries.map(renderCompendiumAncestryResult).join("")}</div>` : renderEmptyInline(normalizedSearch ? "Nenhuma ancestralidade corresponde a esta pesquisa." : "Nenhuma ancestralidade cadastrada. Crie a primeira para disponibilizar suas Top e Bottom Features na criacao de personagens.")}
+      </section>
+    </main>
+  `;
+}
+
+function renderCompendiumAncestryResult(ancestry: AncestryDefinition): string {
+  const top = getAncestryFeature(ancestry, "top");
+  const bottom = getAncestryFeature(ancestry, "bottom");
+  const canEdit = isLocalDefinition(ancestry);
+  return `
+    <article class="compendium-class-result compendium-ancestry-result">
+      <div class="compendium-class-result-open compendium-ancestry-result-open">
+        ${ancestry.image ? `<span class="compendium-class-image" style="background-image: url('${escapeHtml(ancestry.image)}')"></span>` : '<span class="compendium-class-image class-image-placeholder">ANCESTRALIDADE</span>'}
+        <span class="compendium-class-body"><span>${canEdit ? "Local" : "Pack"}</span><h2>${escapeHtml(ancestry.name)}</h2><p>${escapeHtml(ancestry.summary)}</p><span class="ancestry-feature-pair"><span><b>Top Feature</b><strong>${escapeHtml(top?.name ?? "Feature indisponivel")}</strong><small>${escapeHtml(top?.summary ?? "")}</small></span><span><b>Bottom Feature</b><strong>${escapeHtml(bottom?.name ?? "Feature indisponivel")}</strong><small>${escapeHtml(bottom?.summary ?? "")}</small></span></span></span>
+      </div>
+      <div class="compendium-card-result-actions">${canEdit ? `<button type="button" data-action="edit-compendium-ancestry" data-ancestry-id="${escapeHtml(ancestry.id)}">Editar</button><button type="button" data-action="delete-compendium-ancestry" data-ancestry-id="${escapeHtml(ancestry.id)}">Excluir</button>` : '<span class="readonly-label">Conteudo do pack</span>'}</div>
+    </article>
+  `;
+}
+
+function renderCompendiumAncestryFormModal(): string {
+  if (!state.ancestryModalOpen) {
+    return "";
+  }
+  const existing = state.editingCompendiumAncestryId ? findDefinition(catalog, state.editingCompendiumAncestryId) : undefined;
+  const ancestry = existing?.type === "ancestry" ? existing : undefined;
+  const top = ancestry ? getAncestryFeature(ancestry, "top") : undefined;
+  const bottom = ancestry ? getAncestryFeature(ancestry, "bottom") : undefined;
+  return `
+    <div class="modal-backdrop" data-modal-backdrop><form class="modal ancestry-form-modal" onsubmit="return false;" aria-labelledby="ancestry-form-title">
+      <button class="modal-close" type="button" data-modal-close aria-label="Fechar">×</button>
+      <div class="modal-title"><span>Compendium</span><h2 id="ancestry-form-title">${ancestry ? "Editar ancestralidade" : "Nova ancestralidade"}</h2><p>As duas features ficam ordenadas para suportar escolhas unicas e mistas.</p></div>
+      <label class="form-field"><span>Nome</span><input data-ancestry-name required value="${escapeHtml(ancestry?.name ?? "")}" /></label>
+      <label class="form-field"><span>Descricao</span><textarea data-ancestry-summary required>${escapeHtml(ancestry?.summary ?? "")}</textarea></label>
+      <label class="form-field"><span>Imagem (opcional)</span><input data-ancestry-image type="file" accept="image/*" />${ancestry?.image ? "<small>A imagem atual sera mantida se nenhum arquivo for escolhido.</small>" : ""}</label>
+      <div class="ancestry-feature-form-grid">
+        <fieldset class="class-domain-field"><legend>Top Feature</legend><label class="form-field"><span>Nome</span><input data-ancestry-top-name required value="${escapeHtml(top?.name ?? "")}" /></label><label class="form-field"><span>Descricao</span><textarea data-ancestry-top-summary required>${escapeHtml(top?.summary ?? "")}</textarea></label></fieldset>
+        <fieldset class="class-domain-field"><legend>Bottom Feature</legend><label class="form-field"><span>Nome</span><input data-ancestry-bottom-name required value="${escapeHtml(bottom?.name ?? "")}" /></label><label class="form-field"><span>Descricao</span><textarea data-ancestry-bottom-summary required>${escapeHtml(bottom?.summary ?? "")}</textarea></label></fieldset>
+      </div>
+      <p class="form-error" data-ancestry-error hidden></p>
+      <div class="modal-actions"><button class="secondary-action" type="button" data-modal-close>Cancelar</button><button class="primary-action" type="button" data-action="save-compendium-ancestry">Salvar ancestralidade</button></div>
+    </form></div>
+  `;
+}
+
+function renderDeleteCompendiumAncestryModal(): string {
+  const ancestry = state.deletingCompendiumAncestryId ? findDefinition(catalog, state.deletingCompendiumAncestryId) : undefined;
+  if (ancestry?.type !== "ancestry") return "";
+  return `<div class="modal-backdrop" data-modal-backdrop><section class="modal confirm-modal"><h2>Excluir ancestralidade?</h2><p>"${escapeHtml(ancestry.name)}" e suas duas features serao removidas deste dispositivo. Personagens que futuramente a referenciarem poderao perder essas referencias.</p><div class="modal-actions"><button class="secondary-action" type="button" data-action="cancel-delete-compendium-ancestry">Cancelar</button><button class="danger-action" type="button" data-action="confirm-delete-compendium-ancestry">Excluir</button></div></section></div>`;
+}
+
+function isLocalDefinition(definition: { packId: string }): boolean {
   return definition.packId === "local";
 }
 
@@ -2487,6 +2674,95 @@ function renderActivateStoredCardModal(): string {
   return `<div class="modal-backdrop" data-modal-backdrop><section class="confirm-modal card-activation-modal" role="dialog" aria-modal="true" aria-labelledby="activate-card-title"><button class="modal-close" data-modal-close aria-label="Cancelar ativacao">x</button><span class="resource-modal-label">Vault para Loadout</span><h2 id="activate-card-title">Ativar ${escapeHtml(definition.name)}?</h2><p>Esta carta passara a ficar ativa no Loadout.</p>${loadoutFull ? `<label class="form-field"><span>O Loadout ja possui cinco cartas. Escolha uma para guardar *</span><select data-recall-swap-card><option value="">Selecione uma carta ativa</option>${activeCards.map((card) => `<option value="${card.id}">${escapeHtml(card.name)}</option>`).join("")}</select></label>` : ""}<div class="card-activation-rules"><p><strong>Durante um descanso:</strong> a troca e gratuita.</p><p><strong>Agora:</strong> marque ${recallCost} ${recallCost === 1 ? "Stress" : "Stress"}.${stress ? ` Disponivel: ${stress.value}/${stress.max}.` : ""}</p></div><p class="form-error" data-card-activation-error ${state.cardActivationError ? "" : "hidden"}>${escapeHtml(state.cardActivationError ?? "")}</p><div class="modal-actions"><button class="secondary-action" type="button" data-action="activate-stored-card-free">Ativar no descanso</button><button class="primary-action" type="button" data-action="activate-stored-card-stress">Ativar agora</button></div></section></div>`;
 }
 
+const fallbackCharacterClass: ClassDefinition = {
+  id: "class.demo.guardian",
+  type: "class",
+  packId: "demo",
+  name: "Guardiao",
+  summary: "Defensor firme que protege seus aliados.",
+  domainIds: ["domain.demo.guardian", "domain.demo.dread"],
+  startingEvasion: 12,
+  startingHitPoints: 28,
+  featureIds: [],
+  hopeFeatureId: "",
+  subclassIds: ["subclass.demo.vengeance", "subclass.demo.vengeance"]
+};
+
+const fallbackCharacterSubclass: SubclassDefinition = {
+  id: "subclass.demo.vengeance",
+  type: "subclass",
+  packId: "demo",
+  name: "Vengeance",
+  summary: "Transforme golpes recebidos em retribuicao.",
+  classId: fallbackCharacterClass.id,
+  foundationFeatureIds: [],
+  specializationFeatureIds: [],
+  masteryFeatureIds: []
+};
+
+function getCharacterCreationClasses(): ClassDefinition[] {
+  return catalog.classes.length ? catalog.classes : [fallbackCharacterClass];
+}
+
+function getCharacterCreationSubclasses(classId: string): SubclassDefinition[] {
+  const subclasses = catalog.subclasses.filter((subclass) => subclass.classId === classId);
+  return subclasses.length ? subclasses : classId === fallbackCharacterClass.id ? [fallbackCharacterSubclass] : [];
+}
+
+function renderCharacterSelection(): string {
+  const cards = state.characters.map((character) => `
+    <button class="character-select-card" type="button" data-action="select-character" data-character-id="${escapeHtml(character.id)}">
+      <span class="character-select-mark">${escapeHtml(character.identity.name.slice(0, 1).toUpperCase())}</span>
+      <span><strong>${escapeHtml(character.identity.name)}</strong><small>${escapeHtml(character.identity.ancestry)} · ${escapeHtml(character.identity.className)}</small></span>
+      <em>Nivel ${character.identity.level}</em>
+    </button>
+  `).join("");
+
+  return `
+    <main class="character-gate">
+      <img class="character-gate-watermark" src="assets/brand/soulforge-symbol.png" alt="" aria-hidden="true" />
+      <section class="character-gate-panel">
+        <div class="character-gate-brand"><div><strong>SOULFORGE</strong><span>Escolha uma ficha para continuar</span></div></div>
+        <div class="character-gate-heading"><div><h1>Personagens</h1><p>Suas fichas ficam salvas somente neste dispositivo.</p></div><button class="primary-action" type="button" data-action="new-character">Novo personagem</button></div>
+        <div class="character-select-grid">${cards || `<div class="empty-state"><h2>Nenhuma ficha encontrada</h2><p>Crie seu primeiro personagem para iniciar a aventura.</p></div>`}</div>
+      </section>
+    </main>
+  `;
+}
+
+function renderCharacterCreationModal(): string {
+  if (!state.characterCreationOpen) {
+    return "";
+  }
+
+  const classes = getCharacterCreationClasses();
+  const classId = state.characterCreationClassId && classes.some((definition) => definition.id === state.characterCreationClassId)
+    ? state.characterCreationClassId
+    : classes[0].id;
+  const selectedClass = classes.find((definition) => definition.id === classId) ?? classes[0];
+  const subclasses = getCharacterCreationSubclasses(selectedClass.id);
+
+  return `
+    <div class="modal-backdrop" data-modal-backdrop>
+      <form class="modal character-creation-modal" onsubmit="return false;" aria-labelledby="character-creation-title">
+        <button class="modal-close" type="button" data-action="cancel-new-character" aria-label="Fechar">×</button>
+        <div class="modal-title"><span>Nova ficha</span><h2 id="character-creation-title">Criar personagem</h2><p>Comece com o essencial. Os demais detalhes podem ser definidos durante a jornada.</p></div>
+        <div class="form-grid character-creation-identity">
+          <label class="form-field"><span>Nome</span><input data-character-name required maxlength="60" placeholder="Nome do personagem" /></label>
+          <label class="form-field"><span>Ancestralidade</span><input data-character-ancestry required maxlength="60" placeholder="Ex.: Humano" /></label>
+          <label class="form-field form-field-wide"><span>Comunidade</span><input data-character-community required maxlength="80" placeholder="Ex.: Vigilia de Tristelo" /></label>
+        </div>
+        <div class="form-grid">
+          <label class="form-field"><span>Classe</span><select data-character-class>${classes.map((definition) => `<option value="${escapeHtml(definition.id)}" ${definition.id === selectedClass.id ? "selected" : ""}>${escapeHtml(definition.name)}</option>`).join("")}</select><small>Evasao inicial: ${selectedClass.startingEvasion} · PV inicial: ${selectedClass.startingHitPoints}</small></label>
+          <label class="form-field"><span>Subclasse</span><select data-character-subclass ${subclasses.length ? "" : "disabled"}>${subclasses.map((definition) => `<option value="${escapeHtml(definition.id)}">${escapeHtml(definition.name)}</option>`).join("") || "<option>Cadastre uma subclasse no Compendium</option>"}</select></label>
+        </div>
+        ${state.characterCreationError ? `<p class="form-error">${escapeHtml(state.characterCreationError)}</p>` : ""}
+        <div class="modal-actions"><button class="secondary-action" type="button" data-action="cancel-new-character">Cancelar</button><button class="primary-action" type="button" data-action="save-new-character">Criar ficha</button></div>
+      </form>
+    </div>
+  `;
+}
+
 function renderPlaceholder(page: Page): string {
   const labels: Record<Page, string> = {
     overview: "Visao Geral",
@@ -2519,6 +2795,12 @@ function render(options: { preserveMainScroll?: boolean } = {}): void {
     : undefined;
   const previousDocumentScrollTop = options.preserveMainScroll ? window.scrollY : undefined;
   const character = state.character;
+
+  if (state.characterSelectionOpen) {
+    appRoot.innerHTML = `${renderCharacterSelection()}${renderCharacterCreationModal()}`;
+    document.body.classList.toggle("has-modal", state.characterCreationOpen);
+    return;
+  }
 
   if (!character) {
     appRoot.innerHTML = `<div class="boot-screen">Carregando SoulForge...</div>`;
@@ -2588,6 +2870,10 @@ function render(options: { preserveMainScroll?: boolean } = {}): void {
     ${renderCompendiumClassPreviewModal()}
     ${renderCompendiumClassFormModal()}
     ${renderDeleteCompendiumClassModal()}
+    ${renderCompendiumAncestryFormModal()}
+    ${renderDeleteCompendiumAncestryModal()}
+    ${renderPackImportModal()}
+    ${renderRemoveInstalledPackModal()}
   `;
   document.body.classList.toggle("has-modal", Boolean(appRoot.querySelector(".modal-backdrop")));
   if (previousMainScrollTop !== undefined) {
@@ -2647,9 +2933,212 @@ function focusCompendiumCardSearch(): void {
   });
 }
 
+function focusCompendiumAncestrySearch(): void {
+  requestAnimationFrame(() => {
+    const input = document.querySelector<HTMLInputElement>("[data-compendium-ancestry-search]");
+    input?.focus({ preventScroll: true });
+    input?.setSelectionRange(input.value.length, input.value.length);
+  });
+}
+
 async function refreshCatalog(): Promise<void> {
   const customDefinitions = await loadCustomDefinitions();
-  catalog = createCatalog(baseCatalog.packs, [...baseCatalog.definitions, ...customDefinitions]);
+  state.installedPacks = await loadInstalledPacks();
+  catalog = createCatalog([...baseCatalog.packs, ...state.installedPacks], [...baseCatalog.definitions, ...customDefinitions]);
+}
+
+function validatePackBundle(value: unknown): PackBundle {
+  if (!value || typeof value !== "object") throw new Error("O arquivo não contém um Pack válido.");
+  const bundle = value as Partial<PackBundle>;
+  const manifest = bundle.manifest;
+  if (bundle.format !== "soulforge-pack-v1" || !manifest || typeof manifest !== "object" || !Array.isArray(bundle.definitions)) {
+    throw new Error("Use um arquivo no formato .soulforge-pack.json.");
+  }
+  if (!manifest.id || !manifest.name || !manifest.version || !manifest.description) throw new Error("O manifesto do Pack está incompleto.");
+  if (!bundle.definitions.length) throw new Error("O Pack não possui Definitions para importar.");
+  const knownTypes = new Set(["domain", "card", "item", "class", "subclass", "feature", "ancestry"]);
+  const ids = new Set<string>();
+  for (const definition of bundle.definitions) {
+    if (!definition || typeof definition !== "object" || !knownTypes.has(definition.type) || !definition.id || !definition.name || !definition.summary || definition.packId !== manifest.id) {
+      throw new Error("Uma Definition é inválida ou não pertence ao Pack informado.");
+    }
+    if (ids.has(definition.id)) throw new Error("O Pack contém IDs de Definition repetidos.");
+    ids.add(definition.id);
+  }
+  return { format: "soulforge-pack-v1", manifest: manifest as PackManifest, definitions: bundle.definitions as Definition[] };
+}
+
+async function readPackImportFile(file: File): Promise<void> {
+  try {
+    const bundle = validatePackBundle(JSON.parse(await file.text()));
+    if (catalog.packs.some((pack) => pack.id === bundle.manifest.id)) throw new Error("Este Pack já está instalado neste dispositivo.");
+    const existingDefinitionIds = new Set(catalog.definitions.map((definition) => definition.id));
+    if (bundle.definitions.some((definition) => existingDefinitionIds.has(definition.id))) throw new Error("O Pack possui uma Definition que já existe neste dispositivo.");
+    state.pendingPackBundle = bundle;
+    state.packImportError = undefined;
+  } catch (caught) {
+    state.pendingPackBundle = undefined;
+    state.packImportError = caught instanceof Error ? caught.message : "Não foi possível ler este arquivo.";
+  }
+  render();
+}
+
+async function confirmPackImport(): Promise<void> {
+  const bundle = state.pendingPackBundle;
+  if (!bundle) return;
+  try {
+    await installLocalPack(bundle.manifest, bundle.definitions);
+    await refreshCatalog();
+    state.packImportOpen = false;
+    state.pendingPackBundle = undefined;
+    state.packImportError = undefined;
+  } catch {
+    state.packImportError = "Não foi possível instalar este Pack. Ele pode já estar instalado.";
+  }
+  render();
+}
+
+async function confirmRemoveInstalledPack(): Promise<void> {
+  if (!state.deletingInstalledPackId) return;
+  await removeLocalPack(state.deletingInstalledPackId);
+  state.deletingInstalledPackId = undefined;
+  await refreshCatalog();
+  render();
+}
+
+function getAncestryFormValue(selector: string): string {
+  return document.querySelector<HTMLInputElement | HTMLTextAreaElement>(selector)?.value.trim() ?? "";
+}
+
+async function saveCompendiumAncestry(): Promise<void> {
+  const name = getAncestryFormValue("[data-ancestry-name]");
+  const summary = getAncestryFormValue("[data-ancestry-summary]");
+  const topName = getAncestryFormValue("[data-ancestry-top-name]");
+  const topSummary = getAncestryFormValue("[data-ancestry-top-summary]");
+  const bottomName = getAncestryFormValue("[data-ancestry-bottom-name]");
+  const bottomSummary = getAncestryFormValue("[data-ancestry-bottom-summary]");
+  const error = document.querySelector<HTMLElement>("[data-ancestry-error]");
+  const existingDefinition = state.editingCompendiumAncestryId ? findDefinition(catalog, state.editingCompendiumAncestryId) : undefined;
+  const existing = existingDefinition?.type === "ancestry" ? existingDefinition : undefined;
+  const duplicate = catalog.ancestries.some((entry) => entry.name.toLocaleLowerCase("pt-BR") === name.toLocaleLowerCase("pt-BR") && entry.id !== existing?.id);
+  if (!name || !summary || !topName || !topSummary || !bottomName || !bottomSummary || duplicate) {
+    if (error) { error.hidden = false; error.textContent = duplicate ? "Ja existe uma ancestralidade com este nome." : "Preencha a ancestralidade e as duas features."; }
+    return;
+  }
+  if (existing && !isLocalDefinition(existing)) return;
+  try {
+    const image = await readDefinitionImage("[data-ancestry-image]");
+    const ancestryId = existing?.id ?? `ancestry.local.${crypto.randomUUID()}`;
+    const existingTop = existing ? getAncestryFeature(existing, "top") : undefined;
+    const existingBottom = existing ? getAncestryFeature(existing, "bottom") : undefined;
+    const topFeatureId = existingTop?.id ?? `feature.local.${crypto.randomUUID()}`;
+    const bottomFeatureId = existingBottom?.id ?? `feature.local.${crypto.randomUUID()}`;
+    const ancestry: AncestryDefinition = { id: ancestryId, type: "ancestry", packId: "local", name, summary, image: image ?? existing?.image, topFeatureId, bottomFeatureId };
+    const top: FeatureDefinition = { id: topFeatureId, type: "feature", packId: "local", name: topName, summary: topSummary, sourceType: "ancestry", sourceId: ancestryId, tier: "top" };
+    const bottom: FeatureDefinition = { id: bottomFeatureId, type: "feature", packId: "local", name: bottomName, summary: bottomSummary, sourceType: "ancestry", sourceId: ancestryId, tier: "bottom" };
+    await Promise.all([saveCustomDefinition(ancestry), saveCustomDefinition(top), saveCustomDefinition(bottom)]);
+    await refreshCatalog();
+    state.ancestryModalOpen = false;
+    state.editingCompendiumAncestryId = undefined;
+    render();
+  } catch (caught) {
+    if (error) { error.hidden = false; error.textContent = caught instanceof Error ? caught.message : "Nao foi possivel salvar a ancestralidade."; }
+  }
+}
+
+async function removeCompendiumAncestry(): Promise<void> {
+  const definition = state.deletingCompendiumAncestryId ? findDefinition(catalog, state.deletingCompendiumAncestryId) : undefined;
+  if (definition?.type !== "ancestry" || !isLocalDefinition(definition)) return;
+  await Promise.all([deleteCustomDefinition(definition.id), deleteCustomDefinition(definition.topFeatureId), deleteCustomDefinition(definition.bottomFeatureId)]);
+  await refreshCatalog();
+  state.deletingCompendiumAncestryId = undefined;
+  render();
+}
+
+async function openCharacter(characterId: string | undefined): Promise<void> {
+  if (!characterId) {
+    return;
+  }
+
+  const character = await loadCharacter(characterId);
+  if (!character) {
+    return;
+  }
+
+  state.character = character;
+  state.characterSelectionOpen = false;
+  state.characterCreationOpen = false;
+  localStorage.setItem(activeCharacterStorageKey, character.id);
+  render();
+}
+
+async function createCharacter(): Promise<void> {
+  const name = document.querySelector<HTMLInputElement>("[data-character-name]")?.value.trim() ?? "";
+  const ancestry = document.querySelector<HTMLInputElement>("[data-character-ancestry]")?.value.trim() ?? "";
+  const community = document.querySelector<HTMLInputElement>("[data-character-community]")?.value.trim() ?? "";
+  const classId = document.querySelector<HTMLSelectElement>("[data-character-class]")?.value ?? "";
+  const subclassId = document.querySelector<HTMLSelectElement>("[data-character-subclass]")?.value ?? "";
+  const classDefinition = getCharacterCreationClasses().find((definition) => definition.id === classId);
+  const subclassDefinition = getCharacterCreationSubclasses(classId).find((definition) => definition.id === subclassId);
+
+  if (!name || !ancestry || !community || !classDefinition || !subclassDefinition) {
+    state.characterCreationError = "Preencha os dados obrigatorios e escolha uma classe com subclasse.";
+    render();
+    return;
+  }
+
+  const features = catalog.features;
+  const subclassSkills: CharacterSkill[] = ([
+    ["foundation", subclassDefinition.foundationFeatureIds],
+    ["specialized", subclassDefinition.specializationFeatureIds],
+    ["mastery", subclassDefinition.masteryFeatureIds]
+  ] as const).flatMap(([tier, featureIds]) => featureIds.flatMap((featureId) => {
+    const feature = features.find((entry) => entry.id === featureId);
+    return feature ? [{ id: feature.id, name: feature.name, source: "class" as const, tier, description: feature.summary }] : [];
+  }));
+  const fallbackSkills = subclassDefinition.id === fallbackCharacterSubclass.id
+    ? demoCharacter.skills.filter((skill) => skill.source === "class")
+    : [];
+  const hp = classDefinition.startingHitPoints;
+  const character: Character = {
+    id: `character.local.${crypto.randomUUID()}`,
+    identity: {
+      name,
+      ancestry,
+      className: classDefinition.name,
+      primaryClassId: classDefinition.id,
+      subclassName: subclassDefinition.name,
+      primarySubclassId: subclassDefinition.id,
+      primaryDomainIds: classDefinition.domainIds,
+      community,
+      level: 1,
+      xp: 0,
+      nextLevelXp: 10,
+      quote: ""
+    },
+    attributes: [
+      { id: "dex", label: "AGI", value: 0 }, { id: "for", label: "FOR", value: 0 }, { id: "cha", label: "FIN", value: 0 },
+      { id: "wil", label: "INS", value: 0 }, { id: "con", label: "PRE", value: 0 }, { id: "int", label: "CON", value: 0 }
+    ],
+    defense: { evasion: classDefinition.startingEvasion, armor: 0, minor: 0, major: 0 },
+    proficiency: 1,
+    progression: { attributeMarks: {}, acquiredSubclassTiers: ["foundation"], advancementSelections: [], history: [] },
+    resources: [
+      { id: "hp", label: "PV", value: hp, max: hp, tone: "hp" },
+      { id: "stress", label: "Estresse", value: 0, max: 6, tone: "stress" },
+      { id: "armor-slots", label: "Slot de Armadura", value: 0, max: 0, tone: "focus" },
+      { id: "hope", label: "Esperanca", value: 2, max: 6, tone: "hope" }
+    ],
+    skills: subclassSkills.length ? subclassSkills : fallbackSkills,
+    experiences: [],
+    notes: [],
+    deck: { activeCardIds: [], learnedCardIds: [] },
+    inventory: { capacity: 30, compartments: [{ id: "equipped", name: "Equipados", source: "character" }, { id: "backpack", name: "Mochila", capacity: 30, source: "character" }], entries: [] }
+  };
+
+  await saveCharacter(character);
+  state.characters = [...state.characters, character];
+  await openCharacter(character.id);
 }
 
 async function saveCompendiumDomain(): Promise<void> {
@@ -3536,12 +4025,21 @@ function bindEvents(): void {
       state.classModalOpen = false;
       state.editingCompendiumClassId = undefined;
       state.deletingCompendiumClassId = undefined;
+      state.ancestryModalOpen = false;
+      state.editingCompendiumAncestryId = undefined;
+      state.deletingCompendiumAncestryId = undefined;
+      state.packImportOpen = false;
+      state.pendingPackBundle = undefined;
+      state.packImportError = undefined;
+      state.deletingInstalledPackId = undefined;
       render();
       return;
     }
 
     if (target.matches("[data-modal-backdrop]") && modalBackdropPointerDown) {
       modalBackdropPointerDown = false;
+      state.characterCreationOpen = false;
+      state.characterCreationError = undefined;
       state.modalCardId = undefined;
       state.selectedItemId = undefined;
       state.resourceModalId = undefined;
@@ -3579,6 +4077,13 @@ function bindEvents(): void {
       state.classModalOpen = false;
       state.editingCompendiumClassId = undefined;
       state.deletingCompendiumClassId = undefined;
+      state.ancestryModalOpen = false;
+      state.editingCompendiumAncestryId = undefined;
+      state.deletingCompendiumAncestryId = undefined;
+      state.packImportOpen = false;
+      state.pendingPackBundle = undefined;
+      state.packImportError = undefined;
+      state.deletingInstalledPackId = undefined;
       render();
       return;
     }
@@ -3594,6 +4099,76 @@ function bindEvents(): void {
 
     if (target.closest('[data-action="export-character"]')) {
       exportCharacter();
+      return;
+    }
+
+    if (target.closest('[data-action="open-pack-import"]')) {
+      state.packImportOpen = true;
+      state.pendingPackBundle = undefined;
+      state.packImportError = undefined;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="choose-pack-file"]')) {
+      document.querySelector<HTMLInputElement>("[data-pack-file]")?.click();
+      return;
+    }
+
+    if (target.closest('[data-action="confirm-pack-import"]')) {
+      void confirmPackImport();
+      return;
+    }
+
+    const removeInstalledPackButton = target.closest<HTMLElement>('[data-action="remove-installed-pack"]');
+    if (removeInstalledPackButton) {
+      state.deletingInstalledPackId = removeInstalledPackButton.dataset.packId;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="cancel-remove-installed-pack"]')) {
+      state.deletingInstalledPackId = undefined;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="confirm-remove-installed-pack"]')) {
+      void confirmRemoveInstalledPack();
+      return;
+    }
+
+    if (target.closest('[data-action="open-character-select"]')) {
+      state.characterSelectionOpen = true;
+      state.characterCreationOpen = false;
+      state.characterCreationError = undefined;
+      render();
+      return;
+    }
+
+    const selectCharacterButton = target.closest<HTMLElement>('[data-action="select-character"]');
+    if (selectCharacterButton) {
+      void openCharacter(selectCharacterButton.dataset.characterId);
+      return;
+    }
+
+    if (target.closest('[data-action="new-character"]')) {
+      state.characterCreationOpen = true;
+      state.characterCreationClassId = getCharacterCreationClasses()[0]?.id;
+      state.characterCreationError = undefined;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="cancel-new-character"]')) {
+      state.characterCreationOpen = false;
+      state.characterCreationError = undefined;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="save-new-character"]')) {
+      void createCharacter();
       return;
     }
 
@@ -3636,6 +4211,12 @@ function bindEvents(): void {
       return;
     }
 
+    if (target.closest('[data-action="manage-compendium-ancestries"]')) {
+      state.compendiumView = "ancestries";
+      render();
+      return;
+    }
+
     if (target.closest('[data-action="new-compendium-domain"]')) {
       state.domainModalOpen = true;
       state.editingDomainId = undefined;
@@ -3661,6 +4242,44 @@ function bindEvents(): void {
       state.classModalOpen = true;
       state.editingCompendiumClassId = undefined;
       render();
+      return;
+    }
+
+    if (target.closest('[data-action="new-compendium-ancestry"]')) {
+      state.ancestryModalOpen = true;
+      state.editingCompendiumAncestryId = undefined;
+      render();
+      return;
+    }
+
+    const editCompendiumAncestryButton = target.closest<HTMLElement>('[data-action="edit-compendium-ancestry"]');
+    if (editCompendiumAncestryButton) {
+      state.ancestryModalOpen = true;
+      state.editingCompendiumAncestryId = editCompendiumAncestryButton.dataset.ancestryId;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="save-compendium-ancestry"]')) {
+      void saveCompendiumAncestry();
+      return;
+    }
+
+    const deleteCompendiumAncestryButton = target.closest<HTMLElement>('[data-action="delete-compendium-ancestry"]');
+    if (deleteCompendiumAncestryButton) {
+      state.deletingCompendiumAncestryId = deleteCompendiumAncestryButton.dataset.ancestryId;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="cancel-delete-compendium-ancestry"]')) {
+      state.deletingCompendiumAncestryId = undefined;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="confirm-delete-compendium-ancestry"]')) {
+      void removeCompendiumAncestry();
       return;
     }
 
@@ -4354,6 +4973,26 @@ function bindEvents(): void {
         input?.setSelectionRange(input.value.length, input.value.length);
       });
     }
+
+    if (target.matches("[data-compendium-ancestry-search]")) {
+      state.compendiumAncestrySearch = target.value;
+      render({ preserveMainScroll: true });
+      focusCompendiumAncestrySearch();
+    }
+  });
+
+  document.addEventListener("change", (event) => {
+    const target = event.target;
+    if (target instanceof HTMLInputElement && target.matches("[data-pack-file]")) {
+      const file = target.files?.[0];
+      if (file) void readPackImportFile(file);
+      return;
+    }
+    if (target instanceof HTMLSelectElement && target.matches("[data-character-class]")) {
+      state.characterCreationClassId = target.value;
+      state.characterCreationError = undefined;
+      render();
+    }
   });
 }
 
@@ -4362,7 +5001,13 @@ async function boot(): Promise<void> {
   bindEvents();
   bindDragEvents();
   await refreshCatalog();
-  state.character = await ensureDemoCharacter();
+  await ensureDemoCharacter();
+  state.characters = await listCharacters();
+  const activeCharacterId = localStorage.getItem(activeCharacterStorageKey);
+  if (activeCharacterId) {
+    state.character = await loadCharacter(activeCharacterId);
+    state.characterSelectionOpen = !state.character;
+  }
   render();
 }
 

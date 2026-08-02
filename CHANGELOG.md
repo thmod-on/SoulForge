@@ -4,6 +4,20 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.9.0]
+
+### Adicionado
+
+- seleção e criação local de personagens, com persistência no dispositivo;
+- catálogo de Ancestralidades no Compendium, incluindo cadastro, edição, exclusão e pesquisa;
+- instalação de Packs locais a partir de arquivos `.soulforge-pack.json`, com prévia, validação, bloqueio de duplicidade e remoção confirmada;
+- documentação de conteúdo, ancestralidades, Packs e dados locais para orientar o uso privado e responsável de material de terceiros.
+
+### Alterado
+
+- identidade visual do Compendium ampliada para acomodar ancestralidades e conteúdo importado;
+- armazenamento local preparado para manter manifestos de Packs instalados e suas Definitions.
+
 ## [0.8.1]
 
 ### Alterado

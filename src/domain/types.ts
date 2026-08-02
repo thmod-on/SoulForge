@@ -1,4 +1,4 @@
-export type DefinitionType = "domain" | "card" | "item" | "class" | "subclass" | "feature";
+export type DefinitionType = "domain" | "card" | "item" | "class" | "subclass" | "feature" | "ancestry";
 
 export type ResourceTrack = {
   id: string;
@@ -71,6 +71,14 @@ export type PackManifest = {
   name: string;
   version: string;
   description: string;
+  distribution?: "private-local-only" | "shared";
+  contentFormat?: string;
+};
+
+export type PackBundle = {
+  format: "soulforge-pack-v1";
+  manifest: PackManifest;
+  definitions: Definition[];
 };
 
 export type BaseDefinition = {
@@ -126,15 +134,22 @@ export type SubclassDefinition = BaseDefinition & {
   masteryFeatureIds: string[];
 };
 
+export type AncestryDefinition = BaseDefinition & {
+  type: "ancestry";
+  image?: string;
+  topFeatureId: string;
+  bottomFeatureId: string;
+};
+
 export type FeatureDefinition = BaseDefinition & {
   type: "feature";
-  sourceType: "class" | "subclass";
+  sourceType: "class" | "subclass" | "ancestry" | "community";
   sourceId: string;
-  tier: "class" | "hope" | "foundation" | "specialization" | "mastery";
+  tier: "class" | "hope" | "foundation" | "specialization" | "mastery" | "top" | "bottom";
   hopeCost?: number;
 };
 
-export type Definition = DomainDefinition | CardDefinition | ItemDefinition | ClassDefinition | SubclassDefinition | FeatureDefinition;
+export type Definition = DomainDefinition | CardDefinition | ItemDefinition | ClassDefinition | SubclassDefinition | AncestryDefinition | FeatureDefinition;
 
 export type InventoryEntry = {
   definitionId: string;

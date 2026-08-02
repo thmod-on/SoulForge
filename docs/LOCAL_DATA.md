@@ -1,5 +1,7 @@
 # Dados locais
 
+> Packs locais importados são persistidos no armazenamento `installedPacks`, enquanto suas Definitions ficam no armazenamento local de Definitions. Instalação e remoção são operações locais do navegador.
+
 ## Princípio
 
 O SoulForge é local em primeiro lugar. Cada navegador mantém seus próprios personagens e preferências, sem depender de um servidor durante a sessão.

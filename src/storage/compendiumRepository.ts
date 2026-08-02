@@ -2,7 +2,7 @@ import type { Definition } from "../domain/types";
 
 const databaseName = "soulforge";
 const storeName = "customDefinitions";
-const databaseVersion = 2;
+const databaseVersion = 3;
 
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -15,6 +15,9 @@ function openDatabase(): Promise<IDBDatabase> {
       }
       if (!database.objectStoreNames.contains(storeName)) {
         database.createObjectStore(storeName, { keyPath: "id" });
+      }
+      if (!database.objectStoreNames.contains("installedPacks")) {
+        database.createObjectStore("installedPacks", { keyPath: "id" });
       }
     };
     request.onerror = () => reject(request.error);

@@ -66,6 +66,153 @@ button {
   color: #f2a516;
 }
 
+.character-gate {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  padding: 1.5rem;
+  overflow: hidden;
+}
+
+.character-gate-watermark {
+  position: absolute;
+  z-index: -1;
+  width: min(48rem, 82vw);
+  max-height: 82dvh;
+  object-fit: contain;
+  opacity: 0.28;
+  filter: saturate(1.08) drop-shadow(0 0 3rem rgba(142, 79, 196, 0.22));
+  pointer-events: none;
+}
+
+.character-gate-panel {
+  display: grid;
+  gap: 1.35rem;
+  width: min(58rem, 100%);
+  border: 1px solid rgba(244, 234, 219, 0.14);
+  padding: clamp(1.25rem, 4vw, 2.5rem);
+  background:
+    linear-gradient(135deg, rgba(142, 79, 196, 0.1), transparent 42%),
+    rgba(9, 6, 18, 0.78);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
+}
+
+.character-gate-brand,
+.character-gate-heading,
+.character-select-card {
+  display: flex;
+  align-items: center;
+}
+
+.character-gate-brand {
+  gap: 0.8rem;
+}
+
+.character-gate-brand strong {
+  display: block;
+  color: var(--color-text);
+  letter-spacing: 0.08em;
+}
+
+.character-gate-brand span,
+.character-gate-heading p,
+.character-select-card small {
+  color: var(--color-muted);
+}
+
+.character-gate-heading {
+  justify-content: space-between;
+  gap: 1rem;
+  border-top: 1px solid rgba(244, 234, 219, 0.1);
+  padding-top: 1.25rem;
+}
+
+.character-gate-heading h1,
+.character-gate-heading p {
+  margin: 0;
+}
+
+.character-gate-heading h1 {
+  color: var(--color-text);
+  font-size: 1.5rem;
+}
+
+.character-gate-heading p {
+  margin-top: 0.35rem;
+}
+
+.character-select-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.75rem;
+}
+
+.character-select-card {
+  min-height: 5.7rem;
+  gap: 0.75rem;
+  border: 1px solid rgba(244, 234, 219, 0.15);
+  color: var(--color-text);
+  background: rgba(5, 11, 17, 0.55);
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.character-select-card:hover {
+  border-color: rgba(217, 154, 61, 0.62);
+  background: rgba(217, 154, 61, 0.08);
+}
+
+.character-select-card > span:nth-child(2) {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.character-select-card strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.character-select-card em {
+  margin-left: auto;
+  color: var(--color-gold);
+  font-size: 0.72rem;
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.character-select-mark {
+  display: grid;
+  flex: 0 0 auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border: 1px solid rgba(217, 154, 61, 0.55);
+  color: var(--color-gold);
+  background: rgba(142, 79, 196, 0.15);
+  font-weight: 700;
+}
+
+.character-creation-modal {
+  width: min(42rem, calc(100vw - 2rem));
+}
+
+.character-creation-identity .form-field-wide {
+  grid-column: 1 / -1;
+}
+
+.form-error {
+  margin: 0;
+  border-left: 3px solid var(--color-fear);
+  padding: 0.55rem 0.65rem;
+  color: #ffd3d9;
+  background: rgba(201, 46, 66, 0.12);
+  font-size: 0.82rem;
+}
+
 .app-shell {
   display: grid;
   grid-template-columns: 20rem minmax(0, 1fr);
@@ -435,6 +582,19 @@ button {
   padding-top: 0.6rem;
   color: var(--color-muted);
   font-size: 0.68rem;
+}
+
+.sidebar-character-button {
+  border: 0;
+  color: var(--color-muted);
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-size: inherit;
+}
+
+.sidebar-character-button:hover {
+  color: var(--color-gold);
 }
 
 .sidebar-offline-status {
@@ -1566,6 +1726,50 @@ button {
 .setting-option:disabled {
   cursor: not-allowed;
   opacity: 0.62;
+}
+
+.installed-pack-list {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(244, 234, 219, 0.1);
+}
+
+.installed-pack-list h3 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 0.82rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.installed-pack {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.7rem;
+  border: 1px solid rgba(244, 234, 219, 0.12);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.installed-pack div {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.installed-pack strong {
+  color: var(--color-text);
+}
+
+.installed-pack span {
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+.danger-icon-action {
+  color: #ff697a;
 }
 
 .setting-option {
@@ -3035,6 +3239,66 @@ body.has-modal {
   color: var(--color-muted);
 }
 
+.compendium-ancestry-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: 0.75rem;
+}
+
+.ancestry-feature-pair {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.55rem;
+  margin-top: 0.75rem;
+}
+
+.ancestry-feature-pair > span {
+  display: grid;
+  gap: 0.24rem;
+  border-left: 2px solid rgba(142, 79, 196, 0.58);
+  padding: 0.45rem 0.55rem;
+  background: rgba(142, 79, 196, 0.08);
+}
+
+.ancestry-feature-pair > span:last-child {
+  border-color: rgba(217, 154, 61, 0.55);
+  background: rgba(217, 154, 61, 0.07);
+}
+
+.ancestry-feature-pair span,
+.ancestry-feature-pair small {
+  color: var(--color-muted);
+  font-size: 0.72rem;
+}
+
+.ancestry-feature-pair b {
+  color: var(--color-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.compendium-ancestry-result-open {
+  cursor: default;
+}
+
+.ancestry-feature-pair strong {
+  color: var(--color-text);
+  font-size: 0.85rem;
+}
+
+.ancestry-form-modal {
+  width: min(53rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+}
+
+.ancestry-feature-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
 .compendium-index-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3099,7 +3363,7 @@ body.has-modal {
 
 .compendium-management-toolbar {
   display: grid;
-  grid-template-columns: minmax(16rem, 1fr) auto;
+  grid-template-columns: minmax(11rem, 1fr) minmax(14rem, 1.3fr) auto;
   gap: 0.75rem;
   align-items: center;
 }
@@ -3808,6 +4072,32 @@ body.has-modal {
   grid-column: 1 / -1;
 }
 
+.compendium-class-body > .ancestry-feature-pair {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.55rem;
+  margin-top: 0.75rem;
+  color: inherit;
+  font-size: inherit;
+  text-transform: none;
+}
+
+.compendium-class-body > .ancestry-feature-pair > span {
+  display: grid;
+  gap: 0.24rem;
+  border-left: 2px solid rgba(142, 79, 196, 0.58);
+  padding: 0.45rem 0.55rem;
+  color: inherit;
+  background: rgba(142, 79, 196, 0.08);
+  font-size: inherit;
+  text-transform: none;
+}
+
+.compendium-class-body > .ancestry-feature-pair > span:last-child {
+  border-color: rgba(217, 154, 61, 0.55);
+  background: rgba(217, 154, 61, 0.07);
+}
+
 .icon-modal-actions {
   display: flex;
   flex-direction: row;
@@ -4012,6 +4302,44 @@ body.has-modal {
   border-radius: 8px;
   background: #0d0715;
   box-shadow: 0 28px 90px rgba(0, 0, 0, 0.56);
+}
+
+.pack-import-modal {
+  position: relative;
+  display: grid;
+  gap: 1rem;
+  width: min(34rem, 92vw);
+  padding: 1.45rem;
+  border: 1px solid rgba(217, 154, 61, 0.56);
+  border-radius: 8px;
+  background: #0d0715;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.56);
+}
+
+.pack-import-modal h2,
+.pack-import-modal h3 {
+  margin: 0;
+}
+
+.pack-import-preview {
+  display: grid;
+  gap: 0.45rem;
+  padding: 1rem;
+  border: 1px solid rgba(217, 154, 61, 0.35);
+  background: rgba(217, 154, 61, 0.07);
+}
+
+.pack-import-preview > span,
+.pack-import-preview strong {
+  color: var(--color-gold);
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.pack-import-preview p {
+  margin: 0;
+  color: var(--color-muted);
 }
 
 .container-modal-heading {
@@ -4511,6 +4839,29 @@ body.has-modal {
 }
 
 @media (max-width: 760px) {
+  .ancestry-feature-form-grid,
+  .ancestry-feature-pair {
+    grid-template-columns: 1fr;
+  }
+
+  .character-gate {
+    place-items: start center;
+    padding: 0.85rem;
+  }
+
+  .character-gate-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .character-gate-heading .primary-action {
+    width: 100%;
+  }
+
+  .character-creation-identity .form-field-wide {
+    grid-column: auto;
+  }
+
   .app-shell {
     grid-template-columns: 1fr;
     height: auto;

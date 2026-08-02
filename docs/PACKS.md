@@ -1,5 +1,7 @@
 # Packs
 
+> Atualização de importação local: o SoulForge aceita um único arquivo JSON com extensão recomendada `.soulforge-pack.json`. O arquivo usa `format: "soulforge-pack-v1"` e contém `manifest` e `definitions`. Antes da instalação, a aplicação valida formato, manifesto, IDs repetidos e o vínculo de cada Definition ao `packId` do manifesto. Depois da confirmação, o Pack e suas Definitions são persistidos somente no IndexedDB deste navegador. A remoção exige confirmação e também remove as Definitions daquele Pack, podendo deixar referências indisponíveis em personagens existentes.
+
 ## Propósito
 
 Packs são unidades versionadas de conteúdo declarativo. Eles fornecem Definitions reutilizáveis para o catálogo, como cartas, itens, classes, domínios, ancestralidades e comunidades.
@@ -58,3 +60,9 @@ Remover um Pack não deve alterar silenciosamente um personagem. Caso alguma ref
 - validar referências entre Definitions;
 - conferir compatibilidade com a versão do modelo de domínio;
 - construir e testar o aplicativo com o Pack carregado.
+
+## Conteúdo oficial e Packs privados
+
+Packs que reproduzem conteúdo do Daggerheart SRD ou outro material da Darrington Press devem seguir [CONTENT_POLICY.md](CONTENT_POLICY.md).
+
+Em especial, um Pack oficial destinado exclusivamente ao uso privado deve ficar em `local-packs/`, fora do controle de versão e do build público. Ele nunca deve ser importado por `src/content/installedPacks.ts`, incluído em `packs/` ou enviado ao GitHub Pages sem uma revisão explícita da licença e autorização aplicável.
