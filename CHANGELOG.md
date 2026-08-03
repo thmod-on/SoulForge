@@ -4,6 +4,14 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.9.2]
+
+### Alterado
+
+- interface, Progressao, Inventario e Anotacoes reorganizados em modulos por funcionalidade;
+- Compendium separado por entidade: Dominios, Cartas, Itens, Classes e Ancestralidades;
+- novas telas devem seguir a organizacao por feature, preservando o arquivo principal como orquestrador de estado, eventos globais e inicializacao.
+
 ## [0.9.1]
 
 ### Alterado

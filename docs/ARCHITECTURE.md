@@ -4,6 +4,58 @@ Versão: 1.0 (Rascunho)
 
 ---
 
+# Organização da interface
+
+A interface é modular por responsabilidade, mesmo sendo uma PWA sem framework:
+
+- `src/app/`: tipos compartilhados, navegação e composição geral da aplicação;
+- `src/features/`: telas e fluxos por área de produto, como Configurações, Compendium, Inventário e Progressão;
+- `src/features/settings/`: renderização de Configurações e administração visual de dados locais;
+- `src/features/compendium/`: regras de apresentação e futuras telas do catálogo;
+- `src/domain/`: tipos e regras do domínio de jogo;
+- `src/storage/`: acesso ao IndexedDB e persistência local.
+
+`main.ts` deve atuar como orquestrador: inicializa dependências, mantém o estado transitório e conecta renderização a eventos. Novas telas não devem concentrar sua implementação completa nele.
+
+No InventÃ¡rio, `src/features/inventory/renderInventory.ts` concentra a renderizaÃ§Ã£o das grades, itens e modais. As alteraÃ§Ãµes de inventÃ¡rio, a persistÃªncia e o drag-and-drop continuam no orquestrador, onde o estado da ficha Ã© atualizado.
+
+As regras estÃ¡veis de ProgressÃ£o — tiers, custos, nomes e limites de escolha — ficam em `src/features/progression/progressionRules.ts`. A aplicaÃ§Ã£o de uma evoluÃ§Ã£o continua associada Ã  persistÃªncia da ficha.
+
+AnotaÃ§Ãµes possui sua renderizaÃ§Ã£o em `src/features/notes/renderNotes.ts`; os fluxos de salvar, editar e excluir seguem no orquestrador para centralizar a atualizaÃ§Ã£o local da ficha.
+
+Os modais de ProgressÃ£o sÃ£o renderizados por `src/features/progression/renderProgressionDialogs.ts`; o orquestrador conserva as validaÃ§Ãµes e a gravaÃ§Ã£o da evoluÃ§Ã£o.
+
+O espaÃ§o de escolhas da ProgressÃ£o fica em `src/features/progression/renderProgressionWorkspace.ts`, separado das regras que aplicam a evoluÃ§Ã£o ao personagem.
+
+As aÃ§Ãµes de InventÃ¡rio ficam em `src/features/inventory/inventoryActions.ts`; elas atualizam dados e persistem a ficha, enquanto o drag-and-drop permanece como integraÃ§Ã£o de eventos no orquestrador.
+
+O drag-and-drop do InventÃ¡rio usa `src/features/inventory/bindInventoryDrag.ts`, encapsulando Pointer Events, feedback visual e validaÃ§Ã£o do destino antes de solicitar a movimentaÃ§Ã£o do item.
+
+A moldura da ficha do jogador — sidebar, navegaÃ§Ã£o, cabeÃ§alho de editor e recursos — Ã© renderizada por `src/features/player/renderPlayerShell.ts`.
+
+A VisÃ£o Geral, a trilha de subclasse e o Vault ficam em `src/features/player/renderPlayerOverview.ts`, preservando no orquestrador apenas a origem dos dados e os eventos das cartas.
+
+DomÃ­nios do Compendium sÃ£o encapsulados em `src/features/compendium/domains.ts`, reunindo gerenciamento, modais e persistÃªncia do CRUD dessa entidade.
+
+Cartas do Compendium estÃ£o em `src/features/compendium/cards.ts`, incluindo filtros, detalhes, imagem, formulÃ¡rio, validaÃ§Ãµes e o CRUD local. A ativaÃ§Ã£o entre Vault e Loadout permanece na ficha do jogador.
+
+Itens do Compendium ficam em `src/features/compendium/items.ts`, incluindo busca, categorias, imagens, prÃ©via, validaÃ§Ãµes e CRUD local sem permitir exclusÃ£o de um item ainda usado pela ficha.
+
+Classes do Compendium estÃ£o em `src/features/compendium/classes.ts`, incluindo subclasses, features, imagem, visualizaÃ§Ã£o detalhada e o CRUD que persiste todas as Definitions relacionadas.
+
+Ancestralidades do Compendium ficam em `src/features/compendium/ancestries.ts`, reunindo busca, Top/Bottom Features, imagem e o CRUD local que persiste as trÃªs Definitions relacionadas.
+
+# Padrao obrigatorio para novas features
+
+Toda funcionalidade nova deve ser criada em `src/features/<area>/` e agrupada por responsabilidade de produto.
+
+- Renderizacao e modais ficam junto da feature.
+- Acoes e validacoes especificas ficam junto da feature quando nao forem compartilhadas.
+- Tipos e regras de Daggerheart ficam em `src/domain/`.
+- Persistencia local fica em `src/storage/`.
+- `src/main.ts` coordena estado transitório, eventos globais, inicializacao e composicao das features; nao deve voltar a concentrar uma tela ou CRUD completo.
+- Cada nova feature deve documentar sua fronteira arquitetural e passar por `pnpm run build` e `pnpm run test` antes de uma release.
+
 # Objetivo
 
 Este documento define os princípios arquiteturais do SoulForge.

@@ -80,6 +80,16 @@ Nenhuma implementação deve violar esses princípios.
 
 ---
 
+# Diretrizes de organizacao do codigo
+
+Novas telas e fluxos devem ser organizados por feature em `src/features/<area>/`.
+
+- Cada feature concentra sua renderizacao, modais, validacoes e acoes especificas.
+- O arquivo `src/main.ts` deve permanecer como orquestrador: estado transitorio, navegacao global, eventos compartilhados, inicializacao e conexao entre modulos.
+- Regras e tipos de jogo pertencem a `src/domain/`; acesso ao IndexedDB pertence a `src/storage/`.
+- Antes de criar um modulo compartilhado, confirme que ele atende pelo menos duas features reais. Evite abstracoes preventivas.
+- Toda feature nova deve atualizar a documentacao arquitetural pertinente e ser validada com build e testes.
+
 # Modelo do Domínio
 
 Existem apenas três conceitos fundamentais.
