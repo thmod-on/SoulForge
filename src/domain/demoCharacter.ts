@@ -5,6 +5,12 @@ export const demoCharacter: Character = {
   identity: {
     name: "Kael Ironheart",
     ancestry: "Humano",
+    primaryAncestryId: "ancestry.core.human",
+    ancestryIds: ["ancestry.core.human"],
+    ancestryFeatureIds: {
+      top: "feature.core.human.top",
+      bottom: "feature.core.human.bottom"
+    },
     className: "Guardiao",
     primaryClassId: "class.demo.guardian",
     subclassName: "Vengeance",
@@ -67,12 +73,6 @@ export const demoCharacter: Character = {
       source: "class",
       tier: "mastery",
       description: "Gaste 2 Esperanca para Priorizar um adversario ate seu proximo descanso e, ao ataca-lo, poder trocar os resultados dos Dados de Esperanca e Medo."
-    },
-    {
-      id: "skill.demo.human-resolve",
-      name: "Resolucao Humana",
-      source: "ancestry",
-      description: "Quando tudo parece perdido, recupere o folego ao se agarrar a uma memoria importante."
     },
     {
       id: "skill.demo.vigil-bonds",

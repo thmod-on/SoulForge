@@ -1,13 +1,14 @@
 import { baseCatalog } from "./content/installedPacks";
 import { createCatalog, findDefinition, findDomain } from "./domain/catalog";
 import { demoCharacter } from "./domain/demoCharacter";
-import type { CardDefinition, Character, CharacterNote, CharacterNoteCategory, CharacterSkill, CharacterProgressionEntry, ClassDefinition, Definition, InventoryCompartment, ItemDefinition, PackBundle, PackManifest, ProgressionAdvanceKind, SubclassDefinition } from "./domain/types";
+import type { AncestryDefinition, CardDefinition, Character, CharacterNote, CharacterNoteCategory, CharacterSkill, CharacterProgressionEntry, ClassDefinition, Definition, FeatureDefinition, InventoryCompartment, ItemDefinition, PackBundle, PackManifest, ProgressionAdvanceKind, SubclassDefinition } from "./domain/types";
 import { ensureDemoCharacter, listCharacters, loadCharacter, saveCharacter } from "./storage/characterRepository";
 import { deleteCustomDefinition, loadCustomDefinitions, saveCustomDefinition } from "./storage/compendiumRepository";
 import { installLocalPack, loadInstalledPacks, removeLocalPack } from "./storage/packRepository";
 import { renderSettings as renderSettingsPage, getPackDefinitionSummary } from "./features/settings/renderSettings";
 import { getPackDisplayDescription, getPackDisplayName, getPackOriginName } from "./features/compendium/packPresentation";
 import { getTierForLevel, progressionAdvanceLabels } from "./features/progression/progressionRules";
+import { isFinalCharacterCreationStep, nextCharacterCreationStep, previousCharacterCreationStep, type CharacterCreationStep } from "./features/character-creation/creationFlow";
 import { renderProgression as renderProgressionView, type ProgressionRenderDependencies } from "./features/progression/renderProgression";
 import {
   renderProgressionCardPickerModal as renderProgressionCardPickerModalView,
@@ -189,7 +190,15 @@ const state: {
   deletingCompendiumAncestryId?: string;
   characterSelectionOpen: boolean;
   characterCreationOpen: boolean;
+  characterCreationStep: CharacterCreationStep;
+  characterCreationName: string;
+  characterCreationCommunity: string;
   characterCreationClassId?: string;
+  characterCreationSubclassId?: string;
+  characterCreationAncestryIds: string[];
+  characterCreationAncestrySearch: string;
+  characterCreationTopFeatureId?: string;
+  characterCreationBottomFeatureId?: string;
   characterCreationError?: string;
   characters: Character[];
   editingCompendiumClassId?: string;
@@ -232,6 +241,11 @@ const state: {
   ancestryModalOpen: false,
   characterSelectionOpen: true,
   characterCreationOpen: false,
+  characterCreationStep: 1,
+  characterCreationName: "",
+  characterCreationCommunity: "",
+  characterCreationAncestryIds: [],
+  characterCreationAncestrySearch: "",
   characters: [],
   installedPacks: [],
   packImportOpen: false,
@@ -244,7 +258,7 @@ const state: {
   }
 };
 
-const appVersion = "0.9.2";
+const appVersion = "0.10.0";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -468,7 +482,6 @@ function getAncestryFeatureDependencies(): AncestryFeatureDependencies {
 }
 
 function renderSkills(character: Character): string {
-  const ancestrySkills = character.skills.filter((skill) => skill.source === "ancestry");
   const communitySkills = character.skills.filter((skill) => skill.source === "community");
 
   return `
@@ -488,9 +501,9 @@ function renderSkills(character: Character): string {
       <div class="traits-skill-layout">
         <section class="skill-column">
           <div class="section-heading">
-            <h2>${skillSourceLabels.ancestry}</h2>
+            <h2>Ancestralidade</h2>
           </div>
-          ${renderSkillList(ancestrySkills)}
+          ${renderAncestryFeatureSelection(character)}
         </section>
         <section class="skill-column">
           <div class="section-heading">
@@ -500,6 +513,53 @@ function renderSkills(character: Character): string {
         </section>
       </div>
     </main>
+  `;
+}
+
+function renderAncestryFeatureSelection(character: Character): string {
+  const compactName = (value: string) => value.replace(/\s*\([^)]*\)\s*/g, " ").trim().toLocaleLowerCase("pt-BR");
+  const selectedAncestries = (character.identity.ancestryIds?.length
+    ? character.identity.ancestryIds.map((id) => catalog.ancestries.find((ancestry) => ancestry.id === id))
+    : [character.identity.primaryAncestryId
+      ? catalog.ancestries.find((ancestry) => ancestry.id === character.identity.primaryAncestryId)
+      : catalog.ancestries.find((ancestry) => compactName(ancestry.name) === compactName(character.identity.ancestry))]
+  ).filter((ancestry): ancestry is AncestryDefinition => Boolean(ancestry));
+  const primaryAncestry = selectedAncestries[0];
+  const featureFor = (position: "top" | "bottom"): FeatureDefinition | undefined => {
+    const selectedId = character.identity.ancestryFeatureIds?.[position];
+    const defaultId = position === "top" ? primaryAncestry?.topFeatureId : primaryAncestry?.bottomFeatureId;
+    return catalog.features.find((feature) => feature.id === (selectedId ?? defaultId));
+  };
+  const top = featureFor("top");
+  const bottom = featureFor("bottom");
+
+  if (!primaryAncestry || !top || !bottom) {
+    return renderEmptyInline("Importe o Pack da ancestralidade para exibir as Features Top e Bottom deste personagem.");
+  }
+  const ancestryForFeature = (feature: FeatureDefinition) => selectedAncestries.find((ancestry) => ancestry.id === feature.sourceId) ?? primaryAncestry;
+  const ancestryLabel = selectedAncestries.map((ancestry) => ancestry.name).join(" + ");
+
+  return `
+    <div class="ancestry-traits" aria-label="Features de ${escapeHtml(ancestryLabel)}">
+      <div class="ancestry-traits-name">
+        <span>${selectedAncestries.length === 1 ? "Ancestralidade selecionada" : "Ancestralidades selecionadas"}</span>
+        <strong>${escapeHtml(ancestryLabel)}</strong>
+      </div>
+      <div class="ancestry-feature-grid">
+        ${renderAncestryFeatureCard("Top", top, ancestryForFeature(top))}
+        ${renderAncestryFeatureCard("Bottom", bottom, ancestryForFeature(bottom))}
+      </div>
+    </div>
+  `;
+}
+
+function renderAncestryFeatureCard(position: "Top" | "Bottom", feature: FeatureDefinition, ancestry: AncestryDefinition): string {
+  return `
+    <article class="ancestry-feature-card ancestry-feature-${position.toLowerCase()}">
+      <div><span>${position}</span><small>${escapeHtml(ancestry.name)}</small></div>
+      <strong>${escapeHtml(feature.name)}</strong>
+      <p>${escapeHtml(feature.summary)}</p>
+    </article>
   `;
 }
 
@@ -1171,6 +1231,10 @@ function getCharacterCreationSubclasses(classId: string): SubclassDefinition[] {
   return subclasses.length ? subclasses : classId === fallbackCharacterClass.id ? [fallbackCharacterSubclass] : [];
 }
 
+function getCharacterCreationAncestries(): AncestryDefinition[] {
+  return [...catalog.ancestries].sort((left, right) => left.name.localeCompare(right.name, "pt-BR"));
+}
+
 function renderCharacterSelection(): string {
   const cards = state.characters.map((character) => `
     <button class="character-select-card" type="button" data-action="select-character" data-character-id="${escapeHtml(character.id)}">
@@ -1203,23 +1267,54 @@ function renderCharacterCreationModal(): string {
     : classes[0].id;
   const selectedClass = classes.find((definition) => definition.id === classId) ?? classes[0];
   const subclasses = getCharacterCreationSubclasses(selectedClass.id);
+  const ancestries = getCharacterCreationAncestries();
+  const selectedAncestryIds = state.characterCreationAncestryIds.filter((id) => ancestries.some((ancestry) => ancestry.id === id)).slice(0, 2);
+  const selectedAncestries = selectedAncestryIds.map((id) => ancestries.find((ancestry) => ancestry.id === id)).filter((ancestry): ancestry is AncestryDefinition => Boolean(ancestry));
+  const topFeatures = selectedAncestries.map((ancestry) => catalog.features.find((feature) => feature.id === ancestry.topFeatureId)).filter((feature): feature is FeatureDefinition => Boolean(feature));
+  const bottomFeatures = selectedAncestries.map((ancestry) => catalog.features.find((feature) => feature.id === ancestry.bottomFeatureId)).filter((feature): feature is FeatureDefinition => Boolean(feature));
+  const topFeatureId = topFeatures.some((feature) => feature.id === state.characterCreationTopFeatureId) ? state.characterCreationTopFeatureId : topFeatures[0]?.id;
+  const bottomFeatureId = bottomFeatures.some((feature) => feature.id === state.characterCreationBottomFeatureId) ? state.characterCreationBottomFeatureId : bottomFeatures[0]?.id;
+  const ancestrySearch = state.characterCreationAncestrySearch.trim().toLocaleLowerCase("pt-BR");
+  const visibleAncestries = ancestries.filter((ancestry) => !ancestrySearch || `${ancestry.name} ${ancestry.summary}`.toLocaleLowerCase("pt-BR").includes(ancestrySearch));
+  const featureOptionLabel = (feature: FeatureDefinition, position: "top" | "bottom") => {
+    const source = selectedAncestries.find((ancestry) => (position === "top" ? ancestry.topFeatureId : ancestry.bottomFeatureId) === feature.id);
+    return `${escapeHtml(source?.name ?? "Ancestralidade")} - ${escapeHtml(feature.name)}`;
+  };
+  const selectedTopFeature = topFeatures.find((feature) => feature.id === topFeatureId);
+  const selectedBottomFeature = bottomFeatures.find((feature) => feature.id === bottomFeatureId);
 
   return `
     <div class="modal-backdrop" data-modal-backdrop>
-      <form class="modal character-creation-modal" onsubmit="return false;" aria-labelledby="character-creation-title">
+      <form class="modal character-creation-modal" data-creation-step="${state.characterCreationStep}" onsubmit="return false;" aria-labelledby="character-creation-title">
         <button class="modal-close" type="button" data-action="cancel-new-character" aria-label="Fechar">×</button>
-        <div class="modal-title"><span>Nova ficha</span><h2 id="character-creation-title">Criar personagem</h2><p>Comece com o essencial. Os demais detalhes podem ser definidos durante a jornada.</p></div>
-        <div class="form-grid character-creation-identity">
-          <label class="form-field"><span>Nome</span><input data-character-name required maxlength="60" placeholder="Nome do personagem" /></label>
-          <label class="form-field"><span>Ancestralidade</span><input data-character-ancestry required maxlength="60" placeholder="Ex.: Humano" /></label>
-          <label class="form-field form-field-wide"><span>Comunidade</span><input data-character-community required maxlength="80" placeholder="Ex.: Vigilia de Tristelo" /></label>
+        <div class="character-creation-scroll">
+        <div class="character-creation-progress" aria-label="Etapa ${state.characterCreationStep} de 5">${["Identidade", "Ancestralidades", "Features", "Classe", "Revisão"].map((label, index) => `<span class="${index + 1 === state.characterCreationStep ? "is-current" : index + 1 < state.characterCreationStep ? "is-complete" : ""}">${index + 1}. ${label}</span>`).join("")}</div>
+        <div class="modal-title"><span>Nova ficha${state.characterCreationStep > 1 ? ` · Etapa ${state.characterCreationStep} de 5` : ""}</span><h2 id="character-creation-title">${state.characterCreationStep === 1 ? "Criar personagem" : ["", "", "Ancestralidades", "Features", "Classe", "Revisão"][state.characterCreationStep]}</h2>${state.characterCreationStep === 1 ? "<p>Comece com o essencial. Os demais detalhes podem ser definidos durante a jornada.</p>" : ""}</div>
+        <div class="form-grid character-creation-identity creation-step-panel" data-creation-panel="1">
+          <label class="form-field"><span>Nome</span><input data-character-name required maxlength="60" value="${escapeHtml(state.characterCreationName)}" placeholder="Nome do personagem" /></label>
+          <label class="form-field form-field-wide"><span>Comunidade</span><input data-character-community required maxlength="80" value="${escapeHtml(state.characterCreationCommunity)}" placeholder="Ex.: Vigilia de Tristelo" /></label>
         </div>
-        <div class="form-grid">
+        <section class="character-ancestry-picker creation-step-panel" data-creation-panel="2" aria-labelledby="character-ancestry-title">
+          <div><span>Origem</span><h3 id="character-ancestry-title">Ancestralidades</h3><p>Escolha uma ou duas. Com duas, combine livremente a Feature Top e a Feature Bottom.</p></div>
+          <label class="search-box character-ancestry-search"><span aria-hidden="true">⌕</span><input type="search" data-character-ancestry-search value="${escapeHtml(state.characterCreationAncestrySearch)}" placeholder="Pesquisar ancestralidade" aria-label="Pesquisar ancestralidade" /></label>
+          ${ancestries.length ? `<div class="character-ancestry-choice-grid">${visibleAncestries.map((ancestry) => { const selected = selectedAncestryIds.includes(ancestry.id); const disabled = !selected && selectedAncestryIds.length >= 2; return `<label class="character-ancestry-choice ${selected ? "is-selected" : ""}"><input type="checkbox" data-character-ancestry-id="${escapeHtml(ancestry.id)}" ${selected ? "checked" : ""} ${disabled ? "disabled" : ""}/><span><strong>${escapeHtml(ancestry.name)}</strong><small>${escapeHtml(ancestry.summary)}</small></span></label>`; }).join("") || `<p class="form-error">Nenhuma ancestralidade encontrada.</p>`}</div>` : `<p class="form-error">Importe um Pack de ancestralidades no Compendium antes de criar a ficha.</p>`}
+          ${selectedAncestries.length ? `<div class="character-feature-choice-grid"><label class="form-field"><span>Feature Top</span>${topFeatures.length > 1 ? `<select data-character-top-feature>${topFeatures.map((feature) => { const origin = selectedAncestries.find((ancestry) => ancestry.topFeatureId === feature.id); return `<option value="${escapeHtml(feature.id)}" ${feature.id === topFeatureId ? "selected" : ""}>${escapeHtml(origin?.name ?? "Ancestralidade")} - ${escapeHtml(feature.name)}</option>`; }).join("")}</select>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(topFeatures[0]?.name ?? "Feature indisponivel")}</strong><small>${escapeHtml(topFeatures[0]?.summary ?? "")}</small></div>`}</label><label class="form-field"><span>Feature Bottom</span>${bottomFeatures.length > 1 ? `<select data-character-bottom-feature>${bottomFeatures.map((feature) => { const origin = selectedAncestries.find((ancestry) => ancestry.bottomFeatureId === feature.id); return `<option value="${escapeHtml(feature.id)}" ${feature.id === bottomFeatureId ? "selected" : ""}>${escapeHtml(origin?.name ?? "Ancestralidade")} - ${escapeHtml(feature.name)}</option>`; }).join("")}</select>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(bottomFeatures[0]?.name ?? "Feature indisponivel")}</strong><small>${escapeHtml(bottomFeatures[0]?.summary ?? "")}</small></div>`}</label></div>` : ""}
+        </section>
+        <section class="character-ancestry-picker creation-step-panel character-feature-step" data-creation-panel="3" aria-labelledby="character-feature-title">
+          <div><span>Origem</span><h3 id="character-feature-title">Features da ancestralidade</h3><p>${selectedAncestries.length === 2 ? "Escolha uma Feature Top e uma Feature Bottom entre as ancestralidades selecionadas." : "As duas Features abaixo foram definidas pela sua ancestralidade."}</p></div>
+          <div class="character-feature-choice-grid">
+            <label class="form-field"><span>Feature Top</span>${topFeatures.length > 1 ? `<select data-character-top-feature>${topFeatures.map((feature) => `<option value="${escapeHtml(feature.id)}" ${feature.id === topFeatureId ? "selected" : ""}>${featureOptionLabel(feature, "top")}</option>`).join("")}</select><div class="selected-feature-description"><strong>${escapeHtml(selectedTopFeature?.name ?? "Feature indisponível")}</strong><p>${escapeHtml(selectedTopFeature?.summary ?? "")}</p></div>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(topFeatures[0]?.name ?? "Feature indisponível")}</strong><small>${escapeHtml(topFeatures[0]?.summary ?? "")}</small></div>`}</label>
+            <label class="form-field"><span>Feature Bottom</span>${bottomFeatures.length > 1 ? `<select data-character-bottom-feature>${bottomFeatures.map((feature) => `<option value="${escapeHtml(feature.id)}" ${feature.id === bottomFeatureId ? "selected" : ""}>${featureOptionLabel(feature, "bottom")}</option>`).join("")}</select><div class="selected-feature-description"><strong>${escapeHtml(selectedBottomFeature?.name ?? "Feature indisponível")}</strong><p>${escapeHtml(selectedBottomFeature?.summary ?? "")}</p></div>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(bottomFeatures[0]?.name ?? "Feature indisponível")}</strong><small>${escapeHtml(bottomFeatures[0]?.summary ?? "")}</small></div>`}</label>
+          </div>
+        </section>
+        <div class="form-grid creation-step-panel" data-creation-panel="4">
           <label class="form-field"><span>Classe</span><select data-character-class>${classes.map((definition) => `<option value="${escapeHtml(definition.id)}" ${definition.id === selectedClass.id ? "selected" : ""}>${escapeHtml(definition.name)}</option>`).join("")}</select><small>Evasao inicial: ${selectedClass.startingEvasion} · PV inicial: ${selectedClass.startingHitPoints}</small></label>
           <label class="form-field"><span>Subclasse</span><select data-character-subclass ${subclasses.length ? "" : "disabled"}>${subclasses.map((definition) => `<option value="${escapeHtml(definition.id)}">${escapeHtml(definition.name)}</option>`).join("") || "<option>Cadastre uma subclasse no Compendium</option>"}</select></label>
         </div>
+        <section class="character-creation-review creation-step-panel" data-creation-panel="5"><div><span>Pronto para começar</span><h3>${escapeHtml(state.characterCreationName || "Sem nome")}</h3><p>${escapeHtml(state.characterCreationCommunity || "Comunidade não definida")}</p></div><div class="creation-review-grid"><article><span>Ancestralidades</span><strong>${escapeHtml(selectedAncestries.map((ancestry) => ancestry.name).join(" + ") || "Não definida")}</strong></article><article><span>Top</span><strong>${escapeHtml(topFeatures.find((feature) => feature.id === topFeatureId)?.name ?? "Não definida")}</strong></article><article><span>Bottom</span><strong>${escapeHtml(bottomFeatures.find((feature) => feature.id === bottomFeatureId)?.name ?? "Não definida")}</strong></article><article><span>Classe</span><strong>${escapeHtml(selectedClass.name)} · ${escapeHtml(subclasses.find((subclass) => subclass.id === state.characterCreationSubclassId)?.name ?? subclasses[0]?.name ?? "Sem subclasse")}</strong><small>PV ${selectedClass.startingHitPoints} · Evasão ${selectedClass.startingEvasion}</small></article></div></section>
         ${state.characterCreationError ? `<p class="form-error">${escapeHtml(state.characterCreationError)}</p>` : ""}
-        <div class="modal-actions"><button class="secondary-action" type="button" data-action="cancel-new-character">Cancelar</button><button class="primary-action" type="button" data-action="save-new-character">Criar ficha</button></div>
+        </div>
+        <div class="modal-actions character-creation-actions">${state.characterCreationStep > 1 ? `<button class="secondary-action character-creation-arrow" type="button" data-action="character-creation-previous" aria-label="Voltar à etapa anterior" title="Voltar">←</button>` : "<span></span>"}${isFinalCharacterCreationStep(state.characterCreationStep) ? `<button class="primary-action" type="button" data-action="save-new-character">Criar ficha</button>` : `<button class="primary-action character-creation-arrow" type="button" data-action="character-creation-next" aria-label="Avançar para a próxima etapa" title="Continuar">→</button>`}</div>
       </form>
     </div>
   `;
@@ -1486,16 +1581,21 @@ async function openCharacter(characterId: string | undefined): Promise<void> {
 }
 
 async function createCharacter(): Promise<void> {
-  const name = document.querySelector<HTMLInputElement>("[data-character-name]")?.value.trim() ?? "";
-  const ancestry = document.querySelector<HTMLInputElement>("[data-character-ancestry]")?.value.trim() ?? "";
-  const community = document.querySelector<HTMLInputElement>("[data-character-community]")?.value.trim() ?? "";
-  const classId = document.querySelector<HTMLSelectElement>("[data-character-class]")?.value ?? "";
-  const subclassId = document.querySelector<HTMLSelectElement>("[data-character-subclass]")?.value ?? "";
+  const name = state.characterCreationName;
+  const community = state.characterCreationCommunity;
+  const classId = state.characterCreationClassId ?? "";
+  const subclassId = state.characterCreationSubclassId ?? "";
+  const ancestryIds = state.characterCreationAncestryIds.slice(0, 2);
+  const selectedAncestries = ancestryIds.map((id) => catalog.ancestries.find((ancestry) => ancestry.id === id)).filter((ancestry): ancestry is AncestryDefinition => Boolean(ancestry));
+  const topFeatureId = document.querySelector<HTMLSelectElement>('[data-creation-panel="3"] [data-character-top-feature]')?.value ?? state.characterCreationTopFeatureId ?? selectedAncestries[0]?.topFeatureId;
+  const bottomFeatureId = document.querySelector<HTMLSelectElement>('[data-creation-panel="3"] [data-character-bottom-feature]')?.value ?? state.characterCreationBottomFeatureId ?? selectedAncestries[0]?.bottomFeatureId;
   const classDefinition = getCharacterCreationClasses().find((definition) => definition.id === classId);
   const subclassDefinition = getCharacterCreationSubclasses(classId).find((definition) => definition.id === subclassId);
+  const validTopFeature = selectedAncestries.some((ancestry) => ancestry.topFeatureId === topFeatureId);
+  const validBottomFeature = selectedAncestries.some((ancestry) => ancestry.bottomFeatureId === bottomFeatureId);
 
-  if (!name || !ancestry || !community || !classDefinition || !subclassDefinition) {
-    state.characterCreationError = "Preencha os dados obrigatorios e escolha uma classe com subclasse.";
+  if (!name || !community || !classDefinition || !subclassDefinition || selectedAncestries.length !== ancestryIds.length || !selectedAncestries.length || !topFeatureId || !bottomFeatureId || !validTopFeature || !validBottomFeature) {
+    state.characterCreationError = "Preencha os dados obrigatorios, escolha uma ou duas ancestralidades e defina as Features Top e Bottom.";
     render();
     return;
   }
@@ -1517,7 +1617,10 @@ async function createCharacter(): Promise<void> {
     id: `character.local.${crypto.randomUUID()}`,
     identity: {
       name,
-      ancestry,
+      ancestry: selectedAncestries.map((ancestry) => ancestry.name).join(" + "),
+      primaryAncestryId: selectedAncestries[0].id,
+      ancestryIds,
+      ancestryFeatureIds: { top: topFeatureId, bottom: bottomFeatureId },
       className: classDefinition.name,
       primaryClassId: classDefinition.id,
       subclassName: subclassDefinition.name,
@@ -1552,6 +1655,41 @@ async function createCharacter(): Promise<void> {
   await saveCharacter(character);
   state.characters = [...state.characters, character];
   await openCharacter(character.id);
+}
+
+function syncCharacterCreationDraft(): void {
+  state.characterCreationName = document.querySelector<HTMLInputElement>("[data-character-name]")?.value.trim() ?? state.characterCreationName;
+  state.characterCreationCommunity = document.querySelector<HTMLInputElement>("[data-character-community]")?.value.trim() ?? state.characterCreationCommunity;
+  state.characterCreationTopFeatureId = document.querySelector<HTMLSelectElement>('[data-creation-panel="3"] [data-character-top-feature]')?.value ?? state.characterCreationTopFeatureId;
+  state.characterCreationBottomFeatureId = document.querySelector<HTMLSelectElement>('[data-creation-panel="3"] [data-character-bottom-feature]')?.value ?? state.characterCreationBottomFeatureId;
+  state.characterCreationSubclassId = document.querySelector<HTMLSelectElement>("[data-character-subclass]")?.value ?? state.characterCreationSubclassId;
+}
+
+function validateCharacterCreationStep(): boolean {
+  syncCharacterCreationDraft();
+  if (state.characterCreationStep === 1 && (!state.characterCreationName || !state.characterCreationCommunity)) {
+    state.characterCreationError = "Informe o nome e a comunidade do personagem.";
+    return false;
+  }
+  if (state.characterCreationStep === 2 && (state.characterCreationAncestryIds.length < 1 || state.characterCreationAncestryIds.length > 2)) {
+    state.characterCreationError = "Escolha uma ou duas ancestralidades.";
+    return false;
+  }
+  if (state.characterCreationStep === 2) {
+    const primaryAncestry = catalog.ancestries.find((ancestry) => ancestry.id === state.characterCreationAncestryIds[0]);
+    state.characterCreationTopFeatureId = primaryAncestry?.topFeatureId;
+    state.characterCreationBottomFeatureId = primaryAncestry?.bottomFeatureId;
+  }
+  if (state.characterCreationStep === 3 && (!state.characterCreationTopFeatureId || !state.characterCreationBottomFeatureId)) {
+    state.characterCreationError = "Defina as Features Top e Bottom.";
+    return false;
+  }
+  if (state.characterCreationStep === 4 && (!state.characterCreationClassId || !state.characterCreationSubclassId)) {
+    state.characterCreationError = "Escolha uma classe e uma subclasse.";
+    return false;
+  }
+  state.characterCreationError = undefined;
+  return true;
 }
 
 function getCardFormValue(selector: string): string {
@@ -1770,7 +1908,7 @@ function bindEvents(): void {
       return;
     }
 
-    if (target.matches("[data-modal-backdrop]") && modalBackdropPointerDown) {
+    if (target.matches("[data-modal-backdrop]") && modalBackdropPointerDown && !state.characterCreationOpen) {
       modalBackdropPointerDown = false;
       state.characterCreationOpen = false;
       state.characterCreationError = undefined;
@@ -1889,6 +2027,14 @@ function bindEvents(): void {
     if (target.closest('[data-action="new-character"]')) {
       state.characterCreationOpen = true;
       state.characterCreationClassId = getCharacterCreationClasses()[0]?.id;
+      state.characterCreationSubclassId = getCharacterCreationSubclasses(state.characterCreationClassId ?? "")[0]?.id;
+      state.characterCreationStep = 1;
+      state.characterCreationName = "";
+      state.characterCreationCommunity = "";
+      state.characterCreationAncestryIds = getCharacterCreationAncestries().slice(0, 1).map((ancestry) => ancestry.id);
+      state.characterCreationAncestrySearch = "";
+      state.characterCreationTopFeatureId = undefined;
+      state.characterCreationBottomFeatureId = undefined;
       state.characterCreationError = undefined;
       render();
       return;
@@ -1896,7 +2042,30 @@ function bindEvents(): void {
 
     if (target.closest('[data-action="cancel-new-character"]')) {
       state.characterCreationOpen = false;
+      state.characterCreationStep = 1;
+      state.characterCreationAncestryIds = [];
+      state.characterCreationAncestrySearch = "";
+      state.characterCreationTopFeatureId = undefined;
+      state.characterCreationBottomFeatureId = undefined;
       state.characterCreationError = undefined;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="character-creation-previous"]')) {
+      syncCharacterCreationDraft();
+      state.characterCreationStep = previousCharacterCreationStep(state.characterCreationStep);
+      state.characterCreationError = undefined;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="character-creation-next"]')) {
+      if (!validateCharacterCreationStep()) {
+        render();
+        return;
+      }
+      state.characterCreationStep = nextCharacterCreationStep(state.characterCreationStep);
       render();
       return;
     }
@@ -2713,6 +2882,16 @@ function bindEvents(): void {
       render({ preserveMainScroll: true });
       focusCompendiumAncestrySearch();
     }
+
+    if (target.matches("[data-character-ancestry-search]")) {
+      state.characterCreationAncestrySearch = target.value;
+      render();
+      requestAnimationFrame(() => {
+        const search = document.querySelector<HTMLInputElement>("[data-character-ancestry-search]");
+        search?.focus({ preventScroll: true });
+        search?.setSelectionRange(search.value.length, search.value.length);
+      });
+    }
   });
 
   document.addEventListener("change", (event) => {
@@ -2722,10 +2901,40 @@ function bindEvents(): void {
       if (file) void readPackImportFile(file);
       return;
     }
-    if (target instanceof HTMLSelectElement && target.matches("[data-character-class]")) {
-      state.characterCreationClassId = target.value;
+    if (target instanceof HTMLInputElement && target.matches("[data-character-ancestry-id]")) {
+      const ancestryId = target.dataset.characterAncestryId;
+      if (!ancestryId) return;
+      state.characterCreationAncestryIds = target.checked
+        ? [...new Set([...state.characterCreationAncestryIds, ancestryId])].slice(0, 2)
+        : state.characterCreationAncestryIds.filter((id) => id !== ancestryId);
+      state.characterCreationTopFeatureId = undefined;
+      state.characterCreationBottomFeatureId = undefined;
       state.characterCreationError = undefined;
       render();
+      return;
+    }
+    if (target instanceof HTMLSelectElement && target.matches("[data-character-top-feature]")) {
+      state.characterCreationTopFeatureId = target.value;
+      state.characterCreationError = undefined;
+      render();
+      return;
+    }
+    if (target instanceof HTMLSelectElement && target.matches("[data-character-bottom-feature]")) {
+      state.characterCreationBottomFeatureId = target.value;
+      state.characterCreationError = undefined;
+      render();
+      return;
+    }
+    if (target instanceof HTMLSelectElement && target.matches("[data-character-class]")) {
+      state.characterCreationClassId = target.value;
+      state.characterCreationSubclassId = getCharacterCreationSubclasses(target.value)[0]?.id;
+      state.characterCreationError = undefined;
+      render();
+      return;
+    }
+    if (target instanceof HTMLSelectElement && target.matches("[data-character-subclass]")) {
+      state.characterCreationSubclassId = target.value;
+      state.characterCreationError = undefined;
     }
   });
 }

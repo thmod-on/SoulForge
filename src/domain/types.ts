@@ -171,6 +171,12 @@ export type Character = {
   identity: {
     name: string;
     ancestry: string;
+    primaryAncestryId?: string;
+    ancestryIds?: string[];
+    ancestryFeatureIds?: {
+      top?: string;
+      bottom?: string;
+    };
     className: string;
     primaryClassId?: string;
     subclassName?: string;

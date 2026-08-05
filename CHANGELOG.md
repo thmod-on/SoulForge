@@ -4,6 +4,20 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.10.0]
+
+### Adicionado
+
+- criação de personagem organizada em etapas: identidade, ancestralidades, Features, classe e revisão;
+- escolha de até duas ancestralidades, com combinação explícita de Feature Top e Feature Bottom;
+- busca de ancestralidades e descrições das Features selecionadas durante a criação.
+
+### Alterado
+
+- tela de Traços passa a apresentar as Features Top e Bottom efetivamente escolhidas para a ancestralidade do personagem;
+- navegação da criação usa setas posicionadas nos extremos do rodapé e protege o formulário contra fechamento por clique acidental fora do modal;
+- regras de navegação do assistente de criação separadas em módulo próprio.
+
 ## [0.9.2]
 
 ### Alterado

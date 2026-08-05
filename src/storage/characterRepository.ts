@@ -106,6 +106,9 @@ function migrateDemoCharacter(character: Character): Character {
     ...character,
     identity: {
       ...character.identity,
+      primaryAncestryId: character.identity.primaryAncestryId ?? (character.id === demoCharacter.id ? demoCharacter.identity.primaryAncestryId : undefined),
+      ancestryIds: character.identity.ancestryIds ?? (character.identity.primaryAncestryId ? [character.identity.primaryAncestryId] : character.id === demoCharacter.id ? demoCharacter.identity.ancestryIds : undefined),
+      ancestryFeatureIds: character.identity.ancestryFeatureIds ?? (character.id === demoCharacter.id ? demoCharacter.identity.ancestryFeatureIds : undefined),
       subclassName: character.identity.subclassName ?? demoCharacter.identity.subclassName,
       primaryClassId: character.identity.primaryClassId ?? demoCharacter.identity.primaryClassId,
       primarySubclassId: character.identity.primarySubclassId ?? demoCharacter.identity.primarySubclassId,
