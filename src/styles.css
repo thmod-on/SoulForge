@@ -22,7 +22,7 @@
 
 /* O seletor de itens usa uma única região rolável: a lista interna. */
 .container-modal.add-item-modal {
-  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto minmax(0, 1fr) minmax(5.6rem, auto);
   width: min(68rem, calc(100vw - 3rem));
   height: min(46rem, calc(100svh - 3rem));
   max-height: min(46rem, calc(100svh - 3rem));
@@ -252,7 +252,8 @@ button {
 .character-creation-modal[data-creation-step="2"] [data-creation-panel="2"],
 .character-creation-modal[data-creation-step="3"] [data-creation-panel="3"],
 .character-creation-modal[data-creation-step="4"] [data-creation-panel="4"],
-.character-creation-modal[data-creation-step="5"] [data-creation-panel="5"] {
+.character-creation-modal[data-creation-step="5"] [data-creation-panel="5"],
+.character-creation-modal[data-creation-step="6"] [data-creation-panel="6"] {
   display: grid;
 }
 
@@ -428,6 +429,116 @@ button {
 
 .character-creation-review {
   gap: 1rem;
+}
+
+.character-class-starting-stats {
+  grid-column: 1 / -1;
+  margin: 0;
+  border-top: 1px solid rgba(244, 234, 219, 0.12);
+  color: var(--color-muted);
+  padding-top: 0.75rem;
+}
+
+.character-class-starting-stats strong {
+  color: var(--color-gold);
+}
+
+.character-class-starting-stats span {
+  margin: 0 0.45rem;
+}
+
+.character-domain-card-picker {
+  gap: 0.8rem;
+}
+
+.character-domain-card-picker > div:first-child {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.character-domain-card-picker h3,
+.character-domain-card-picker p {
+  margin: 0;
+}
+
+.character-domain-card-picker > div:first-child > span,
+.character-domain-card-toolbar > span {
+  color: var(--color-gold);
+  font-size: 0.72rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.character-domain-card-picker > div:first-child > p {
+  color: var(--color-muted);
+  line-height: 1.4;
+}
+
+.character-domain-card-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.character-domain-card-toolbar > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.character-domain-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.character-domain-card {
+  display: grid;
+  grid-template-columns: 4.4rem minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr;
+  gap: 0.25rem 0.65rem;
+  min-height: 6.4rem;
+  border: 1px solid rgba(244, 234, 219, 0.13);
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.025);
+  padding: 0.55rem;
+  text-align: left;
+}
+
+.character-domain-card:hover,
+.character-domain-card.is-selected {
+  border-color: rgba(217, 154, 61, 0.7);
+  background: rgba(217, 154, 61, 0.1);
+}
+
+.character-domain-card-art {
+  grid-row: 1 / -1;
+  min-height: 5.2rem;
+  background: radial-gradient(circle, rgba(142, 79, 196, 0.36), transparent 67%), rgba(8, 5, 17, 0.58);
+  overflow: hidden;
+}
+
+.character-domain-card-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.character-domain-card small,
+.character-domain-card p {
+  color: var(--color-muted);
+}
+
+.character-domain-card p {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.class-detail-body > .resource-modal-label {
+  display: none;
 }
 
 .character-creation-review > div:first-child {

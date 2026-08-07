@@ -4,6 +4,18 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.11.0]
+
+### Adicionado
+
+- nova etapa na criação de personagem para escolher duas cartas de Domínio de nível 1, restritas aos domínios da classe e adicionadas ao Loadout inicial.
+
+### Alterado
+
+- seleção de item do Compendium reserva a área de confirmação para manter as miniaturas estáveis;
+- etapa de classe da criação separa os valores iniciais de PV e Evasão dos campos de escolha;
+- detalhe de classe no Compendium remove o marcador redundante de contexto.
+
 ## [0.10.0]
 
 ### Adicionado

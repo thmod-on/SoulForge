@@ -197,6 +197,8 @@ const state: {
   characterCreationSubclassId?: string;
   characterCreationAncestryIds: string[];
   characterCreationAncestrySearch: string;
+  characterCreationCardIds: string[];
+  characterCreationCardDomainId?: string;
   characterCreationTopFeatureId?: string;
   characterCreationBottomFeatureId?: string;
   characterCreationError?: string;
@@ -246,6 +248,7 @@ const state: {
   characterCreationCommunity: "",
   characterCreationAncestryIds: [],
   characterCreationAncestrySearch: "",
+  characterCreationCardIds: [],
   characters: [],
   installedPacks: [],
   packImportOpen: false,
@@ -258,7 +261,7 @@ const state: {
   }
 };
 
-const appVersion = "0.10.0";
+const appVersion = "0.11.0";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -1202,7 +1205,7 @@ const fallbackCharacterClass: ClassDefinition = {
   packId: "demo",
   name: "Guardiao",
   summary: "Defensor firme que protege seus aliados.",
-  domainIds: ["domain.demo.guardian", "domain.demo.test"],
+  domainIds: ["domain.core.blade", "domain.core.valor"],
   startingEvasion: 12,
   startingHitPoints: 28,
   featureIds: [],
@@ -1282,14 +1285,19 @@ function renderCharacterCreationModal(): string {
   };
   const selectedTopFeature = topFeatures.find((feature) => feature.id === topFeatureId);
   const selectedBottomFeature = bottomFeatures.find((feature) => feature.id === bottomFeatureId);
+  const eligibleStartingCards = catalog.cards.filter((card) => card.tier === 1 && selectedClass.domainIds.includes(card.domainId));
+  const selectedCardDomainId = selectedClass.domainIds.includes(state.characterCreationCardDomainId as never)
+    ? state.characterCreationCardDomainId
+    : undefined;
+  const visibleStartingCards = eligibleStartingCards.filter((card) => !selectedCardDomainId || card.domainId === selectedCardDomainId);
 
   return `
     <div class="modal-backdrop" data-modal-backdrop>
       <form class="modal character-creation-modal" data-creation-step="${state.characterCreationStep}" onsubmit="return false;" aria-labelledby="character-creation-title">
         <button class="modal-close" type="button" data-action="cancel-new-character" aria-label="Fechar">×</button>
         <div class="character-creation-scroll">
-        <div class="character-creation-progress" aria-label="Etapa ${state.characterCreationStep} de 5">${["Identidade", "Ancestralidades", "Features", "Classe", "Revisão"].map((label, index) => `<span class="${index + 1 === state.characterCreationStep ? "is-current" : index + 1 < state.characterCreationStep ? "is-complete" : ""}">${index + 1}. ${label}</span>`).join("")}</div>
-        <div class="modal-title"><span>Nova ficha${state.characterCreationStep > 1 ? ` · Etapa ${state.characterCreationStep} de 5` : ""}</span><h2 id="character-creation-title">${state.characterCreationStep === 1 ? "Criar personagem" : ["", "", "Ancestralidades", "Features", "Classe", "Revisão"][state.characterCreationStep]}</h2>${state.characterCreationStep === 1 ? "<p>Comece com o essencial. Os demais detalhes podem ser definidos durante a jornada.</p>" : ""}</div>
+        <div class="character-creation-progress" aria-label="Etapa ${state.characterCreationStep} de 6">${["Identidade", "Ancestralidades", "Features", "Classe", "Cartas", "Revisão"].map((label, index) => `<span class="${index + 1 === state.characterCreationStep ? "is-current" : index + 1 < state.characterCreationStep ? "is-complete" : ""}">${index + 1}. ${label}</span>`).join("")}</div>
+        <div class="modal-title"><span>Nova ficha${state.characterCreationStep > 1 ? ` · Etapa ${state.characterCreationStep} de 6` : ""}</span><h2 id="character-creation-title">${state.characterCreationStep === 1 ? "Criar personagem" : ["", "", "Ancestralidades", "Features", "Classe", "Cartas de Domínio", "Revisão"][state.characterCreationStep]}</h2>${state.characterCreationStep === 1 ? "<p>Comece com o essencial. Os demais detalhes podem ser definidos durante a jornada.</p>" : ""}</div>
         <div class="form-grid character-creation-identity creation-step-panel" data-creation-panel="1">
           <label class="form-field"><span>Nome</span><input data-character-name required maxlength="60" value="${escapeHtml(state.characterCreationName)}" placeholder="Nome do personagem" /></label>
           <label class="form-field form-field-wide"><span>Comunidade</span><input data-character-community required maxlength="80" value="${escapeHtml(state.characterCreationCommunity)}" placeholder="Ex.: Vigilia de Tristelo" /></label>
@@ -1308,10 +1316,12 @@ function renderCharacterCreationModal(): string {
           </div>
         </section>
         <div class="form-grid creation-step-panel" data-creation-panel="4">
-          <label class="form-field"><span>Classe</span><select data-character-class>${classes.map((definition) => `<option value="${escapeHtml(definition.id)}" ${definition.id === selectedClass.id ? "selected" : ""}>${escapeHtml(definition.name)}</option>`).join("")}</select><small>Evasao inicial: ${selectedClass.startingEvasion} · PV inicial: ${selectedClass.startingHitPoints}</small></label>
+          <label class="form-field"><span>Classe</span><select data-character-class>${classes.map((definition) => `<option value="${escapeHtml(definition.id)}" ${definition.id === selectedClass.id ? "selected" : ""}>${escapeHtml(definition.name)}</option>`).join("")}</select></label>
           <label class="form-field"><span>Subclasse</span><select data-character-subclass ${subclasses.length ? "" : "disabled"}>${subclasses.map((definition) => `<option value="${escapeHtml(definition.id)}">${escapeHtml(definition.name)}</option>`).join("") || "<option>Cadastre uma subclasse no Compendium</option>"}</select></label>
+          <p class="character-class-starting-stats">Evasão inicial <strong>${selectedClass.startingEvasion}</strong><span>·</span> PV inicial <strong>${selectedClass.startingHitPoints}</strong></p>
         </div>
-        <section class="character-creation-review creation-step-panel" data-creation-panel="5"><div><span>Pronto para começar</span><h3>${escapeHtml(state.characterCreationName || "Sem nome")}</h3><p>${escapeHtml(state.characterCreationCommunity || "Comunidade não definida")}</p></div><div class="creation-review-grid"><article><span>Ancestralidades</span><strong>${escapeHtml(selectedAncestries.map((ancestry) => ancestry.name).join(" + ") || "Não definida")}</strong></article><article><span>Top</span><strong>${escapeHtml(topFeatures.find((feature) => feature.id === topFeatureId)?.name ?? "Não definida")}</strong></article><article><span>Bottom</span><strong>${escapeHtml(bottomFeatures.find((feature) => feature.id === bottomFeatureId)?.name ?? "Não definida")}</strong></article><article><span>Classe</span><strong>${escapeHtml(selectedClass.name)} · ${escapeHtml(subclasses.find((subclass) => subclass.id === state.characterCreationSubclassId)?.name ?? subclasses[0]?.name ?? "Sem subclasse")}</strong><small>PV ${selectedClass.startingHitPoints} · Evasão ${selectedClass.startingEvasion}</small></article></div></section>
+        <section class="character-domain-card-picker creation-step-panel" data-creation-panel="5"><div><span>Loadout inicial</span><h3>Escolha 2 cartas de Domínio</h3><p>Cartas de nível 1 dos domínios liberados pela sua classe. Você pode escolher as duas do mesmo domínio.</p></div><div class="character-domain-card-toolbar"><span>${state.characterCreationCardIds.length} / 2 selecionadas</span><div>${selectedClass.domainIds.map((domainId) => { const domain = findDomain(catalog, domainId); return `<button type="button" class="chip ${selectedCardDomainId === domainId ? "is-active" : ""}" data-character-card-domain-id="${escapeHtml(domainId)}">${escapeHtml(domain?.name ?? "Domínio")}</button>`; }).join("")}</div></div>${eligibleStartingCards.length ? `<div class="character-domain-card-grid">${visibleStartingCards.map((card) => `<button type="button" class="character-domain-card ${state.characterCreationCardIds.includes(card.id) ? "is-selected" : ""}" data-character-starting-card-id="${escapeHtml(card.id)}"><span class="character-domain-card-art">${card.image ? `<img src="${escapeHtml(card.image)}" alt="" />` : ""}</span><strong>${escapeHtml(card.name)}</strong><small>${escapeHtml(findDomain(catalog, card.domainId)?.name ?? "Domínio")} · Tier ${card.tier}</small><p>${escapeHtml(card.summary)}</p></button>`).join("")}</div>` : `<p class="form-error">Não há cartas de nível 1 para os domínios desta classe. Importe o Pack correspondente antes de criar a ficha.</p>`}</section>
+        <section class="character-creation-review creation-step-panel" data-creation-panel="6"><div><span>Pronto para começar</span><h3>${escapeHtml(state.characterCreationName || "Sem nome")}</h3><p>${escapeHtml(state.characterCreationCommunity || "Comunidade não definida")}</p></div><div class="creation-review-grid"><article><span>Ancestralidades</span><strong>${escapeHtml(selectedAncestries.map((ancestry) => ancestry.name).join(" + ") || "Não definida")}</strong></article><article><span>Top</span><strong>${escapeHtml(selectedTopFeature?.name ?? "Não definida")}</strong></article><article><span>Bottom</span><strong>${escapeHtml(selectedBottomFeature?.name ?? "Não definida")}</strong></article><article><span>Classe</span><strong>${escapeHtml(selectedClass.name)} · ${escapeHtml(subclasses.find((subclass) => subclass.id === state.characterCreationSubclassId)?.name ?? subclasses[0]?.name ?? "Sem subclasse")}</strong><small>PV ${selectedClass.startingHitPoints} · Evasão ${selectedClass.startingEvasion}</small></article><article><span>Cartas no Loadout</span><strong>${escapeHtml(state.characterCreationCardIds.map((id) => catalog.cards.find((card) => card.id === id)?.name ?? "").filter(Boolean).join(" · ") || "Nenhuma carta")}</strong></article></div></section>
         ${state.characterCreationError ? `<p class="form-error">${escapeHtml(state.characterCreationError)}</p>` : ""}
         </div>
         <div class="modal-actions character-creation-actions">${state.characterCreationStep > 1 ? `<button class="secondary-action character-creation-arrow" type="button" data-action="character-creation-previous" aria-label="Voltar à etapa anterior" title="Voltar">←</button>` : "<span></span>"}${isFinalCharacterCreationStep(state.characterCreationStep) ? `<button class="primary-action" type="button" data-action="save-new-character">Criar ficha</button>` : `<button class="primary-action character-creation-arrow" type="button" data-action="character-creation-next" aria-label="Avançar para a próxima etapa" title="Continuar">→</button>`}</div>
@@ -1593,9 +1603,11 @@ async function createCharacter(): Promise<void> {
   const subclassDefinition = getCharacterCreationSubclasses(classId).find((definition) => definition.id === subclassId);
   const validTopFeature = selectedAncestries.some((ancestry) => ancestry.topFeatureId === topFeatureId);
   const validBottomFeature = selectedAncestries.some((ancestry) => ancestry.bottomFeatureId === bottomFeatureId);
+  const eligibleStartingCardIds = classDefinition ? catalog.cards.filter((card) => card.tier === 1 && classDefinition.domainIds.includes(card.domainId)).map((card) => card.id) : [];
+  const selectedStartingCardIds = state.characterCreationCardIds.filter((id) => eligibleStartingCardIds.includes(id));
 
-  if (!name || !community || !classDefinition || !subclassDefinition || selectedAncestries.length !== ancestryIds.length || !selectedAncestries.length || !topFeatureId || !bottomFeatureId || !validTopFeature || !validBottomFeature) {
-    state.characterCreationError = "Preencha os dados obrigatorios, escolha uma ou duas ancestralidades e defina as Features Top e Bottom.";
+  if (!name || !community || !classDefinition || !subclassDefinition || selectedAncestries.length !== ancestryIds.length || !selectedAncestries.length || !topFeatureId || !bottomFeatureId || !validTopFeature || !validBottomFeature || selectedStartingCardIds.length !== 2) {
+    state.characterCreationError = "Complete a ficha, defina as Features e escolha duas cartas de Domínio de nível 1.";
     render();
     return;
   }
@@ -1648,7 +1660,7 @@ async function createCharacter(): Promise<void> {
     skills: subclassSkills.length ? subclassSkills : fallbackSkills,
     experiences: [],
     notes: [],
-    deck: { activeCardIds: [], learnedCardIds: [] },
+    deck: { activeCardIds: selectedStartingCardIds, learnedCardIds: selectedStartingCardIds },
     inventory: { capacity: 30, compartments: [{ id: "equipped", name: "Equipados", source: "character" }, { id: "backpack", name: "Mochila", capacity: 30, source: "character" }], entries: [] }
   };
 
@@ -1686,6 +1698,10 @@ function validateCharacterCreationStep(): boolean {
   }
   if (state.characterCreationStep === 4 && (!state.characterCreationClassId || !state.characterCreationSubclassId)) {
     state.characterCreationError = "Escolha uma classe e uma subclasse.";
+    return false;
+  }
+  if (state.characterCreationStep === 5 && state.characterCreationCardIds.length !== 2) {
+    state.characterCreationError = "Escolha exatamente duas cartas de Domínio de nível 1.";
     return false;
   }
   state.characterCreationError = undefined;
@@ -2033,6 +2049,8 @@ function bindEvents(): void {
       state.characterCreationCommunity = "";
       state.characterCreationAncestryIds = getCharacterCreationAncestries().slice(0, 1).map((ancestry) => ancestry.id);
       state.characterCreationAncestrySearch = "";
+      state.characterCreationCardIds = [];
+      state.characterCreationCardDomainId = undefined;
       state.characterCreationTopFeatureId = undefined;
       state.characterCreationBottomFeatureId = undefined;
       state.characterCreationError = undefined;
@@ -2045,6 +2063,8 @@ function bindEvents(): void {
       state.characterCreationStep = 1;
       state.characterCreationAncestryIds = [];
       state.characterCreationAncestrySearch = "";
+      state.characterCreationCardIds = [];
+      state.characterCreationCardDomainId = undefined;
       state.characterCreationTopFeatureId = undefined;
       state.characterCreationBottomFeatureId = undefined;
       state.characterCreationError = undefined;
@@ -2066,6 +2086,25 @@ function bindEvents(): void {
         return;
       }
       state.characterCreationStep = nextCharacterCreationStep(state.characterCreationStep);
+      render();
+      return;
+    }
+
+    const characterCardDomainButton = target.closest<HTMLElement>("[data-character-card-domain-id]");
+    if (characterCardDomainButton) {
+      state.characterCreationCardDomainId = characterCardDomainButton.dataset.characterCardDomainId;
+      render();
+      return;
+    }
+
+    const characterStartingCardButton = target.closest<HTMLElement>("[data-character-starting-card-id]");
+    if (characterStartingCardButton) {
+      const cardId = characterStartingCardButton.dataset.characterStartingCardId;
+      if (!cardId) return;
+      state.characterCreationCardIds = state.characterCreationCardIds.includes(cardId)
+        ? state.characterCreationCardIds.filter((id) => id !== cardId)
+        : state.characterCreationCardIds.length < 2 ? [...state.characterCreationCardIds, cardId] : state.characterCreationCardIds;
+      state.characterCreationError = undefined;
       render();
       return;
     }
@@ -2928,6 +2967,8 @@ function bindEvents(): void {
     if (target instanceof HTMLSelectElement && target.matches("[data-character-class]")) {
       state.characterCreationClassId = target.value;
       state.characterCreationSubclassId = getCharacterCreationSubclasses(target.value)[0]?.id;
+      state.characterCreationCardIds = [];
+      state.characterCreationCardDomainId = undefined;
       state.characterCreationError = undefined;
       render();
       return;
