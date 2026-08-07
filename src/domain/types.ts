@@ -8,6 +8,55 @@ export type ResourceTrack = {
   tone: "hope" | "stress" | "hp" | "shadow" | "focus";
 };
 
+export type GameMarkerReset = "session" | "short-rest" | "long-rest";
+
+export type GameMarkerQuantity =
+  | { kind: "fixed"; value: number }
+  | { kind: "attribute"; attributeId: Attribute["id"] }
+  | { kind: "spellcast-trait" };
+
+export type CounterGameMarkerDefinition = {
+  id: string;
+  kind: "counter";
+  label: string;
+  initialValue?: number;
+  max?: number;
+  reset?: GameMarkerReset;
+};
+
+export type DiceGameMarkerDefinition = {
+  id: string;
+  kind: "dice";
+  label: string;
+  die: "d4";
+  quantity: GameMarkerQuantity;
+  reset?: "session";
+};
+
+/** Declaracao reutilizavel do conteudo; nunca guarda dados de uma sessao. */
+export type GameMarkerDefinition = CounterGameMarkerDefinition | DiceGameMarkerDefinition;
+
+export type CounterGameMarkerState = {
+  key: string;
+  sourceDefinitionId: string;
+  markerId: string;
+  kind: "counter";
+  value: number;
+  max?: number;
+};
+
+export type DiceGameMarkerState = {
+  key: string;
+  sourceDefinitionId: string;
+  markerId: string;
+  kind: "dice";
+  die: "d4";
+  results: Array<{ id: string; value: number; used: boolean }>;
+};
+
+/** Estado variavel do personagem. E preservado mesmo se a fonte ficar inativa. */
+export type CharacterGameMarkerState = CounterGameMarkerState | DiceGameMarkerState;
+
 export type Attribute = {
   id: "for" | "dex" | "con" | "int" | "wil" | "cha";
   label: string;
@@ -103,6 +152,7 @@ export type CardDefinition = BaseDefinition & {
   recallCost?: number;
   effect: string;
   image?: string;
+  gameMarkers?: GameMarkerDefinition[];
 };
 
 export type ItemDefinition = BaseDefinition & {
@@ -124,6 +174,7 @@ export type ClassDefinition = BaseDefinition & {
   hopeFeatureId: string;
   subclassIds: [string, string];
   image?: string;
+  gameMarkers?: GameMarkerDefinition[];
 };
 
 export type SubclassDefinition = BaseDefinition & {
@@ -132,6 +183,7 @@ export type SubclassDefinition = BaseDefinition & {
   foundationFeatureIds: string[];
   specializationFeatureIds: string[];
   masteryFeatureIds: string[];
+  spellcastAttributeId?: Attribute["id"];
 };
 
 export type AncestryDefinition = BaseDefinition & {
@@ -147,6 +199,7 @@ export type FeatureDefinition = BaseDefinition & {
   sourceId: string;
   tier: "class" | "hope" | "foundation" | "specialization" | "mastery" | "top" | "bottom";
   hopeCost?: number;
+  gameMarkers?: GameMarkerDefinition[];
 };
 
 export type Definition = DomainDefinition | CardDefinition | ItemDefinition | ClassDefinition | SubclassDefinition | AncestryDefinition | FeatureDefinition;
@@ -193,6 +246,8 @@ export type Character = {
   proficiency: number;
   progression?: CharacterProgression;
   resources: ResourceTrack[];
+  /** Estado de marcadores de jogo, separado das definicoes do Compendium. */
+  gameMarkers?: CharacterGameMarkerState[];
   skills: CharacterSkill[];
   experiences: CharacterExperience[];
   notes: CharacterNote[];

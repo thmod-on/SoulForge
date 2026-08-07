@@ -11,11 +11,11 @@ export const demoCharacter: Character = {
       top: "feature.core.human.top",
       bottom: "feature.core.human.bottom"
     },
-    className: "Guardiao",
-    primaryClassId: "class.demo.guardian",
-    subclassName: "Vengeance",
-    primarySubclassId: "subclass.demo.vengeance",
-    primaryDomainIds: ["domain.demo.guardian", "domain.demo.test"],
+    className: "Serafim",
+    primaryClassId: "class.core.serafim",
+    subclassName: "Portador Divino",
+    primarySubclassId: "subclass.core.serafim.portador-divino",
+    primaryDomainIds: ["domain.core.splendor", "domain.core.valor"],
     community: "Vigilia de Tristelo",
     level: 1,
     xp: 0,
@@ -120,8 +120,8 @@ export const demoCharacter: Character = {
     }
   ],
   deck: {
-    activeCardIds: ["card.demo.shield-block", "card.demo.stalwart-advance"],
-    learnedCardIds: ["card.demo.shield-block", "card.demo.stalwart-advance"]
+    activeCardIds: ["card.demo.shield-block", "card.demo.stalwart-advance", "card.demo.guardians-ward"],
+    learnedCardIds: ["card.demo.shield-block", "card.demo.stalwart-advance", "card.demo.guardians-ward"]
   },
   inventory: {
     capacity: 30,

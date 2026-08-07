@@ -10,5 +10,15 @@
   "image": "assets/cards/guardians-ward.webp",
   "cost": "1 Stress",
   "recallCost": 1,
-  "effect": "Quando um aliado Proximo sofrer dano, marque 1 Stress para reduzir a severidade em um limiar."
+  "effect": "Quando um aliado Proximo sofrer dano, marque 1 Stress para reduzir a severidade em um limiar.",
+  "gameMarkers": [
+    {
+      "id": "ward-charges",
+      "kind": "counter",
+      "label": "Cargas da guarda",
+      "initialValue": 3,
+      "max": 3,
+      "reset": "long-rest"
+    }
+  ]
 }

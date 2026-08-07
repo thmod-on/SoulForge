@@ -1,4 +1,6 @@
 import type { CardDefinition, Character, CharacterSkill } from "../../domain/types";
+import type { ActiveGameMarker } from "../game-markers/gameMarkerSync";
+import { renderGameMarkers } from "../game-markers/renderGameMarkers";
 
 export type PlayerOverviewDependencies = {
   escapeHtml: (value: string) => string;
@@ -8,12 +10,13 @@ export type PlayerOverviewDependencies = {
   getInactiveCardCount: (character: Character) => number;
   getStoredCards: (character: Character) => CardDefinition[];
   getAcquiredSubclassTiers: (character: Character) => Array<NonNullable<CharacterSkill["tier"]>>;
+  getActiveGameMarkers: (character: Character) => ActiveGameMarker[];
 };
 
 export function renderOverview(character: Character, dependencies: PlayerOverviewDependencies): string {
   const activeCards = dependencies.getActiveCards(character);
   const inactiveCards = dependencies.getInactiveCardCount(character);
-  return `<main class="content">${dependencies.renderResources(character)}${renderSubclassTrack(character, dependencies)}<section class="band"><div class="section-heading"><h2>Cartas ativas</h2><span>${activeCards.length} / 5 ativas</span></div><div class="card-row">${activeCards.map((card) => renderCardTile(card, dependencies)).join("")}</div><button class="deck-drawer-button" data-action="open-stored-cards">Ver Vault (${inactiveCards})</button></section><section class="quick-actions"><button data-action="rest-short"><span>REST</span> Descansar breve</button><button data-action="rest-long"><span>FULL</span> Descansar longo</button><button data-page="skills"><span>XP</span> Registrar experiencia</button></section></main>`;
+  return `<main class="content">${dependencies.renderResources(character)}${renderGameMarkers(dependencies.getActiveGameMarkers(character), dependencies.escapeHtml)}${renderSubclassTrack(character, dependencies)}<section class="band"><div class="section-heading"><h2>Cartas ativas</h2><span>${activeCards.length} / 5 ativas</span></div><div class="card-row">${activeCards.map((card) => renderCardTile(card, dependencies)).join("")}</div><button class="deck-drawer-button" data-action="open-stored-cards">Ver Vault (${inactiveCards})</button></section><section class="quick-actions"><button data-action="rest-short"><span>REST</span> Descansar breve</button><button data-action="rest-long"><span>FULL</span> Descansar longo</button><button data-page="skills"><span>XP</span> Registrar experiencia</button></section></main>`;
 }
 
 export function renderStoredCards(character: Character, dependencies: PlayerOverviewDependencies): string {

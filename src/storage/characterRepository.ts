@@ -70,6 +70,20 @@ export async function listCharacters(): Promise<Character[]> {
   return characters;
 }
 
+/** Remove uma ficha local e todo o estado salvo associado a ela. */
+export async function deleteCharacter(characterId: string): Promise<void> {
+  const database = await openDatabase();
+
+  await new Promise<void>((resolve, reject) => {
+    const transaction = database.transaction(storeName, "readwrite");
+    transaction.objectStore(storeName).delete(characterId);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+  });
+
+  database.close();
+}
+
 export async function ensureDemoCharacter(): Promise<Character> {
   const existingCharacter = await loadCharacter(demoCharacter.id);
 
@@ -101,11 +115,24 @@ function migrateDemoCharacter(character: Character): Character {
     ...entry,
     compartmentId: entry.compartmentId ?? (entry.equipped ? "equipped" : "backpack")
   }));
+  const markerPreviewCardId = "card.demo.guardians-ward";
+  const learnedCardIds = Array.from(new Set([...(character.deck.learnedCardIds ?? character.deck.activeCardIds), markerPreviewCardId]));
+  const activeCardIds = character.deck.activeCardIds.includes(markerPreviewCardId) || character.deck.activeCardIds.length >= 5
+    ? character.deck.activeCardIds
+    : [...character.deck.activeCardIds, markerPreviewCardId];
+  const isKael = character.id === demoCharacter.id;
 
   return {
     ...character,
     identity: {
       ...character.identity,
+      ...(isKael ? {
+        className: demoCharacter.identity.className,
+        primaryClassId: demoCharacter.identity.primaryClassId,
+        subclassName: demoCharacter.identity.subclassName,
+        primarySubclassId: demoCharacter.identity.primarySubclassId,
+        primaryDomainIds: demoCharacter.identity.primaryDomainIds
+      } : {}),
       primaryAncestryId: character.identity.primaryAncestryId ?? (character.id === demoCharacter.id ? demoCharacter.identity.primaryAncestryId : undefined),
       ancestryIds: character.identity.ancestryIds ?? (character.identity.primaryAncestryId ? [character.identity.primaryAncestryId] : character.id === demoCharacter.id ? demoCharacter.identity.ancestryIds : undefined),
       ancestryFeatureIds: character.identity.ancestryFeatureIds ?? (character.id === demoCharacter.id ? demoCharacter.identity.ancestryFeatureIds : undefined),
@@ -126,7 +153,8 @@ function migrateDemoCharacter(character: Character): Character {
     notes: character.notes ?? demoCharacter.notes,
     deck: {
       ...character.deck,
-      learnedCardIds: character.deck.learnedCardIds ?? demoCharacter.deck.learnedCardIds
+      activeCardIds,
+      learnedCardIds
     },
     inventory: {
       ...character.inventory,

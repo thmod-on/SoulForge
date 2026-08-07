@@ -1,8 +1,9 @@
 import { baseCatalog } from "./content/installedPacks";
 import { createCatalog, findDefinition, findDomain } from "./domain/catalog";
 import { demoCharacter } from "./domain/demoCharacter";
-import type { AncestryDefinition, CardDefinition, Character, CharacterNote, CharacterNoteCategory, CharacterSkill, CharacterProgressionEntry, ClassDefinition, Definition, FeatureDefinition, InventoryCompartment, ItemDefinition, PackBundle, PackManifest, ProgressionAdvanceKind, SubclassDefinition } from "./domain/types";
-import { ensureDemoCharacter, listCharacters, loadCharacter, saveCharacter } from "./storage/characterRepository";
+import type { AncestryDefinition, Attribute, CardDefinition, Character, CharacterNote, CharacterNoteCategory, CharacterSkill, CharacterProgressionEntry, ClassDefinition, Definition, FeatureDefinition, InventoryCompartment, ItemDefinition, PackBundle, PackManifest, ProgressionAdvanceKind, SubclassDefinition } from "./domain/types";
+import { deleteCharacter as deleteStoredCharacter, ensureDemoCharacter, listCharacters, loadCharacter, saveCharacter as persistCharacter } from "./storage/characterRepository";
+import { getActiveGameMarkers, resetGameMarkers, synchronizeGameMarkers } from "./features/game-markers/gameMarkerSync";
 import { deleteCustomDefinition, loadCustomDefinitions, saveCustomDefinition } from "./storage/compendiumRepository";
 import { installLocalPack, loadInstalledPacks, removeLocalPack } from "./storage/packRepository";
 import { renderSettings as renderSettingsPage, getPackDefinitionSummary } from "./features/settings/renderSettings";
@@ -125,8 +126,26 @@ function getAppRoot(): HTMLDivElement {
 
 const appRoot = getAppRoot();
 const activeCharacterStorageKey = "soulforge.active-character-id";
+const characterCreationAttributeDefaults: Record<Attribute["id"], number> = { dex: 2, for: 1, cha: 1, wil: 0, con: 0, int: -1 };
+const characterCreationAttributes: Array<{ id: Attribute["id"]; label: string; description: string }> = [
+  { id: "dex", label: "Agilidade", description: "Correr, saltar e manobrar." },
+  { id: "for", label: "Força", description: "Erguer, esmagar e agarrar." },
+  { id: "cha", label: "Finesse", description: "Controlar, esconder e operar." },
+  { id: "wil", label: "Instinto", description: "Perceber, sentir e navegar." },
+  { id: "con", label: "Presença", description: "Encantar, performar e enganar." },
+  { id: "int", label: "Conhecimento", description: "Recordar, analisar e compreender." }
+];
 let catalog = baseCatalog;
 let modalBackdropPointerDown = false;
+
+/** Centraliza a persistencia para que todo personagem salvo mantenha os marcadores sincronizados. */
+async function saveCharacter(character: Character): Promise<void> {
+  const synchronized = synchronizeGameMarkers(character, catalog);
+  if (synchronized !== character) {
+    Object.assign(character, synchronized);
+  }
+  await persistCharacter(synchronized);
+}
 
 const state: {
   page: Page;
@@ -189,6 +208,7 @@ const state: {
   editingCompendiumAncestryId?: string;
   deletingCompendiumAncestryId?: string;
   characterSelectionOpen: boolean;
+  deletingCharacterId?: string;
   characterCreationOpen: boolean;
   characterCreationStep: CharacterCreationStep;
   characterCreationName: string;
@@ -199,6 +219,7 @@ const state: {
   characterCreationAncestrySearch: string;
   characterCreationCardIds: string[];
   characterCreationCardDomainId?: string;
+  characterCreationAttributeValues: Record<Attribute["id"], number>;
   characterCreationTopFeatureId?: string;
   characterCreationBottomFeatureId?: string;
   characterCreationError?: string;
@@ -249,6 +270,7 @@ const state: {
   characterCreationAncestryIds: [],
   characterCreationAncestrySearch: "",
   characterCreationCardIds: [],
+  characterCreationAttributeValues: { ...characterCreationAttributeDefaults },
   characters: [],
   installedPacks: [],
   packImportOpen: false,
@@ -261,7 +283,7 @@ const state: {
   }
 };
 
-const appVersion = "0.11.0";
+const appVersion = "0.12.0";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -412,7 +434,8 @@ function getPlayerOverviewDependencies(): PlayerOverviewDependencies {
     getActiveCards,
     getInactiveCardCount,
     getStoredCards,
-    getAcquiredSubclassTiers: (character) => getProgression(character).acquiredSubclassTiers
+    getAcquiredSubclassTiers: (character) => getProgression(character).acquiredSubclassTiers,
+    getActiveGameMarkers: (character) => getActiveGameMarkers(character, catalog)
   };
 }
 
@@ -1240,11 +1263,16 @@ function getCharacterCreationAncestries(): AncestryDefinition[] {
 
 function renderCharacterSelection(): string {
   const cards = state.characters.map((character) => `
-    <button class="character-select-card" type="button" data-action="select-character" data-character-id="${escapeHtml(character.id)}">
-      <span class="character-select-mark">${escapeHtml(character.identity.name.slice(0, 1).toUpperCase())}</span>
-      <span><strong>${escapeHtml(character.identity.name)}</strong><small>${escapeHtml(character.identity.ancestry)} · ${escapeHtml(character.identity.className)}</small></span>
-      <em>Nivel ${character.identity.level}</em>
-    </button>
+    <article class="character-select-entry">
+      <button class="character-select-card" type="button" data-action="select-character" data-character-id="${escapeHtml(character.id)}">
+        <span class="character-select-mark">${escapeHtml(character.identity.name.slice(0, 1).toUpperCase())}</span>
+        <span><strong>${escapeHtml(character.identity.name)}</strong><small>${escapeHtml(character.identity.ancestry)} · ${escapeHtml(character.identity.className)}</small></span>
+        <em>Nivel ${character.identity.level}</em>
+      </button>
+      ${character.id === demoCharacter.id
+        ? '<span class="character-demo-label">Ficha demo</span>'
+        : `<button class="character-delete-action" type="button" data-action="request-delete-character" data-character-id="${escapeHtml(character.id)}" aria-label="Excluir ${escapeHtml(character.identity.name)}" title="Excluir personagem">×</button>`}
+    </article>
   `).join("");
 
   return `
@@ -1257,6 +1285,13 @@ function renderCharacterSelection(): string {
       </section>
     </main>
   `;
+}
+
+function renderDeleteCharacterModal(): string {
+  const character = state.characters.find((entry) => entry.id === state.deletingCharacterId);
+  if (!character) return "";
+
+  return `<div class="modal-backdrop" data-modal-backdrop><section class="confirm-modal danger-modal" role="dialog" aria-modal="true" aria-labelledby="delete-character-title"><h2 id="delete-character-title">Excluir personagem?</h2><p>A ficha de <strong>${escapeHtml(character.identity.name)}</strong>, incluindo inventário, anotações e progresso, será removida deste dispositivo.</p><div class="danger-summary"><strong>!</strong><span>Esta ação não pode ser desfeita.</span></div><div class="confirmation-actions"><button class="secondary-action" type="button" data-action="cancel-delete-character">Cancelar</button><button class="danger-action" type="button" data-action="confirm-delete-character">Excluir personagem</button></div></section></div>`;
 }
 
 function renderCharacterCreationModal(): string {
@@ -1290,38 +1325,41 @@ function renderCharacterCreationModal(): string {
     ? state.characterCreationCardDomainId
     : undefined;
   const visibleStartingCards = eligibleStartingCards.filter((card) => !selectedCardDomainId || card.domainId === selectedCardDomainId);
+  const selectedSubclass = subclasses.find((subclass) => subclass.id === state.characterCreationSubclassId) ?? subclasses[0];
+  const getSubclassFeature = (featureId: string | undefined) => featureId ? catalog.features.find((feature) => feature.id === featureId) : undefined;
+  const renderSubclassFeature = (label: string, featureId: string | undefined) => {
+    const feature = getSubclassFeature(featureId);
+    return feature ? `<article><span>${label}</span><strong>${escapeHtml(feature.name)}</strong><p>${escapeHtml(feature.summary)}</p></article>` : "";
+  };
 
   return `
     <div class="modal-backdrop" data-modal-backdrop>
       <form class="modal character-creation-modal" data-creation-step="${state.characterCreationStep}" onsubmit="return false;" aria-labelledby="character-creation-title">
         <button class="modal-close" type="button" data-action="cancel-new-character" aria-label="Fechar">×</button>
         <div class="character-creation-scroll">
-        <div class="character-creation-progress" aria-label="Etapa ${state.characterCreationStep} de 6">${["Identidade", "Ancestralidades", "Features", "Classe", "Cartas", "Revisão"].map((label, index) => `<span class="${index + 1 === state.characterCreationStep ? "is-current" : index + 1 < state.characterCreationStep ? "is-complete" : ""}">${index + 1}. ${label}</span>`).join("")}</div>
-        <div class="modal-title"><span>Nova ficha${state.characterCreationStep > 1 ? ` · Etapa ${state.characterCreationStep} de 6` : ""}</span><h2 id="character-creation-title">${state.characterCreationStep === 1 ? "Criar personagem" : ["", "", "Ancestralidades", "Features", "Classe", "Cartas de Domínio", "Revisão"][state.characterCreationStep]}</h2>${state.characterCreationStep === 1 ? "<p>Comece com o essencial. Os demais detalhes podem ser definidos durante a jornada.</p>" : ""}</div>
+        <div class="character-creation-progress" aria-label="Etapa ${state.characterCreationStep} de 7">${["Identidade", "Ancestralidades", "Features", "Atributos", "Classe", "Cartas", "Revisão"].map((label, index) => `<span class="${index + 1 === state.characterCreationStep ? "is-current" : index + 1 < state.characterCreationStep ? "is-complete" : ""}">${index + 1}. ${label}</span>`).join("")}</div>
+        <div class="modal-title"><span>Nova ficha${state.characterCreationStep > 1 ? ` · Etapa ${state.characterCreationStep} de 7` : ""}</span><h2 id="character-creation-title">${state.characterCreationStep === 1 ? "Criar personagem" : ["", "", "Ancestralidades", "Features", "Atributos", "Classe", "Cartas de Domínio", "Revisão"][state.characterCreationStep]}</h2>${state.characterCreationStep === 1 ? "<p>Comece com o essencial. Os demais detalhes podem ser definidos durante a jornada.</p>" : ""}</div>
         <div class="form-grid character-creation-identity creation-step-panel" data-creation-panel="1">
           <label class="form-field"><span>Nome</span><input data-character-name required maxlength="60" value="${escapeHtml(state.characterCreationName)}" placeholder="Nome do personagem" /></label>
           <label class="form-field form-field-wide"><span>Comunidade</span><input data-character-community required maxlength="80" value="${escapeHtml(state.characterCreationCommunity)}" placeholder="Ex.: Vigilia de Tristelo" /></label>
         </div>
-        <section class="character-ancestry-picker creation-step-panel" data-creation-panel="2" aria-labelledby="character-ancestry-title">
-          <div><span>Origem</span><h3 id="character-ancestry-title">Ancestralidades</h3><p>Escolha uma ou duas. Com duas, combine livremente a Feature Top e a Feature Bottom.</p></div>
+        <section class="character-ancestry-picker creation-step-panel" data-creation-panel="2">
+          <div><span>Origem</span><p>Escolha uma ou duas. Com duas, combine livremente a Feature Top e a Feature Bottom.</p></div>
           <label class="search-box character-ancestry-search"><span aria-hidden="true">⌕</span><input type="search" data-character-ancestry-search value="${escapeHtml(state.characterCreationAncestrySearch)}" placeholder="Pesquisar ancestralidade" aria-label="Pesquisar ancestralidade" /></label>
           ${ancestries.length ? `<div class="character-ancestry-choice-grid">${visibleAncestries.map((ancestry) => { const selected = selectedAncestryIds.includes(ancestry.id); const disabled = !selected && selectedAncestryIds.length >= 2; return `<label class="character-ancestry-choice ${selected ? "is-selected" : ""}"><input type="checkbox" data-character-ancestry-id="${escapeHtml(ancestry.id)}" ${selected ? "checked" : ""} ${disabled ? "disabled" : ""}/><span><strong>${escapeHtml(ancestry.name)}</strong><small>${escapeHtml(ancestry.summary)}</small></span></label>`; }).join("") || `<p class="form-error">Nenhuma ancestralidade encontrada.</p>`}</div>` : `<p class="form-error">Importe um Pack de ancestralidades no Compendium antes de criar a ficha.</p>`}
           ${selectedAncestries.length ? `<div class="character-feature-choice-grid"><label class="form-field"><span>Feature Top</span>${topFeatures.length > 1 ? `<select data-character-top-feature>${topFeatures.map((feature) => { const origin = selectedAncestries.find((ancestry) => ancestry.topFeatureId === feature.id); return `<option value="${escapeHtml(feature.id)}" ${feature.id === topFeatureId ? "selected" : ""}>${escapeHtml(origin?.name ?? "Ancestralidade")} - ${escapeHtml(feature.name)}</option>`; }).join("")}</select>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(topFeatures[0]?.name ?? "Feature indisponivel")}</strong><small>${escapeHtml(topFeatures[0]?.summary ?? "")}</small></div>`}</label><label class="form-field"><span>Feature Bottom</span>${bottomFeatures.length > 1 ? `<select data-character-bottom-feature>${bottomFeatures.map((feature) => { const origin = selectedAncestries.find((ancestry) => ancestry.bottomFeatureId === feature.id); return `<option value="${escapeHtml(feature.id)}" ${feature.id === bottomFeatureId ? "selected" : ""}>${escapeHtml(origin?.name ?? "Ancestralidade")} - ${escapeHtml(feature.name)}</option>`; }).join("")}</select>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(bottomFeatures[0]?.name ?? "Feature indisponivel")}</strong><small>${escapeHtml(bottomFeatures[0]?.summary ?? "")}</small></div>`}</label></div>` : ""}
         </section>
-        <section class="character-ancestry-picker creation-step-panel character-feature-step" data-creation-panel="3" aria-labelledby="character-feature-title">
-          <div><span>Origem</span><h3 id="character-feature-title">Features da ancestralidade</h3><p>${selectedAncestries.length === 2 ? "Escolha uma Feature Top e uma Feature Bottom entre as ancestralidades selecionadas." : "As duas Features abaixo foram definidas pela sua ancestralidade."}</p></div>
+        <section class="character-ancestry-picker creation-step-panel character-feature-step" data-creation-panel="3">
+          <div><span>Origem</span><p>${selectedAncestries.length === 2 ? "Escolha uma Feature Top e uma Feature Bottom entre as ancestralidades selecionadas." : "As duas Features abaixo foram definidas pela sua ancestralidade."}</p></div>
           <div class="character-feature-choice-grid">
             <label class="form-field"><span>Feature Top</span>${topFeatures.length > 1 ? `<select data-character-top-feature>${topFeatures.map((feature) => `<option value="${escapeHtml(feature.id)}" ${feature.id === topFeatureId ? "selected" : ""}>${featureOptionLabel(feature, "top")}</option>`).join("")}</select><div class="selected-feature-description"><strong>${escapeHtml(selectedTopFeature?.name ?? "Feature indisponível")}</strong><p>${escapeHtml(selectedTopFeature?.summary ?? "")}</p></div>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(topFeatures[0]?.name ?? "Feature indisponível")}</strong><small>${escapeHtml(topFeatures[0]?.summary ?? "")}</small></div>`}</label>
             <label class="form-field"><span>Feature Bottom</span>${bottomFeatures.length > 1 ? `<select data-character-bottom-feature>${bottomFeatures.map((feature) => `<option value="${escapeHtml(feature.id)}" ${feature.id === bottomFeatureId ? "selected" : ""}>${featureOptionLabel(feature, "bottom")}</option>`).join("")}</select><div class="selected-feature-description"><strong>${escapeHtml(selectedBottomFeature?.name ?? "Feature indisponível")}</strong><p>${escapeHtml(selectedBottomFeature?.summary ?? "")}</p></div>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(bottomFeatures[0]?.name ?? "Feature indisponível")}</strong><small>${escapeHtml(bottomFeatures[0]?.summary ?? "")}</small></div>`}</label>
           </div>
         </section>
-        <div class="form-grid creation-step-panel" data-creation-panel="4">
-          <label class="form-field"><span>Classe</span><select data-character-class>${classes.map((definition) => `<option value="${escapeHtml(definition.id)}" ${definition.id === selectedClass.id ? "selected" : ""}>${escapeHtml(definition.name)}</option>`).join("")}</select></label>
-          <label class="form-field"><span>Subclasse</span><select data-character-subclass ${subclasses.length ? "" : "disabled"}>${subclasses.map((definition) => `<option value="${escapeHtml(definition.id)}">${escapeHtml(definition.name)}</option>`).join("") || "<option>Cadastre uma subclasse no Compendium</option>"}</select></label>
-          <p class="character-class-starting-stats">Evasão inicial <strong>${selectedClass.startingEvasion}</strong><span>·</span> PV inicial <strong>${selectedClass.startingHitPoints}</strong></p>
-        </div>
-        <section class="character-domain-card-picker creation-step-panel" data-creation-panel="5"><div><span>Loadout inicial</span><h3>Escolha 2 cartas de Domínio</h3><p>Cartas de nível 1 dos domínios liberados pela sua classe. Você pode escolher as duas do mesmo domínio.</p></div><div class="character-domain-card-toolbar"><span>${state.characterCreationCardIds.length} / 2 selecionadas</span><div>${selectedClass.domainIds.map((domainId) => { const domain = findDomain(catalog, domainId); return `<button type="button" class="chip ${selectedCardDomainId === domainId ? "is-active" : ""}" data-character-card-domain-id="${escapeHtml(domainId)}">${escapeHtml(domain?.name ?? "Domínio")}</button>`; }).join("")}</div></div>${eligibleStartingCards.length ? `<div class="character-domain-card-grid">${visibleStartingCards.map((card) => `<button type="button" class="character-domain-card ${state.characterCreationCardIds.includes(card.id) ? "is-selected" : ""}" data-character-starting-card-id="${escapeHtml(card.id)}"><span class="character-domain-card-art">${card.image ? `<img src="${escapeHtml(card.image)}" alt="" />` : ""}</span><strong>${escapeHtml(card.name)}</strong><small>${escapeHtml(findDomain(catalog, card.domainId)?.name ?? "Domínio")} · Tier ${card.tier}</small><p>${escapeHtml(card.summary)}</p></button>`).join("")}</div>` : `<p class="form-error">Não há cartas de nível 1 para os domínios desta classe. Importe o Pack correspondente antes de criar a ficha.</p>`}</section>
-        <section class="character-creation-review creation-step-panel" data-creation-panel="6"><div><span>Pronto para começar</span><h3>${escapeHtml(state.characterCreationName || "Sem nome")}</h3><p>${escapeHtml(state.characterCreationCommunity || "Comunidade não definida")}</p></div><div class="creation-review-grid"><article><span>Ancestralidades</span><strong>${escapeHtml(selectedAncestries.map((ancestry) => ancestry.name).join(" + ") || "Não definida")}</strong></article><article><span>Top</span><strong>${escapeHtml(selectedTopFeature?.name ?? "Não definida")}</strong></article><article><span>Bottom</span><strong>${escapeHtml(selectedBottomFeature?.name ?? "Não definida")}</strong></article><article><span>Classe</span><strong>${escapeHtml(selectedClass.name)} · ${escapeHtml(subclasses.find((subclass) => subclass.id === state.characterCreationSubclassId)?.name ?? subclasses[0]?.name ?? "Sem subclasse")}</strong><small>PV ${selectedClass.startingHitPoints} · Evasão ${selectedClass.startingEvasion}</small></article><article><span>Cartas no Loadout</span><strong>${escapeHtml(state.characterCreationCardIds.map((id) => catalog.cards.find((card) => card.id === id)?.name ?? "").filter(Boolean).join(" · ") || "Nenhuma carta")}</strong></article></div></section>
+        <section class="character-attributes-picker creation-step-panel" data-creation-panel="4"><div><span>Traços</span><p>Distribua seus atributos. Use cada valor uma vez: +2, +1, +1, +0, +0 e −1.</p></div><div class="character-attribute-choice-grid">${characterCreationAttributes.map((attribute) => `<label class="form-field"><span>${attribute.label}</span><small>${attribute.description}</small><select data-character-attribute-id="${attribute.id}">${[-1, 0, 1, 2].map((value) => `<option value="${value}" ${state.characterCreationAttributeValues[attribute.id] === value ? "selected" : ""}>${value > 0 ? `+${value}` : value}</option>`).join("")}</select></label>`).join("")}</div></section>
+        <section class="character-class-picker creation-step-panel" data-creation-panel="5"><div><span>Arquétipo</span><h3>Classe e subclasse</h3><p>Escolha a classe e veja as características de cada subclasse antes de decidir.</p></div><label class="form-field"><span>Classe</span><select data-character-class>${classes.map((definition) => `<option value="${escapeHtml(definition.id)}" ${definition.id === selectedClass.id ? "selected" : ""}>${escapeHtml(definition.name)}</option>`).join("")}</select><small>${escapeHtml(selectedClass.summary)}</small></label><p class="character-class-starting-stats">Evasão inicial <strong>${selectedClass.startingEvasion}</strong><span>·</span> PV inicial <strong>${selectedClass.startingHitPoints}</strong></p><div class="character-subclass-choice-grid">${subclasses.map((subclass) => `<label class="character-subclass-choice ${subclass.id === selectedSubclass?.id ? "is-selected" : ""}"><input type="radio" name="character-subclass" data-character-subclass-id="${escapeHtml(subclass.id)}" ${subclass.id === selectedSubclass?.id ? "checked" : ""}/><span><strong>${escapeHtml(subclass.name)}</strong><small>${escapeHtml(subclass.summary)}</small>${subclass.spellcastAttributeId ? `<em>Conjuração: ${characterCreationAttributes.find((attribute) => attribute.id === subclass.spellcastAttributeId)?.label ?? ""}</em>` : ""}<div class="character-subclass-features">${renderSubclassFeature("Fundação", subclass.foundationFeatureIds[0])}${renderSubclassFeature("Especialização", subclass.specializationFeatureIds[0])}${renderSubclassFeature("Maestria", subclass.masteryFeatureIds[0])}</div></span></label>`).join("") || `<p class="form-error">Cadastre uma subclasse no Compendium.</p>`}</div></section>
+        <section class="character-domain-card-picker creation-step-panel" data-creation-panel="6"><div><span>Loadout inicial</span><h3>Escolha 2 cartas de Domínio</h3><p>Cartas de nível 1 dos domínios liberados pela sua classe. Você pode escolher as duas do mesmo domínio.</p></div><div class="character-domain-card-toolbar"><span>${state.characterCreationCardIds.length} / 2 selecionadas</span><div>${selectedClass.domainIds.map((domainId) => { const domain = findDomain(catalog, domainId); return `<button type="button" class="chip ${selectedCardDomainId === domainId ? "is-active" : ""}" data-character-card-domain-id="${escapeHtml(domainId)}">${escapeHtml(domain?.name ?? "Domínio")}</button>`; }).join("")}</div></div>${eligibleStartingCards.length ? `<div class="character-domain-card-grid">${visibleStartingCards.map((card) => `<button type="button" class="character-domain-card ${state.characterCreationCardIds.includes(card.id) ? "is-selected" : ""}" data-character-starting-card-id="${escapeHtml(card.id)}"><span class="character-domain-card-art">${card.image ? `<img src="${escapeHtml(card.image)}" alt="" />` : ""}</span><strong>${escapeHtml(card.name)}</strong><small>${escapeHtml(findDomain(catalog, card.domainId)?.name ?? "Domínio")} · Tier ${card.tier}</small><p>${escapeHtml(card.summary)}</p></button>`).join("")}</div>` : `<p class="form-error">Não há cartas de nível 1 para os domínios desta classe. Importe o Pack correspondente antes de criar a ficha.</p>`}</section>
+        <section class="character-creation-review creation-step-panel" data-creation-panel="7"><div><span>Pronto para começar</span><h3>${escapeHtml(state.characterCreationName || "Sem nome")}</h3><p>${escapeHtml(state.characterCreationCommunity || "Comunidade não definida")}</p></div><div class="creation-review-grid"><article><span>Ancestralidades</span><strong>${escapeHtml(selectedAncestries.map((ancestry) => ancestry.name).join(" + ") || "Não definida")}</strong></article><article><span>Top</span><strong>${escapeHtml(selectedTopFeature?.name ?? "Não definida")}</strong></article><article><span>Bottom</span><strong>${escapeHtml(selectedBottomFeature?.name ?? "Não definida")}</strong></article><article><span>Atributos</span><strong>${characterCreationAttributes.map((attribute) => `${attribute.label} ${state.characterCreationAttributeValues[attribute.id] >= 0 ? "+" : ""}${state.characterCreationAttributeValues[attribute.id]}`).join(" · ")}</strong></article><article><span>Classe</span><strong>${escapeHtml(selectedClass.name)} · ${escapeHtml(selectedSubclass?.name ?? "Sem subclasse")}</strong><small>PV ${selectedClass.startingHitPoints} · Evasão ${selectedClass.startingEvasion}</small></article><article><span>Cartas no Loadout</span><strong>${escapeHtml(state.characterCreationCardIds.map((id) => catalog.cards.find((card) => card.id === id)?.name ?? "").filter(Boolean).join(" · ") || "Nenhuma carta")}</strong></article></div></section>
         ${state.characterCreationError ? `<p class="form-error">${escapeHtml(state.characterCreationError)}</p>` : ""}
         </div>
         <div class="modal-actions character-creation-actions">${state.characterCreationStep > 1 ? `<button class="secondary-action character-creation-arrow" type="button" data-action="character-creation-previous" aria-label="Voltar à etapa anterior" title="Voltar">←</button>` : "<span></span>"}${isFinalCharacterCreationStep(state.characterCreationStep) ? `<button class="primary-action" type="button" data-action="save-new-character">Criar ficha</button>` : `<button class="primary-action character-creation-arrow" type="button" data-action="character-creation-next" aria-label="Avançar para a próxima etapa" title="Continuar">→</button>`}</div>
@@ -1354,6 +1392,9 @@ function renderPlaceholder(page: Page): string {
 }
 
 function render(options: { preserveMainScroll?: boolean } = {}): void {
+  const previousCharacterCreationScrollTop = state.characterSelectionOpen && state.characterCreationOpen
+    ? appRoot.querySelector<HTMLElement>(".character-creation-scroll")?.scrollTop
+    : undefined;
   const previousMainScrollTop = options.preserveMainScroll
     ? appRoot.querySelector<HTMLElement>(".main-shell")?.scrollTop
     : undefined;
@@ -1361,18 +1402,30 @@ function render(options: { preserveMainScroll?: boolean } = {}): void {
     ? appRoot.querySelector<HTMLElement>(".content")?.scrollTop
     : undefined;
   const previousDocumentScrollTop = options.preserveMainScroll ? window.scrollY : undefined;
-  const character = state.character;
+  const currentCharacter = state.character;
 
   if (state.characterSelectionOpen) {
-    appRoot.innerHTML = `${renderCharacterSelection()}${renderCharacterCreationModal()}`;
-    document.body.classList.toggle("has-modal", state.characterCreationOpen);
+    appRoot.innerHTML = `${renderCharacterSelection()}${renderCharacterCreationModal()}${renderDeleteCharacterModal()}`;
+    document.body.classList.toggle("has-modal", state.characterCreationOpen || Boolean(state.deletingCharacterId));
+    if (previousCharacterCreationScrollTop !== undefined) {
+      requestAnimationFrame(() => {
+        const creationScroll = appRoot.querySelector<HTMLElement>(".character-creation-scroll");
+        if (creationScroll) creationScroll.scrollTop = previousCharacterCreationScrollTop;
+      });
+    }
     return;
   }
 
-  if (!character) {
+  if (!currentCharacter) {
     appRoot.innerHTML = `<div class="boot-screen">Carregando SoulForge...</div>`;
     return;
   }
+  const synchronizedCharacter = synchronizeGameMarkers(currentCharacter, catalog);
+  if (synchronizedCharacter !== currentCharacter) {
+    state.character = synchronizedCharacter;
+    void persistCharacter(synchronizedCharacter);
+  }
+  const character = synchronizedCharacter;
 
   const screen = state.page === "overview"
     ? renderOverviewView(character, getPlayerOverviewDependencies())
@@ -1556,6 +1609,12 @@ async function confirmPackImport(): Promise<void> {
   try {
     await installLocalPack(bundle.manifest, bundle.definitions);
     await refreshCatalog();
+    // O pack pode disponibilizar Definitions que uma migracao do personagem demo passou a referenciar.
+    if (state.character?.id === demoCharacter.id) {
+      await ensureDemoCharacter();
+      state.character = await loadCharacter(demoCharacter.id);
+      state.characters = await listCharacters();
+    }
     state.packImportOpen = false;
     state.pendingPackBundle = undefined;
     state.packImportError = undefined;
@@ -1578,6 +1637,9 @@ async function openCharacter(characterId: string | undefined): Promise<void> {
     return;
   }
 
+  if (characterId === demoCharacter.id) {
+    await ensureDemoCharacter();
+  }
   const character = await loadCharacter(characterId);
   if (!character) {
     return;
@@ -1587,6 +1649,25 @@ async function openCharacter(characterId: string | undefined): Promise<void> {
   state.characterSelectionOpen = false;
   state.characterCreationOpen = false;
   localStorage.setItem(activeCharacterStorageKey, character.id);
+  render();
+}
+
+async function confirmDeleteCharacter(): Promise<void> {
+  const characterId = state.deletingCharacterId;
+  if (!characterId || characterId === demoCharacter.id) {
+    state.deletingCharacterId = undefined;
+    render();
+    return;
+  }
+
+  await deleteStoredCharacter(characterId);
+  state.characters = state.characters.filter((character) => character.id !== characterId);
+  if (state.character?.id === characterId) {
+    state.character = undefined;
+    localStorage.removeItem(activeCharacterStorageKey);
+    state.characterSelectionOpen = true;
+  }
+  state.deletingCharacterId = undefined;
   render();
 }
 
@@ -1605,8 +1686,9 @@ async function createCharacter(): Promise<void> {
   const validBottomFeature = selectedAncestries.some((ancestry) => ancestry.bottomFeatureId === bottomFeatureId);
   const eligibleStartingCardIds = classDefinition ? catalog.cards.filter((card) => card.tier === 1 && classDefinition.domainIds.includes(card.domainId)).map((card) => card.id) : [];
   const selectedStartingCardIds = state.characterCreationCardIds.filter((id) => eligibleStartingCardIds.includes(id));
+  const hasValidAttributes = hasValidCharacterCreationAttributes(state.characterCreationAttributeValues);
 
-  if (!name || !community || !classDefinition || !subclassDefinition || selectedAncestries.length !== ancestryIds.length || !selectedAncestries.length || !topFeatureId || !bottomFeatureId || !validTopFeature || !validBottomFeature || selectedStartingCardIds.length !== 2) {
+  if (!name || !community || !classDefinition || !subclassDefinition || !hasValidAttributes || selectedAncestries.length !== ancestryIds.length || !selectedAncestries.length || !topFeatureId || !bottomFeatureId || !validTopFeature || !validBottomFeature || selectedStartingCardIds.length !== 2) {
     state.characterCreationError = "Complete a ficha, defina as Features e escolha duas cartas de Domínio de nível 1.";
     render();
     return;
@@ -1645,8 +1727,8 @@ async function createCharacter(): Promise<void> {
       quote: ""
     },
     attributes: [
-      { id: "dex", label: "AGI", value: 0 }, { id: "for", label: "FOR", value: 0 }, { id: "cha", label: "FIN", value: 0 },
-      { id: "wil", label: "INS", value: 0 }, { id: "con", label: "PRE", value: 0 }, { id: "int", label: "CON", value: 0 }
+      { id: "dex", label: "AGI", value: state.characterCreationAttributeValues.dex }, { id: "for", label: "FOR", value: state.characterCreationAttributeValues.for }, { id: "cha", label: "FIN", value: state.characterCreationAttributeValues.cha },
+      { id: "wil", label: "INS", value: state.characterCreationAttributeValues.wil }, { id: "con", label: "PRE", value: state.characterCreationAttributeValues.con }, { id: "int", label: "CON", value: state.characterCreationAttributeValues.int }
     ],
     defense: { evasion: classDefinition.startingEvasion, armor: 0, minor: 0, major: 0 },
     proficiency: 1,
@@ -1674,7 +1756,14 @@ function syncCharacterCreationDraft(): void {
   state.characterCreationCommunity = document.querySelector<HTMLInputElement>("[data-character-community]")?.value.trim() ?? state.characterCreationCommunity;
   state.characterCreationTopFeatureId = document.querySelector<HTMLSelectElement>('[data-creation-panel="3"] [data-character-top-feature]')?.value ?? state.characterCreationTopFeatureId;
   state.characterCreationBottomFeatureId = document.querySelector<HTMLSelectElement>('[data-creation-panel="3"] [data-character-bottom-feature]')?.value ?? state.characterCreationBottomFeatureId;
-  state.characterCreationSubclassId = document.querySelector<HTMLSelectElement>("[data-character-subclass]")?.value ?? state.characterCreationSubclassId;
+  document.querySelectorAll<HTMLSelectElement>("[data-character-attribute-id]").forEach((input) => {
+    const attributeId = input.dataset.characterAttributeId as Attribute["id"] | undefined;
+    if (attributeId) state.characterCreationAttributeValues[attributeId] = Number(input.value);
+  });
+}
+
+function hasValidCharacterCreationAttributes(values: Record<Attribute["id"], number>): boolean {
+  return Object.values(values).sort((left, right) => left - right).join(",") === "-1,0,0,1,1,2";
 }
 
 function validateCharacterCreationStep(): boolean {
@@ -1696,11 +1785,15 @@ function validateCharacterCreationStep(): boolean {
     state.characterCreationError = "Defina as Features Top e Bottom.";
     return false;
   }
-  if (state.characterCreationStep === 4 && (!state.characterCreationClassId || !state.characterCreationSubclassId)) {
+  if (state.characterCreationStep === 4 && !hasValidCharacterCreationAttributes(state.characterCreationAttributeValues)) {
+    state.characterCreationError = "Distribua uma vez cada valor: +2, +1, +1, +0, +0 e −1.";
+    return false;
+  }
+  if (state.characterCreationStep === 5 && (!state.characterCreationClassId || !state.characterCreationSubclassId)) {
     state.characterCreationError = "Escolha uma classe e uma subclasse.";
     return false;
   }
-  if (state.characterCreationStep === 5 && state.characterCreationCardIds.length !== 2) {
+  if (state.characterCreationStep === 6 && state.characterCreationCardIds.length !== 2) {
     state.characterCreationError = "Escolha exatamente duas cartas de Domínio de nível 1.";
     return false;
   }
@@ -1775,6 +1868,55 @@ async function adjustResource(delta: number): Promise<void> {
   });
 
   const updatedCharacter = { ...character, resources };
+  state.character = updatedCharacter;
+  await saveCharacter(updatedCharacter);
+  render();
+}
+
+async function adjustGameMarker(markerKey: string, delta: number): Promise<void> {
+  const character = state.character;
+  if (!character || !delta) return;
+  const gameMarkers = (character.gameMarkers ?? []).map((marker) => {
+    if (marker.key !== markerKey || marker.kind !== "counter") return marker;
+    const value = marker.max === undefined ? marker.value + delta : Math.min(marker.max, Math.max(0, marker.value + delta));
+    return { ...marker, value: Math.max(0, value) };
+  });
+  const updatedCharacter = { ...character, gameMarkers };
+  state.character = updatedCharacter;
+  await saveCharacter(updatedCharacter);
+  render();
+}
+
+async function setGameMarkerDieResult(markerKey: string, dieId: string, value: number): Promise<void> {
+  const character = state.character;
+  if (!character || value < 1 || value > 4) return;
+  const gameMarkers = (character.gameMarkers ?? []).map((marker) => {
+    if (marker.key !== markerKey || marker.kind !== "dice") return marker;
+    return { ...marker, results: marker.results.map((die) => die.id !== dieId ? die : die.value === value ? { ...die, value: 0, used: false } : { ...die, value, used: false }) };
+  });
+  const updatedCharacter = { ...character, gameMarkers };
+  state.character = updatedCharacter;
+  await saveCharacter(updatedCharacter);
+  render();
+}
+
+async function toggleGameMarkerDieUse(markerKey: string, dieId: string): Promise<void> {
+  const character = state.character;
+  if (!character) return;
+  const gameMarkers = (character.gameMarkers ?? []).map((marker) => {
+    if (marker.key !== markerKey || marker.kind !== "dice") return marker;
+    return { ...marker, results: marker.results.map((die) => die.id !== dieId || die.value === 0 ? die : { ...die, used: !die.used }) };
+  });
+  const updatedCharacter = { ...character, gameMarkers };
+  state.character = updatedCharacter;
+  await saveCharacter(updatedCharacter);
+  render();
+}
+
+async function applyGameMarkerReset(reset: "session" | "short-rest" | "long-rest"): Promise<void> {
+  const character = state.character;
+  if (!character) return;
+  const updatedCharacter = resetGameMarkers(character, catalog, reset);
   state.character = updatedCharacter;
   await saveCharacter(updatedCharacter);
   render();
@@ -1920,6 +2062,7 @@ function bindEvents(): void {
       state.pendingPackBundle = undefined;
       state.packImportError = undefined;
       state.deletingInstalledPackId = undefined;
+      state.deletingCharacterId = undefined;
       render();
       return;
     }
@@ -1972,6 +2115,7 @@ function bindEvents(): void {
       state.pendingPackBundle = undefined;
       state.packImportError = undefined;
       state.deletingInstalledPackId = undefined;
+      state.deletingCharacterId = undefined;
       render();
       return;
     }
@@ -1982,6 +2126,46 @@ function bindEvents(): void {
     if (resourceAdjustButton) {
       const delta = Number(resourceAdjustButton.dataset.resourceAdjust);
       void adjustResource(delta);
+      return;
+    }
+
+    const gameMarkerAdjustButton = target.closest<HTMLElement>("[data-game-marker-adjust]");
+    if (gameMarkerAdjustButton) {
+      const markerKey = gameMarkerAdjustButton.dataset.gameMarkerAdjust;
+      const delta = Number(gameMarkerAdjustButton.dataset.gameMarkerDelta);
+      if (markerKey) void adjustGameMarker(markerKey, delta);
+      return;
+    }
+
+    const gameMarkerDieResultButton = target.closest<HTMLElement>("[data-game-marker-die-result]");
+    if (gameMarkerDieResultButton) {
+      const markerKey = gameMarkerDieResultButton.dataset.gameMarkerDieResult;
+      const dieId = gameMarkerDieResultButton.dataset.gameMarkerDieId;
+      const value = Number(gameMarkerDieResultButton.dataset.gameMarkerDieValue);
+      if (markerKey && dieId) void setGameMarkerDieResult(markerKey, dieId, value);
+      return;
+    }
+
+    const gameMarkerDieUseButton = target.closest<HTMLElement>("[data-game-marker-die-use]");
+    if (gameMarkerDieUseButton) {
+      const markerKey = gameMarkerDieUseButton.dataset.gameMarkerDieUse;
+      const dieId = gameMarkerDieUseButton.dataset.gameMarkerDieId;
+      if (markerKey && dieId) void toggleGameMarkerDieUse(markerKey, dieId);
+      return;
+    }
+
+    if (target.closest('[data-action="reset-game-markers-session"]')) {
+      void applyGameMarkerReset("session");
+      return;
+    }
+
+    if (target.closest('[data-action="rest-short"]')) {
+      void applyGameMarkerReset("short-rest");
+      return;
+    }
+
+    if (target.closest('[data-action="rest-long"]')) {
+      void applyGameMarkerReset("long-rest");
       return;
     }
 
@@ -2034,6 +2218,24 @@ function bindEvents(): void {
       return;
     }
 
+    const requestDeleteCharacterButton = target.closest<HTMLElement>('[data-action="request-delete-character"]');
+    if (requestDeleteCharacterButton) {
+      state.deletingCharacterId = requestDeleteCharacterButton.dataset.characterId;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="cancel-delete-character"]')) {
+      state.deletingCharacterId = undefined;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="confirm-delete-character"]')) {
+      void confirmDeleteCharacter();
+      return;
+    }
+
     const selectCharacterButton = target.closest<HTMLElement>('[data-action="select-character"]');
     if (selectCharacterButton) {
       void openCharacter(selectCharacterButton.dataset.characterId);
@@ -2050,6 +2252,7 @@ function bindEvents(): void {
       state.characterCreationAncestryIds = getCharacterCreationAncestries().slice(0, 1).map((ancestry) => ancestry.id);
       state.characterCreationAncestrySearch = "";
       state.characterCreationCardIds = [];
+      state.characterCreationAttributeValues = { ...characterCreationAttributeDefaults };
       state.characterCreationCardDomainId = undefined;
       state.characterCreationTopFeatureId = undefined;
       state.characterCreationBottomFeatureId = undefined;
@@ -2064,6 +2267,7 @@ function bindEvents(): void {
       state.characterCreationAncestryIds = [];
       state.characterCreationAncestrySearch = "";
       state.characterCreationCardIds = [];
+      state.characterCreationAttributeValues = { ...characterCreationAttributeDefaults };
       state.characterCreationCardDomainId = undefined;
       state.characterCreationTopFeatureId = undefined;
       state.characterCreationBottomFeatureId = undefined;
@@ -2973,9 +3177,18 @@ function bindEvents(): void {
       render();
       return;
     }
-    if (target instanceof HTMLSelectElement && target.matches("[data-character-subclass]")) {
-      state.characterCreationSubclassId = target.value;
+    if (target instanceof HTMLSelectElement && target.matches("[data-character-attribute-id]")) {
+      const attributeId = target.dataset.characterAttributeId as Attribute["id"] | undefined;
+      if (attributeId) state.characterCreationAttributeValues[attributeId] = Number(target.value);
       state.characterCreationError = undefined;
+      render();
+      return;
+    }
+    if (target instanceof HTMLInputElement && target.matches("[data-character-subclass-id]")) {
+      state.characterCreationSubclassId = target.dataset.characterSubclassId;
+      state.characterCreationError = undefined;
+      render();
+      return;
     }
   });
 }

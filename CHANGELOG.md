@@ -4,6 +4,19 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.12.0]
+
+### Adicionado
+
+- base de marcadores de jogo declarativos, com contadores e dados sincronizados automaticamente a partir de fontes ativas da ficha;
+- distribuição obrigatória de atributos e detalhes de subclasses na criação de personagem;
+- exclusão confirmada de fichas locais pela seleção de personagens.
+
+### Alterado
+
+- fluxo de criação preserva a posição de rolagem durante escolhas e simplifica etapas redundantes;
+- etapas de atributos e classe foram alinhadas visualmente às demais etapas da criação.
+
 ## [0.11.0]
 
 ### Adicionado
