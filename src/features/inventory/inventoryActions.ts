@@ -24,7 +24,7 @@ export type InventoryActionDependencies = {
   canAddItemToCompartment: (compartment: InventoryCompartment, entries: InventoryItemEntry[], item: ItemDefinition, quantity: number) => boolean;
   findItem: (definitionId: string) => ItemDefinition | undefined;
   saveCharacter: (character: Character) => Promise<void>;
-  render: () => void;
+  render: (options?: { preserveMainScroll?: boolean }) => void;
 };
 
 export async function moveItemToCompartment(itemId: string | undefined, targetCompartmentId: string | undefined, sourceCompartmentId: string | undefined, dependencies: InventoryActionDependencies): Promise<void> {
@@ -40,7 +40,7 @@ export async function moveItemToCompartment(itemId: string | undefined, targetCo
   const updatedCharacter: Character = { ...character, inventory: { ...character.inventory, entries: character.inventory.entries.map((entry) => entry.definitionId === itemId && getEntryCompartmentId(entry) === currentCompartmentId ? { ...entry, compartmentId: targetCompartmentId, equipped: targetCompartmentId === "equipped" } : entry) } };
   state.character = updatedCharacter;
   await saveCharacter(updatedCharacter);
-  render();
+  render({ preserveMainScroll: true });
 }
 
 export async function addItemToContainer(dependencies: InventoryActionDependencies): Promise<void> {

@@ -71,6 +71,9 @@ export type Defense = {
   major: number;
 };
 
+/** Bônus declarados por um item enquanto ele estiver em Equipados. */
+export type ItemCombatModifiers = Partial<Defense>;
+
 export type CharacterSkill = {
   id: string;
   name: string;
@@ -163,6 +166,7 @@ export type ItemDefinition = BaseDefinition & {
   weight: number;
   value?: number;
   traits?: string[];
+  combatModifiers?: ItemCombatModifiers;
 };
 
 export type ClassDefinition = BaseDefinition & {
@@ -240,6 +244,7 @@ export type Character = {
     xp: number;
     nextLevelXp: number;
     quote: string;
+    portraitImage?: string;
   };
   attributes: Attribute[];
   defense: Defense;

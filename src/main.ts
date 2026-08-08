@@ -54,6 +54,7 @@ import {
   consumeInventoryDragClickSuppression,
   type InventoryDragDependencies
 } from "./features/inventory/bindInventoryDrag";
+import { getEffectiveDefense, synchronizeArmorResource } from "./features/inventory/combatModifiers";
 import {
   renderEditorHeader as renderEditorHeaderView,
   renderResourceIndicator as renderResourceIndicatorView,
@@ -140,7 +141,8 @@ let modalBackdropPointerDown = false;
 
 /** Centraliza a persistencia para que todo personagem salvo mantenha os marcadores sincronizados. */
 async function saveCharacter(character: Character): Promise<void> {
-  const synchronized = synchronizeGameMarkers(character, catalog);
+  const withSynchronizedArmor = synchronizeArmorResource(character, getItemDefinition);
+  const synchronized = synchronizeGameMarkers(withSynchronizedArmor, catalog);
   if (synchronized !== character) {
     Object.assign(character, synchronized);
   }
@@ -209,6 +211,8 @@ const state: {
   deletingCompendiumAncestryId?: string;
   characterSelectionOpen: boolean;
   deletingCharacterId?: string;
+  characterPortraitModalOpen: boolean;
+  characterPortraitPreviewOpen: boolean;
   characterCreationOpen: boolean;
   characterCreationStep: CharacterCreationStep;
   characterCreationName: string;
@@ -220,6 +224,7 @@ const state: {
   characterCreationCardIds: string[];
   characterCreationCardDomainId?: string;
   characterCreationAttributeValues: Record<Attribute["id"], number>;
+  characterCreationPortraitImage?: string;
   characterCreationTopFeatureId?: string;
   characterCreationBottomFeatureId?: string;
   characterCreationError?: string;
@@ -263,6 +268,8 @@ const state: {
   classModalOpen: false,
   ancestryModalOpen: false,
   characterSelectionOpen: true,
+  characterPortraitModalOpen: false,
+  characterPortraitPreviewOpen: false,
   characterCreationOpen: false,
   characterCreationStep: 1,
   characterCreationName: "",
@@ -283,7 +290,7 @@ const state: {
   }
 };
 
-const appVersion = "0.12.0";
+const appVersion = "0.13.0";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -333,6 +340,11 @@ function attributeTitle(label: string): string {
   };
 
   return labels[label] ?? label;
+}
+
+function getItemDefinition(definitionId: string): ItemDefinition | undefined {
+  const definition = findDefinition(catalog, definitionId);
+  return definition?.type === "item" ? definition : undefined;
 }
 
 function getItemEntries(character: Character) {
@@ -422,7 +434,11 @@ function getPlayerShellDependencies(): PlayerShellDependencies {
     editorNavigation: sideNavItems,
     escapeHtml,
     attributeTitle,
-    progressPercent
+    progressPercent,
+    getEffectiveDefense: (character) => getEffectiveDefense(character, (definitionId) => {
+      const definition = findDefinition(catalog, definitionId);
+      return definition?.type === "item" ? definition : undefined;
+    })
   };
 }
 
@@ -1294,6 +1310,19 @@ function renderDeleteCharacterModal(): string {
   return `<div class="modal-backdrop" data-modal-backdrop><section class="confirm-modal danger-modal" role="dialog" aria-modal="true" aria-labelledby="delete-character-title"><h2 id="delete-character-title">Excluir personagem?</h2><p>A ficha de <strong>${escapeHtml(character.identity.name)}</strong>, incluindo inventário, anotações e progresso, será removida deste dispositivo.</p><div class="danger-summary"><strong>!</strong><span>Esta ação não pode ser desfeita.</span></div><div class="confirmation-actions"><button class="secondary-action" type="button" data-action="cancel-delete-character">Cancelar</button><button class="danger-action" type="button" data-action="confirm-delete-character">Excluir personagem</button></div></section></div>`;
 }
 
+function renderCharacterPortraitModal(): string {
+  if (!state.characterPortraitModalOpen || !state.character) return "";
+  const portrait = state.character.identity.portraitImage;
+  return `<div class="modal-backdrop" data-modal-backdrop><section class="container-modal portrait-modal" role="dialog" aria-modal="true" aria-labelledby="portrait-modal-title"><div class="container-modal-heading"><h2 id="portrait-modal-title">Foto do personagem</h2><button class="modal-close modal-close-inline" data-modal-close aria-label="Fechar">x</button></div><p>A imagem fica salva somente nesta ficha, neste dispositivo.</p>${portrait ? `<img class="portrait-modal-preview" src="${escapeHtml(portrait)}" alt="Retrato atual de ${escapeHtml(state.character.identity.name)}" />` : ""}<label class="form-field"><span>Escolher nova foto</span><input data-character-portrait-replace type="file" accept="image/png,image/jpeg,image/webp" /><small>PNG, JPG ou WebP; até 1,5 MB.</small></label>${portrait ? '<button class="danger-action" type="button" data-action="remove-character-portrait">Remover foto</button>' : ""}</section></div>`;
+}
+
+function renderCharacterPortraitPreviewModal(): string {
+  const character = state.character;
+  const portrait = character?.identity.portraitImage;
+  if (!state.characterPortraitPreviewOpen || !character || !portrait) return "";
+  return `<div class="modal-backdrop portrait-preview-backdrop" data-modal-backdrop><section class="portrait-preview-modal" role="dialog" aria-modal="true" aria-labelledby="portrait-preview-title"><button class="modal-close" type="button" data-modal-close aria-label="Fechar foto ampliada">x</button><h2 id="portrait-preview-title">${escapeHtml(character.identity.name)}</h2><img src="${escapeHtml(portrait)}" alt="Retrato ampliado de ${escapeHtml(character.identity.name)}" /></section></div>`;
+}
+
 function renderCharacterCreationModal(): string {
   if (!state.characterCreationOpen) {
     return "";
@@ -1342,6 +1371,7 @@ function renderCharacterCreationModal(): string {
         <div class="form-grid character-creation-identity creation-step-panel" data-creation-panel="1">
           <label class="form-field"><span>Nome</span><input data-character-name required maxlength="60" value="${escapeHtml(state.characterCreationName)}" placeholder="Nome do personagem" /></label>
           <label class="form-field form-field-wide"><span>Comunidade</span><input data-character-community required maxlength="80" value="${escapeHtml(state.characterCreationCommunity)}" placeholder="Ex.: Vigilia de Tristelo" /></label>
+          <label class="form-field form-field-wide character-portrait-upload"><span>Foto do personagem</span><input data-character-portrait type="file" accept="image/png,image/jpeg,image/webp" /><small>${state.characterCreationPortraitImage ? "Foto selecionada. Você pode escolher outra para substituí-la." : "Opcional. PNG, JPG ou WebP; até 1,5 MB."}</small>${state.characterCreationPortraitImage ? `<img src="${escapeHtml(state.characterCreationPortraitImage)}" alt="Prévia do retrato" />` : ""}</label>
         </div>
         <section class="character-ancestry-picker creation-step-panel" data-creation-panel="2">
           <div><span>Origem</span><p>Escolha uma ou duas. Com duas, combine livremente a Feature Top e a Feature Bottom.</p></div>
@@ -1420,7 +1450,8 @@ function render(options: { preserveMainScroll?: boolean } = {}): void {
     appRoot.innerHTML = `<div class="boot-screen">Carregando SoulForge...</div>`;
     return;
   }
-  const synchronizedCharacter = synchronizeGameMarkers(currentCharacter, catalog);
+  const characterWithSynchronizedArmor = synchronizeArmorResource(currentCharacter, getItemDefinition);
+  const synchronizedCharacter = synchronizeGameMarkers(characterWithSynchronizedArmor, catalog);
   if (synchronizedCharacter !== currentCharacter) {
     state.character = synchronizedCharacter;
     void persistCharacter(synchronizedCharacter);
@@ -1492,6 +1523,8 @@ function render(options: { preserveMainScroll?: boolean } = {}): void {
     ${renderDeleteCompendiumClassModalView(getClassFeatureDependencies())}
     ${renderCompendiumAncestryFormModalView(getAncestryFeatureDependencies())}
     ${renderDeleteCompendiumAncestryModalView(getAncestryFeatureDependencies())}
+    ${renderCharacterPortraitModal()}
+    ${renderCharacterPortraitPreviewModal()}
     ${renderPackImportModal()}
     ${renderRemoveInstalledPackModal()}
   `;
@@ -1671,6 +1704,30 @@ async function confirmDeleteCharacter(): Promise<void> {
   render();
 }
 
+async function readCharacterPortrait(file: File): Promise<string> {
+  if (file.size > 1_500_000) throw new Error("A imagem deve ter no máximo 1,5 MB.");
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Não foi possível ler a imagem."));
+    reader.onerror = () => reject(new Error("Não foi possível ler a imagem."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function replaceCharacterPortrait(file: File): Promise<void> {
+  const character = state.character;
+  if (!character) return;
+  try {
+    const portraitImage = await readCharacterPortrait(file);
+    state.character = { ...character, identity: { ...character.identity, portraitImage } };
+    state.characterPortraitModalOpen = false;
+    await saveCharacter(state.character);
+    render();
+  } catch (error) {
+    window.alert(error instanceof Error ? error.message : "Não foi possível usar a imagem.");
+  }
+}
+
 async function createCharacter(): Promise<void> {
   const name = state.characterCreationName;
   const community = state.characterCreationCommunity;
@@ -1724,7 +1781,8 @@ async function createCharacter(): Promise<void> {
       level: 1,
       xp: 0,
       nextLevelXp: 10,
-      quote: ""
+      quote: "",
+      portraitImage: state.characterCreationPortraitImage
     },
     attributes: [
       { id: "dex", label: "AGI", value: state.characterCreationAttributeValues.dex }, { id: "for", label: "FOR", value: state.characterCreationAttributeValues.for }, { id: "cha", label: "FIN", value: state.characterCreationAttributeValues.cha },
@@ -1736,7 +1794,7 @@ async function createCharacter(): Promise<void> {
     resources: [
       { id: "hp", label: "PV", value: hp, max: hp, tone: "hp" },
       { id: "stress", label: "Estresse", value: 0, max: 6, tone: "stress" },
-      { id: "armor-slots", label: "Slot de Armadura", value: 0, max: 0, tone: "focus" },
+      { id: "armor-slots", label: "Armadura", value: 0, max: 0, tone: "focus" },
       { id: "hope", label: "Esperanca", value: 2, max: 6, tone: "hope" }
     ],
     skills: subclassSkills.length ? subclassSkills : fallbackSkills,
@@ -2063,6 +2121,8 @@ function bindEvents(): void {
       state.packImportError = undefined;
       state.deletingInstalledPackId = undefined;
       state.deletingCharacterId = undefined;
+      state.characterPortraitModalOpen = false;
+      state.characterPortraitPreviewOpen = false;
       render();
       return;
     }
@@ -2116,6 +2176,8 @@ function bindEvents(): void {
       state.packImportError = undefined;
       state.deletingInstalledPackId = undefined;
       state.deletingCharacterId = undefined;
+      state.characterPortraitModalOpen = false;
+      state.characterPortraitPreviewOpen = false;
       render();
       return;
     }
@@ -2218,6 +2280,26 @@ function bindEvents(): void {
       return;
     }
 
+    if (target.closest('[data-action="open-character-portrait"]')) {
+      state.characterPortraitModalOpen = true;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="open-character-portrait-preview"]')) {
+      state.characterPortraitPreviewOpen = true;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="remove-character-portrait"]') && state.character) {
+      const updatedCharacter = { ...state.character, identity: { ...state.character.identity, portraitImage: undefined } };
+      state.character = updatedCharacter;
+      state.characterPortraitModalOpen = false;
+      void saveCharacter(updatedCharacter).then(() => render());
+      return;
+    }
+
     const requestDeleteCharacterButton = target.closest<HTMLElement>('[data-action="request-delete-character"]');
     if (requestDeleteCharacterButton) {
       state.deletingCharacterId = requestDeleteCharacterButton.dataset.characterId;
@@ -2253,6 +2335,7 @@ function bindEvents(): void {
       state.characterCreationAncestrySearch = "";
       state.characterCreationCardIds = [];
       state.characterCreationAttributeValues = { ...characterCreationAttributeDefaults };
+      state.characterCreationPortraitImage = undefined;
       state.characterCreationCardDomainId = undefined;
       state.characterCreationTopFeatureId = undefined;
       state.characterCreationBottomFeatureId = undefined;
@@ -2268,6 +2351,7 @@ function bindEvents(): void {
       state.characterCreationAncestrySearch = "";
       state.characterCreationCardIds = [];
       state.characterCreationAttributeValues = { ...characterCreationAttributeDefaults };
+      state.characterCreationPortraitImage = undefined;
       state.characterCreationCardDomainId = undefined;
       state.characterCreationTopFeatureId = undefined;
       state.characterCreationBottomFeatureId = undefined;
@@ -3142,6 +3226,20 @@ function bindEvents(): void {
     if (target instanceof HTMLInputElement && target.matches("[data-pack-file]")) {
       const file = target.files?.[0];
       if (file) void readPackImportFile(file);
+      return;
+    }
+    if (target instanceof HTMLInputElement && target.matches("[data-character-portrait]")) {
+      const file = target.files?.[0];
+      if (!file) return;
+      void readCharacterPortrait(file).then((portraitImage) => {
+        state.characterCreationPortraitImage = portraitImage;
+        render();
+      }).catch((error) => window.alert(error instanceof Error ? error.message : "Não foi possível usar a imagem."));
+      return;
+    }
+    if (target instanceof HTMLInputElement && target.matches("[data-character-portrait-replace]")) {
+      const file = target.files?.[0];
+      if (file) void replaceCharacterPortrait(file);
       return;
     }
     if (target instanceof HTMLInputElement && target.matches("[data-character-ancestry-id]")) {

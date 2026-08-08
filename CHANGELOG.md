@@ -4,6 +4,23 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.13.0]
+
+### Adicionado
+
+- foto local para cada personagem, com troca pela ficha e visualização ampliada;
+- modificadores de combate declarativos em itens equipados, aplicáveis a Armadura, Evasão e Limiares.
+
+### Alterado
+
+- a trilha de Armadura é sincronizada automaticamente com o valor da armadura equipada;
+- dados de marcadores passam a permitir registrar individualmente resultado e uso;
+- miniatura do retrato preserva o espaço da sidebar, enquanto a imagem completa pode ser ampliada.
+
+### Corrigido
+
+- movimentar itens entre containers preserva a posição de rolagem da ficha.
+
 ## [0.12.0]
 
 ### Adicionado
