@@ -36,7 +36,7 @@ export function renderEditorHeader(dependencies: PlayerShellDependencies): strin
 
 export function renderResources(character: Character, dependencies: PlayerShellDependencies): string {
   const { escapeHtml } = dependencies;
-  return `<section class="band resources-band" aria-labelledby="resources-title"><div class="section-heading"><h2 id="resources-title">Recursos</h2></div><div class="resource-grid">${character.resources.map((resource) => `<button class="resource-card tone-${resource.tone}" data-resource-id="${resource.id}"><div class="resource-card-header"><span>${escapeHtml(resource.id === "armor-slots" ? "Armadura" : resource.label)}</span><strong>${resource.value} / ${resource.max}</strong></div>${renderResourceIndicator(resource, dependencies)}</button>`).join("")}<button class="resource-add-card" data-action="add-resource"><span>+</span>Adicionar recurso</button></div></section>`;
+  return `<section class="band resources-band" aria-labelledby="resources-title"><div class="section-heading"><h2 id="resources-title">Recursos</h2><button class="resource-add-button" type="button" data-action="add-resource"><span>+</span>Adicionar recurso</button></div><div class="resource-grid">${character.resources.map((resource) => `<button class="resource-card tone-${resource.tone}" data-resource-id="${resource.id}"><div class="resource-card-header"><span>${escapeHtml(resource.id === "armor-slots" ? "Armadura" : resource.label)}</span><strong>${resource.value} / ${resource.max}</strong></div>${renderResourceIndicator(resource, dependencies)}</button>`).join("")}</div></section>`;
 }
 
 export function renderResourceIndicator(resource: Character["resources"][number], dependencies: PlayerShellDependencies): string {

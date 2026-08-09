@@ -4,6 +4,19 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.14.0]
+
+### Adicionado
+
+- criação de recursos personalizados diretamente pela ficha, com nome, valores e cor;
+- interação de dados por slots geométricos, preparada para d4 e d6, com confirmação antes do consumo.
+
+### Alterado
+
+- marcadores de jogo compactados e integrados às ações rápidas da ficha;
+- ação de reiniciar marcadores de sessão movida para as ações rápidas;
+- ação de adicionar recurso movida para o cabeçalho de Recursos.
+
 ## [0.13.0]
 
 ### Adicionado

@@ -28,7 +28,7 @@ export type DiceGameMarkerDefinition = {
   id: string;
   kind: "dice";
   label: string;
-  die: "d4";
+  die: "d4" | "d6";
   quantity: GameMarkerQuantity;
   reset?: "session";
 };
@@ -50,7 +50,7 @@ export type DiceGameMarkerState = {
   sourceDefinitionId: string;
   markerId: string;
   kind: "dice";
-  die: "d4";
+  die: "d4" | "d6";
   results: Array<{ id: string; value: number; used: boolean }>;
 };
 

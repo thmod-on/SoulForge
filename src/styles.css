@@ -1560,6 +1560,28 @@ button {
   color: #f2a516;
 }
 
+.resource-add-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 2rem;
+  padding: 0.35rem 0.55rem;
+  border: 1px dashed rgba(242, 165, 22, 0.56);
+  color: var(--color-gold);
+  background: transparent;
+  font-size: 0.72rem;
+}
+
+.resource-add-button span {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.resource-add-button:hover {
+  border-style: solid;
+  background: rgba(242, 165, 22, 0.08);
+}
+
 .resource-card-header {
   display: flex;
   align-items: baseline;
@@ -1908,7 +1930,7 @@ button {
 
 .quick-actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
   gap: 0.75rem;
 }
 
@@ -5684,11 +5706,11 @@ body.has-modal {
 }
 /* Bloco provisório: a interação dos marcadores será definida em uma etapa posterior. */
 .game-markers-preview {
-  padding: 0.85rem 1rem;
+  padding: 0.55rem 0.8rem 0.6rem;
 }
 
 .game-markers-preview .section-heading {
-  margin-bottom: 0.65rem;
+  margin-bottom: 0.3rem;
 }
 
 .game-markers-preview .section-heading > div {
@@ -5712,10 +5734,9 @@ body.has-modal {
 .game-marker-preview {
   display: grid;
   gap: 0.2rem;
-  padding: 0.7rem 0.8rem;
-  border: 1px dashed color-mix(in srgb, var(--accent) 55%, transparent);
-  border-radius: 0.7rem;
-  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  padding: 0.2rem 0.25rem;
+  border: 0;
+  background: transparent;
 }
 
 .game-marker-preview h3 {
@@ -5763,33 +5784,104 @@ body.has-modal {
   font-size: 0.72rem;
 }
 
-.game-marker-dice-list { display: grid; gap: 0.45rem; }
 .game-marker-dice-help { margin: 0; color: var(--color-muted); font-size: 0.72rem; line-height: 1.35; }
 
-.game-marker-die {
+.game-marker-dice-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  padding: 0.15rem 0.25rem 0.2rem;
+}
+
+.game-marker-die-slot,
+.game-marker-result-picker button {
+  appearance: none;
   display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.35rem;
-  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
-  border-radius: 0.45rem;
+  place-items: center;
+  width: 3.65rem;
+  height: 3.65rem;
+  border: 0;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 20%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 82%, transparent), 0 0.3rem 0.75rem rgba(0, 0, 0, 0.18);
+  transition: transform 140ms ease, opacity 140ms ease, filter 140ms ease;
 }
 
-.game-marker-die.is-used { opacity: 0.55; }
-.game-marker-die > span { color: var(--accent); font-size: 0.72rem; font-weight: 700; }
-.game-marker-die-results { display: flex; gap: 0.2rem; }
-.game-marker-die-result-label { display: block; margin-bottom: 0.18rem; color: var(--color-muted); font-size: 0.62rem; }
-
-.game-marker-die-results button,
-.game-marker-die-use {
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
-  border-radius: 0.3rem;
-  color: var(--text);
-  background: transparent;
+.game-marker-die-slot strong {
+  font-size: 1.35rem;
+  line-height: 1;
 }
 
-.game-marker-die-results button { width: 1.45rem; height: 1.45rem; }
-.game-marker-die-results button.is-selected,
-.game-marker-die-use { border-color: var(--accent); color: var(--accent); }
-.game-marker-die-use { padding: 0.22rem 0.38rem; font-size: 0.68rem; }
+.game-marker-die-slot small {
+  color: currentColor;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.game-marker-die-slot.die-d4,
+.game-marker-result-picker .die-d4 {
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+.game-marker-die-slot.die-d4 {
+  background: linear-gradient(145deg, #a26ad0, #4a276b) !important;
+  filter: drop-shadow(0 0.3rem 0.42rem rgba(76, 37, 109, 0.48));
+}
+
+.game-marker-die-slot.die-d4 strong { margin-top: 0.55rem; }
+.game-marker-die-slot.die-d4 small { margin-top: -0.55rem; }
+
+.game-marker-die-slot.die-d6,
+.game-marker-result-picker .die-d6 {
+  border-radius: 0.1rem;
+}
+
+.game-marker-die-slot.has-result {
+  color: #fff5dd;
+  background: color-mix(in srgb, var(--accent) 42%, var(--surface));
+  box-shadow: inset 0 0 0 1px var(--accent), 0 0 1rem color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.game-marker-die-slot.die-d4.has-result {
+  background: linear-gradient(145deg, #d29aff, #62348b) !important;
+}
+
+.game-marker-die-slot:hover:not(:disabled),
+.game-marker-die-slot:focus-visible {
+  transform: translateY(-0.14rem);
+  filter: brightness(1.15);
+}
+
+.game-marker-die-slot.is-used {
+  opacity: 0.4;
+  filter: grayscale(0.8);
+  cursor: default;
+}
+
+.game-marker-die-slot:disabled { pointer-events: none; }
+
+.game-marker-die-dialog { width: min(24rem, calc(100vw - 2rem)); }
+
+.game-marker-result-picker {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.game-marker-result-picker button {
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+.resource-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.resource-form-wide {
+  grid-column: 1 / -1;
+}

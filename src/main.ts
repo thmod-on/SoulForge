@@ -1,9 +1,9 @@
 import { baseCatalog } from "./content/installedPacks";
 import { createCatalog, findDefinition, findDomain } from "./domain/catalog";
 import { demoCharacter } from "./domain/demoCharacter";
-import type { AncestryDefinition, Attribute, CardDefinition, Character, CharacterNote, CharacterNoteCategory, CharacterSkill, CharacterProgressionEntry, ClassDefinition, Definition, FeatureDefinition, InventoryCompartment, ItemDefinition, PackBundle, PackManifest, ProgressionAdvanceKind, SubclassDefinition } from "./domain/types";
+import type { AncestryDefinition, Attribute, CardDefinition, Character, CharacterNote, CharacterNoteCategory, CharacterSkill, CharacterProgressionEntry, ClassDefinition, Definition, DiceGameMarkerState, FeatureDefinition, InventoryCompartment, ItemDefinition, PackBundle, PackManifest, ProgressionAdvanceKind, SubclassDefinition } from "./domain/types";
 import { deleteCharacter as deleteStoredCharacter, ensureDemoCharacter, listCharacters, loadCharacter, saveCharacter as persistCharacter } from "./storage/characterRepository";
-import { getActiveGameMarkers, resetGameMarkers, synchronizeGameMarkers } from "./features/game-markers/gameMarkerSync";
+import { getActiveGameMarkers, resetGameMarkers, synchronizeGameMarkers, type ActiveGameMarker } from "./features/game-markers/gameMarkerSync";
 import { deleteCustomDefinition, loadCustomDefinitions, saveCustomDefinition } from "./storage/compendiumRepository";
 import { installLocalPack, loadInstalledPacks, removeLocalPack } from "./storage/packRepository";
 import { renderSettings as renderSettingsPage, getPackDefinitionSummary } from "./features/settings/renderSettings";
@@ -167,6 +167,7 @@ const state: {
   selectedProgressionTier: ProgressionTierNumber;
   modalCardId?: string;
   resourceModalId?: string;
+  addResourceModalOpen: boolean;
   progressionHistoryOpen: boolean;
   progressionPicker?: ProgressionPicker;
   progressionPickerTier?: ProgressionTierNumber;
@@ -213,6 +214,7 @@ const state: {
   deletingCharacterId?: string;
   characterPortraitModalOpen: boolean;
   characterPortraitPreviewOpen: boolean;
+  gameMarkerDieDialog?: { markerKey: string; dieId: string; mode: "result" | "consume" };
   characterCreationOpen: boolean;
   characterCreationStep: CharacterCreationStep;
   characterCreationName: string;
@@ -253,6 +255,7 @@ const state: {
   lastPlayerPage: "overview",
   selectedCardId: "card.demo.dread-veil",
   selectedProgressionTier: 2,
+  addResourceModalOpen: false,
   progressionHistoryOpen: false,
   progressionPickerIds: [],
   progressionDraft: [],
@@ -290,7 +293,7 @@ const state: {
   }
 };
 
-const appVersion = "0.13.0";
+const appVersion = "0.14.0";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -1310,6 +1313,11 @@ function renderDeleteCharacterModal(): string {
   return `<div class="modal-backdrop" data-modal-backdrop><section class="confirm-modal danger-modal" role="dialog" aria-modal="true" aria-labelledby="delete-character-title"><h2 id="delete-character-title">Excluir personagem?</h2><p>A ficha de <strong>${escapeHtml(character.identity.name)}</strong>, incluindo inventário, anotações e progresso, será removida deste dispositivo.</p><div class="danger-summary"><strong>!</strong><span>Esta ação não pode ser desfeita.</span></div><div class="confirmation-actions"><button class="secondary-action" type="button" data-action="cancel-delete-character">Cancelar</button><button class="danger-action" type="button" data-action="confirm-delete-character">Excluir personagem</button></div></section></div>`;
 }
 
+function renderAddResourceModal(): string {
+  if (!state.addResourceModalOpen) return "";
+  return `<div class="modal-backdrop" data-modal-backdrop><section class="container-modal resource-create-modal" role="dialog" aria-modal="true" aria-labelledby="add-resource-title"><div class="container-modal-heading"><h2 id="add-resource-title">Novo recurso</h2><button class="modal-close modal-close-inline" type="button" data-modal-close aria-label="Fechar">x</button></div><p>Crie um controle próprio para esta ficha. Ele ficará salvo somente neste personagem.</p><div class="resource-form-grid"><label class="form-field resource-form-wide"><span>Nome *</span><input data-add-resource-label type="text" maxlength="40" placeholder="Ex.: Cargas Arcanas" /></label><label class="form-field"><span>Valor atual *</span><input data-add-resource-value type="number" min="0" value="0" /></label><label class="form-field"><span>Valor máximo *</span><input data-add-resource-max type="number" min="1" value="1" /></label><label class="form-field resource-form-wide"><span>Cor</span><select data-add-resource-tone><option value="focus">Azul</option><option value="hope">Esperança</option><option value="stress">Estresse</option><option value="hp">PV</option><option value="shadow">Essência</option></select></label></div><p class="form-error" data-add-resource-error hidden></p><div class="modal-actions"><button class="secondary-action" type="button" data-modal-close>Cancelar</button><button class="primary-action" type="button" data-action="save-resource">Criar recurso</button></div></section></div>`;
+}
+
 function renderCharacterPortraitModal(): string {
   if (!state.characterPortraitModalOpen || !state.character) return "";
   const portrait = state.character.identity.portraitImage;
@@ -1321,6 +1329,27 @@ function renderCharacterPortraitPreviewModal(): string {
   const portrait = character?.identity.portraitImage;
   if (!state.characterPortraitPreviewOpen || !character || !portrait) return "";
   return `<div class="modal-backdrop portrait-preview-backdrop" data-modal-backdrop><section class="portrait-preview-modal" role="dialog" aria-modal="true" aria-labelledby="portrait-preview-title"><button class="modal-close" type="button" data-modal-close aria-label="Fechar foto ampliada">x</button><h2 id="portrait-preview-title">${escapeHtml(character.identity.name)}</h2><img src="${escapeHtml(portrait)}" alt="Retrato ampliado de ${escapeHtml(character.identity.name)}" /></section></div>`;
+}
+
+function getGameMarkerDieFaces(die: "d4" | "d6"): number[] {
+  return Array.from({ length: die === "d4" ? 4 : 6 }, (_, index) => index + 1);
+}
+
+function renderGameMarkerDieDialog(): string {
+  const dialog = state.gameMarkerDieDialog;
+  const character = state.character;
+  if (!dialog || !character) return "";
+  const marker = getActiveGameMarkers(character, catalog).find((entry) => entry.key === dialog.markerKey && entry.state.kind === "dice") as (ActiveGameMarker & { state: DiceGameMarkerState }) | undefined;
+  const diceState = marker?.state;
+  if (!marker || !diceState || diceState.kind !== "dice") return "";
+  const die = diceState.results.find((entry) => entry.id === dialog.dieId);
+  if (!die) return "";
+
+  if (dialog.mode === "result") {
+    return `<div class="modal-backdrop" data-modal-backdrop><section class="confirm-modal game-marker-die-dialog" role="dialog" aria-modal="true" aria-labelledby="game-marker-result-title"><button class="modal-close" type="button" data-modal-close aria-label="Cancelar">x</button><span class="resource-modal-label">${diceState.die}</span><h2 id="game-marker-result-title">Definir resultado</h2><p>Escolha o resultado deste dado de ${escapeHtml(marker.definition.label)}.</p><div class="game-marker-result-picker">${getGameMarkerDieFaces(diceState.die).map((value) => `<button type="button" class="die-${diceState.die}" data-action="set-game-marker-die-result" data-game-marker-die-value="${value}">${value}</button>`).join("")}</div></section></div>`;
+  }
+
+  return `<div class="modal-backdrop" data-modal-backdrop><section class="confirm-modal game-marker-die-dialog" role="dialog" aria-modal="true" aria-labelledby="game-marker-consume-title"><button class="modal-close" type="button" data-modal-close aria-label="Cancelar">x</button><span class="resource-modal-label">${marker.state.die}</span><h2 id="game-marker-consume-title">Consumir dado?</h2><p>Você consumirá um dado de <strong>${escapeHtml(marker.definition.label)}</strong> com resultado <strong>${die.value}</strong>.</p><div class="modal-actions"><button class="secondary-action" type="button" data-modal-close>Cancelar</button><button class="primary-action" type="button" data-action="confirm-game-marker-die-use">Consumir dado</button></div></section></div>`;
 }
 
 function renderCharacterCreationModal(): string {
@@ -1500,6 +1529,7 @@ function render(options: { preserveMainScroll?: boolean } = {}): void {
     ${renderItemModalView(getInventoryRenderDependencies())}
     ${renderDeleteItemModalView(getInventoryRenderDependencies())}
     ${renderResourceModalView(state.resourceModalId, getInventoryRenderDependencies())}
+    ${renderAddResourceModal()}
     ${renderProgressionHistoryModalView(getProgressionDialogDependencies())}
     ${renderProgressionPickerModalView(getProgressionDialogDependencies())}
     ${renderProgressionCardPickerModalView(getProgressionDialogDependencies())}
@@ -1525,6 +1555,7 @@ function render(options: { preserveMainScroll?: boolean } = {}): void {
     ${renderDeleteCompendiumAncestryModalView(getAncestryFeatureDependencies())}
     ${renderCharacterPortraitModal()}
     ${renderCharacterPortraitPreviewModal()}
+    ${renderGameMarkerDieDialog()}
     ${renderPackImportModal()}
     ${renderRemoveInstalledPackModal()}
   `;
@@ -1931,6 +1962,40 @@ async function adjustResource(delta: number): Promise<void> {
   render();
 }
 
+async function createResource(): Promise<void> {
+  const character = state.character;
+  if (!character) return;
+  const labelInput = document.querySelector<HTMLInputElement>("[data-add-resource-label]");
+  const valueInput = document.querySelector<HTMLInputElement>("[data-add-resource-value]");
+  const maxInput = document.querySelector<HTMLInputElement>("[data-add-resource-max]");
+  const toneInput = document.querySelector<HTMLSelectElement>("[data-add-resource-tone]");
+  const error = document.querySelector<HTMLElement>("[data-add-resource-error]");
+  const label = labelInput?.value.trim() ?? "";
+  const value = Number(valueInput?.value);
+  const max = Number(maxInput?.value);
+  const tone = toneInput?.value as Character["resources"][number]["tone"] | undefined;
+
+  if (!label || !Number.isInteger(value) || !Number.isInteger(max) || value < 0 || max < 1 || value > max || !tone) {
+    if (error) {
+      error.textContent = "Informe um nome e valores inteiros entre 0 e o máximo definido.";
+      error.removeAttribute("hidden");
+    }
+    labelInput?.classList.toggle("is-invalid", !label);
+    valueInput?.classList.toggle("is-invalid", !Number.isInteger(value) || value < 0 || value > max);
+    maxInput?.classList.toggle("is-invalid", !Number.isInteger(max) || max < 1 || value > max);
+    return;
+  }
+
+  const updatedCharacter: Character = {
+    ...character,
+    resources: [...character.resources, { id: `resource.${crypto.randomUUID()}`, label, value, max, tone }]
+  };
+  state.character = updatedCharacter;
+  state.addResourceModalOpen = false;
+  await saveCharacter(updatedCharacter);
+  render();
+}
+
 async function adjustGameMarker(markerKey: string, delta: number): Promise<void> {
   const character = state.character;
   if (!character || !delta) return;
@@ -1947,26 +2012,28 @@ async function adjustGameMarker(markerKey: string, delta: number): Promise<void>
 
 async function setGameMarkerDieResult(markerKey: string, dieId: string, value: number): Promise<void> {
   const character = state.character;
-  if (!character || value < 1 || value > 4) return;
+  if (!character || value < 1 || value > 6) return;
   const gameMarkers = (character.gameMarkers ?? []).map((marker) => {
     if (marker.key !== markerKey || marker.kind !== "dice") return marker;
     return { ...marker, results: marker.results.map((die) => die.id !== dieId ? die : die.value === value ? { ...die, value: 0, used: false } : { ...die, value, used: false }) };
   });
   const updatedCharacter = { ...character, gameMarkers };
   state.character = updatedCharacter;
+  state.gameMarkerDieDialog = undefined;
   await saveCharacter(updatedCharacter);
   render();
 }
 
-async function toggleGameMarkerDieUse(markerKey: string, dieId: string): Promise<void> {
+async function consumeGameMarkerDie(markerKey: string, dieId: string): Promise<void> {
   const character = state.character;
   if (!character) return;
   const gameMarkers = (character.gameMarkers ?? []).map((marker) => {
     if (marker.key !== markerKey || marker.kind !== "dice") return marker;
-    return { ...marker, results: marker.results.map((die) => die.id !== dieId || die.value === 0 ? die : { ...die, used: !die.used }) };
+    return { ...marker, results: marker.results.map((die) => die.id !== dieId || die.value === 0 || die.used ? die : { ...die, used: true }) };
   });
   const updatedCharacter = { ...character, gameMarkers };
   state.character = updatedCharacter;
+  state.gameMarkerDieDialog = undefined;
   await saveCharacter(updatedCharacter);
   render();
 }
@@ -2079,6 +2146,7 @@ function bindEvents(): void {
       state.modalCardId = undefined;
       state.selectedItemId = undefined;
       state.resourceModalId = undefined;
+      state.addResourceModalOpen = false;
       state.progressionHistoryOpen = false;
       state.progressionPicker = undefined;
       state.progressionPickerIds = [];
@@ -2123,6 +2191,7 @@ function bindEvents(): void {
       state.deletingCharacterId = undefined;
       state.characterPortraitModalOpen = false;
       state.characterPortraitPreviewOpen = false;
+      state.gameMarkerDieDialog = undefined;
       render();
       return;
     }
@@ -2134,6 +2203,7 @@ function bindEvents(): void {
       state.modalCardId = undefined;
       state.selectedItemId = undefined;
       state.resourceModalId = undefined;
+      state.addResourceModalOpen = false;
       state.progressionHistoryOpen = false;
       state.progressionPicker = undefined;
       state.progressionPickerIds = [];
@@ -2178,6 +2248,7 @@ function bindEvents(): void {
       state.deletingCharacterId = undefined;
       state.characterPortraitModalOpen = false;
       state.characterPortraitPreviewOpen = false;
+      state.gameMarkerDieDialog = undefined;
       render();
       return;
     }
@@ -2199,20 +2270,29 @@ function bindEvents(): void {
       return;
     }
 
-    const gameMarkerDieResultButton = target.closest<HTMLElement>("[data-game-marker-die-result]");
-    if (gameMarkerDieResultButton) {
-      const markerKey = gameMarkerDieResultButton.dataset.gameMarkerDieResult;
-      const dieId = gameMarkerDieResultButton.dataset.gameMarkerDieId;
-      const value = Number(gameMarkerDieResultButton.dataset.gameMarkerDieValue);
-      if (markerKey && dieId) void setGameMarkerDieResult(markerKey, dieId, value);
+    const gameMarkerDieSlot = target.closest<HTMLElement>('[data-action="interact-game-marker-die"]');
+    if (gameMarkerDieSlot && state.character) {
+      const markerKey = gameMarkerDieSlot.dataset.gameMarkerKey;
+      const dieId = gameMarkerDieSlot.dataset.gameMarkerDieId;
+      const marker = markerKey ? getActiveGameMarkers(state.character, catalog).find((entry) => entry.key === markerKey && entry.state.kind === "dice") : undefined;
+      const die = marker?.state.kind === "dice" ? marker.state.results.find((entry) => entry.id === dieId) : undefined;
+      if (markerKey && dieId && die && !die.used) {
+        state.gameMarkerDieDialog = { markerKey, dieId, mode: die.value ? "consume" : "result" };
+        render({ preserveMainScroll: true });
+      }
       return;
     }
 
-    const gameMarkerDieUseButton = target.closest<HTMLElement>("[data-game-marker-die-use]");
-    if (gameMarkerDieUseButton) {
-      const markerKey = gameMarkerDieUseButton.dataset.gameMarkerDieUse;
-      const dieId = gameMarkerDieUseButton.dataset.gameMarkerDieId;
-      if (markerKey && dieId) void toggleGameMarkerDieUse(markerKey, dieId);
+    if (target.closest('[data-action="set-game-marker-die-result"]')) {
+      const dialog = state.gameMarkerDieDialog;
+      const value = Number(target.closest<HTMLElement>('[data-action="set-game-marker-die-result"]')?.dataset.gameMarkerDieValue);
+      if (dialog && Number.isInteger(value)) void setGameMarkerDieResult(dialog.markerKey, dialog.dieId, value);
+      return;
+    }
+
+    if (target.closest('[data-action="confirm-game-marker-die-use"]')) {
+      const dialog = state.gameMarkerDieDialog;
+      if (dialog) void consumeGameMarkerDie(dialog.markerKey, dialog.dieId);
       return;
     }
 
@@ -3020,6 +3100,17 @@ function bindEvents(): void {
     if (itemButton) {
       state.selectedItemId = itemButton.dataset.itemId;
       render();
+      return;
+    }
+
+    if (target.closest('[data-action="add-resource"]')) {
+      state.addResourceModalOpen = true;
+      render();
+      return;
+    }
+
+    if (target.closest('[data-action="save-resource"]')) {
+      void createResource();
       return;
     }
 
