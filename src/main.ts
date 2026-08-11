@@ -2,7 +2,7 @@ import { baseCatalog } from "./content/installedPacks";
 import { createCatalog, findDefinition, findDomain } from "./domain/catalog";
 import { demoCharacter } from "./domain/demoCharacter";
 import type { AncestryDefinition, Attribute, CardDefinition, Character, CharacterNote, CharacterNoteCategory, CharacterSkill, CharacterProgressionEntry, ClassDefinition, Definition, DiceGameMarkerState, FeatureDefinition, InventoryCompartment, ItemDefinition, PackBundle, PackManifest, ProgressionAdvanceKind, SubclassDefinition } from "./domain/types";
-import { deleteCharacter as deleteStoredCharacter, ensureDemoCharacter, listCharacters, loadCharacter, saveCharacter as persistCharacter } from "./storage/characterRepository";
+import { deleteCharacter as deleteStoredCharacter, ensureDemoCharacter, ensureDemoKaelII, listCharacters, loadCharacter, saveCharacter as persistCharacter } from "./storage/characterRepository";
 import { getActiveGameMarkers, resetGameMarkers, synchronizeGameMarkers, type ActiveGameMarker } from "./features/game-markers/gameMarkerSync";
 import { deleteCustomDefinition, loadCustomDefinitions, saveCustomDefinition } from "./storage/compendiumRepository";
 import { installLocalPack, loadInstalledPacks, removeLocalPack } from "./storage/packRepository";
@@ -38,7 +38,6 @@ import {
   renderInventory as renderInventoryView,
   renderItemModal as renderItemModalView,
   renderItemVisual as renderItemVisualView,
-  renderResourceModal as renderResourceModalView,
   type InventoryRenderDependencies
 } from "./features/inventory/renderInventory";
 import {
@@ -82,6 +81,8 @@ import {
   renderCompendiumCardFormModal as renderCompendiumCardFormModalView,
   renderCompendiumCardsManager as renderCompendiumCardsManagerView,
   renderDeleteCompendiumCardModal as renderDeleteCompendiumCardModalView,
+  renderGameMarkerFields,
+  readGameMarker,
   saveCompendiumCard as saveCompendiumCardAction,
   type CardFeatureDependencies
 } from "./features/compendium/cards";
@@ -293,7 +294,7 @@ const state: {
   }
 };
 
-const appVersion = "0.14.0";
+const appVersion = "0.15.0";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -505,7 +506,16 @@ function getClassFeatureDependencies(): ClassFeatureDependencies {
     catalog,
     escapeHtml,
     renderEmptyInline,
-    saveCustomDefinition,
+    saveCustomDefinition: async (definition) => {
+      if (definition.type === "class") {
+        const marker = readGameMarker("class");
+        if (!(marker instanceof Error) && marker) {
+          await saveCustomDefinition({ ...definition, gameMarkers: [marker] });
+          return;
+        }
+      }
+      await saveCustomDefinition(definition);
+    },
     deleteCustomDefinition,
     refreshCatalog,
     render
@@ -1450,6 +1460,110 @@ function renderPlaceholder(page: Page): string {
   `;
 }
 
+function injectGameMarkerAuthoringFields(): void {
+  const card = state.editingCompendiumCardId ? catalog.cards.find((entry) => entry.id === state.editingCompendiumCardId) : undefined;
+  const cardEffect = appRoot.querySelector<HTMLElement>("[data-compendium-card-effect]");
+  if (state.cardModalOpen && cardEffect && !appRoot.querySelector('[data-game-marker-label="card"]')) {
+    cardEffect.closest("label")?.insertAdjacentHTML("afterend", renderGameMarkerFields("card", card?.gameMarkers?.[0], escapeHtml));
+  }
+
+  const characterClass = state.editingCompendiumClassId ? catalog.classes.find((entry) => entry.id === state.editingCompendiumClassId) : undefined;
+  const classSummary = appRoot.querySelector<HTMLElement>("[data-compendium-class-summary]");
+  if (state.classModalOpen && classSummary && !appRoot.querySelector('[data-game-marker-label="class"]')) {
+    classSummary.closest("label")?.insertAdjacentHTML("afterend", renderGameMarkerFields("class", characterClass?.gameMarkers?.[0], escapeHtml));
+  }
+
+  appRoot.querySelectorAll<HTMLElement>(".game-marker-form").forEach(configureGameMarkerAuthoringForm);
+}
+
+function enhanceCompendiumClassResults(): void {
+  appRoot.querySelectorAll<HTMLElement>("[data-compendium-class-preview-id]").forEach((button) => {
+    const definition = catalog.classes.find((entry) => entry.id === button.dataset.compendiumClassPreviewId);
+    if (!definition) return;
+    const body = button.querySelector<HTMLElement>(".compendium-class-body");
+    const source = body?.querySelector<HTMLElement>(":scope > span");
+    if (source) source.textContent = definition.packId === "local" ? "Local" : getPackDisplayName(definition.packId, catalog.packs);
+    const originalName = getOriginalClassName(definition.id);
+    const title = body?.querySelector<HTMLElement>("h2");
+    if (title && originalName) title.textContent = `${definition.name} (${originalName})`;
+    const readonly = button.parentElement?.querySelector<HTMLElement>(".readonly-label");
+    if (readonly) readonly.textContent = "Conteúdo não editável";
+  });
+}
+
+function getOriginalClassName(classId: string): string | undefined {
+  return {
+    "class.core.bardo": "Bard", "class.core.druida": "Druid", "class.core.guardiao": "Guardian",
+    "class.core.ranger": "Ranger", "class.core.ladino": "Rogue", "class.core.serafim": "Seraph",
+    "class.core.feiticeiro": "Sorcerer", "class.core.guerreiro": "Warrior", "class.core.mago": "Wizard",
+    "class.hope-fear.assassin": "Assassin", "class.hope-fear.brawler": "Brawler",
+    "class.hope-fear.warlock": "Warlock", "class.hope-fear.witch": "Witch"
+  }[classId];
+}
+
+function configureGameMarkerAuthoringForm(form: HTMLElement): void {
+  const kind = form.querySelector<HTMLSelectElement>("[data-game-marker-kind]");
+  const quantityKind = form.querySelector<HTMLSelectElement>("[data-game-marker-quantity-kind]");
+  const die = form.querySelector<HTMLSelectElement>("[data-game-marker-die]");
+  const quantityValue = form.querySelector<HTMLInputElement | HTMLSelectElement>("[data-game-marker-quantity-value]");
+  if (!kind || !quantityKind || !die || !quantityValue) return;
+
+  const isDice = kind.value === "dice";
+  const isCounter = !isDice;
+  form.querySelectorAll<HTMLInputElement>("[data-game-marker-initial], [data-game-marker-max]").forEach((control) => {
+    control.disabled = !isCounter;
+    control.closest("label")?.classList.toggle("is-disabled", !isCounter);
+  });
+  [die, quantityKind, quantityValue].forEach((control) => {
+    control.disabled = !isDice;
+    control.closest("label")?.classList.toggle("is-disabled", !isDice);
+  });
+
+  const quantityLabel = quantityValue.closest("label");
+  const quantityTitle = quantityLabel?.querySelector("span");
+  if (!isDice || quantityKind.value === "spellcast-trait") {
+    if (quantityTitle) quantityTitle.textContent = "Atributo de Conjuração";
+    quantityValue.disabled = true;
+    quantityValue.value = "";
+    return;
+  }
+
+  if (quantityKind.value === "fixed") {
+    if (quantityTitle) quantityTitle.textContent = "Quantidade de dados";
+    quantityValue.disabled = false;
+    if (quantityValue instanceof HTMLInputElement) {
+      quantityValue.type = "number";
+      quantityValue.min = "1";
+      quantityValue.step = "1";
+      if (!quantityValue.value || Number(quantityValue.value) < 1) quantityValue.value = "1";
+    } else {
+      const input = document.createElement("input");
+      input.type = "number";
+      input.min = "1";
+      input.step = "1";
+      input.value = "1";
+      input.dataset.gameMarkerQuantityValue = quantityValue.dataset.gameMarkerQuantityValue;
+      quantityValue.replaceWith(input);
+    }
+    return;
+  }
+
+  if (quantityTitle) quantityTitle.textContent = "Atributo que define a quantidade";
+  if (quantityValue instanceof HTMLInputElement) {
+    const select = document.createElement("select");
+    select.dataset.gameMarkerQuantityValue = quantityValue.dataset.gameMarkerQuantityValue;
+    const attributes = [["dex", "Agilidade"], ["for", "Força"], ["cha", "Finesse"], ["wil", "Instinto"], ["con", "Presença"], ["int", "Conhecimento"]] as const;
+    select.innerHTML = attributes.map(([id, label]) => `<option value="${id}" ${quantityValue.value === id ? "selected" : ""}>${label}</option>`).join("");
+    quantityValue.replaceWith(select);
+  }
+}
+
+function updateGameMarkerAuthoringForm(target: HTMLSelectElement): void {
+  const form = target.closest<HTMLElement>(".game-marker-form");
+  if (!form) return;
+  configureGameMarkerAuthoringForm(form);
+}
+
 function render(options: { preserveMainScroll?: boolean } = {}): void {
   const previousCharacterCreationScrollTop = state.characterSelectionOpen && state.characterCreationOpen
     ? appRoot.querySelector<HTMLElement>(".character-creation-scroll")?.scrollTop
@@ -1528,7 +1642,6 @@ function render(options: { preserveMainScroll?: boolean } = {}): void {
     ${renderActivateStoredCardModal()}
     ${renderItemModalView(getInventoryRenderDependencies())}
     ${renderDeleteItemModalView(getInventoryRenderDependencies())}
-    ${renderResourceModalView(state.resourceModalId, getInventoryRenderDependencies())}
     ${renderAddResourceModal()}
     ${renderProgressionHistoryModalView(getProgressionDialogDependencies())}
     ${renderProgressionPickerModalView(getProgressionDialogDependencies())}
@@ -1559,6 +1672,8 @@ function render(options: { preserveMainScroll?: boolean } = {}): void {
     ${renderPackImportModal()}
     ${renderRemoveInstalledPackModal()}
   `;
+  injectGameMarkerAuthoringFields();
+  enhanceCompendiumClassResults();
   document.body.classList.toggle("has-modal", Boolean(appRoot.querySelector(".modal-backdrop")));
   if (previousMainScrollTop !== undefined) {
     requestAnimationFrame(() => {
@@ -1937,9 +2052,8 @@ async function activateStoredCard(mode: "rest" | "stress"): Promise<void> {
   render();
 }
 
-async function adjustResource(delta: number): Promise<void> {
+async function adjustResource(resourceId: string | undefined, delta: number): Promise<void> {
   const character = state.character;
-  const resourceId = state.resourceModalId;
 
   if (!character || !resourceId) {
     return;
@@ -2258,7 +2372,7 @@ function bindEvents(): void {
     const resourceAdjustButton = target.closest<HTMLElement>("[data-resource-adjust]");
     if (resourceAdjustButton) {
       const delta = Number(resourceAdjustButton.dataset.resourceAdjust);
-      void adjustResource(delta);
+      void adjustResource(resourceAdjustButton.dataset.resourceId, delta);
       return;
     }
 
@@ -3114,13 +3228,6 @@ function bindEvents(): void {
       return;
     }
 
-    const resourceButton = target.closest<HTMLElement>("[data-resource-id]");
-    if (resourceButton) {
-      state.resourceModalId = resourceButton.dataset.resourceId;
-      render();
-      return;
-    }
-
     const cardModalButton = target.closest<HTMLElement>("[data-card-modal-id]");
     if (cardModalButton) {
       state.modalCardId = cardModalButton.dataset.cardModalId;
@@ -3314,6 +3421,10 @@ function bindEvents(): void {
 
   document.addEventListener("change", (event) => {
     const target = event.target;
+    if (target instanceof HTMLSelectElement && (target.matches("[data-game-marker-kind]") || target.matches("[data-game-marker-quantity-kind]"))) {
+      updateGameMarkerAuthoringForm(target);
+      return;
+    }
     if (target instanceof HTMLInputElement && target.matches("[data-pack-file]")) {
       const file = target.files?.[0];
       if (file) void readPackImportFile(file);
@@ -3388,6 +3499,7 @@ async function boot(): Promise<void> {
   bindInventoryDragEvents(getInventoryDragDependencies());
   await refreshCatalog();
   await ensureDemoCharacter();
+  await ensureDemoKaelII();
   state.characters = await listCharacters();
   const activeCharacterId = localStorage.getItem(activeCharacterStorageKey);
   if (activeCharacterId) {

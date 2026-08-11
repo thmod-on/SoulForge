@@ -47,14 +47,18 @@ export function getGameMarkerKey(sourceDefinitionId: string, markerId: string): 
 
 function getActiveMarkerSources(character: Character, catalog: Catalog): MarkerSource[] {
   const sources: MarkerSource[] = [];
-  const classDefinition = character.identity.primaryClassId ? catalog.classes.find((entry) => entry.id === character.identity.primaryClassId) : undefined;
+  // O ID e a referencia preferencial. O nome atua como compatibilidade para fichas
+  // locais criadas com uma versao anterior de um pack, antes de seus IDs serem
+  // padronizados. Isso nao infere regras por texto: apenas religa uma ficha ao
+  // mesmo conteudo declarado pelo autor do pack.
+  const classDefinition = findCharacterClass(character, catalog);
   if (classDefinition) {
     sources.push({ definition: classDefinition, label: classDefinition.name });
     for (const featureId of [...classDefinition.featureIds, classDefinition.hopeFeatureId]) {
       const feature = catalog.features.find((entry) => entry.id === featureId); if (feature) sources.push({ definition: feature, label: feature.name });
     }
   }
-  const subclass = character.identity.primarySubclassId ? catalog.subclasses.find((entry) => entry.id === character.identity.primarySubclassId) : undefined;
+  const subclass = findCharacterSubclass(character, catalog, classDefinition);
   if (subclass) {
     const acquired = new Set(character.progression?.acquiredSubclassTiers ?? ["foundation"]);
     const featureIds = [...subclass.foundationFeatureIds, ...(acquired.has("specialized") ? subclass.specializationFeatureIds : []), ...(acquired.has("mastery") ? subclass.masteryFeatureIds : [])];
@@ -62,6 +66,28 @@ function getActiveMarkerSources(character: Character, catalog: Catalog): MarkerS
   }
   for (const cardId of character.deck.activeCardIds) { const card = catalog.cards.find((entry) => entry.id === cardId); if (card) sources.push({ definition: card, label: card.name }); }
   return sources;
+}
+
+function normalizeContentName(value: string | undefined): string {
+  return (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+function findCharacterClass(character: Character, catalog: Catalog): ClassDefinition | undefined {
+  return catalog.classes.find((entry) => entry.id === character.identity.primaryClassId)
+    ?? catalog.classes.find((entry) => normalizeContentName(entry.name) === normalizeContentName(character.identity.className));
+}
+
+function findCharacterSubclass(character: Character, catalog: Catalog, classDefinition?: ClassDefinition) {
+  return catalog.subclasses.find((entry) => entry.id === character.identity.primarySubclassId)
+    ?? catalog.subclasses.find((entry) => (
+      normalizeContentName(entry.name) === normalizeContentName(character.identity.subclassName)
+      && (!classDefinition || entry.classId === classDefinition.id)
+    ));
 }
 
 function synchronizeMarkerState(existing: CharacterGameMarkerState | undefined, key: string, sourceDefinitionId: string, definition: GameMarkerDefinition, character: Character, catalog: Catalog): CharacterGameMarkerState {
@@ -84,7 +110,9 @@ function getDiceQuantity(definition: Extract<GameMarkerDefinition, { kind: "dice
   if (quantity.kind === "fixed") return Math.max(0, quantity.value);
   if (quantity.kind === "attribute") return Math.max(0, character.attributes.find((attribute) => attribute.id === quantity.attributeId)?.value ?? 0);
   const feature = catalog.features.find((entry) => entry.id === sourceDefinitionId);
-  const subclass = feature?.sourceType === "subclass" ? catalog.subclasses.find((entry) => entry.id === feature.sourceId) : character.identity.primarySubclassId ? catalog.subclasses.find((entry) => entry.id === character.identity.primarySubclassId) : undefined;
+  const subclass = feature?.sourceType === "subclass"
+    ? catalog.subclasses.find((entry) => entry.id === feature.sourceId)
+    : findCharacterSubclass(character, catalog, findCharacterClass(character, catalog));
   const attributeId = subclass?.spellcastAttributeId;
   return Math.max(0, character.attributes.find((attribute) => attribute.id === attributeId)?.value ?? 0);
 }

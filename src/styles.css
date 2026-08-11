@@ -1599,6 +1599,71 @@ button {
   font-size: 1rem;
 }
 
+.resource-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+}
+
+.resource-card-footer > .pips,
+.resource-card-footer > .shield-pips,
+.resource-card-footer > .resource-meter {
+  flex: 1;
+  min-width: 0;
+}
+
+.resource-card-controls {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.35rem;
+}
+
+.resource-card-controls > button {
+  display: grid;
+  width: 1.65rem;
+  height: 1.65rem;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--accent) 58%, transparent);
+  border-radius: 50%;
+  color: var(--accent);
+  background: transparent;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.resource-card-controls > button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 13%, transparent);
+}
+
+.resource-card-controls > button:disabled {
+  opacity: 0.3;
+}
+
+.game-marker-form {
+  display: grid;
+  gap: 0.8rem;
+  margin: 0;
+  padding: 0.9rem;
+  border: 1px solid rgba(217, 154, 61, 0.35);
+  background: rgba(217, 154, 61, 0.04);
+}
+
+.game-marker-form legend {
+  padding: 0 0.35rem;
+  color: var(--color-gold);
+  font-weight: 700;
+}
+
+.game-marker-form legend small {
+  color: var(--color-muted);
+  font-weight: 400;
+}
+
+.game-marker-form .form-field.is-disabled {
+  opacity: 0.42;
+}
+
 .tone-hope {
   border-color: rgba(243, 234, 220, 0.55);
 }
@@ -4296,6 +4361,7 @@ body.has-modal {
 
 .form-field {
   display: grid;
+  align-content: start;
   gap: 0.38rem;
 }
 
@@ -5706,6 +5772,7 @@ body.has-modal {
 }
 /* Bloco provisório: a interação dos marcadores será definida em uma etapa posterior. */
 .game-markers-preview {
+  --accent: var(--color-gold);
   padding: 0.55rem 0.8rem 0.6rem;
 }
 
@@ -5775,6 +5842,57 @@ body.has-modal {
 
 .game-marker-counter button:disabled {
   opacity: 0.35;
+}
+
+.game-marker-counter-preview {
+  gap: 0.35rem;
+}
+
+.game-marker-counter-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.game-marker-counter-controls > button {
+  display: grid;
+  width: 1.8rem;
+  height: 1.8rem;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--accent) 58%, transparent);
+  border-radius: 50%;
+  color: var(--accent);
+  background: transparent;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.game-marker-counter-controls > button:disabled {
+  opacity: 0.32;
+}
+
+.game-marker-counter-token {
+  display: grid;
+  width: 3.65rem;
+  height: 3.65rem;
+  place-content: center;
+  text-align: center;
+  color: #fff5dd;
+  background: linear-gradient(145deg, #a26a32, #513117);
+  clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%);
+  filter: drop-shadow(0 0.3rem 0.42rem rgba(102, 57, 19, 0.45));
+}
+
+.game-marker-counter-token strong {
+  color: inherit;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.game-marker-counter-token small {
+  color: inherit;
+  font-size: 0.57rem;
+  font-weight: 700;
 }
 
 .game-marker-session-reset {

@@ -31,4 +31,19 @@ describe("marcadores de jogo", () => {
     expect(synchronized.gameMarkers?.[0]).toMatchObject({ kind: "dice", die: "d4" });
     expect(synchronized.gameMarkers?.[0]?.kind === "dice" ? synchronized.gameMarkers[0].results : []).toHaveLength(2);
   });
+
+  it("mantem a fonte ativa quando uma ficha local possui IDs antigos, mas os mesmos nomes", () => {
+    const feature: FeatureDefinition = { id: "feature.legacy.serafim.class", type: "feature", packId: "test", name: "Dados de Oração", summary: "", sourceType: "class", sourceId: "class.legacy.serafim", tier: "class", gameMarkers: [{ id: "prayer-dice", kind: "dice", label: "Dados de Oração", die: "d4", quantity: { kind: "spellcast-trait" }, reset: "session" }] };
+    const subclass: SubclassDefinition = { id: "subclass.legacy.serafim.portador-divino", type: "subclass", packId: "test", name: "Portador Divino", summary: "", classId: "class.legacy.serafim", foundationFeatureIds: [], specializationFeatureIds: [], masteryFeatureIds: [], spellcastAttributeId: "for" };
+    const characterClass: ClassDefinition = { id: "class.legacy.serafim", type: "class", packId: "test", name: "Serafim", summary: "", domainIds: ["domain.a", "domain.b"], startingEvasion: 9, startingHitPoints: 7, featureIds: [feature.id], hopeFeatureId: "", subclassIds: [subclass.id, subclass.id] };
+    const catalog = createCatalog([], [feature, subclass, characterClass]);
+    const character = { ...demoCharacter, identity: { ...demoCharacter.identity, primaryClassId: "class.core.serafim", primarySubclassId: "subclass.core.serafim.portador-divino" }, gameMarkers: undefined };
+
+    const synchronized = synchronizeGameMarkers(character, catalog);
+
+    expect(getActiveGameMarkers(synchronized, catalog)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ definition: expect.objectContaining({ id: "prayer-dice" }) })
+    ]));
+    expect(synchronized.gameMarkers?.find((marker) => marker.kind === "dice")?.kind === "dice" ? synchronized.gameMarkers.find((marker) => marker.kind === "dice")?.results : []).toHaveLength(2);
+  });
 });

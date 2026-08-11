@@ -4,6 +4,24 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.15.0]
+
+### Adicionado
+
+- controles diretos de aumentar e reduzir recursos na ficha;
+- ficha-demo Kael II, criada com as referências atuais dos packs;
+- autoria opcional de marcadores de jogo para cartas e classes, com contador ou dados.
+
+### Alterado
+
+- formulário de marcadores passa a orientar e habilitar somente os campos aplicáveis ao tipo escolhido;
+- lista de classes do Compendium passa a identificar o pack de origem e exibir o nome original das classes oficiais.
+
+### Corrigido
+
+- sincronização de marcadores aceita referências legadas de classes e subclasses por compatibilidade;
+- alinhamento dos campos no cadastro de cartas.
+
 ## [0.14.0]
 
 ### Adicionado

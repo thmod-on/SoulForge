@@ -1,4 +1,5 @@
 import { demoCharacter } from "../domain/demoCharacter";
+import { demoKaelII } from "../domain/demoKaelII";
 import type { Character } from "../domain/types";
 
 const databaseName = "soulforge";
@@ -101,6 +102,14 @@ export async function ensureDemoCharacter(): Promise<Character> {
   return demoCharacter;
 }
 
+/** Cria a segunda ficha de demonstracao apenas quando ela ainda nao existe. */
+export async function ensureDemoKaelII(): Promise<Character> {
+  const existingCharacter = await loadCharacter(demoKaelII.id);
+  if (existingCharacter) return existingCharacter;
+  await saveCharacter(demoKaelII);
+  return demoKaelII;
+}
+
 function migrateDemoCharacter(character: Character): Character {
   const compartments = character.inventory.compartments ?? demoCharacter.inventory.compartments;
   const progression = character.progression
@@ -117,9 +126,11 @@ function migrateDemoCharacter(character: Character): Character {
   }));
   const markerPreviewCardId = "card.demo.guardians-ward";
   const learnedCardIds = Array.from(new Set([...(character.deck.learnedCardIds ?? character.deck.activeCardIds), markerPreviewCardId]));
-  const activeCardIds = character.deck.activeCardIds.includes(markerPreviewCardId) || character.deck.activeCardIds.length >= 5
+  // Kael é a ficha de demonstração dos marcadores: mantém Guardian's Ward no
+  // Loadout, respeitando o limite de cinco cartas ao substituir apenas a última.
+  const activeCardIds = character.deck.activeCardIds.includes(markerPreviewCardId)
     ? character.deck.activeCardIds
-    : [...character.deck.activeCardIds, markerPreviewCardId];
+    : [...character.deck.activeCardIds.slice(0, 4), markerPreviewCardId];
   const isKael = character.id === demoCharacter.id;
 
   return {

@@ -1,5 +1,5 @@
 import type { Catalog } from "../../domain/catalog";
-import type { CardDefinition, Character } from "../../domain/types";
+import type { CardDefinition, Character, GameMarkerDefinition } from "../../domain/types";
 
 export type CardFeatureState = {
   compendiumCardSearch: string;
@@ -64,6 +64,7 @@ export async function saveCompendiumCard(dependencies: CardFeatureDependencies):
   const cost = value("[data-compendium-card-cost]");
   const recallCost = Number(value("[data-compendium-card-recall-cost]"));
   const effect = value("[data-compendium-card-effect]");
+  const gameMarker = readGameMarker("card");
   const error = document.querySelector<HTMLElement>("[data-compendium-card-error]");
   const existing = state.editingCompendiumCardId ? catalog.cards.find((entry) => entry.id === state.editingCompendiumCardId) : undefined;
   const duplicate = catalog.cards.some((card) => card.name.toLocaleLowerCase("pt-BR") === name.toLocaleLowerCase("pt-BR") && card.id !== existing?.id);
@@ -72,9 +73,10 @@ export async function saveCompendiumCard(dependencies: CardFeatureDependencies):
     return;
   }
   if (existing && existing.packId !== "local") return;
+  if (gameMarker instanceof Error) { if (error) { error.hidden = false; error.textContent = gameMarker.message; } return; }
   let image = existing?.image;
   try { image = (await readDefinitionImage("[data-compendium-card-image]")) ?? image; } catch (imageError) { if (error) { error.hidden = false; error.textContent = imageError instanceof Error ? imageError.message : "Nao foi possivel usar a imagem."; } return; }
-  await saveCustomDefinition({ id: existing?.id ?? `card.local.${crypto.randomUUID()}`, type: "card", packId: "local", name, summary: effect.length > 140 ? `${effect.slice(0, 137).trimEnd()}...` : effect, domainId, tier, cardType, cost: cost || undefined, recallCost, effect, image });
+  await saveCustomDefinition({ id: existing?.id ?? `card.local.${crypto.randomUUID()}`, type: "card", packId: "local", name, summary: effect.length > 140 ? `${effect.slice(0, 137).trimEnd()}...` : effect, domainId, tier, cardType, cost: cost || undefined, recallCost, effect, image, ...(gameMarker ? { gameMarkers: [gameMarker] } : {}) });
   await refreshCatalog();
   state.cardModalOpen = false;
   state.editingCompendiumCardId = undefined;
@@ -108,6 +110,23 @@ function renderCompendiumCardResult(card: CardDefinition, dependencies: CardFeat
   const domain = dependencies.catalog.domains.find((entry) => entry.id === card.domainId);
   const isLocal = card.packId === "local";
   return `<article class="compendium-card-result"><button class="compendium-card-result-open" type="button" data-card-modal-id="${card.id}" aria-label="Ver detalhes de ${dependencies.escapeHtml(card.name)}">${card.image ? `<span class="compendium-card-result-image" style="background-image: url('${dependencies.escapeHtml(card.image)}')" aria-hidden="true"></span>` : ""}<div><span>${dependencies.escapeHtml(domain?.name ?? "Sem dominio")} - Tier ${card.tier} - ${dependencies.escapeHtml(card.cardType)}</span><h2>${dependencies.escapeHtml(card.name)}</h2><p>${dependencies.escapeHtml(card.summary)}</p></div><div class="compendium-card-result-meta"><span>${dependencies.escapeHtml(card.cost ?? "Sem custo")}</span></div></button><div class="compendium-card-result-actions">${isLocal ? `<button type="button" data-action="edit-compendium-card" data-card-id="${card.id}">Editar</button><button type="button" data-action="delete-compendium-card" data-card-id="${card.id}">Excluir</button>` : '<span class="readonly-label">Conteudo do pack</span>'}</div></article>`;
+}
+
+export function renderGameMarkerFields(key: string, marker: GameMarkerDefinition | undefined, escapeHtml: (value: string) => string): string {
+  const counter = marker?.kind === "counter" ? marker : undefined;
+  const dice = marker?.kind === "dice" ? marker : undefined;
+  const quantity = dice?.quantity;
+  return `<fieldset class="game-marker-form"><legend>Marcador de jogo <small>Opcional; aparece na ficha quando esta fonte estiver ativa.</small></legend><div class="form-grid"><label class="form-field"><span>Rotulo</span><input data-game-marker-label="${key}" value="${escapeHtml(marker?.label ?? "")}" placeholder="Ex.: Cargas arcanas" /></label><label class="form-field"><span>Tipo</span><select data-game-marker-kind="${key}"><option value="counter" ${!dice ? "selected" : ""}>Contador</option><option value="dice" ${dice ? "selected" : ""}>Dados</option></select></label><label class="form-field"><span>Valor inicial</span><input data-game-marker-initial="${key}" type="number" min="0" step="1" value="${counter?.initialValue ?? 0}" /></label><label class="form-field"><span>Valor maximo</span><input data-game-marker-max="${key}" type="number" min="0" step="1" value="${counter?.max ?? ""}" placeholder="Sem limite" /></label><label class="form-field"><span>Reinicia em</span><select data-game-marker-reset="${key}"><option value="">Nao reinicia</option>${(["session", "short-rest", "long-rest"] as const).map((reset) => `<option value="${reset}" ${marker?.reset === reset ? "selected" : ""}>${reset === "session" ? "Sessao" : reset === "short-rest" ? "Descanso breve" : "Descanso longo"}</option>`).join("")}</select></label><label class="form-field"><span>Dado</span><select data-game-marker-die="${key}"><option value="d4" ${dice?.die !== "d6" ? "selected" : ""}>d4</option><option value="d6" ${dice?.die === "d6" ? "selected" : ""}>d6</option></select></label><label class="form-field"><span>Quantidade de dados</span><select data-game-marker-quantity-kind="${key}"><option value="fixed" ${quantity?.kind === "fixed" || !quantity ? "selected" : ""}>Quantidade fixa</option><option value="attribute" ${quantity?.kind === "attribute" ? "selected" : ""}>Atributo</option><option value="spellcast-trait" ${quantity?.kind === "spellcast-trait" ? "selected" : ""}>Atributo de Conjuracao</option></select></label><label class="form-field"><span>Quantidade / atributo</span><input data-game-marker-quantity-value="${key}" value="${quantity?.kind === "fixed" ? quantity.value : quantity?.kind === "attribute" ? quantity.attributeId : "1"}" placeholder="Ex.: 2 ou for" /></label></div></fieldset>`;
+}
+
+export function readGameMarker(key: string): GameMarkerDefinition | undefined | Error {
+  const value = (name: string) => document.querySelector<HTMLInputElement | HTMLSelectElement>(`[data-game-marker-${name}="${key}"]`)?.value.trim() ?? "";
+  const label = value("label"); if (!label) return undefined;
+  const kind = value("kind"); const reset = value("reset") || undefined; const id = `marker.local.${crypto.randomUUID()}`;
+  if (kind === "counter") { const initialValue = Number(value("initial")); const rawMax = value("max"); const max = rawMax ? Number(rawMax) : undefined; if (!Number.isInteger(initialValue) || initialValue < 0 || (max !== undefined && (!Number.isInteger(max) || max < initialValue))) return new Error("Informe valores validos para o contador."); return { id, kind: "counter", label, initialValue, ...(max === undefined ? {} : { max }), ...(reset ? { reset: reset as "session" | "short-rest" | "long-rest" } : {}) }; }
+  const die = value("die") as "d4" | "d6"; const quantityKind = value("quantity-kind"); const rawQuantity = value("quantity-value"); const quantity = quantityKind === "fixed" ? { kind: "fixed" as const, value: Number(rawQuantity) } : quantityKind === "attribute" ? { kind: "attribute" as const, attributeId: rawQuantity as "for" | "dex" | "con" | "int" | "wil" | "cha" } : { kind: "spellcast-trait" as const };
+  if ((quantity.kind === "fixed" && (!Number.isInteger(quantity.value) || quantity.value < 1)) || (quantity.kind === "attribute" && !["for", "dex", "con", "int", "wil", "cha"].includes(quantity.attributeId))) return new Error("Informe uma quantidade ou atributo valido para os dados.");
+  return { id, kind: "dice", label, die, quantity, reset: "session" };
 }
 
 function readDefinitionImage(selector: string): Promise<string | undefined> {
