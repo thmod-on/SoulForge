@@ -1,4 +1,4 @@
-import type { ItemDefinition, PackBundle, PackManifest, ProgressionAdvanceKind } from "../domain/types";
+import type { CharacterMulticlass, ItemDefinition, PackBundle, PackManifest, ProgressionAdvanceKind } from "../domain/types";
 
 export type Page = "overview" | "skills" | "inventory" | "progression" | "notes" | "compendium" | "settings" | "storedCards";
 export type InventoryFilter = "todos" | ItemDefinition["category"];
@@ -15,7 +15,10 @@ export type ProgressionDraftChoice = {
   attributeIds?: string[];
   experienceIds?: string[];
   cardId?: string;
+  multiclass?: CharacterMulticlass;
 };
+
+export type ProgressionMulticlassDraft = Partial<Pick<CharacterMulticlass, "classId" | "domainId" | "featureId" | "subclassId" | "foundationFeatureId">>;
 
 export type SettingsViewState = {
   installedPacks: PackManifest[];

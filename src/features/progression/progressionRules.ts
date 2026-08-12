@@ -33,7 +33,8 @@ export const progressionAdvanceLabels: Record<ProgressionAdvanceKind, string> = 
   domain: "Carta adicional de Dominio",
   evasion: "Evasao +1",
   subclass: "Carta aprimorada da subclasse",
-  proficiency: "Proficiencia +1"
+  proficiency: "Proficiencia +1",
+  multiclass: "Multiclasse"
 };
 
 export const progressionAdvanceRules: Record<ProgressionAdvanceKind, { minimumTier: ProgressionTierNumber; slotCount: Record<ProgressionTierNumber, number> }> = {
@@ -44,8 +45,13 @@ export const progressionAdvanceRules: Record<ProgressionAdvanceKind, { minimumTi
   domain: { minimumTier: 2, slotCount: { 2: 1, 3: 1, 4: 1 } },
   evasion: { minimumTier: 2, slotCount: { 2: 1, 3: 1, 4: 1 } },
   subclass: { minimumTier: 3, slotCount: { 2: 0, 3: 1, 4: 1 } },
-  proficiency: { minimumTier: 3, slotCount: { 2: 0, 3: 1, 4: 1 } }
+  proficiency: { minimumTier: 3, slotCount: { 2: 0, 3: 1, 4: 1 } },
+  multiclass: { minimumTier: 3, slotCount: { 2: 0, 3: 1, 4: 1 } }
 };
+
+export function getProgressionChoiceCost(kind: ProgressionAdvanceKind): number {
+  return kind === "proficiency" || kind === "multiclass" ? 2 : 1;
+}
 
 export function getTierForLevel(level: number): ProgressionTierNumber {
   return level >= 8 ? 4 : level >= 5 ? 3 : 2;

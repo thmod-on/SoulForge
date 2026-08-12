@@ -129,6 +129,14 @@ button {
   padding-top: 1.25rem;
 }
 
+.character-gate-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
 .character-gate-heading h1,
 .character-gate-heading p {
   margin: 0;
@@ -289,7 +297,8 @@ button {
 .character-creation-modal[data-creation-step="4"] [data-creation-panel="4"],
 .character-creation-modal[data-creation-step="5"] [data-creation-panel="5"],
 .character-creation-modal[data-creation-step="6"] [data-creation-panel="6"],
-.character-creation-modal[data-creation-step="7"] [data-creation-panel="7"] {
+.character-creation-modal[data-creation-step="7"] [data-creation-panel="7"],
+.character-creation-modal[data-creation-step="8"] [data-creation-panel="8"] {
   display: grid;
 }
 
@@ -3144,6 +3153,27 @@ button {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.55rem;
+}
+
+.progression-card-tier-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.85rem 0;
+}
+
+.progression-card-tier-tabs button {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  min-height: 2rem;
+  padding: 0.3rem 0.65rem;
+}
+
+.progression-card-tier-tabs button.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 .progression-card-choice-list button {

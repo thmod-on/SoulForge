@@ -4,7 +4,7 @@ import type { Character } from "../domain/types";
 
 const databaseName = "soulforge";
 const storeName = "characters";
-const databaseVersion = 3;
+const databaseVersion = 4;
 
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -20,6 +20,9 @@ function openDatabase(): Promise<IDBDatabase> {
       }
       if (!database.objectStoreNames.contains("installedPacks")) {
         database.createObjectStore("installedPacks", { keyPath: "id" });
+      }
+      if (!database.objectStoreNames.contains("definitionOverrides")) {
+        database.createObjectStore("definitionOverrides", { keyPath: "id" });
       }
     };
 

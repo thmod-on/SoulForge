@@ -1,7 +1,7 @@
 import type { Definition, PackManifest } from "../domain/types";
 
 const databaseName = "soulforge";
-const databaseVersion = 3;
+const databaseVersion = 4;
 const packStoreName = "installedPacks";
 const definitionStoreName = "customDefinitions";
 
@@ -14,6 +14,7 @@ function openDatabase(): Promise<IDBDatabase> {
       if (!database.objectStoreNames.contains("characters")) database.createObjectStore("characters", { keyPath: "id" });
       if (!database.objectStoreNames.contains(definitionStoreName)) database.createObjectStore(definitionStoreName, { keyPath: "id" });
       if (!database.objectStoreNames.contains(packStoreName)) database.createObjectStore(packStoreName, { keyPath: "id" });
+      if (!database.objectStoreNames.contains("definitionOverrides")) database.createObjectStore("definitionOverrides", { keyPath: "id" });
     };
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);

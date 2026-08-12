@@ -18,7 +18,7 @@ export function renderOverview(character: Character, dependencies: PlayerOvervie
   const inactiveCards = dependencies.getInactiveCardCount(character);
   const gameMarkers = dependencies.getActiveGameMarkers(character);
   const hasSessionReset = gameMarkers.some((marker) => marker.definition.reset === "session");
-  return `<main class="content">${dependencies.renderResources(character)}${renderGameMarkers(gameMarkers, dependencies.escapeHtml)}${renderSubclassTrack(character, dependencies)}<section class="band"><div class="section-heading"><h2>Cartas ativas</h2><span>${activeCards.length} / 5 ativas</span></div><div class="card-row">${activeCards.map((card) => renderCardTile(card, dependencies)).join("")}</div><button class="deck-drawer-button" data-action="open-stored-cards">Ver Vault (${inactiveCards})</button></section><section class="quick-actions"><button data-action="rest-short"><span>REST</span> Descansar breve</button><button data-action="rest-long"><span>FULL</span> Descansar longo</button>${hasSessionReset ? '<button data-action="reset-game-markers-session"><span>NEW</span> Nova sessao</button>' : ""}<button data-page="skills"><span>XP</span> Registrar experiencia</button></section></main>`;
+  return `<main class="content">${dependencies.renderResources(character)}${renderGameMarkers(gameMarkers, dependencies.escapeHtml)}${renderSubclassTrack(character, dependencies)}${renderMulticlassTrack(character, dependencies)}<section class="band"><div class="section-heading"><h2>Cartas ativas</h2><span>${activeCards.length} / 5 ativas</span></div><div class="card-row">${activeCards.map((card) => renderCardTile(card, dependencies)).join("")}</div><button class="deck-drawer-button" data-action="open-stored-cards">Ver Vault (${inactiveCards})</button></section><section class="quick-actions"><button data-action="rest-short"><span>REST</span> Descansar breve</button><button data-action="rest-long"><span>FULL</span> Descansar longo</button>${hasSessionReset ? '<button data-action="reset-game-markers-session"><span>NEW</span> Nova sessao</button>' : ""}<button data-page="skills"><span>XP</span> Registrar experiencia</button></section></main>`;
 }
 
 export function renderStoredCards(character: Character, dependencies: PlayerOverviewDependencies): string {
@@ -46,6 +46,12 @@ function renderSubclassTrack(character: Character, dependencies: PlayerOverviewD
     return `<article class="subclass-track-card ${isActive ? "is-active" : "is-locked"}"><span class="subclass-track-stage">${stage.label}</span><h3>${dependencies.escapeHtml(skill?.name ?? `Carta de ${stage.label}`)}</h3><p>${dependencies.escapeHtml(skill?.description ?? "Caracteristica da subclasse ainda nao definida.")}</p><small>${status}</small></article>`;
   });
   return `<section class="band subclass-track-band"><div class="section-heading"><div><h2>${dependencies.escapeHtml(character.identity.subclassName ?? "Subclasse nao definida")}</h2></div></div><div class="subclass-track-grid">${cards.join("")}</div></section>`;
+}
+
+function renderMulticlassTrack(character: Character, dependencies: PlayerOverviewDependencies): string {
+  const multiclass = character.progression?.multiclass;
+  if (!multiclass) return "";
+  return `<section class="band subclass-track-band multiclass-track-band"><div class="section-heading"><div><h2>Multiclasse — ${dependencies.escapeHtml(multiclass.className)}</h2><span>${dependencies.escapeHtml(multiclass.domainName)}</span></div></div><div class="subclass-track-grid"><article class="subclass-track-card is-active"><span class="subclass-track-stage">Característica de classe</span><h3>${dependencies.escapeHtml(multiclass.featureName)}</h3><small>Ativa</small></article><article class="subclass-track-card is-active"><span class="subclass-track-stage">Fundação — ${dependencies.escapeHtml(multiclass.subclassName)}</span><h3>${dependencies.escapeHtml(multiclass.foundationFeatureName)}</h3><small>Ativa</small></article></div></section>`;
 }
 
 function renderStoredCardTile(card: CardDefinition, dependencies: PlayerOverviewDependencies): string {

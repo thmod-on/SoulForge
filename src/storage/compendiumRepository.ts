@@ -1,8 +1,17 @@
-import type { Definition } from "../domain/types";
+import type { Definition, GameMarkerDefinition } from "../domain/types";
 
 const databaseName = "soulforge";
 const storeName = "customDefinitions";
-const databaseVersion = 3;
+const overrideStoreName = "definitionOverrides";
+const databaseVersion = 4;
+
+/** Complemento local de metadados para conteudo de packs, sem alterar a fonte original. */
+export type CardMarkerOverride = {
+  id: string;
+  kind: "card-marker";
+  definitionId: string;
+  gameMarkers: GameMarkerDefinition[];
+};
 
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -19,10 +28,35 @@ function openDatabase(): Promise<IDBDatabase> {
       if (!database.objectStoreNames.contains("installedPacks")) {
         database.createObjectStore("installedPacks", { keyPath: "id" });
       }
+      if (!database.objectStoreNames.contains(overrideStoreName)) {
+        database.createObjectStore(overrideStoreName, { keyPath: "id" });
+      }
     };
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);
   });
+}
+
+export async function loadCardMarkerOverrides(): Promise<CardMarkerOverride[]> {
+  const database = await openDatabase();
+  const overrides = await new Promise<CardMarkerOverride[]>((resolve, reject) => {
+    const request = database.transaction(overrideStoreName, "readonly").objectStore(overrideStoreName).getAll();
+    request.onsuccess = () => resolve((request.result as CardMarkerOverride[]).filter((entry) => entry.kind === "card-marker"));
+    request.onerror = () => reject(request.error);
+  });
+  database.close();
+  return overrides;
+}
+
+export async function saveCardMarkerOverride(definitionId: string, gameMarkers: GameMarkerDefinition[]): Promise<void> {
+  const database = await openDatabase();
+  await new Promise<void>((resolve, reject) => {
+    const transaction = database.transaction(overrideStoreName, "readwrite");
+    transaction.objectStore(overrideStoreName).put({ id: `card-marker:${definitionId}`, kind: "card-marker", definitionId, gameMarkers } satisfies CardMarkerOverride);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+  });
+  database.close();
 }
 
 export async function loadCustomDefinitions(): Promise<Definition[]> {

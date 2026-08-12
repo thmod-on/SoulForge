@@ -1,5 +1,5 @@
-import type { CardDefinition, Character } from "../../domain/types";
-import type { ProgressionDraftChoice, ProgressionPicker, ProgressionTierNumber } from "../../app/types";
+import type { CardDefinition, Character, ClassDefinition, FeatureDefinition, SubclassDefinition } from "../../domain/types";
+import type { ProgressionDraftChoice, ProgressionMulticlassDraft, ProgressionPicker, ProgressionTierNumber } from "../../app/types";
 
 export type ProgressionDialogState = {
   character?: Character;
@@ -9,12 +9,16 @@ export type ProgressionDialogState = {
   progressionPickerIds: string[];
   progressionDraft: ProgressionDraftChoice[];
   progressionCardPickerMode?: "mandatory" | "advance";
+  progressionCardTierFilter: "todos" | number;
   progressionCardId?: string;
   progressionTierExperienceOpen: boolean;
   progressionTierExperience?: { name: string; description: string };
   progressionTierExperienceError?: string;
   progressionConfirmationOpen: boolean;
   progressionCardDestination: "loadout" | "vault";
+  progressionMulticlassOpen: boolean;
+  progressionMulticlassTier?: ProgressionTierNumber;
+  progressionMulticlassDraft: ProgressionMulticlassDraft;
 };
 
 export type ProgressionDialogDependencies = {
@@ -27,6 +31,9 @@ export type ProgressionDialogDependencies = {
   requiresTierExperience: (character: Character) => boolean;
   findCard: (cardId: string) => CardDefinition | undefined;
   findDomainName: (domainId: string) => string | undefined;
+  getEligibleMulticlassClasses: (character: Character) => ClassDefinition[];
+  subclasses: SubclassDefinition[];
+  features: FeatureDefinition[];
 };
 
 export function renderProgressionHistoryModal(dependencies: ProgressionDialogDependencies): string {
@@ -54,8 +61,12 @@ export function renderProgressionCardPickerModal(dependencies: ProgressionDialog
   const { state, escapeHtml, getProgressionCardCandidates, findDomainName } = dependencies;
   const character = state.character;
   if (!character || !state.progressionCardPickerMode) return "";
-  const cards = getProgressionCardCandidates(character);
-  return `<div class="modal-backdrop" data-modal-backdrop><section class="progression-picker-modal progression-card-picker-modal" role="dialog" aria-modal="true" aria-labelledby="progression-card-picker-title"><button class="modal-close" data-modal-close aria-label="Fechar escolha de carta">x</button><span class="resource-modal-label">${state.progressionCardPickerMode === "mandatory" ? "Carta obrigatoria" : "Avanco opcional"}</span><h2 id="progression-card-picker-title">Escolha uma carta de Dominio</h2><p>Somente cartas dos Dominios da classe e de nivel permitido aparecem aqui.</p><div class="progression-card-choice-list">${cards.map((card) => `<button class="${state.progressionCardId === card.id ? "is-selected" : ""}" type="button" data-action="select-progression-card" data-progression-card-id="${card.id}"><span class="progression-card-choice-art">${card.image ? `<img src="${escapeHtml(card.image)}" alt="" />` : ""}</span><span><strong>${escapeHtml(card.name)}</strong><small>${escapeHtml(findDomainName(card.domainId) ?? "Dominio")} · Tier ${card.tier}</small><em>${escapeHtml(card.summary)}</em></span></button>`).join("")}</div></section></div>`;
+  const allCards = getProgressionCardCandidates(character);
+  const mandatory = state.progressionCardPickerMode === "mandatory";
+  const tiers = [...new Set(allCards.map((card) => card.tier))].sort((a, b) => a - b);
+  const cards = mandatory && state.progressionCardTierFilter !== "todos" ? allCards.filter((card) => card.tier === state.progressionCardTierFilter) : allCards;
+  const tierTabs = mandatory ? `<div class="progression-card-tier-tabs" role="tablist" aria-label="Filtrar cartas por Tier"><button class="${state.progressionCardTierFilter === "todos" ? "is-active" : ""}" type="button" data-action="filter-progression-card-tier" data-progression-card-tier="todos">Todos</button>${tiers.map((tier) => `<button class="${state.progressionCardTierFilter === tier ? "is-active" : ""}" type="button" data-action="filter-progression-card-tier" data-progression-card-tier="${tier}">Tier ${tier}</button>`).join("")}</div>` : "";
+  return `<div class="modal-backdrop" data-modal-backdrop><section class="progression-picker-modal progression-card-picker-modal" role="dialog" aria-modal="true" aria-labelledby="progression-card-picker-title"><button class="modal-close" data-modal-close aria-label="Fechar escolha de carta">x</button><span class="resource-modal-label">${mandatory ? "Carta obrigatoria" : "Avanco opcional"}</span><h2 id="progression-card-picker-title">Escolha uma carta de Dominio</h2><p>Somente cartas dos Dominios da classe e de nivel permitido aparecem aqui.</p>${tierTabs}<div class="progression-card-choice-list">${cards.map((card) => `<button class="${state.progressionCardId === card.id ? "is-selected" : ""}" type="button" data-action="select-progression-card" data-progression-card-id="${card.id}"><span class="progression-card-choice-art">${card.image ? `<img src="${escapeHtml(card.image)}" alt="" />` : ""}</span><span><strong>${escapeHtml(card.name)}</strong><small>${escapeHtml(findDomainName(card.domainId) ?? "Dominio")} · Tier ${card.tier}</small><em>${escapeHtml(card.summary)}</em></span></button>`).join("") || "<p>Nenhuma carta elegível neste Tier.</p>"}</div></section></div>`;
 }
 
 export function renderTierExperienceModal(dependencies: ProgressionDialogDependencies): string {
@@ -74,4 +85,21 @@ export function renderProgressionConfirmationModal(dependencies: ProgressionDial
   const tierExperience = requiresTierExperience(character) ? state.progressionTierExperience : undefined;
   const selectedCard = state.progressionCardId ? findCard(state.progressionCardId) : undefined;
   return `<div class="modal-backdrop" data-modal-backdrop><section class="progression-picker-modal" role="dialog" aria-modal="true" aria-labelledby="progression-confirmation-title"><button class="modal-close" data-modal-close aria-label="Cancelar evolucao">x</button><span class="resource-modal-label">Confirmar evolucao</span><h2 id="progression-confirmation-title">Nivel ${character.identity.level} para ${nextLevel}</h2><p>${tierAchievement}</p>${tierExperience ? `<p><strong>Experiencia de Tier +2:</strong> ${escapeHtml(tierExperience.name)}</p>` : ""}<ul class="progression-confirmation-list">${state.progressionDraft.map((choice) => `<li>${escapeHtml(choice.label)}</li>`).join("")}${selectedCard ? `<li>Carta de Dominio: ${escapeHtml(selectedCard.name)} → ${state.progressionCardDestination === "loadout" ? "Loadout" : "Vault"}</li>` : ""}</ul><div class="confirmation-actions"><button class="secondary-action" type="button" data-modal-close>Voltar</button><button class="primary-action" type="button" data-action="apply-progression">Aplicar evolucao</button></div></section></div>`;
+}
+
+export function renderProgressionMulticlassModal(dependencies: ProgressionDialogDependencies): string {
+  const { state, escapeHtml, getEligibleMulticlassClasses, subclasses, features, findDomainName } = dependencies;
+  const character = state.character;
+  if (!character || !state.progressionMulticlassOpen) return "";
+  const classes = getEligibleMulticlassClasses(character);
+  const selectedClass = classes.find((entry) => entry.id === state.progressionMulticlassDraft.classId) ?? classes[0];
+  const selectedDomainId = state.progressionMulticlassDraft.domainId ?? selectedClass?.domainIds[0];
+  const classFeatures = features.filter((entry) => entry.sourceType === "class" && entry.sourceId === selectedClass?.id && entry.tier === "class");
+  const selectedFeatureId = state.progressionMulticlassDraft.featureId ?? classFeatures[0]?.id;
+  const classSubclasses = subclasses.filter((entry) => entry.classId === selectedClass?.id);
+  const selectedSubclass = classSubclasses.find((entry) => entry.id === state.progressionMulticlassDraft.subclassId) ?? classSubclasses[0];
+  const foundationFeatures = features.filter((entry) => entry.sourceType === "subclass" && entry.sourceId === selectedSubclass?.id && entry.tier === "foundation");
+  const selectedFoundationId = state.progressionMulticlassDraft.foundationFeatureId ?? foundationFeatures[0]?.id;
+  const incomplete = !selectedClass || !selectedDomainId || !selectedFeatureId || !selectedSubclass || !selectedFoundationId;
+  return `<div class="modal-backdrop" data-modal-backdrop><section class="progression-picker-modal multiclass-picker-modal" role="dialog" aria-modal="true" aria-labelledby="multiclass-picker-title"><button class="modal-close" data-modal-close aria-label="Fechar Multiclasse">x</button><span class="resource-modal-label">Avanço de dois espaços</span><h2 id="multiclass-picker-title">Escolher Multiclasse</h2><p>Escolha uma segunda classe, um de seus Domínios, uma característica de classe e uma Fundação de subclasse. Esta escolha ocupa os dois avanços deste nível.</p>${classes.length ? `<div class="form-grid"><label class="form-field"><span>Classe adicional</span><select data-progression-multiclass-class>${classes.map((entry) => `<option value="${escapeHtml(entry.id)}" ${entry.id === selectedClass.id ? "selected" : ""}>${escapeHtml(entry.name)}</option>`).join("")}</select></label><label class="form-field"><span>Domínio da Multiclasse</span><select data-progression-multiclass-domain>${selectedClass.domainIds.map((id) => `<option value="${escapeHtml(id)}" ${id === selectedDomainId ? "selected" : ""}>${escapeHtml(findDomainName(id) ?? id)}</option>`).join("")}</select></label><label class="form-field"><span>Característica de classe</span><select data-progression-multiclass-feature>${classFeatures.map((entry) => `<option value="${escapeHtml(entry.id)}" ${entry.id === selectedFeatureId ? "selected" : ""}>${escapeHtml(entry.name)}</option>`).join("")}</select></label><label class="form-field"><span>Subclasse para Fundação</span><select data-progression-multiclass-subclass>${classSubclasses.map((entry) => `<option value="${escapeHtml(entry.id)}" ${entry.id === selectedSubclass?.id ? "selected" : ""}>${escapeHtml(entry.name)}</option>`).join("")}</select></label><label class="form-field"><span>Fundação da subclasse</span><select data-progression-multiclass-foundation>${foundationFeatures.map((entry) => `<option value="${escapeHtml(entry.id)}" ${entry.id === selectedFoundationId ? "selected" : ""}>${escapeHtml(entry.name)}</option>`).join("")}</select></label></div><button class="primary-action" type="button" data-action="confirm-progression-multiclass" ${incomplete ? "disabled" : ""}>Adicionar Multiclasse</button>` : `<p class="form-error">Nenhuma outra classe está disponível no Compendium.</p>`}</section></div>`;
 }

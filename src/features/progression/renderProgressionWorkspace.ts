@@ -17,6 +17,7 @@ export type ProgressionWorkspaceDependencies = {
   getProgressionChoiceCount: () => number;
   getAdvanceSlotsUsed: (character: Character, tier: ProgressionTierNumber, kind: ProgressionAdvanceKind) => number;
   getNextSubclassAdvance: (character: Character, tier: ProgressionTierNumber) => "specialized" | "mastery" | undefined;
+  canChooseMulticlass: (character: Character, tier: ProgressionTierNumber) => boolean;
   requiresTierExperience: (character: Character) => boolean;
   getProgressionCardCandidates: (character: Character) => CardDefinition[];
   getActiveCards: (character: Character) => CardDefinition[];
@@ -24,12 +25,13 @@ export type ProgressionWorkspaceDependencies = {
 };
 
 export function renderProgressionOptions(character: Character, isCurrentTier: boolean, dependencies: ProgressionWorkspaceDependencies): string {
-  const { getProgressionChoiceCount, getTierForLevel, getNextSubclassAdvance } = dependencies;
+  const { getProgressionChoiceCount, getTierForLevel, getNextSubclassAdvance, canChooseMulticlass } = dependencies;
   const usedChoices = getProgressionChoiceCount();
   const currentTier = getTierForLevel(Math.min(character.identity.level + 1, 10));
   const tiers = ([2, 3, 4] as ProgressionTierNumber[]).filter((tier) => tier <= currentTier);
   return tiers.map((tier) => {
     const subclassAdvance = getNextSubclassAdvance(character, tier);
+    const hasSubclassDraft = dependencies.state.progressionDraft.some((choice) => choice.kind === "subclass" && choice.tier === tier);
     const options: Array<{ kind: ProgressionAdvanceKind; description: string; disabled?: boolean }> = [
       { kind: "attributes", description: "Ganhe +1 em dois atributos ainda nao marcados." },
       { kind: "hp", description: "Ganhe permanentemente um slot de PV." },
@@ -38,7 +40,8 @@ export function renderProgressionOptions(character: Character, isCurrentTier: bo
       { kind: "domain", description: "Escolha uma carta adicional de Dominio." },
       { kind: "evasion", description: "Ganhe permanentemente +1 em Evasao." },
       { kind: "subclass", description: subclassAdvance ? `Receba ${subclassAdvance === "specialized" ? "a Especializacao" : "a Maestria"} da subclasse.` : "A proxima feature da subclasse nao esta disponivel neste Tier.", disabled: !subclassAdvance },
-      { kind: "proficiency", description: "Ganhe +1 em Proficiencia. Consome as duas escolhas.", disabled: usedChoices > 0 }
+      { kind: "proficiency", description: "Ganhe +1 em Proficiencia. Consome as duas escolhas.", disabled: usedChoices > 0 },
+      { kind: "multiclass", description: "Escolha outra classe, um Dominio, uma caracteristica e uma Fundacao. Consome as duas escolhas.", disabled: hasSubclassDraft || !canChooseMulticlass(character, tier) || usedChoices > 0 }
     ];
     return `<section class="progression-tier-options"><h3>Espacos do Tier ${tier}${tier === currentTier ? "" : " (pendentes)"}</h3><div class="progression-option-list">${options.filter((option) => progressionAdvanceRules[option.kind].slotCount[tier] > 0).map((option) => renderProgressionOption(option, character, tier, isCurrentTier, usedChoices, dependencies)).join("")}</div></section>`;
   }).join("");
@@ -76,7 +79,7 @@ function renderTierExperienceStep(character: Character, dependencies: Progressio
 
 function renderProgressionOption(option: { kind: ProgressionAdvanceKind; description: string; disabled?: boolean }, character: Character, tier: ProgressionTierNumber, isCurrentTier: boolean, usedChoices: number, dependencies: ProgressionWorkspaceDependencies): string {
   const { escapeHtml, getAdvanceSlotsUsed } = dependencies;
-  const cost = option.kind === "proficiency" ? 2 : 1;
+  const cost = option.kind === "proficiency" || option.kind === "multiclass" ? 2 : 1;
   const rule = progressionAdvanceRules[option.kind];
   const slots = rule.slotCount[tier];
   const slotsUsed = getAdvanceSlotsUsed(character, tier, option.kind);

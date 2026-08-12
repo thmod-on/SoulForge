@@ -4,6 +4,21 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.16.0]
+
+### Adicionado
+
+- escolha de experiências na criação de personagem;
+- fluxo inicial de Multiclasse na Progressão, com classe, Domínio e Features adicionais;
+- complementos locais de marcadores para cartas vindas de packs, sem alterar seu conteúdo original;
+- metadado declarado para o contador de Palavras Inspiradoras, vinculado à Presença e ao descanso longo.
+
+### Alterado
+
+- criação de personagem dividida em módulos de fluxo, regras e apresentação;
+- contadores de marcadores passam a aceitar quantidade dinâmica por atributo;
+- banco local atualizado para guardar complementos de metadados de cartas.
+
 ## [0.15.0]
 
 ### Adicionado

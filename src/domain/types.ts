@@ -19,6 +19,11 @@ export type CounterGameMarkerDefinition = {
   id: string;
   kind: "counter";
   label: string;
+  /**
+   * Quantidade declarativa para contadores que acompanham um atributo ou
+   * outra regra conhecida. Quando presente, define o maximo e a reposicao.
+   */
+  quantity?: GameMarkerQuantity;
   initialValue?: number;
   max?: number;
   reset?: GameMarkerReset;
@@ -100,7 +105,22 @@ export type CharacterNote = {
   updatedAt: string;
 };
 
-export type ProgressionAdvanceKind = "attributes" | "hp" | "stress" | "experiences" | "domain" | "evasion" | "subclass" | "proficiency";
+export type ProgressionAdvanceKind = "attributes" | "hp" | "stress" | "experiences" | "domain" | "evasion" | "subclass" | "proficiency" | "multiclass";
+
+/** A segunda classe escolhida uma única vez por meio do avanço de Multiclasse. */
+export type CharacterMulticlass = {
+  classId: string;
+  className: string;
+  domainId: string;
+  domainName: string;
+  featureId: string;
+  featureName: string;
+  subclassId: string;
+  subclassName: string;
+  foundationFeatureId: string;
+  foundationFeatureName: string;
+  spellcastAttributeId?: Attribute["id"];
+};
 
 export type CharacterProgressionEntry = {
   level: number;
@@ -115,6 +135,7 @@ export type CharacterProgression = {
   attributeMarks: Record<string, string[]>;
   acquiredSubclassTiers: Array<"foundation" | "specialized" | "mastery">;
   advancementSelections: Array<{ kind: ProgressionAdvanceKind; tier: number; level: number }>;
+  multiclass?: CharacterMulticlass;
   history: CharacterProgressionEntry[];
 };
 

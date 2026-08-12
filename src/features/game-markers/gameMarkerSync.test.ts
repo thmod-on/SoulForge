@@ -21,6 +21,16 @@ describe("marcadores de jogo", () => {
     expect(inactive.gameMarkers).toHaveLength(1);
   });
 
+  it("resolve contador declarativo pelo atributo e o repoe no descanso", () => {
+    const card: CardDefinition = { id: "card.test.presence", type: "card", packId: "test", name: "Palavras", summary: "", domainId: "domain.test", tier: 1, cardType: "acao", effect: "", gameMarkers: [{ id: "uses", kind: "counter", label: "Usos", quantity: { kind: "attribute", attributeId: "con" }, reset: "long-rest" }] };
+    const catalog = createCatalog([], [card]);
+    const character = { ...demoCharacter, attributes: demoCharacter.attributes.map((attribute) => attribute.id === "con" ? { ...attribute, value: 3 } : attribute), deck: { activeCardIds: [card.id], learnedCardIds: [card.id] }, gameMarkers: undefined };
+    const synchronized = synchronizeGameMarkers(character, catalog);
+    expect(synchronized.gameMarkers?.[0]).toMatchObject({ kind: "counter", value: 3, max: 3 });
+    const spent = { ...synchronized, gameMarkers: synchronized.gameMarkers?.map((marker) => marker.kind === "counter" ? { ...marker, value: 1 } : marker) };
+    expect(resetGameMarkers(spent, catalog, "long-rest").gameMarkers?.[0]).toMatchObject({ value: 3, max: 3 });
+  });
+
   it("resolve dados pela caracteristica de Conjuracao declarada pela subclasse", () => {
     const feature: FeatureDefinition = { id: "feature.test.prayer", type: "feature", packId: "test", name: "Dados de Oração", summary: "", sourceType: "class", sourceId: "class.test.seraph", tier: "class", gameMarkers: [{ id: "prayer-dice", kind: "dice", label: "Dados de Oração", die: "d4", quantity: { kind: "spellcast-trait" }, reset: "session" }] };
     const subclass: SubclassDefinition = { id: "subclass.test.seraph", type: "subclass", packId: "test", name: "Sentinela", summary: "", classId: "class.test.seraph", foundationFeatureIds: [], specializationFeatureIds: [], masteryFeatureIds: [], spellcastAttributeId: "for" };

@@ -1,5 +1,5 @@
 import type { Catalog } from "../../domain/catalog";
-import type { CardDefinition, Character, CharacterGameMarkerState, ClassDefinition, FeatureDefinition, GameMarkerDefinition } from "../../domain/types";
+import type { CardDefinition, Character, CharacterGameMarkerState, ClassDefinition, FeatureDefinition, GameMarkerDefinition, GameMarkerQuantity } from "../../domain/types";
 
 export type ActiveGameMarker = { key: string; sourceDefinitionId: string; sourceLabel: string; definition: GameMarkerDefinition; state: CharacterGameMarkerState };
 type MarkerSource = { definition: CardDefinition | ClassDefinition | FeatureDefinition; label: string };
@@ -34,7 +34,7 @@ export function resetGameMarkers(character: Character, catalog: Catalog, reset: 
     if (!active || active.definition.reset !== reset) return state;
     changed = true;
     if (state.kind === "counter" && active.definition.kind === "counter") {
-      const value = active.definition.initialValue ?? 0;
+      const value = getCounterResetValue(active.definition, character, catalog, active.sourceDefinitionId);
       return { ...state, value: state.max === undefined ? value : Math.min(value, state.max) };
     }
     if (state.kind === "dice") return { ...state, results: state.results.map((die) => ({ ...die, value: 0, used: false })) };
@@ -92,9 +92,9 @@ function findCharacterSubclass(character: Character, catalog: Catalog, classDefi
 
 function synchronizeMarkerState(existing: CharacterGameMarkerState | undefined, key: string, sourceDefinitionId: string, definition: GameMarkerDefinition, character: Character, catalog: Catalog): CharacterGameMarkerState {
   if (definition.kind === "counter") {
-    const max = definition.max;
+    const max = getCounterMaximum(definition, character, catalog, sourceDefinitionId);
     if (existing?.kind === "counter") return { ...existing, key, sourceDefinitionId, markerId: definition.id, max, value: max === undefined ? existing.value : Math.min(existing.value, max) };
-    const value = definition.initialValue ?? 0;
+    const value = getCounterResetValue(definition, character, catalog, sourceDefinitionId);
     return { key, sourceDefinitionId, markerId: definition.id, kind: "counter", value: max === undefined ? value : Math.min(value, max), ...(max === undefined ? {} : { max }) };
   }
   const quantity = getDiceQuantity(definition, character, catalog, sourceDefinitionId);
@@ -106,7 +106,18 @@ function synchronizeMarkerState(existing: CharacterGameMarkerState | undefined, 
 }
 
 function getDiceQuantity(definition: Extract<GameMarkerDefinition, { kind: "dice" }>, character: Character, catalog: Catalog, sourceDefinitionId: string): number {
-  const quantity = definition.quantity;
+  return getMarkerQuantity(definition.quantity, character, catalog, sourceDefinitionId);
+}
+
+function getCounterMaximum(definition: Extract<GameMarkerDefinition, { kind: "counter" }>, character: Character, catalog: Catalog, sourceDefinitionId: string): number | undefined {
+  return definition.quantity ? getMarkerQuantity(definition.quantity, character, catalog, sourceDefinitionId) : definition.max;
+}
+
+function getCounterResetValue(definition: Extract<GameMarkerDefinition, { kind: "counter" }>, character: Character, catalog: Catalog, sourceDefinitionId: string): number {
+  return definition.quantity ? getMarkerQuantity(definition.quantity, character, catalog, sourceDefinitionId) : definition.initialValue ?? 0;
+}
+
+function getMarkerQuantity(quantity: GameMarkerQuantity, character: Character, catalog: Catalog, sourceDefinitionId: string): number {
   if (quantity.kind === "fixed") return Math.max(0, quantity.value);
   if (quantity.kind === "attribute") return Math.max(0, character.attributes.find((attribute) => attribute.id === quantity.attributeId)?.value ?? 0);
   const feature = catalog.features.find((entry) => entry.id === sourceDefinitionId);

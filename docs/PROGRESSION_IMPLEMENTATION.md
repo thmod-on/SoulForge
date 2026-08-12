@@ -141,6 +141,12 @@ Cancelar ou fechar o fluxo não deve alterar o personagem.
 - Especialização e Maestria seguem a ordem da Subclasse;
 - escolhas de Subclasse e Multiclasse respeitam seus bloqueios por tier.
 
+## Estado atual da Multiclasse
+
+O SoulForge registra uma única seleção de Multiclasse em `Character.progression.multiclass`, sem alterar a classe principal, a Evasão inicial ou o PV inicial. A seleção persistida contém a classe adicional, o Domínio escolhido, uma característica de classe e uma Feature de Fundação de uma de suas subclasses.
+
+O fluxo guiado só é oferecido no Tier 3 ou 4, custa os dois avanços do nível e impede a carta aprimorada de Subclasse somente no mesmo Tier. Após confirmada, nenhuma nova Multiclasse pode ser selecionada. Cartas de Domínio da Multiclasse passam a ser elegíveis na progressão até `ceil(nível de destino / 2)`.
+
 ## Fases de entrega
 
 ### Fase 1 — fundação de domínio
