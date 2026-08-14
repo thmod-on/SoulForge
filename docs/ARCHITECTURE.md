@@ -56,6 +56,17 @@ Toda funcionalidade nova deve ser criada em `src/features/<area>/` e agrupada po
 - `src/main.ts` coordena estado transitório, eventos globais, inicializacao e composicao das features; nao deve voltar a concentrar uma tela ou CRUD completo.
 - Cada nova feature deve documentar sua fronteira arquitetural e passar por `pnpm run build` e `pnpm run test` antes de uma release.
 
+## Barreira arquitetural automatizada
+
+`pnpm run check:architecture` protege a fronteira entre o orquestrador e as features. Ela falha quando:
+
+- `src/main.ts` cresce além da linha de base legada;
+- um novo template HTML é criado no orquestrador;
+- uma nova função de renderização é declarada em `src/main.ts`;
+- um módulo em `src/` importa `src/main.ts`.
+
+A linha de base está em `scripts/architecture-baseline.json`. Ela representa apenas o legado já existente e deve diminuir durante as refatorações; aumentar seus limites exige uma decisão arquitetural documentada. A checagem roda em `pnpm run check` e no GitHub Actions antes do build.
+
 # Objetivo
 
 Este documento define os princípios arquiteturais do SoulForge.

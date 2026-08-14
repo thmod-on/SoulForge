@@ -4,6 +4,21 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.17.0]
+
+### Adicionado
+
+- revisão declarativa de marcadores nas cartas dos packs Core e Hope & Fear, sem inferir regras por texto livre;
+- seleção guiada de atributos na criação de personagem, com valores disponíveis e opção de reset;
+- verificação arquitetural automática para preservar as fronteiras entre `main.ts` e as features.
+
+### Alterado
+
+- limiares de dano agora recebem o nível do personagem e modificadores de equipamentos;
+- cartas recebidas na Progressão são aprendidas diretamente no Vault;
+- a interface passa a chamar o valor das cartas de nível, reservando Tier para a progressão do personagem;
+- a etapa de atributos da criação foi extraída para o módulo responsável.
+
 ## [0.16.0]
 
 ### Adicionado

@@ -14,7 +14,8 @@ import { buildMulticlassChoice, canChooseMulticlass, canLearnMulticlassDomainCar
 import { nextCharacterCreationStep, previousCharacterCreationStep, type CharacterCreationStep } from "./features/character-creation/creationFlow";
 import { buildCharacterFromDraft, getCreationAncestries, getCreationClasses, getCreationSubclasses, hasValidCreationAttributes, validateCreationStep, type CharacterCreationDraft } from "./features/character-creation/characterCreationRules";
 import { renderCreationActions, renderCreationProgress, renderCreationTitle } from "./features/character-creation/renderCreationChrome";
-import { renderCreationExperiencesStep, renderCreationIdentityStep, renderCreationReviewStep } from "./features/character-creation/renderCreationSteps";
+import { renderCreationAttributesStep, renderCreationExperiencesStep, renderCreationIdentityStep, renderCreationReviewStep } from "./features/character-creation/renderCreationSteps";
+import { characterCreationAttributes, createEmptyCreationAttributeValues, parseCreationAttributeValue } from "./features/character-creation/attributeAllocation";
 import { renderProgression as renderProgressionView, type ProgressionRenderDependencies } from "./features/progression/renderProgression";
 import {
   renderProgressionCardPickerModal as renderProgressionCardPickerModalView,
@@ -135,15 +136,6 @@ function getAppRoot(): HTMLDivElement {
 
 const appRoot = getAppRoot();
 const activeCharacterStorageKey = "soulforge.active-character-id";
-const characterCreationAttributeDefaults: Record<Attribute["id"], number> = { dex: 2, for: 1, cha: 1, wil: 0, con: 0, int: -1 };
-const characterCreationAttributes: Array<{ id: Attribute["id"]; label: string; description: string }> = [
-  { id: "dex", label: "Agilidade", description: "Correr, saltar e manobrar." },
-  { id: "for", label: "Força", description: "Erguer, esmagar e agarrar." },
-  { id: "cha", label: "Finesse", description: "Controlar, esconder e operar." },
-  { id: "wil", label: "Instinto", description: "Perceber, sentir e navegar." },
-  { id: "con", label: "Presença", description: "Encantar, performar e enganar." },
-  { id: "int", label: "Conhecimento", description: "Recordar, analisar e compreender." }
-];
 let catalog = baseCatalog;
 let cardMarkerOverrides: CardMarkerOverride[] = [];
 let modalBackdropPointerDown = false;
@@ -188,7 +180,6 @@ const state: {
   progressionCardTierFilter: "todos" | number;
   progressionCardPickerTier?: ProgressionTierNumber;
   progressionCardId?: string;
-  progressionCardDestination: "loadout" | "vault";
   progressionTierExperienceOpen: boolean;
   progressionTierExperience?: { name: string; description: string };
   progressionTierExperienceError?: string;
@@ -274,7 +265,6 @@ const state: {
   progressionPickerIds: [],
   progressionDraft: [],
   progressionConfirmationOpen: false,
-  progressionCardDestination: "loadout",
   progressionCardTierFilter: "todos",
   progressionTierExperienceOpen: false,
   progressionMulticlassOpen: false,
@@ -298,7 +288,7 @@ const state: {
   characterCreationAncestrySearch: "",
   characterCreationCardIds: [],
   characterCreationExperiences: [{ name: "", description: "" }, { name: "", description: "" }],
-  characterCreationAttributeValues: { ...characterCreationAttributeDefaults },
+  characterCreationAttributeValues: createEmptyCreationAttributeValues(),
   characters: [],
   installedPacks: [],
   packImportOpen: false,
@@ -311,7 +301,7 @@ const state: {
   }
 };
 
-const appVersion = "0.16.0";
+const appVersion = "0.17.0";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -885,14 +875,11 @@ async function applyProgression(): Promise<void> {
   if (!chosenCard || !getProgressionCardCandidates(character, true).some((card) => card.id === chosenCard.id)) {
     return;
   }
-  if (state.progressionCardDestination === "loadout" && getActiveCards(character).length >= 5) {
-    return;
-  }
   if (multiclassChoice && !multiclassChoice.multiclass) return;
   const historyEntry: CharacterProgressionEntry = {
     level: nextLevel,
     appliedAt: new Date().toISOString(),
-    choices: [...choices.map((choice) => choice.label), `Carta de Dominio: ${chosenCard.name} → ${state.progressionCardDestination === "loadout" ? "Loadout" : "Vault"}`, ...(tierExperience ? [`Experiencia de Tier +2: ${tierExperience.name}`] : [])],
+    choices: [...choices.map((choice) => choice.label), `Carta de Dominio: ${chosenCard.name} → Vault`, ...(tierExperience ? [`Experiencia de Tier +2: ${tierExperience.name}`] : [])],
     advances: choices.map((choice) => ({ kind: choice.kind, label: choice.label })),
     tierAchievement
   };
@@ -927,7 +914,7 @@ async function applyProgression(): Promise<void> {
     proficiency: character.proficiency + proficiencyBonus + (isTierAchievement ? 1 : 0),
     resources,
     deck: {
-      activeCardIds: state.progressionCardDestination === "loadout" ? [...character.deck.activeCardIds, chosenCard.id] : character.deck.activeCardIds,
+      activeCardIds: character.deck.activeCardIds,
       learnedCardIds: [...character.deck.learnedCardIds, chosenCard.id, ...additionalCardIds]
     },
     experiences: character.experiences.map((experience) => experienceIds.includes(experience.id) ? { ...experience, value: experience.value + 1 } : experience).concat(tierExperience ? [{ id: `experience.tier.${nextLevel}.${crypto.randomUUID()}`, name: tierExperience.name, value: 2, description: tierExperience.description }] : []),
@@ -949,7 +936,6 @@ async function applyProgression(): Promise<void> {
   state.progressionConfirmationOpen = false;
   state.progressionError = undefined;
   state.progressionCardId = undefined;
-  state.progressionCardDestination = "loadout";
   state.progressionTierExperience = undefined;
   state.progressionTierExperienceError = undefined;
   state.selectedProgressionTier = getTierForLevel(Math.min(nextLevel + 1, 10));
@@ -1007,7 +993,6 @@ function getProgressionWorkspaceDependencies(): ProgressionWorkspaceDependencies
     canChooseMulticlass: (character, tier) => canChooseMulticlass(character, tier, state.progressionDraft),
     requiresTierExperience,
     getProgressionCardCandidates,
-    getActiveCards,
     findCard: (cardId) => {
       const definition = findDefinition(catalog, cardId);
       return definition?.type === "card" ? definition : undefined;
@@ -1450,9 +1435,9 @@ function renderCharacterCreationModal(): string {
             <label class="form-field"><span>Feature Bottom</span>${bottomFeatures.length > 1 ? `<select data-character-bottom-feature>${bottomFeatures.map((feature) => `<option value="${escapeHtml(feature.id)}" ${feature.id === bottomFeatureId ? "selected" : ""}>${featureOptionLabel(feature, "bottom")}</option>`).join("")}</select><div class="selected-feature-description"><strong>${escapeHtml(selectedBottomFeature?.name ?? "Feature indisponível")}</strong><p>${escapeHtml(selectedBottomFeature?.summary ?? "")}</p></div>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(bottomFeatures[0]?.name ?? "Feature indisponível")}</strong><small>${escapeHtml(bottomFeatures[0]?.summary ?? "")}</small></div>`}</label>
           </div>
         </section>
-        <section class="character-attributes-picker creation-step-panel" data-creation-panel="4"><div><span>Traços</span><p>Distribua seus atributos. Use cada valor uma vez: +2, +1, +1, +0, +0 e −1.</p></div><div class="character-attribute-choice-grid">${characterCreationAttributes.map((attribute) => `<label class="form-field"><span>${attribute.label}</span><small>${attribute.description}</small><select data-character-attribute-id="${attribute.id}">${[-1, 0, 1, 2].map((value) => `<option value="${value}" ${state.characterCreationAttributeValues[attribute.id] === value ? "selected" : ""}>${value > 0 ? `+${value}` : value}</option>`).join("")}</select></label>`).join("")}</div></section>
+        ${renderCreationAttributesStep(state.characterCreationAttributeValues)}
         <section class="character-class-picker creation-step-panel" data-creation-panel="5"><div><span>Arquétipo</span><h3>Classe e subclasse</h3><p>Escolha a classe e veja as características de cada subclasse antes de decidir.</p></div><label class="form-field"><span>Classe</span><select data-character-class>${classes.map((definition) => `<option value="${escapeHtml(definition.id)}" ${definition.id === selectedClass.id ? "selected" : ""}>${escapeHtml(definition.name)}</option>`).join("")}</select><small>${escapeHtml(selectedClass.summary)}</small></label><p class="character-class-starting-stats">Evasão inicial <strong>${selectedClass.startingEvasion}</strong><span>·</span> PV inicial <strong>${selectedClass.startingHitPoints}</strong></p><div class="character-subclass-choice-grid">${subclasses.map((subclass) => `<label class="character-subclass-choice ${subclass.id === selectedSubclass?.id ? "is-selected" : ""}"><input type="radio" name="character-subclass" data-character-subclass-id="${escapeHtml(subclass.id)}" ${subclass.id === selectedSubclass?.id ? "checked" : ""}/><span><strong>${escapeHtml(subclass.name)}</strong><small>${escapeHtml(subclass.summary)}</small>${subclass.spellcastAttributeId ? `<em>Conjuração: ${characterCreationAttributes.find((attribute) => attribute.id === subclass.spellcastAttributeId)?.label ?? ""}</em>` : ""}<div class="character-subclass-features">${renderSubclassFeature("Fundação", subclass.foundationFeatureIds[0])}${renderSubclassFeature("Especialização", subclass.specializationFeatureIds[0])}${renderSubclassFeature("Maestria", subclass.masteryFeatureIds[0])}</div></span></label>`).join("") || `<p class="form-error">Cadastre uma subclasse no Compendium.</p>`}</div></section>
-        <section class="character-domain-card-picker creation-step-panel" data-creation-panel="6"><div><span>Loadout inicial</span><h3>Escolha 2 cartas de Domínio</h3><p>Cartas de nível 1 dos domínios liberados pela sua classe. Você pode escolher as duas do mesmo domínio.</p></div><div class="character-domain-card-toolbar"><span>${state.characterCreationCardIds.length} / 2 selecionadas</span><div>${selectedClass.domainIds.map((domainId) => { const domain = findDomain(catalog, domainId); return `<button type="button" class="chip ${selectedCardDomainId === domainId ? "is-active" : ""}" data-character-card-domain-id="${escapeHtml(domainId)}">${escapeHtml(domain?.name ?? "Domínio")}</button>`; }).join("")}</div></div>${eligibleStartingCards.length ? `<div class="character-domain-card-grid">${visibleStartingCards.map((card) => `<button type="button" class="character-domain-card ${state.characterCreationCardIds.includes(card.id) ? "is-selected" : ""}" data-character-starting-card-id="${escapeHtml(card.id)}"><span class="character-domain-card-art">${card.image ? `<img src="${escapeHtml(card.image)}" alt="" />` : ""}</span><strong>${escapeHtml(card.name)}</strong><small>${escapeHtml(findDomain(catalog, card.domainId)?.name ?? "Domínio")} · Tier ${card.tier}</small><p>${escapeHtml(card.summary)}</p></button>`).join("")}</div>` : `<p class="form-error">Não há cartas de nível 1 para os domínios desta classe. Importe o Pack correspondente antes de criar a ficha.</p>`}</section>
+        <section class="character-domain-card-picker creation-step-panel" data-creation-panel="6"><div><span>Loadout inicial</span><h3>Escolha 2 cartas de Domínio</h3><p>Cartas de nível 1 dos domínios liberados pela sua classe. Você pode escolher as duas do mesmo domínio.</p></div><div class="character-domain-card-toolbar"><span>${state.characterCreationCardIds.length} / 2 selecionadas</span><div>${selectedClass.domainIds.map((domainId) => { const domain = findDomain(catalog, domainId); return `<button type="button" class="chip ${selectedCardDomainId === domainId ? "is-active" : ""}" data-character-card-domain-id="${escapeHtml(domainId)}">${escapeHtml(domain?.name ?? "Domínio")}</button>`; }).join("")}</div></div>${eligibleStartingCards.length ? `<div class="character-domain-card-grid">${visibleStartingCards.map((card) => `<button type="button" class="character-domain-card ${state.characterCreationCardIds.includes(card.id) ? "is-selected" : ""}" data-character-starting-card-id="${escapeHtml(card.id)}"><span class="character-domain-card-art">${card.image ? `<img src="${escapeHtml(card.image)}" alt="" />` : ""}</span><strong>${escapeHtml(card.name)}</strong><small>${escapeHtml(findDomain(catalog, card.domainId)?.name ?? "Domínio")} · Nível ${card.tier}</small><p>${escapeHtml(card.summary)}</p></button>`).join("")}</div>` : `<p class="form-error">Não há cartas de nível 1 para os domínios desta classe. Importe o Pack correspondente antes de criar a ficha.</p>`}</section>
         ${renderCreationExperiencesStep(state.characterCreationExperiences, escapeHtml)}
         ${renderCreationReviewStep({ name: state.characterCreationName, community: state.characterCreationCommunity, ancestries: selectedAncestries.map((ancestry) => ancestry.name).join(" + "), topFeature: selectedTopFeature?.name, bottomFeature: selectedBottomFeature?.name, attributes: characterCreationAttributes.map((attribute) => ({ label: attribute.label, value: state.characterCreationAttributeValues[attribute.id] })), className: selectedClass.name, subclassName: selectedSubclass?.name, hitPoints: selectedClass.startingHitPoints, evasion: selectedClass.startingEvasion, cards: state.characterCreationCardIds.map((id) => catalog.cards.find((card) => card.id === id)?.name ?? "").filter(Boolean).join(" · "), experiences: state.characterCreationExperiences.map((experience) => experience.name).filter(Boolean).join(" · ") }, escapeHtml)}
         ${state.characterCreationError ? `<p class="form-error">${escapeHtml(state.characterCreationError)}</p>` : ""}
@@ -2024,13 +2009,14 @@ function syncCharacterCreationDraft(): void {
   });
   document.querySelectorAll<HTMLSelectElement>("[data-character-attribute-id]").forEach((input) => {
     const attributeId = input.dataset.characterAttributeId as Attribute["id"] | undefined;
-    if (attributeId) state.characterCreationAttributeValues[attributeId] = Number(input.value);
+    if (attributeId) state.characterCreationAttributeValues[attributeId] = parseCreationAttributeValue(input.value);
   });
 }
 
 function hasValidCharacterCreationAttributes(values: Record<Attribute["id"], number>): boolean {
   return hasValidCreationAttributes(values);
 }
+
 
 function validateCharacterCreationStep(): boolean {
   syncCharacterCreationDraft();
@@ -2594,7 +2580,7 @@ function bindEvents(): void {
       state.characterCreationAncestrySearch = "";
       state.characterCreationCardIds = [];
       state.characterCreationExperiences = [{ name: "", description: "" }, { name: "", description: "" }];
-      state.characterCreationAttributeValues = { ...characterCreationAttributeDefaults };
+      state.characterCreationAttributeValues = createEmptyCreationAttributeValues();
       state.characterCreationPortraitImage = undefined;
       state.characterCreationCardDomainId = undefined;
       state.characterCreationTopFeatureId = undefined;
@@ -2610,7 +2596,7 @@ function bindEvents(): void {
       state.characterCreationAncestryIds = [];
       state.characterCreationAncestrySearch = "";
       state.characterCreationCardIds = [];
-      state.characterCreationAttributeValues = { ...characterCreationAttributeDefaults };
+      state.characterCreationAttributeValues = createEmptyCreationAttributeValues();
       state.characterCreationPortraitImage = undefined;
       state.characterCreationCardDomainId = undefined;
       state.characterCreationTopFeatureId = undefined;
@@ -3009,6 +2995,7 @@ function bindEvents(): void {
       } else if (kind === "domain") {
         state.progressionCardPickerMode = "advance";
         state.progressionCardPickerTier = Number(progressionAdvanceButton.dataset.progressionTier) as ProgressionTierNumber;
+        state.progressionCardTierFilter = "todos";
       } else if (kind === "subclass") {
         const character = state.character;
         if (character) {
@@ -3161,13 +3148,6 @@ function bindEvents(): void {
       return;
     }
 
-    const progressionCardDestination = target.closest<HTMLElement>('[data-action="set-progression-card-destination"]');
-    if (progressionCardDestination) {
-      state.progressionCardDestination = progressionCardDestination.dataset.progressionCardDestination === "vault" ? "vault" : "loadout";
-      render({ preserveMainScroll: true });
-      return;
-    }
-
     if (target.closest('[data-action="open-progression-confirmation"]')) {
       const choiceCount = getProgressionChoiceCount();
       if (choiceCount !== 2) {
@@ -3176,8 +3156,6 @@ function bindEvents(): void {
         state.progressionError = "Escolha a carta obrigatoria de Dominio antes de confirmar.";
       } else if (state.character && requiresTierExperience(state.character) && !state.progressionTierExperience?.name.trim()) {
         state.progressionError = "Defina a nova Experiencia +2 recebida ao entrar no Tier.";
-      } else if (state.progressionCardDestination === "loadout" && state.character && getActiveCards(state.character).length >= 5) {
-        state.progressionError = "Seu Loadout esta cheio. Mova uma carta para o Vault ou escolha Vault como destino para a nova carta.";
       } else {
         state.progressionError = undefined;
         state.progressionConfirmationOpen = true;
@@ -3646,9 +3624,15 @@ function bindEvents(): void {
       render();
       return;
     }
+    if (target instanceof HTMLElement && target.closest('[data-action="reset-character-attributes"]')) {
+      state.characterCreationAttributeValues = createEmptyCreationAttributeValues();
+      state.characterCreationError = undefined;
+      render({ preserveMainScroll: true });
+      return;
+    }
     if (target instanceof HTMLSelectElement && target.matches("[data-character-attribute-id]")) {
       const attributeId = target.dataset.characterAttributeId as Attribute["id"] | undefined;
-      if (attributeId) state.characterCreationAttributeValues[attributeId] = Number(target.value);
+      if (attributeId) state.characterCreationAttributeValues[attributeId] = parseCreationAttributeValue(target.value);
       state.characterCreationError = undefined;
       render();
       return;

@@ -1,3 +1,6 @@
+import type { Attribute } from "../../domain/types";
+import { characterCreationAttributes, formatCreationAttributeValue, getRemainingCreationAttributeValues } from "./attributeAllocation";
+
 type EscapeHtml = (value: string) => string;
 
 export function renderCreationIdentityStep(state: { name: string; community: string; portraitImage?: string }, escapeHtml: EscapeHtml): string {
@@ -6,6 +9,11 @@ export function renderCreationIdentityStep(state: { name: string; community: str
 
 export function renderCreationExperiencesStep(experiences: Array<{ name: string }>, escapeHtml: EscapeHtml): string {
   return `<section class="character-creation-experiences creation-step-panel" data-creation-panel="7"><div><span>História</span><h3>Defina duas Experiências</h3><p>Cada uma começa em +2. Escolha frases específicas que expressem vivências, aptidões ou traços do personagem.</p></div><div class="form-grid">${experiences.map((experience, index) => `<label class="form-field form-field-wide"><span>Experiência ${index + 1} · +2</span><input data-character-experience-name="${index}" maxlength="80" value="${escapeHtml(experience.name)}" placeholder="Ex.: Vigia de fronteira" /><small>Evite termos muito amplos ou que concedam um poder específico.</small></label>`).join("")}</div></section>`;
+}
+
+export function renderCreationAttributesStep(values: Record<Attribute["id"], number>): string {
+  const available = getRemainingCreationAttributeValues(values);
+  return `<section class="character-attributes-picker creation-step-panel" data-creation-panel="4"><div><span>Traços</span><p>Distribua seus atributos. Use cada valor uma vez: +2, +1, +1, +0, +0 e −1.</p><div class="character-attribute-available" aria-live="polite"><strong>Valores disponíveis</strong><span>${available.length ? available.map((value) => `<i>${formatCreationAttributeValue(value)}</i>`).join("") : "Todos distribuídos"}</span><button type="button" class="character-attribute-reset" data-action="reset-character-attributes">Resetar</button></div></div><div class="character-attribute-choice-grid">${characterCreationAttributes.map((attribute) => { const selected = values[attribute.id]; const remaining = getRemainingCreationAttributeValues(values, attribute.id); return `<label class="form-field"><span>${attribute.label}</span><small>${attribute.description}</small><select data-character-attribute-id="${attribute.id}"><option value="" ${Number.isNaN(selected) ? "selected" : ""}>Selecione</option>${[-1, 0, 1, 2].map((value) => `<option value="${value}" ${selected === value ? "selected" : ""} ${selected === value || remaining.includes(value) ? "" : "disabled"}>${formatCreationAttributeValue(value)}</option>`).join("")}</select></label>`; }).join("")}</div></section>`;
 }
 
 export function renderCreationReviewStep(model: { name: string; community: string; ancestries: string; topFeature?: string; bottomFeature?: string; attributes: Array<{ label: string; value: number }>; className: string; subclassName?: string; hitPoints: number; evasion: number; cards: string; experiences: string }, escapeHtml: EscapeHtml): string {

@@ -28,7 +28,7 @@ export function renderStoredCards(character: Character, dependencies: PlayerOver
 
 export function renderCardTile(card: CardDefinition, dependencies: Pick<PlayerOverviewDependencies, "escapeHtml">): string {
   const { escapeHtml } = dependencies;
-  return `<button class="ability-card" data-card-modal-id="${card.id}"><div class="card-tier" aria-label="Tier ${card.tier}"><small>Tier</small><strong>${card.tier}</strong></div><div class="card-recall" aria-label="Custo de recall: ${card.recallCost ?? 0} Stress" title="Custo de recall: ${card.recallCost ?? 0} Stress"><span aria-hidden="true">⚡</span><strong>${card.recallCost ?? 0}</strong></div><div class="card-art ${card.image ? "has-image" : ""}" ${card.image ? `style="background-image: url('${escapeHtml(card.image)}')"` : ""}></div><h3>${escapeHtml(card.name)}</h3><span>${escapeHtml(card.cardType)}</span><p>${escapeHtml(card.summary)}</p></button>`;
+  return `<button class="ability-card" data-card-modal-id="${card.id}"><div class="card-tier" aria-label="Nível ${card.tier}"><small>Nível</small><strong>${card.tier}</strong></div><div class="card-recall" aria-label="Custo de recall: ${card.recallCost ?? 0} Stress" title="Custo de recall: ${card.recallCost ?? 0} Stress"><span aria-hidden="true">⚡</span><strong>${card.recallCost ?? 0}</strong></div><div class="card-art ${card.image ? "has-image" : ""}" ${card.image ? `style="background-image: url('${escapeHtml(card.image)}')"` : ""}></div><h3>${escapeHtml(card.name)}</h3><span>${escapeHtml(card.cardType)}</span><p>${escapeHtml(card.summary)}</p></button>`;
 }
 
 function renderSubclassTrack(character: Character, dependencies: PlayerOverviewDependencies): string {

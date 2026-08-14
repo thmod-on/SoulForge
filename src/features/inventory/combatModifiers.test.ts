@@ -16,7 +16,12 @@ const armor: ItemDefinition = { id: "item.armor", type: "item", packId: "test", 
 
 describe("getEffectiveDefense", () => {
   it("aplica somente modificadores de itens equipados", () => {
-    expect(getEffectiveDefense(character, (id) => id === armor.id ? armor : undefined)).toEqual({ evasion: 9, armor: 2, minor: 6, major: 12 });
+    expect(getEffectiveDefense(character, (id) => id === armor.id ? armor : undefined)).toEqual({ evasion: 9, armor: 2, minor: 7, major: 13 });
+  });
+
+  it("inclui o nível nos limiares mesmo sem equipamento", () => {
+    const levelFourCharacter = { ...character, identity: { ...character.identity, level: 4 }, inventory: { ...character.inventory, entries: [] } };
+    expect(getEffectiveDefense(levelFourCharacter, () => undefined)).toEqual({ evasion: 10, armor: 0, minor: 9, major: 14 });
   });
 
   it("sincroniza os slots de Armadura apenas com a armadura equipada", () => {

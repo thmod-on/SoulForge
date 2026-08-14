@@ -2,6 +2,13 @@ import type { Character, Defense, ItemDefinition } from "../../domain/types";
 
 /** Calcula os valores exibidos na ficha sem alterar a defesa-base persistida. */
 export function getEffectiveDefense(character: Character, findItem: (id: string) => ItemDefinition | undefined): Defense {
+  // Os limiares acompanham o nível atual do personagem e recebem, depois,
+  // quaisquer bônus ou penalidades declarados nos itens equipados.
+  const baseDefense: Defense = {
+    ...character.defense,
+    minor: character.defense.minor + character.identity.level,
+    major: character.defense.major + character.identity.level
+  };
   return character.inventory.entries
     .filter((entry) => (entry.compartmentId ?? (entry.equipped ? "equipped" : "backpack")) === "equipped")
     .reduce<Defense>((defense, entry) => {
@@ -14,7 +21,7 @@ export function getEffectiveDefense(character: Character, findItem: (id: string)
             major: defense.major + (modifiers.major ?? 0) * entry.quantity
           }
         : defense;
-    }, { ...character.defense });
+    }, baseDefense);
 }
 
 /** Mantém os slots de Armadura alinhados à armadura atualmente equipada. */

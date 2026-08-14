@@ -1,0 +1,34 @@
+{
+  "main": {
+    "maxLines": 3665,
+    "maxTemplateLiterals": 95,
+    "allowedRenderFunctions": [
+      "renderSkills",
+      "renderAncestryFeatureSelection",
+      "renderAncestryFeatureCard",
+      "renderSkillList",
+      "renderExperienceList",
+      "renderSettings",
+      "renderPackImportModal",
+      "renderRemoveInstalledPackModal",
+      "renderAddContainerModal",
+      "renderDeleteContainerModal",
+      "renderEmptyInline",
+      "renderCompendium",
+      "renderCompendiumFirstSpread",
+      "renderCompendiumSecondSpread",
+      "renderCompendiumThirdSpread",
+      "renderCompendiumChapterCard",
+      "renderActivateStoredCardModal",
+      "renderCharacterSelection",
+      "renderDeleteCharacterModal",
+      "renderAddResourceModal",
+      "renderCharacterPortraitModal",
+      "renderCharacterPortraitPreviewModal",
+      "renderGameMarkerDieDialog",
+      "renderCharacterCreationModal",
+      "renderPlaceholder",
+      "render"
+    ]
+  }
+}

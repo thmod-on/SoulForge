@@ -6,7 +6,6 @@ export type ProgressionWorkspaceState = {
   progressionDraft: ProgressionDraftChoice[];
   progressionTierExperience?: { name: string; description: string };
   progressionCardId?: string;
-  progressionCardDestination: "loadout" | "vault";
   progressionError?: string;
 };
 
@@ -20,7 +19,6 @@ export type ProgressionWorkspaceDependencies = {
   canChooseMulticlass: (character: Character, tier: ProgressionTierNumber) => boolean;
   requiresTierExperience: (character: Character) => boolean;
   getProgressionCardCandidates: (character: Character) => CardDefinition[];
-  getActiveCards: (character: Character) => CardDefinition[];
   findCard: (cardId: string) => CardDefinition | undefined;
 };
 
@@ -59,14 +57,13 @@ export function renderProgressionDraft(character: Character, dependencies: Progr
 }
 
 export function renderProgressionDomainStep(character: Character, dependencies: ProgressionWorkspaceDependencies): string {
-  const { state, escapeHtml, getProgressionCardCandidates, getActiveCards, findCard } = dependencies;
+  const { state, escapeHtml, getProgressionCardCandidates, findCard } = dependencies;
   const candidates = getProgressionCardCandidates(character);
   const selectedCard = state.progressionCardId ? findCard(state.progressionCardId) : undefined;
   const hasRequiredCard = Boolean(selectedCard);
-  const canUseLoadout = getActiveCards(character).length < 5;
   const cardStatus = candidates.length ? "Pendente: escolha uma carta elegivel." : "Nenhuma carta elegivel encontrada nos Dominios da classe.";
   const selectedCardPreview = selectedCard ? `<div class="progression-selected-card" aria-label="Carta selecionada: ${escapeHtml(selectedCard.name)}"><span class="progression-selected-card-art">${selectedCard.image ? `<img src="${escapeHtml(selectedCard.image)}" alt="" />` : "DOM"}</span><strong title="${escapeHtml(selectedCard.name)}">${escapeHtml(selectedCard.name)}</strong></div>` : `<p>${escapeHtml(cardStatus)}</p>`;
-  return `<aside class="progression-domain-card-step ${hasRequiredCard ? "is-complete" : "is-pending"}" aria-label="Carta obrigatoria de Dominio"><div class="progression-step-heading"><strong>Carta de Dominio</strong></div>${selectedCardPreview}<button class="${hasRequiredCard ? "secondary-action" : "primary-action"}" type="button" data-action="open-progression-card-picker" ${candidates.length ? "" : "disabled"}>${hasRequiredCard ? "Alterar carta" : "Selecionar carta"}</button>${hasRequiredCard ? `<div class="progression-card-destination"><button class="${state.progressionCardDestination === "loadout" ? "is-selected" : ""}" type="button" data-action="set-progression-card-destination" data-progression-card-destination="loadout" ${canUseLoadout ? "" : "disabled"}>Loadout</button><button class="${state.progressionCardDestination === "vault" ? "is-selected" : ""}" type="button" data-action="set-progression-card-destination" data-progression-card-destination="vault">Vault</button></div>` : ""}</aside>`;
+  return `<aside class="progression-domain-card-step ${hasRequiredCard ? "is-complete" : "is-pending"}" aria-label="Carta obrigatória de Domínio"><div class="progression-step-heading"><strong>Carta de Domínio</strong></div>${selectedCardPreview}<button class="${hasRequiredCard ? "secondary-action" : "primary-action"}" type="button" data-action="open-progression-card-picker" ${candidates.length ? "" : "disabled"}>${hasRequiredCard ? "Alterar carta" : "Selecionar carta"}</button>${hasRequiredCard ? "<small class=\"progression-card-vault-note\">A carta será aprendida no Vault. Ative-a no Loadout quando quiser usá-la.</small>" : ""}</aside>`;
 }
 
 function renderTierExperienceStep(character: Character, dependencies: ProgressionWorkspaceDependencies): string {
