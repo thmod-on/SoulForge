@@ -4,6 +4,26 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.19.0]
+
+### Adicionado
+
+- comunidades no Compendium, com criação local, importação por Pack e Feature associada à ficha;
+- etapa de comunidade no assistente de criação de personagem;
+- suporte a quantidade de marcadores declarada pelo nível do personagem;
+- visualização completa das múltiplas Features de subclasses durante a criação da ficha.
+
+### Alterado
+
+- criação de personagem reorganizada para escolher Classe e subclasse antes dos Atributos;
+- etapa de Atributos destaca o atributo de Conjuração definido pela subclasse escolhida;
+- revisão da ficha exibe Comunidade como uma escolha estruturada;
+- renderização de classe e subclasse foi organizada no módulo próprio da criação de personagem.
+
+### Corrigido
+
+- visibilidade dos painéis do assistente de criação após a reorganização das etapas.
+
 ## [0.18.0]
 
 ### Adicionado

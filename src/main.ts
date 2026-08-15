@@ -3,7 +3,7 @@ import { getSpellcastAttributeId } from "./content/spellcastAttributes";
 import { getOfficialCardMarkers } from "./content/officialCardMarkers";
 import { createCatalog, findDefinition, findDomain } from "./domain/catalog";
 import { demoCharacter } from "./domain/demoCharacter";
-import type { AncestryDefinition, Attribute, CardDefinition, Character, CharacterNote, CharacterNoteCategory, CharacterSkill, CharacterProgressionEntry, ClassDefinition, Definition, DiceGameMarkerState, FeatureDefinition, InventoryCompartment, ItemDefinition, PackBundle, PackManifest, ProgressionAdvanceKind, SubclassDefinition } from "./domain/types";
+import type { AncestryDefinition, Attribute, CardDefinition, Character, CharacterNote, CharacterNoteCategory, CharacterSkill, CharacterProgressionEntry, ClassDefinition, DiceGameMarkerState, FeatureDefinition, InventoryCompartment, ItemDefinition, PackBundle, PackManifest, ProgressionAdvanceKind, SubclassDefinition } from "./domain/types";
 import { deleteCharacter as deleteStoredCharacter, ensureDemoCharacter, ensureDemoKaelII, listCharacters, loadCharacter, saveCharacter as persistCharacter } from "./storage/characterRepository";
 import { getActiveGameMarkers, resetGameMarkers, synchronizeGameMarkers, type ActiveGameMarker } from "./features/game-markers/gameMarkerSync";
 import { deleteCustomDefinition, loadCardMarkerOverrides, loadCustomDefinitions, saveCardMarkerOverride, saveCustomDefinition, type CardMarkerOverride } from "./storage/compendiumRepository";
@@ -15,11 +15,13 @@ import { buildMulticlassChoice, canChooseMulticlass, canLearnMulticlassDomainCar
 import { nextCharacterCreationStep, previousCharacterCreationStep, type CharacterCreationStep } from "./features/character-creation/creationFlow";
 import { buildCharacterFromDraft, getCreationAncestries, getCreationClasses, getCreationSubclasses, hasValidCreationAttributes, validateCreationStep, type CharacterCreationDraft } from "./features/character-creation/characterCreationRules";
 import { renderCreationActions, renderCreationProgress, renderCreationTitle } from "./features/character-creation/renderCreationChrome";
-import { renderCreationAttributesStep, renderCreationExperiencesStep, renderCreationIdentityStep, renderCreationReviewStep } from "./features/character-creation/renderCreationSteps";
-import { characterCreationAttributes, createEmptyCreationAttributeValues, parseCreationAttributeValue } from "./features/character-creation/attributeAllocation";
+import { renderCreationAttributesStep, renderCreationClassStep, renderCreationCommunityStep, renderCreationExperiencesStep, renderCreationIdentityStep, renderCreationReviewStep } from "./features/character-creation/renderCreationSteps";
+import { characterCreationAttributes, createEmptyCreationAttributeValues, handleCreationAttributeAllocation } from "./features/character-creation/attributeAllocation";
+import { handleCommunityAction, renderCompendiumCommunitiesManager as renderCompendiumCommunitiesManagerView, renderCompendiumFourthSpread as renderCompendiumFourthSpreadView } from "./features/compendium/communities";
+import { validatePackBundle } from "./features/packs/packValidation";
+import { renderCharacterSelection as renderCharacterSelectionView } from "./features/character-selection/renderCharacterSelection";
 import { renderProgression as renderProgressionView, type ProgressionRenderDependencies } from "./features/progression/renderProgression";
-import {
-  renderProgressionCardPickerModal as renderProgressionCardPickerModalView,
+import { renderProgressionCardPickerModal as renderProgressionCardPickerModalView,
   renderProgressionHistoryModal as renderProgressionHistoryModalView,
   renderProgressionPickerModal as renderProgressionPickerModalView,
   renderProgressionMulticlassModal as renderProgressionMulticlassModalView,
@@ -165,6 +167,8 @@ const state: {
   compendiumItemSearch: string;
   compendiumItemFilter: InventoryFilter;
   compendiumAncestrySearch: string;
+  compendiumCommunitySearch: string;
+  compendiumCommunityPackId: string;
   lastPlayerPage: Page;
   selectedItemId?: string;
   selectedCardId: string;
@@ -214,6 +218,7 @@ const state: {
   addItemError?: string;
   classModalOpen: boolean;
   ancestryModalOpen: boolean;
+  communityModalOpen: boolean; editingCompendiumCommunityId?: string; deletingCompendiumCommunityId?: string;
   editingCompendiumAncestryId?: string;
   deletingCompendiumAncestryId?: string;
   characterSelectionOpen: boolean;
@@ -224,7 +229,9 @@ const state: {
   characterCreationOpen: boolean;
   characterCreationStep: CharacterCreationStep;
   characterCreationName: string;
-  characterCreationCommunity: string;
+  characterCreationCommunity: string; characterCreationCommunityId?: string;
+  characterCreationCommunitySearch: string;
+  characterCreationCommunityPackId: string;
   characterCreationClassId?: string;
   characterCreationSubclassId?: string;
   characterCreationAncestryIds: string[];
@@ -233,6 +240,7 @@ const state: {
   characterCreationCardDomainId?: string;
   characterCreationExperiences: Array<{ name: string; description: string }>;
   characterCreationAttributeValues: Record<Attribute["id"], number>;
+  characterCreationSelectedAttributeValue?: number;
   characterCreationPortraitImage?: string;
   characterCreationTopFeatureId?: string;
   characterCreationBottomFeatureId?: string;
@@ -259,6 +267,8 @@ const state: {
   compendiumItemSearch: "",
   compendiumItemFilter: "todos",
   compendiumAncestrySearch: "",
+  compendiumCommunitySearch: "",
+  compendiumCommunityPackId: "todos",
   lastPlayerPage: "overview",
   selectedCardId: "card.demo.dread-veil",
   progressionStep: "advances",
@@ -278,18 +288,22 @@ const state: {
   addItemCatalogFilter: "todos",
   classModalOpen: false,
   ancestryModalOpen: false,
+  communityModalOpen: false,
   characterSelectionOpen: true,
   characterPortraitModalOpen: false,
   characterPortraitPreviewOpen: false,
   characterCreationOpen: false,
   characterCreationStep: 1,
   characterCreationName: "",
-  characterCreationCommunity: "",
+  characterCreationCommunity: "", characterCreationCommunityId: undefined,
+  characterCreationCommunitySearch: "",
+  characterCreationCommunityPackId: "todos",
   characterCreationAncestryIds: [],
   characterCreationAncestrySearch: "",
   characterCreationCardIds: [],
   characterCreationExperiences: [{ name: "", description: "" }, { name: "", description: "" }],
   characterCreationAttributeValues: createEmptyCreationAttributeValues(),
+  characterCreationSelectedAttributeValue: undefined,
   characters: [],
   installedPacks: [],
   packImportOpen: false,
@@ -302,7 +316,7 @@ const state: {
   }
 };
 
-const appVersion = "0.18.0";
+const appVersion = "0.19.0";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -447,6 +461,7 @@ function getPlayerShellDependencies(): PlayerShellDependencies {
     escapeHtml,
     attributeTitle,
     progressPercent,
+    getCommunityName: (character) => catalog.communities.find((community) => community.id === character.identity.primaryCommunityId)?.name,
     getSpellcastAttributeId: (character) => getSpellcastAttributeId(character.identity.primarySubclassId, catalog.subclasses.find((subclass) => subclass.id === character.identity.primarySubclassId)),
     getEffectiveDefense: (character) => getEffectiveDefense(character, (definitionId) => {
       const definition = findDefinition(catalog, definitionId);
@@ -1071,6 +1086,7 @@ function renderCompendium(): string {
   if (state.compendiumView === "ancestries") {
     return renderCompendiumAncestriesManagerView(getAncestryFeatureDependencies());
   }
+  if (state.compendiumView === "communities") return renderCompendiumCommunitiesManagerView({ state, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render });
 
   return `
     <main class="content compendium-content">
@@ -1083,10 +1099,11 @@ function renderCompendium(): string {
       <nav class="compendium-bookmarks" aria-label="Aberturas do Compendium">
         <button class="${state.compendiumSpread === 1 ? "is-active" : ""}" type="button" data-compendium-spread="1" aria-current="${state.compendiumSpread === 1 ? "page" : "false"}">Abertura 1 <span>Dominios | Cartas</span></button>
         <button class="${state.compendiumSpread === 2 ? "is-active" : ""}" type="button" data-compendium-spread="2" aria-current="${state.compendiumSpread === 2 ? "page" : "false"}">Abertura 2 <span>Itens | Classes</span></button>
-        <button class="${state.compendiumSpread === 3 ? "is-active" : ""}" type="button" data-compendium-spread="3" aria-current="${state.compendiumSpread === 3 ? "page" : "false"}">Abertura 3 <span>Ancestralidades | Condicoes</span></button>
+        <button class="${state.compendiumSpread === 3 ? "is-active" : ""}" type="button" data-compendium-spread="3" aria-current="${state.compendiumSpread === 3 ? "page" : "false"}">Abertura 3 <span>Ancestralidades | Comunidades</span></button>
+        <button class="${state.compendiumSpread === 4 ? "is-active" : ""}" type="button" data-compendium-spread="4" aria-current="${state.compendiumSpread === 4 ? "page" : "false"}">Abertura 4 <span>Condições | Transformações</span></button>
       </nav>
 
-      ${state.compendiumSpread === 1 ? renderCompendiumFirstSpread() : state.compendiumSpread === 2 ? renderCompendiumSecondSpread() : renderCompendiumThirdSpread()}
+      ${state.compendiumSpread === 1 ? renderCompendiumFirstSpread() : state.compendiumSpread === 2 ? renderCompendiumSecondSpread() : state.compendiumSpread === 3 ? renderCompendiumThirdSpread() : renderCompendiumFourthSpreadView(renderCompendiumChapterCard)}
     </main>
   `;
 }
@@ -1180,7 +1197,7 @@ function renderCompendiumSecondSpread(): string {
 
 function renderCompendiumThirdSpread(): string {
   return `
-      <section class="compendium-spread compendium-index-spread" aria-label="Ancestralidades e condicoes do Compendium">
+      <section class="compendium-spread compendium-index-spread" aria-label="Ancestralidades e comunidades do Compendium">
         <article class="compendium-page">
           ${renderCompendiumChapterCard({
             eyebrow: "Heranca",
@@ -1202,17 +1219,19 @@ function renderCompendiumThirdSpread(): string {
         </article>
         <article class="compendium-page">
           ${renderCompendiumChapterCard({
-            eyebrow: "Em preparacao",
-            title: "Condicoes",
-            summary: "Efeitos oficiais e temporarios que serao introduzidos quando houver conteudo e fluxo de jogo suficientes.",
-            count: 0,
-            countLabel: "Condicoes cadastradas",
-            primaryAction: "Implementacao futura",
-            secondaryAction: "Sem capitulo disponivel",
+            eyebrow: "Herança",
+            title: "Comunidades",
+            summary: "Origens culturais, sociais ou ambientais que concedem uma Feature permanente.",
+            count: catalog.communities.length,
+            countLabel: "Comunidades cadastradas",
+            primaryAction: "Consultar comunidades",
+            primaryActionId: "manage-compendium-communities",
+            secondaryAction: "Pesquisar e gerenciar",
+            secondaryActionId: "manage-compendium-communities",
             details: [
-              "Condicoes sao reconhecidas pelo modelo de dominio.",
-              "O SoulForge ainda nao oferece cadastro ou uso delas na ficha.",
-              "O capitulo sera aberto com regras e conteudo de Pack adequados."
+              "Cada comunidade concede uma única Feature.",
+              "Os adjetivos são referências narrativas, não bônus adicionais.",
+              "A comunidade mecânica não substitui a origem livre da personagem."
             ]
           })}
         </article>
@@ -1306,32 +1325,6 @@ function getCharacterCreationAncestries(): AncestryDefinition[] {
   return getCreationAncestries(catalog);
 }
 
-function renderCharacterSelection(): string {
-  const cards = state.characters.map((character) => `
-    <article class="character-select-entry">
-      <button class="character-select-card" type="button" data-action="select-character" data-character-id="${escapeHtml(character.id)}">
-        <span class="character-select-mark">${escapeHtml(character.identity.name.slice(0, 1).toUpperCase())}</span>
-        <span><strong>${escapeHtml(character.identity.name)}</strong><small>${escapeHtml(character.identity.ancestry)} · ${escapeHtml(character.identity.className)}</small></span>
-        <em>Nivel ${character.identity.level}</em>
-      </button>
-      ${character.id === demoCharacter.id
-        ? '<span class="character-demo-label">Ficha demo</span>'
-        : `<button class="character-delete-action" type="button" data-action="request-delete-character" data-character-id="${escapeHtml(character.id)}" aria-label="Excluir ${escapeHtml(character.identity.name)}" title="Excluir personagem">×</button>`}
-    </article>
-  `).join("");
-
-  return `
-    <main class="character-gate">
-      <img class="character-gate-watermark" src="assets/brand/soulforge-symbol.png" alt="" aria-hidden="true" />
-      <section class="character-gate-panel">
-        <div class="character-gate-brand"><div><strong>SOULFORGE</strong><span>Escolha uma ficha para continuar</span></div></div>
-        <div class="character-gate-heading"><div><h1>Personagens</h1><p>Suas fichas ficam salvas somente neste dispositivo.</p></div><div class="character-gate-actions"><button class="secondary-action" type="button" data-page="compendium">▣ Compendium</button><button class="secondary-action" type="button" data-page="settings">⚙ Configurações</button><button class="primary-action" type="button" data-action="new-character">Novo personagem</button></div></div>
-        <div class="character-select-grid">${cards || `<div class="empty-state"><h2>Nenhuma ficha encontrada</h2><p>Crie seu primeiro personagem para iniciar a aventura.</p></div>`}</div>
-      </section>
-    </main>
-  `;
-}
-
 function renderDeleteCharacterModal(): string {
   const character = state.characters.find((entry) => entry.id === state.deletingCharacterId);
   if (!character) return "";
@@ -1410,11 +1403,7 @@ function renderCharacterCreationModal(): string {
     : selectedClass.domainIds[0];
   const visibleStartingCards = eligibleStartingCards.filter((card) => card.domainId === selectedCardDomainId);
   const selectedSubclass = subclasses.find((subclass) => subclass.id === state.characterCreationSubclassId) ?? subclasses[0];
-  const getSubclassFeature = (featureId: string | undefined) => featureId ? catalog.features.find((feature) => feature.id === featureId) : undefined;
-  const renderSubclassFeature = (label: string, featureId: string | undefined) => {
-    const feature = getSubclassFeature(featureId);
-    return feature ? `<article><span>${label}</span><strong>${escapeHtml(feature.name)}</strong><p>${escapeHtml(feature.summary)}</p></article>` : "";
-  };
+  const spellcastAttributeId = getSpellcastAttributeId(selectedSubclass?.id, selectedSubclass);
 
   return `
     <div class="modal-backdrop" data-modal-backdrop>
@@ -1437,11 +1426,12 @@ function renderCharacterCreationModal(): string {
             <label class="form-field"><span>Feature Bottom</span>${bottomFeatures.length > 1 ? `<select data-character-bottom-feature>${bottomFeatures.map((feature) => `<option value="${escapeHtml(feature.id)}" ${feature.id === bottomFeatureId ? "selected" : ""}>${featureOptionLabel(feature, "bottom")}</option>`).join("")}</select><div class="selected-feature-description"><strong>${escapeHtml(selectedBottomFeature?.name ?? "Feature indisponível")}</strong><p>${escapeHtml(selectedBottomFeature?.summary ?? "")}</p></div>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(bottomFeatures[0]?.name ?? "Feature indisponível")}</strong><small>${escapeHtml(bottomFeatures[0]?.summary ?? "")}</small></div>`}</label>
           </div>
         </section>
-        ${renderCreationAttributesStep(state.characterCreationAttributeValues)}
-        <section class="character-class-picker creation-step-panel" data-creation-panel="5"><div><span>Arquétipo</span><h3>Classe e subclasse</h3><p>Escolha a classe e veja as características de cada subclasse antes de decidir.</p></div><label class="form-field"><span>Classe</span><select data-character-class>${classes.map((definition) => `<option value="${escapeHtml(definition.id)}" ${definition.id === selectedClass.id ? "selected" : ""}>${escapeHtml(definition.name)}</option>`).join("")}</select><small>${escapeHtml(selectedClass.summary)}</small></label><p class="character-class-starting-stats">Evasão inicial <strong>${selectedClass.startingEvasion}</strong><span>·</span> PV inicial <strong>${selectedClass.startingHitPoints}</strong></p><div class="character-subclass-choice-grid">${subclasses.map((subclass) => `<label class="character-subclass-choice ${subclass.id === selectedSubclass?.id ? "is-selected" : ""}"><input type="radio" name="character-subclass" data-character-subclass-id="${escapeHtml(subclass.id)}" ${subclass.id === selectedSubclass?.id ? "checked" : ""}/><span><strong>${escapeHtml(subclass.name)}</strong><small>${escapeHtml(subclass.summary)}</small>${subclass.spellcastAttributeId ? `<em>Conjuração: ${characterCreationAttributes.find((attribute) => attribute.id === subclass.spellcastAttributeId)?.label ?? ""}</em>` : ""}<div class="character-subclass-features">${renderSubclassFeature("Fundação", subclass.foundationFeatureIds[0])}${renderSubclassFeature("Especialização", subclass.specializationFeatureIds[0])}${renderSubclassFeature("Maestria", subclass.masteryFeatureIds[0])}</div></span></label>`).join("") || `<p class="form-error">Cadastre uma subclasse no Compendium.</p>`}</div></section>
-        <section class="character-domain-card-picker creation-step-panel" data-creation-panel="6"><div><span>Loadout inicial</span><h3>Escolha 2 cartas de Domínio</h3><p>Cartas de nível 1 dos domínios liberados pela sua classe. Você pode escolher as duas do mesmo domínio.</p></div><div class="character-domain-card-toolbar"><span>${state.characterCreationCardIds.length} / 2 selecionadas</span><div>${selectedClass.domainIds.map((domainId) => { const domain = findDomain(catalog, domainId); return `<button type="button" class="chip ${selectedCardDomainId === domainId ? "is-active" : ""}" data-character-card-domain-id="${escapeHtml(domainId)}">${escapeHtml(domain?.name ?? "Domínio")}</button>`; }).join("")}</div></div>${eligibleStartingCards.length ? `<div class="character-domain-card-grid">${visibleStartingCards.map((card) => `<button type="button" class="character-domain-card ${state.characterCreationCardIds.includes(card.id) ? "is-selected" : ""}" data-character-starting-card-id="${escapeHtml(card.id)}"><span class="character-domain-card-art">${card.image ? `<img src="${escapeHtml(card.image)}" alt="" />` : ""}</span><strong>${escapeHtml(card.name)}</strong><small>${escapeHtml(findDomain(catalog, card.domainId)?.name ?? "Domínio")} · Nível ${card.tier}</small><p>${escapeHtml(card.summary)}</p></button>`).join("")}</div>` : `<p class="form-error">Não há cartas de nível 1 para os domínios desta classe. Importe o Pack correspondente antes de criar a ficha.</p>`}</section>
+        ${renderCreationCommunityStep({ communities: catalog.communities, features: catalog.features, selectedId: state.characterCreationCommunityId, search: state.characterCreationCommunitySearch, packId: state.characterCreationCommunityPackId, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs) }, escapeHtml)}
+        ${renderCreationClassStep({ classes, selectedClass, subclasses, selectedSubclassId: selectedSubclass?.id, features: catalog.features }, escapeHtml)}
+        ${renderCreationAttributesStep(state.characterCreationAttributeValues, state.characterCreationSelectedAttributeValue, spellcastAttributeId)}
+        <section class="character-domain-card-picker creation-step-panel" data-creation-panel="7"><div><span>Loadout inicial</span><h3>Escolha 2 cartas de Domínio</h3><p>Cartas de nível 1 dos domínios liberados pela sua classe. Você pode escolher as duas do mesmo domínio.</p></div><div class="character-domain-card-toolbar"><span>${state.characterCreationCardIds.length} / 2 selecionadas</span><div>${selectedClass.domainIds.map((domainId) => { const domain = findDomain(catalog, domainId); return `<button type="button" class="chip ${selectedCardDomainId === domainId ? "is-active" : ""}" data-character-card-domain-id="${escapeHtml(domainId)}">${escapeHtml(domain?.name ?? "Domínio")}</button>`; }).join("")}</div></div>${eligibleStartingCards.length ? `<div class="character-domain-card-grid">${visibleStartingCards.map((card) => `<button type="button" class="character-domain-card ${state.characterCreationCardIds.includes(card.id) ? "is-selected" : ""}" data-character-starting-card-id="${escapeHtml(card.id)}"><span class="character-domain-card-art">${card.image ? `<img src="${escapeHtml(card.image)}" alt="" />` : ""}</span><strong>${escapeHtml(card.name)}</strong><small>${escapeHtml(findDomain(catalog, card.domainId)?.name ?? "Domínio")} · Nível ${card.tier}</small><p>${escapeHtml(card.summary)}</p></button>`).join("")}</div>` : `<p class="form-error">Não há cartas de nível 1 para os domínios desta classe. Importe o Pack correspondente antes de criar a ficha.</p>`}</section>
         ${renderCreationExperiencesStep(state.characterCreationExperiences, escapeHtml)}
-        ${renderCreationReviewStep({ name: state.characterCreationName, community: state.characterCreationCommunity, ancestries: selectedAncestries.map((ancestry) => ancestry.name).join(" + "), topFeature: selectedTopFeature?.name, bottomFeature: selectedBottomFeature?.name, attributes: characterCreationAttributes.map((attribute) => ({ label: attribute.label, value: state.characterCreationAttributeValues[attribute.id] })), className: selectedClass.name, subclassName: selectedSubclass?.name, hitPoints: selectedClass.startingHitPoints, evasion: selectedClass.startingEvasion, cards: state.characterCreationCardIds.map((id) => catalog.cards.find((card) => card.id === id)?.name ?? "").filter(Boolean).join(" · "), experiences: state.characterCreationExperiences.map((experience) => experience.name).filter(Boolean).join(" · ") }, escapeHtml)}
+        ${renderCreationReviewStep({ name: state.characterCreationName, community: catalog.communities.find((entry) => entry.id === state.characterCreationCommunityId)?.name ?? state.characterCreationCommunity, ancestries: selectedAncestries.map((ancestry) => ancestry.name).join(" + "), topFeature: selectedTopFeature?.name, bottomFeature: selectedBottomFeature?.name, attributes: characterCreationAttributes.map((attribute) => ({ label: attribute.label, value: state.characterCreationAttributeValues[attribute.id] })), className: selectedClass.name, subclassName: selectedSubclass?.name, hitPoints: selectedClass.startingHitPoints, evasion: selectedClass.startingEvasion, cards: state.characterCreationCardIds.map((id) => catalog.cards.find((card) => card.id === id)?.name ?? "").filter(Boolean).join(" · "), experiences: state.characterCreationExperiences.map((experience) => experience.name).filter(Boolean).join(" · ") }, escapeHtml)}
         ${state.characterCreationError ? `<p class="form-error">${escapeHtml(state.characterCreationError)}</p>` : ""}
         </div>
         ${renderCreationActions({ step: state.characterCreationStep })}
@@ -1599,7 +1589,7 @@ function render(options: { preserveMainScroll?: boolean } = {}): void {
   }
 
   if (state.characterSelectionOpen) {
-    appRoot.innerHTML = `${renderCharacterSelection()}${renderCharacterCreationModal()}${renderDeleteCharacterModal()}`;
+    appRoot.innerHTML = `${renderCharacterSelectionView(state.characters, demoCharacter.id, escapeHtml)}${renderCharacterCreationModal()}${renderDeleteCharacterModal()}`;
     document.body.classList.toggle("has-modal", state.characterCreationOpen || Boolean(state.deletingCharacterId));
     if (previousCharacterCreationScrollTop !== undefined) {
       requestAnimationFrame(() => {
@@ -1773,27 +1763,6 @@ async function refreshCatalog(): Promise<void> {
     return { ...definition, gameMarkers: override ? override.gameMarkers : officialMarkers ?? definition.gameMarkers };
   });
   catalog = createCatalog([...baseCatalog.packs, ...state.installedPacks], definitions);
-}
-
-function validatePackBundle(value: unknown): PackBundle {
-  if (!value || typeof value !== "object") throw new Error("O arquivo não contém um Pack válido.");
-  const bundle = value as Partial<PackBundle>;
-  const manifest = bundle.manifest;
-  if (bundle.format !== "soulforge-pack-v1" || !manifest || typeof manifest !== "object" || !Array.isArray(bundle.definitions)) {
-    throw new Error("Use um arquivo no formato .soulforge-pack.json.");
-  }
-  if (!manifest.id || !manifest.name || !manifest.version || !manifest.description) throw new Error("O manifesto do Pack está incompleto.");
-  if (!bundle.definitions.length) throw new Error("O Pack não possui Definitions para importar.");
-  const knownTypes = new Set(["domain", "card", "item", "class", "subclass", "feature", "ancestry"]);
-  const ids = new Set<string>();
-  for (const definition of bundle.definitions) {
-    if (!definition || typeof definition !== "object" || !knownTypes.has(definition.type) || !definition.id || !definition.name || !definition.summary || definition.packId !== manifest.id) {
-      throw new Error("Uma Definition é inválida ou não pertence ao Pack informado.");
-    }
-    if (ids.has(definition.id)) throw new Error("O Pack contém IDs de Definition repetidos.");
-    ids.add(definition.id);
-  }
-  return { format: "soulforge-pack-v1", manifest: manifest as PackManifest, definitions: bundle.definitions as Definition[] };
 }
 
 async function readPackImportFile(file: File): Promise<void> {
@@ -2008,10 +1977,6 @@ function syncCharacterCreationDraft(): void {
       state.characterCreationExperiences[index] = { ...state.characterCreationExperiences[index], name: input.value };
     }
   });
-  document.querySelectorAll<HTMLSelectElement>("[data-character-attribute-id]").forEach((input) => {
-    const attributeId = input.dataset.characterAttributeId as Attribute["id"] | undefined;
-    if (attributeId) state.characterCreationAttributeValues[attributeId] = parseCreationAttributeValue(input.value);
-  });
 }
 
 function hasValidCharacterCreationAttributes(values: Record<Attribute["id"], number>): boolean {
@@ -2034,7 +1999,7 @@ function validateCharacterCreationStep(): boolean {
 function getCharacterCreationDraft(): CharacterCreationDraft {
   return {
     name: state.characterCreationName,
-    community: state.characterCreationCommunity,
+    community: state.characterCreationCommunity, communityId: state.characterCreationCommunityId,
     classId: state.characterCreationClassId,
     subclassId: state.characterCreationSubclassId,
     ancestryIds: state.characterCreationAncestryIds,
@@ -2268,6 +2233,24 @@ function bindEvents(): void {
       return;
     }
 
+    if (handleCommunityAction(target, { state, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render })) return;
+
+    const attributeAllocation = target.closest<HTMLElement>("[data-character-attribute-allocation]");
+    if (attributeAllocation) {
+      const result = handleCreationAttributeAllocation({
+        values: state.characterCreationAttributeValues, selectedValue: state.characterCreationSelectedAttributeValue,
+        action: attributeAllocation.dataset.characterAttributeAllocation, attributeId: attributeAllocation.dataset.characterAttributeId,
+        value: Number(attributeAllocation.dataset.characterAttributeValue)
+      });
+      state.characterCreationAttributeValues = result.values;
+      state.characterCreationSelectedAttributeValue = result.selectedValue;
+      state.characterCreationError = result.error;
+      render({ preserveMainScroll: true });
+      return;
+    }
+
+    const communityChoice = target.closest<HTMLElement>("[data-character-community-id]"); if (communityChoice) { state.characterCreationCommunityId = communityChoice.dataset.characterCommunityId; state.characterCreationError = undefined; render({ preserveMainScroll: true }); return; }
+
     const subclassTabButton = target.closest<HTMLButtonElement>('[data-action="select-class-subclass-tab"]');
     if (subclassTabButton) {
       const tabs = subclassTabButton.closest<HTMLElement>(".class-subclass-tabs");
@@ -2354,7 +2337,7 @@ function bindEvents(): void {
       state.characterPortraitModalOpen = false;
       state.characterPortraitPreviewOpen = false;
       state.gameMarkerDieDialog = undefined;
-      render();
+      render({ preserveMainScroll: true });
       return;
     }
 
@@ -2574,12 +2557,14 @@ function bindEvents(): void {
       state.characterCreationSubclassId = getCharacterCreationSubclasses(state.characterCreationClassId ?? "")[0]?.id;
       state.characterCreationStep = 1;
       state.characterCreationName = "";
-      state.characterCreationCommunity = "";
+      state.characterCreationCommunity = ""; state.characterCreationCommunityId = catalog.communities[0]?.id;
+      state.characterCreationCommunitySearch = ""; state.characterCreationCommunityPackId = "todos";
       state.characterCreationAncestryIds = getCharacterCreationAncestries().slice(0, 1).map((ancestry) => ancestry.id);
       state.characterCreationAncestrySearch = "";
       state.characterCreationCardIds = [];
       state.characterCreationExperiences = [{ name: "", description: "" }, { name: "", description: "" }];
       state.characterCreationAttributeValues = createEmptyCreationAttributeValues();
+      state.characterCreationSelectedAttributeValue = undefined;
       state.characterCreationPortraitImage = undefined;
       state.characterCreationCardDomainId = undefined;
       state.characterCreationTopFeatureId = undefined;
@@ -2596,6 +2581,7 @@ function bindEvents(): void {
       state.characterCreationAncestrySearch = "";
       state.characterCreationCardIds = [];
       state.characterCreationAttributeValues = createEmptyCreationAttributeValues();
+      state.characterCreationSelectedAttributeValue = undefined;
       state.characterCreationPortraitImage = undefined;
       state.characterCreationCardDomainId = undefined;
       state.characterCreationTopFeatureId = undefined;
@@ -2694,6 +2680,8 @@ function bindEvents(): void {
       render();
       return;
     }
+
+    if (target.closest('[data-action="manage-compendium-communities"]')) { state.compendiumView = "communities"; render(); return; }
 
     if (target.closest('[data-action="new-compendium-domain"]')) {
       state.domainModalOpen = true;
@@ -3522,6 +3510,8 @@ function bindEvents(): void {
       focusCompendiumAncestrySearch();
     }
 
+    if (target.matches("[data-compendium-community-search]")) { state.compendiumCommunitySearch = target.value; render({ preserveMainScroll: true }); requestAnimationFrame(() => { const search = document.querySelector<HTMLInputElement>("[data-compendium-community-search]"); search?.focus({ preventScroll: true }); search?.setSelectionRange(search.value.length, search.value.length); }); }
+
     if (target.matches("[data-character-ancestry-search]")) {
       state.characterCreationAncestrySearch = target.value;
       render();
@@ -3531,10 +3521,22 @@ function bindEvents(): void {
         search?.setSelectionRange(search.value.length, search.value.length);
       });
     }
+
+    if (target.matches("[data-character-community-search]")) { state.characterCreationCommunitySearch = target.value; render({ preserveMainScroll: true }); requestAnimationFrame(() => { const search = document.querySelector<HTMLInputElement>("[data-character-community-search]"); search?.focus({ preventScroll: true }); search?.setSelectionRange(search.value.length, search.value.length); }); }
   });
 
   document.addEventListener("change", (event) => {
     const target = event.target;
+    if (target instanceof HTMLSelectElement && target.matches("[data-compendium-community-pack-filter]")) {
+      state.compendiumCommunityPackId = target.value;
+      render({ preserveMainScroll: true });
+      return;
+    }
+    if (target instanceof HTMLSelectElement && target.matches("[data-character-community-pack-filter]")) {
+      state.characterCreationCommunityPackId = target.value;
+      render({ preserveMainScroll: true });
+      return;
+    }
     if (target instanceof HTMLSelectElement && target.matches("[data-progression-multiclass-class]")) {
       const classDefinition = catalog.classes.find((entry) => entry.id === target.value);
       const subclass = catalog.subclasses.find((entry) => entry.classId === classDefinition?.id);
@@ -3617,19 +3619,6 @@ function bindEvents(): void {
       state.characterCreationSubclassId = getCharacterCreationSubclasses(target.value)[0]?.id;
       state.characterCreationCardIds = [];
       state.characterCreationCardDomainId = undefined;
-      state.characterCreationError = undefined;
-      render();
-      return;
-    }
-    if (target instanceof HTMLElement && target.closest('[data-action="reset-character-attributes"]')) {
-      state.characterCreationAttributeValues = createEmptyCreationAttributeValues();
-      state.characterCreationError = undefined;
-      render({ preserveMainScroll: true });
-      return;
-    }
-    if (target instanceof HTMLSelectElement && target.matches("[data-character-attribute-id]")) {
-      const attributeId = target.dataset.characterAttributeId as Attribute["id"] | undefined;
-      if (attributeId) state.characterCreationAttributeValues[attributeId] = parseCreationAttributeValue(target.value);
       state.characterCreationError = undefined;
       render();
       return;

@@ -8,6 +8,8 @@ O projeto usa o termo **ancestralidade**, adotado pelo material oficial. Ele rep
 
 Esses aspectos pertencem à **comunidade**. Juntas, ancestralidade e comunidade formam a **herança** (*Heritage*) do personagem.
 
+O plano de dados, interface, Compendium e Packs para comunidades está em [COMMUNITIES.md](COMMUNITIES.md).
+
 ## Fontes de regra
 
 - [Daggerheart SRD 1.0 — setembro de 2025](https://www.daggerheart.com/wp-content/uploads/2025/09/Daggerheart-SRD-9-09-25.pdf): criação de personagem, ancestralidades, ancestralidade mista e comunidades.

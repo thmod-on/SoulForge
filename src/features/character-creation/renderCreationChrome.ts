@@ -4,8 +4,8 @@ export type CreationChromeState = {
   step: CharacterCreationStep;
 };
 
-const steps = ["Identidade", "Ancestralidades", "Features", "Atributos", "Classe", "Cartas", "Experiências", "Revisão"];
-const titles = ["", "", "Ancestralidades", "Features", "Atributos", "Classe", "Cartas de Domínio", "Experiências", "Revisão"];
+const steps = ["Identidade", "Ancestralidades", "Features", "Comunidade", "Classe", "Atributos", "Cartas", "Experiências", "Revisão"];
+const titles = ["", "", "Ancestralidades", "Features", "Comunidade", "Classe", "Atributos", "Cartas de Domínio", "Experiências", "Revisão"];
 
 export function renderCreationProgress(state: CreationChromeState): string {
   return `<div class="character-creation-progress" aria-label="Etapa ${state.step} de ${steps.length}">${steps.map((label, index) => `<span class="${index + 1 === state.step ? "is-current" : index + 1 < state.step ? "is-complete" : ""}">${index + 1}. ${label}</span>`).join("")}</div>`;

@@ -1,0 +1,10 @@
+{
+  "id": "feature.demo.wanderer-way",
+  "type": "feature",
+  "packId": "demo",
+  "name": "Caminho Conhecido",
+  "summary": "Você tem vantagem em testes para encontrar abrigo, orientação ou ajuda em uma comunidade desconhecida.",
+  "sourceType": "community",
+  "sourceId": "community.demo.wanderer",
+  "tier": "community"
+}

@@ -1,5 +1,6 @@
 import type {
   AncestryDefinition,
+  CommunityDefinition,
   CardDefinition,
   ClassDefinition,
   Definition,
@@ -17,6 +18,7 @@ export type Catalog = {
   cards: CardDefinition[];
   classes: ClassDefinition[];
   ancestries: AncestryDefinition[];
+  communities: CommunityDefinition[];
   subclasses: SubclassDefinition[];
   features: FeatureDefinition[];
   items: ItemDefinition[];
@@ -30,6 +32,7 @@ export function createCatalog(packs: PackManifest[], definitions: Definition[]):
     cards: definitions.filter((definition): definition is CardDefinition => definition.type === "card"),
     classes: definitions.filter((definition): definition is ClassDefinition => definition.type === "class"),
     ancestries: definitions.filter((definition): definition is AncestryDefinition => definition.type === "ancestry"),
+    communities: definitions.filter((definition): definition is CommunityDefinition => definition.type === "community"),
     subclasses: definitions.filter((definition): definition is SubclassDefinition => definition.type === "subclass"),
     features: definitions.filter((definition): definition is FeatureDefinition => definition.type === "feature"),
     items: definitions.filter((definition): definition is ItemDefinition => definition.type === "item")

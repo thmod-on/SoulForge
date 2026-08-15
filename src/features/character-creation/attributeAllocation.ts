@@ -31,6 +31,33 @@ export function formatCreationAttributeValue(value: number): string {
   return value > 0 ? `+${value}` : String(value);
 }
 
-export function parseCreationAttributeValue(value: string): number {
-  return value === "" ? Number.NaN : Number(value);
+export function selectCreationAttributeValue(values: Record<Attribute["id"], number>, value: number): number | undefined {
+  return getRemainingCreationAttributeValues(values).includes(value) ? value : undefined;
+}
+
+export function assignCreationAttributeValue(values: Record<Attribute["id"], number>, attributeId: Attribute["id"], selectedValue?: number): { values: Record<Attribute["id"], number>; error?: string } {
+  if (!Number.isInteger(selectedValue)) {
+    if (Number.isInteger(values[attributeId])) return { values: { ...values, [attributeId]: Number.NaN } };
+    return { values, error: "Escolha um valor disponível antes de selecionar um atributo." };
+  }
+  const value = selectedValue as number;
+
+  if (!getRemainingCreationAttributeValues(values).includes(value)) {
+    return { values, error: "Esse valor não está mais disponível." };
+  }
+
+  return { values: { ...values, [attributeId]: value } };
+}
+
+export function handleCreationAttributeAllocation(input: { values: Record<Attribute["id"], number>; selectedValue?: number; action?: string; attributeId?: string; value?: number }): { values: Record<Attribute["id"], number>; selectedValue?: number; error?: string } {
+  if (input.action === "reset") return { values: createEmptyCreationAttributeValues() };
+  if (input.action === "select") {
+    const selectedValue = input.value;
+    const nextValue = Number.isInteger(selectedValue) ? selectCreationAttributeValue(input.values, selectedValue as number) : undefined;
+    return { values: input.values, selectedValue: input.selectedValue === nextValue ? undefined : nextValue };
+  }
+  const attribute = characterCreationAttributes.find((entry) => entry.id === input.attributeId);
+  if (!attribute) return { values: input.values, selectedValue: input.selectedValue };
+  const result = assignCreationAttributeValue(input.values, attribute.id, input.selectedValue);
+  return { ...result, selectedValue: undefined };
 }

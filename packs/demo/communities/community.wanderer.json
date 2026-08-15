@@ -1,0 +1,9 @@
+{
+  "id": "community.demo.wanderer",
+  "type": "community",
+  "packId": "demo",
+  "name": "Viajante",
+  "summary": "Você cresceu entre estradas, travessias e pessoas de muitos lugares.",
+  "adjectives": ["adaptável", "curioso", "resiliente", "observador", "prático", "sociável"],
+  "featureId": "feature.demo.wanderer-way"
+}

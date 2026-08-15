@@ -1,5 +1,6 @@
 import type { Catalog } from "../../domain/catalog";
 import { getSpellcastAttributeId } from "../../content/spellcastAttributes";
+import { getCharacterCommunity, getCharacterCommunityFeature } from "../communities/communityRules";
 import type { CardDefinition, Character, CharacterGameMarkerState, ClassDefinition, FeatureDefinition, GameMarkerDefinition, GameMarkerQuantity } from "../../domain/types";
 
 export type ActiveGameMarker = { key: string; sourceDefinitionId: string; sourceLabel: string; definition: GameMarkerDefinition; state: CharacterGameMarkerState };
@@ -65,6 +66,9 @@ function getActiveMarkerSources(character: Character, catalog: Catalog): MarkerS
     const featureIds = [...subclass.foundationFeatureIds, ...(acquired.has("specialized") ? subclass.specializationFeatureIds : []), ...(acquired.has("mastery") ? subclass.masteryFeatureIds : [])];
     for (const featureId of featureIds) { const feature = catalog.features.find((entry) => entry.id === featureId); if (feature) sources.push({ definition: feature, label: feature.name }); }
   }
+  const community = getCharacterCommunity(character, catalog);
+  const communityFeature = getCharacterCommunityFeature(character, catalog);
+  if (community && communityFeature) sources.push({ definition: communityFeature, label: `${community.name} — ${communityFeature.name}` });
   for (const cardId of character.deck.activeCardIds) { const card = catalog.cards.find((entry) => entry.id === cardId); if (card) sources.push({ definition: card, label: card.name }); }
   return sources;
 }
@@ -121,6 +125,7 @@ function getCounterResetValue(definition: Extract<GameMarkerDefinition, { kind: 
 function getMarkerQuantity(quantity: GameMarkerQuantity, character: Character, catalog: Catalog, sourceDefinitionId: string): number {
   if (quantity.kind === "fixed") return Math.max(0, quantity.value);
   if (quantity.kind === "attribute") return Math.max(0, character.attributes.find((attribute) => attribute.id === quantity.attributeId)?.value ?? 0);
+  if (quantity.kind === "character-level") return Math.max(0, character.identity.level);
   const feature = catalog.features.find((entry) => entry.id === sourceDefinitionId);
   const subclass = feature?.sourceType === "subclass"
     ? catalog.subclasses.find((entry) => entry.id === feature.sourceId)

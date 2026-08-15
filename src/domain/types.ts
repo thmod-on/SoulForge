@@ -1,4 +1,4 @@
-export type DefinitionType = "domain" | "card" | "item" | "class" | "subclass" | "feature" | "ancestry";
+export type DefinitionType = "domain" | "card" | "item" | "class" | "subclass" | "feature" | "ancestry" | "community";
 
 export type ResourceTrack = {
   id: string;
@@ -13,7 +13,9 @@ export type GameMarkerReset = "session" | "short-rest" | "long-rest";
 export type GameMarkerQuantity =
   | { kind: "fixed"; value: number }
   | { kind: "attribute"; attributeId: Attribute["id"] }
-  | { kind: "spellcast-trait" };
+  | { kind: "spellcast-trait" }
+  /** Quantidade acompanha o nível atual do personagem. */
+  | { kind: "character-level" };
 
 export type CounterGameMarkerDefinition = {
   id: string;
@@ -218,16 +220,24 @@ export type AncestryDefinition = BaseDefinition & {
   bottomFeatureId: string;
 };
 
+/** Origem cultural, social ou ambiental que concede uma única Feature. */
+export type CommunityDefinition = BaseDefinition & {
+  type: "community";
+  adjectives: string[];
+  featureId: string;
+  image?: string;
+};
+
 export type FeatureDefinition = BaseDefinition & {
   type: "feature";
   sourceType: "class" | "subclass" | "ancestry" | "community";
   sourceId: string;
-  tier: "class" | "hope" | "foundation" | "specialization" | "mastery" | "top" | "bottom";
+  tier: "class" | "hope" | "foundation" | "specialization" | "mastery" | "top" | "bottom" | "community";
   hopeCost?: number;
   gameMarkers?: GameMarkerDefinition[];
 };
 
-export type Definition = DomainDefinition | CardDefinition | ItemDefinition | ClassDefinition | SubclassDefinition | AncestryDefinition | FeatureDefinition;
+export type Definition = DomainDefinition | CardDefinition | ItemDefinition | ClassDefinition | SubclassDefinition | AncestryDefinition | CommunityDefinition | FeatureDefinition;
 
 export type InventoryEntry = {
   definitionId: string;
@@ -261,6 +271,10 @@ export type Character = {
     primarySubclassId?: string;
     primaryDomainIds?: [string, string];
     community: string;
+    /** Comunidade mecânica declarada por um Pack; `community` preserva a origem narrativa livre. */
+    primaryCommunityId?: string;
+    /** Parâmetros estruturados solicitados pela Feature de comunidade, quando existirem. */
+    communityFeatureChoiceValues?: Record<string, unknown>;
     level: number;
     xp: number;
     nextLevelXp: number;

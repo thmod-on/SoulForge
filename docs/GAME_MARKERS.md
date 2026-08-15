@@ -55,7 +55,19 @@ Quando a quantidade do contador depende de uma regra declarada, use `quantity` n
 }
 ```
 
-Inicialmente, o tipo de dado suportado e `d4`. A quantidade pode ser fixa (`{ "kind": "fixed", "value": 3 }`), ligada a um atributo (`{ "kind": "attribute", "attributeId": "con" }`) ou ao atributo de Conjuracao da subclasse (`spellcast-trait`). Nesse ultimo caso, a `SubclassDefinition` declara explicitamente `spellcastAttributeId`; nenhuma descricao textual e interpretada.
+Inicialmente, o tipo de dado suportado e `d4`. A quantidade pode ser fixa (`{ "kind": "fixed", "value": 3 }`), ligada a um atributo (`{ "kind": "attribute", "attributeId": "con" }`), ao atributo de Conjuracao da subclasse (`spellcast-trait`) ou ao nivel atual da personagem (`character-level`). Nesse ultimo caso, a `SubclassDefinition` declara explicitamente `spellcastAttributeId`; nenhuma descricao textual e interpretada.
+
+Exemplo de contador que acompanha o nivel e se reinicializa a cada sessao:
+
+```json
+{
+  "id": "tide-tokens",
+  "kind": "counter",
+  "label": "Cargas da Mare",
+  "quantity": { "kind": "character-level" },
+  "reset": "session"
+}
+```
 
 ## Sincronizacao da ficha
 

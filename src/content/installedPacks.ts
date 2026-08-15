@@ -18,6 +18,8 @@ import shadowEssence from "../../packs/demo/items/item.shadow-essence.json";
 import steelShield from "../../packs/demo/items/item.steel-shield.json";
 import torch from "../../packs/demo/items/item.torch.json";
 import vigilAmulet from "../../packs/demo/items/item.vigil-amulet.json";
+import wandererCommunity from "../../packs/demo/communities/community.wanderer.json";
+import wandererFeature from "../../packs/demo/features/feature.wanderer-way.json";
 import { createCatalog } from "../domain/catalog";
 import type { Definition, PackManifest } from "../domain/types";
 
@@ -41,6 +43,8 @@ export const baseCatalog = createCatalog([manifest as PackManifest], [
   torch,
   gold,
   shadowEssence
+  ,wandererCommunity,
+  wandererFeature
 ] as Definition[]);
 
 // Compatibilidade para consumidores que precisam apenas do catalogo dos packs instalados.

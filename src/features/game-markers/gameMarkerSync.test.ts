@@ -42,6 +42,14 @@ describe("marcadores de jogo", () => {
     expect(synchronized.gameMarkers?.[0]?.kind === "dice" ? synchronized.gameMarkers[0].results : []).toHaveLength(2);
   });
 
+  it("resolve contador declarativo pelo nível do personagem", () => {
+    const feature: FeatureDefinition = { id: "feature.test.tide", type: "feature", packId: "test", name: "Conhecer a Maré", summary: "", sourceType: "community", sourceId: "community.test.seaborne", tier: "community", gameMarkers: [{ id: "tide", kind: "counter", label: "Maré", quantity: { kind: "character-level" }, reset: "session" }] };
+    const community = { id: "community.test.seaborne", type: "community" as const, packId: "test", name: "Marítima", summary: "", adjectives: [], featureId: feature.id };
+    const catalog = createCatalog([], [feature, community]);
+    const character = { ...demoCharacter, identity: { ...demoCharacter.identity, level: 3, primaryCommunityId: community.id }, gameMarkers: undefined };
+    expect(synchronizeGameMarkers(character, catalog).gameMarkers?.[0]).toMatchObject({ kind: "counter", value: 3, max: 3 });
+  });
+
   it("mantem a fonte ativa quando uma ficha local possui IDs antigos, mas os mesmos nomes", () => {
     const feature: FeatureDefinition = { id: "feature.legacy.serafim.class", type: "feature", packId: "test", name: "Dados de Oração", summary: "", sourceType: "class", sourceId: "class.legacy.serafim", tier: "class", gameMarkers: [{ id: "prayer-dice", kind: "dice", label: "Dados de Oração", die: "d4", quantity: { kind: "spellcast-trait" }, reset: "session" }] };
     const subclass: SubclassDefinition = { id: "subclass.legacy.serafim.portador-divino", type: "subclass", packId: "test", name: "Portador Divino", summary: "", classId: "class.legacy.serafim", foundationFeatureIds: [], specializationFeatureIds: [], masteryFeatureIds: [], spellcastAttributeId: "for" };
