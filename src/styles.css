@@ -1090,6 +1090,32 @@ button {
   color: var(--color-gold);
 }
 
+.attribute-badge.is-spellcast::before {
+  border-color: rgba(162, 99, 210, 0.88);
+  background:
+    radial-gradient(circle at 82% 24%, rgba(182, 112, 235, 0.32), transparent 1.8rem),
+    linear-gradient(180deg, rgba(167, 106, 218, 0.14), rgba(167, 106, 218, 0.045)),
+    rgba(255, 255, 255, 0.025);
+}
+
+.attribute-spellcast-icon {
+  position: absolute;
+  top: 0.38rem;
+  right: 0.3rem;
+  z-index: 2;
+  display: grid;
+  width: 0.95rem;
+  height: 0.95rem;
+  place-items: center;
+  border: 1px solid rgba(199, 143, 240, 0.72);
+  border-radius: 50%;
+  background: rgba(33, 18, 53, 0.96);
+  box-shadow: 0 0 0.55rem rgba(176, 100, 231, 0.28);
+  font-size: 0.58rem;
+  font-style: normal;
+  line-height: 1;
+}
+
 .attribute-badge strong {
   display: block;
   color: var(--color-text);
@@ -2734,6 +2760,177 @@ button {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
+}
+
+.progression-wizard {
+  display: grid;
+  gap: 0.8rem;
+  max-width: 72rem;
+  border: 1px solid var(--color-border);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 9rem),
+    var(--color-panel);
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.2);
+  padding: 0.85rem;
+}
+
+.progression-creation-progress {
+  padding-right: 0;
+}
+
+.progression-stepper {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.progression-stepper li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  border: 1px solid rgba(244, 234, 219, 0.12);
+  color: var(--color-muted);
+  background: rgba(8, 5, 17, 0.34);
+  padding: 0.42rem 0.5rem;
+}
+
+.progression-stepper li > span {
+  display: grid;
+  place-items: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  flex: 0 0 auto;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 0.68rem;
+}
+
+.progression-stepper strong {
+  overflow: hidden;
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.progression-stepper li.is-current {
+  border-color: rgba(217, 154, 61, 0.72);
+  color: var(--color-gold);
+  background: rgba(217, 154, 61, 0.12);
+}
+
+.progression-stepper li.is-complete {
+  border-color: rgba(86, 212, 157, 0.5);
+  color: #8de4be;
+}
+
+.progression-wizard-stage {
+  display: grid;
+  gap: 0.8rem;
+  min-width: 0;
+  border-top: 1px solid rgba(244, 234, 219, 0.1);
+  padding-top: 0.8rem;
+}
+
+.progression-wizard-stage > header {
+  display: grid;
+  gap: 0.22rem;
+}
+
+.progression-wizard-stage > header > span {
+  color: var(--color-gold);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.progression-wizard-stage h2,
+.progression-review h3 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 1.08rem;
+}
+
+.progression-stage-copy {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.84rem;
+  line-height: 1.42;
+}
+
+.progression-advance-summary,
+.progression-review {
+  display: grid;
+  gap: 0.55rem;
+  border: 1px solid rgba(217, 154, 61, 0.32);
+  background: rgba(217, 154, 61, 0.055);
+  padding: 0.7rem;
+}
+
+.progression-advance-summary > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.progression-advance-summary ul,
+.progression-review ul {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.progression-advance-summary li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  min-height: 1.9rem;
+  border-top: 1px solid rgba(244, 234, 219, 0.08);
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+.progression-advance-summary li button {
+  width: 1.45rem;
+  height: 1.45rem;
+  border: 1px solid rgba(244, 234, 219, 0.18);
+  color: var(--color-muted);
+  background: transparent;
+}
+
+.progression-advance-summary small,
+.progression-review p {
+  color: var(--color-muted);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.progression-review li {
+  border-top: 1px solid rgba(244, 234, 219, 0.08);
+  color: var(--color-text);
+  padding-top: 0.35rem;
+  font-size: 0.84rem;
+}
+
+.progression-review p {
+  margin: 0;
+}
+
+.progression-wizard-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-top: 1px solid rgba(244, 234, 219, 0.1);
+  padding-top: 0.75rem;
 }
 
 .progression-tier {

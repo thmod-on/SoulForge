@@ -1,4 +1,5 @@
 import { baseCatalog } from "./content/installedPacks";
+import { getSpellcastAttributeId } from "./content/spellcastAttributes";
 import { getOfficialCardMarkers } from "./content/officialCardMarkers";
 import { createCatalog, findDefinition, findDomain } from "./domain/catalog";
 import { demoCharacter } from "./domain/demoCharacter";
@@ -19,7 +20,6 @@ import { characterCreationAttributes, createEmptyCreationAttributeValues, parseC
 import { renderProgression as renderProgressionView, type ProgressionRenderDependencies } from "./features/progression/renderProgression";
 import {
   renderProgressionCardPickerModal as renderProgressionCardPickerModalView,
-  renderProgressionConfirmationModal as renderProgressionConfirmationModalView,
   renderProgressionHistoryModal as renderProgressionHistoryModalView,
   renderProgressionPickerModal as renderProgressionPickerModalView,
   renderProgressionMulticlassModal as renderProgressionMulticlassModalView,
@@ -27,11 +27,14 @@ import {
   type ProgressionDialogDependencies
 } from "./features/progression/renderProgressionDialogs";
 import {
+  renderProgressionAdvanceSummary as renderProgressionAdvanceSummaryView,
   renderProgressionDomainStep as renderProgressionDomainStepView,
-  renderProgressionDraft as renderProgressionDraftView,
   renderProgressionOptions as renderProgressionOptionsView,
+  renderProgressionReview as renderProgressionReviewView,
+  renderTierExperienceStep as renderTierExperienceStepView,
   type ProgressionWorkspaceDependencies
 } from "./features/progression/renderProgressionWorkspace";
+import { advanceProgressionFlow, goBackInProgressionFlow } from "./features/progression/progressionFlow";
 import {
   renderDeleteNoteModal as renderDeleteNoteModalView,
   renderNoteModal as renderNoteModalView,
@@ -120,7 +123,7 @@ import {
   saveCompendiumAncestry as saveCompendiumAncestryAction,
   type AncestryFeatureDependencies
 } from "./features/compendium/ancestries";
-import type { CompendiumSpread, CompendiumView, InventoryFilter, Page, ProgressionDraftChoice, ProgressionMulticlassDraft, ProgressionPicker, ProgressionTierNumber, SettingsSection } from "./app/types";
+import type { CompendiumSpread, CompendiumView, InventoryFilter, Page, ProgressionDraftChoice, ProgressionFlowStep, ProgressionMulticlassDraft, ProgressionPicker, ProgressionTierNumber, SettingsSection } from "./app/types";
 import { editorNavigation as sideNavItems, isEditorPage, playerNavigation as topNavItems } from "./app/navigation";
 import "./styles.css";
 
@@ -165,7 +168,7 @@ const state: {
   lastPlayerPage: Page;
   selectedItemId?: string;
   selectedCardId: string;
-  selectedProgressionTier: ProgressionTierNumber;
+  progressionStep: ProgressionFlowStep;
   modalCardId?: string;
   resourceModalId?: string;
   addResourceModalOpen: boolean;
@@ -174,7 +177,6 @@ const state: {
   progressionPickerTier?: ProgressionTierNumber;
   progressionPickerIds: string[];
   progressionDraft: ProgressionDraftChoice[];
-  progressionConfirmationOpen: boolean;
   progressionError?: string;
   progressionCardPickerMode?: "mandatory" | "advance";
   progressionCardTierFilter: "todos" | number;
@@ -259,12 +261,11 @@ const state: {
   compendiumAncestrySearch: "",
   lastPlayerPage: "overview",
   selectedCardId: "card.demo.dread-veil",
-  selectedProgressionTier: 2,
+  progressionStep: "advances",
   addResourceModalOpen: false,
   progressionHistoryOpen: false,
   progressionPickerIds: [],
   progressionDraft: [],
-  progressionConfirmationOpen: false,
   progressionCardTierFilter: "todos",
   progressionTierExperienceOpen: false,
   progressionMulticlassOpen: false,
@@ -301,7 +302,7 @@ const state: {
   }
 };
 
-const appVersion = "0.17.0";
+const appVersion = "0.18.0";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -446,6 +447,7 @@ function getPlayerShellDependencies(): PlayerShellDependencies {
     escapeHtml,
     attributeTitle,
     progressPercent,
+    getSpellcastAttributeId: (character) => getSpellcastAttributeId(character.identity.primarySubclassId, catalog.subclasses.find((subclass) => subclass.id === character.identity.primarySubclassId)),
     getEffectiveDefense: (character) => getEffectiveDefense(character, (definitionId) => {
       const definition = findDefinition(catalog, definitionId);
       return definition?.type === "item" ? definition : undefined;
@@ -933,12 +935,11 @@ async function applyProgression(): Promise<void> {
   await saveCharacter(updatedCharacter);
   state.character = updatedCharacter;
   state.progressionDraft = [];
-  state.progressionConfirmationOpen = false;
   state.progressionError = undefined;
   state.progressionCardId = undefined;
   state.progressionTierExperience = undefined;
   state.progressionTierExperienceError = undefined;
-  state.selectedProgressionTier = getTierForLevel(Math.min(nextLevel + 1, 10));
+  state.progressionStep = "advances";
   render();
 }
 
@@ -955,10 +956,12 @@ function getProgressionRenderDependencies(): ProgressionRenderDependencies {
     state,
     escapeHtml,
     progressPercent,
-    getTierForLevel,
-    renderProgressionOptions: (character, isCurrentTier) => renderProgressionOptionsView(character, isCurrentTier, getProgressionWorkspaceDependencies()),
+    requiresTierExperience,
+    renderProgressionOptions: (character) => renderProgressionOptionsView(character, getProgressionWorkspaceDependencies()),
+    renderProgressionAdvanceSummary: () => renderProgressionAdvanceSummaryView(getProgressionWorkspaceDependencies()),
     renderProgressionDomainStep: (character) => renderProgressionDomainStepView(character, getProgressionWorkspaceDependencies()),
-    renderProgressionDraft: (character) => renderProgressionDraftView(character, getProgressionWorkspaceDependencies())
+    renderTierExperienceStep: (character) => renderTierExperienceStepView(character, getProgressionWorkspaceDependencies()),
+    renderProgressionReview: (character) => renderProgressionReviewView(character, getProgressionWorkspaceDependencies())
   };
 }
 
@@ -991,7 +994,6 @@ function getProgressionWorkspaceDependencies(): ProgressionWorkspaceDependencies
     getAdvanceSlotsUsed,
     getNextSubclassAdvance,
     canChooseMulticlass: (character, tier) => canChooseMulticlass(character, tier, state.progressionDraft),
-    requiresTierExperience,
     getProgressionCardCandidates,
     findCard: (cardId) => {
       const definition = findDefinition(catalog, cardId);
@@ -1667,7 +1669,6 @@ function render(options: { preserveMainScroll?: boolean } = {}): void {
     ${renderProgressionMulticlassModalView(getProgressionDialogDependencies())}
     ${renderProgressionCardPickerModalView(getProgressionDialogDependencies())}
     ${renderTierExperienceModalView(getProgressionDialogDependencies())}
-    ${renderProgressionConfirmationModalView(getProgressionDialogDependencies())}
     ${renderAddContainerModal()}
     ${renderDeleteContainerModal()}
     ${renderNoteModalView(getNotesRenderDependencies())}
@@ -2309,7 +2310,6 @@ function bindEvents(): void {
       state.progressionHistoryOpen = false;
       state.progressionPicker = undefined;
       state.progressionPickerIds = [];
-      state.progressionConfirmationOpen = false;
       state.progressionCardPickerMode = undefined;
       state.progressionCardPickerTier = undefined;
       state.progressionTierExperienceOpen = false;
@@ -2369,7 +2369,6 @@ function bindEvents(): void {
       state.progressionHistoryOpen = false;
       state.progressionPicker = undefined;
       state.progressionPickerIds = [];
-      state.progressionConfirmationOpen = false;
       state.progressionCardPickerMode = undefined;
       state.progressionCardPickerTier = undefined;
       state.progressionTierExperienceOpen = false;
@@ -2978,10 +2977,29 @@ function bindEvents(): void {
       return;
     }
 
-    const progressionTierButton = target.closest<HTMLElement>('[data-action="select-progression-tier"]');
-    if (progressionTierButton) {
-      state.selectedProgressionTier = Number(progressionTierButton.dataset.progressionTier) as ProgressionTierNumber;
-      render();
+    if (target.closest('[data-action="progression-step-back"]')) {
+      if (state.character) {
+        const transition = goBackInProgressionFlow(state.progressionStep, requiresTierExperience(state.character));
+        state.progressionStep = transition.step;
+        state.progressionError = transition.error;
+      }
+      render({ preserveMainScroll: true });
+      return;
+    }
+
+    if (target.closest('[data-action="progression-step-next"]')) {
+      if (state.character) {
+        const transition = advanceProgressionFlow({
+          step: state.progressionStep,
+          choiceCount: getProgressionChoiceCount(),
+          cardId: state.progressionCardId,
+          requiresTierExperience: requiresTierExperience(state.character),
+          tierExperienceName: state.progressionTierExperience?.name
+        });
+        state.progressionStep = transition.step;
+        state.progressionError = transition.error;
+      }
+      render({ preserveMainScroll: true });
       return;
     }
 
@@ -3144,22 +3162,6 @@ function bindEvents(): void {
       state.progressionCardPickerMode = undefined;
       state.progressionCardPickerTier = undefined;
       state.progressionCardTierFilter = "todos";
-      render({ preserveMainScroll: true });
-      return;
-    }
-
-    if (target.closest('[data-action="open-progression-confirmation"]')) {
-      const choiceCount = getProgressionChoiceCount();
-      if (choiceCount !== 2) {
-        state.progressionError = `Escolha ${2 - choiceCount} avanço${2 - choiceCount === 1 ? "" : "s"} antes de confirmar.`;
-      } else if (!state.progressionCardId) {
-        state.progressionError = "Escolha a carta obrigatoria de Dominio antes de confirmar.";
-      } else if (state.character && requiresTierExperience(state.character) && !state.progressionTierExperience?.name.trim()) {
-        state.progressionError = "Defina a nova Experiencia +2 recebida ao entrar no Tier.";
-      } else {
-        state.progressionError = undefined;
-        state.progressionConfirmationOpen = true;
-      }
       render({ preserveMainScroll: true });
       return;
     }
@@ -3411,11 +3413,6 @@ function bindEvents(): void {
     if (event.key === "Escape" && state.progressionPicker) {
       state.progressionPicker = undefined;
       state.progressionPickerIds = [];
-      render();
-    }
-
-    if (event.key === "Escape" && state.progressionConfirmationOpen) {
-      state.progressionConfirmationOpen = false;
       render();
     }
 

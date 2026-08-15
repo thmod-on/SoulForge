@@ -4,6 +4,19 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.18.0]
+
+### Adicionado
+
+- assistente de Progressão por etapas, com avanços, carta de Domínio, conquista de Tier quando aplicável e revisão final;
+- destaque visual do atributo de Conjuração na ficha e suporte de compatibilidade para personagens já criados;
+- definição de atributo de Conjuração por subclasse no cadastro de classes locais.
+
+### Alterado
+
+- os packs locais de classes Core e Hope & Fear passam a declarar os atributos de Conjuração das subclasses aplicáveis;
+- a tela de Progressão reutiliza a identidade visual do fluxo de criação de personagem.
+
 ## [0.17.0]
 
 ### Adicionado

@@ -1,38 +1,47 @@
+import type { ProgressionFlowStep } from "../../app/types";
 import type { Character } from "../../domain/types";
-import type { ProgressionTierNumber } from "../../app/types";
-import { progressionTiers } from "./progressionRules";
-
-type ProgressionTier = (typeof progressionTiers)[number];
+import { getTierForLevel } from "./progressionRules";
+import { getPreviousProgressionFlowStep, getProgressionFlowSteps } from "./progressionFlow";
 
 export type ProgressionViewState = {
-  selectedProgressionTier: ProgressionTierNumber;
+  progressionStep: ProgressionFlowStep;
+  progressionError?: string;
 };
 
 export type ProgressionRenderDependencies = {
   state: ProgressionViewState;
   escapeHtml: (value: string) => string;
   progressPercent: (value: number, max: number) => number;
-  getTierForLevel: (level: number) => ProgressionTierNumber;
-  renderProgressionOptions: (character: Character, isCurrentTier: boolean) => string;
+  requiresTierExperience: (character: Character) => boolean;
+  renderProgressionOptions: (character: Character) => string;
+  renderProgressionAdvanceSummary: () => string;
   renderProgressionDomainStep: (character: Character) => string;
-  renderProgressionDraft: (character: Character) => string;
+  renderTierExperienceStep: (character: Character) => string;
+  renderProgressionReview: (character: Character) => string;
 };
 
 export function renderProgression(character: Character, dependencies: ProgressionRenderDependencies): string {
-  const { state, progressPercent, getTierForLevel } = dependencies;
+  const { state, progressPercent, requiresTierExperience } = dependencies;
   const nextLevel = Math.min(character.identity.level + 1, 10);
-  const currentTier = getTierForLevel(nextLevel);
-  const selectedTier = progressionTiers.find((tier) => tier.tier === state.selectedProgressionTier) ?? progressionTiers[0];
+  const tier = getTierForLevel(nextLevel);
+  const needsExperience = requiresTierExperience(character);
+  const steps = getProgressionFlowSteps(needsExperience);
+  const currentStep = steps.some((step) => step.id === state.progressionStep) ? state.progressionStep : "advances";
+  const currentStepIndex = steps.findIndex((step) => step.id === currentStep);
+  const title = steps[currentStepIndex]?.label ?? "Avanços";
 
-  return `<main class="content progression-content"><div class="screen-title"><div><h1>Progressao</h1></div></div><div class="progression-bar" aria-label="Tiers de progressao"><div class="progression-character-status" aria-label="Nivel e experiencia do personagem"><strong>Nivel ${character.identity.level}</strong><span>${character.identity.xp} / ${character.identity.nextLevelXp} XP</span><div class="progression-xp-bar" aria-hidden="true"><i style="width: ${progressPercent(character.identity.xp, character.identity.nextLevelXp)}%"></i></div></div><div class="progression-tabs" role="tablist" aria-label="Tiers de progressao">${progressionTiers.map((tier) => `<button class="${state.selectedProgressionTier === tier.tier ? "is-active" : ""}" type="button" data-action="select-progression-tier" data-progression-tier="${tier.tier}"><strong>Tier ${tier.tier}</strong><span>Niveis ${tier.levels}</span></button>`).join("")}</div></div><section class="progression-board">${renderProgressionTier(selectedTier, character, currentTier, dependencies)}</section></main>`;
+  return `<main class="content progression-content"><div class="screen-title"><div><h1>Progressão</h1><p>Nível ${character.identity.level} para ${nextLevel} · Tier ${tier}</p></div><button class="progression-history-button" type="button" data-action="open-progression-history">Ver histórico</button></div><section class="progression-wizard"><div class="progression-character-status" aria-label="Nível e experiência do personagem"><strong>Nível ${character.identity.level}</strong><span>${character.identity.xp} / ${character.identity.nextLevelXp} XP</span><div class="progression-xp-bar" aria-hidden="true"><i style="width: ${progressPercent(character.identity.xp, character.identity.nextLevelXp)}%"></i></div></div><div class="character-creation-progress progression-creation-progress" aria-label="Etapa ${currentStepIndex + 1} de ${steps.length}">${steps.map((step, index) => `<span class="${index === currentStepIndex ? "is-current" : index < currentStepIndex ? "is-complete" : ""}">${index + 1}. ${step.label}</span>`).join("")}</div><section class="progression-wizard-stage" aria-labelledby="progression-wizard-title"><header><h2 id="progression-wizard-title">${title}</h2></header>${renderProgressionStep(currentStep, character, dependencies)}${state.progressionError ? `<p class="progression-feedback" role="alert">${dependencies.escapeHtml(state.progressionError)}</p>` : ""}<footer class="progression-wizard-actions">${getPreviousProgressionFlowStep(currentStep, needsExperience) ? '<button class="secondary-action" type="button" data-action="progression-step-back">← Voltar</button>' : "<span></span>"}${currentStep === "review" ? '<button class="primary-action" type="button" data-action="apply-progression">Aplicar evolução</button>' : '<button class="primary-action" type="button" data-action="progression-step-next">Continuar →</button>'}</footer></section></section></main>`;
 }
 
-function renderProgressionTier(tier: ProgressionTier, character: Character, currentTier: ProgressionTierNumber, dependencies: ProgressionRenderDependencies): string {
-  const { escapeHtml, renderProgressionOptions, renderProgressionDomainStep, renderProgressionDraft } = dependencies;
-  const currentLevel = character.identity.level;
-  const endLevel = Number(tier.levels.split("-")[1]);
-  const isCurrentTier = currentTier === tier.tier;
-  const isPastTier = currentLevel > endLevel;
-  const statusLabel = isPastTier ? "Concluido" : isCurrentTier ? "Atual" : "Bloqueado";
-  return `<article class="progression-tier ${isCurrentTier ? "is-current" : ""} ${isPastTier ? "is-complete" : ""}"><div class="progression-tier-header"><p class="progression-tier-headline">${escapeHtml(tier.headline)}</p><button class="progression-history-button" type="button" data-action="open-progression-history">Ver historico</button></div><div class="progression-tier-meta"><span>${tier.choices} escolhas</span><span>${statusLabel}</span></div>${isCurrentTier ? `<div class="progression-workspace"><div class="progression-elective-panel">${renderProgressionOptions(character, isCurrentTier)}</div>${renderProgressionDomainStep(character)}</div>` : `<div class="progression-elective-panel">${renderProgressionOptions(character, isCurrentTier)}</div>`}${isCurrentTier ? renderProgressionDraft(character) : ""}<p class="progression-tier-footer">${escapeHtml(isCurrentTier ? "Selecione dois avanços e confirme antes de alterar a ficha." : tier.footer)}</p></article>`;
+function renderProgressionStep(step: ProgressionFlowStep, character: Character, dependencies: ProgressionRenderDependencies): string {
+  switch (step) {
+    case "advances":
+      return `<p class="progression-stage-copy">Escolha como o personagem evolui. Alguns avanços ocupam os dois espaços desta passagem de nível.</p><div class="progression-elective-panel">${dependencies.renderProgressionOptions(character)}</div>${dependencies.renderProgressionAdvanceSummary()}`;
+    case "domain-card":
+      return `<p class="progression-stage-copy">A carta aprendida será guardada no Vault. Você decide depois quando ativá-la no Loadout.</p>${dependencies.renderProgressionDomainStep(character)}`;
+    case "tier-experience":
+      return `<p class="progression-stage-copy">Este nível inaugura um novo Tier. Registre a Experiência +2 que representa esse marco.</p>${dependencies.renderTierExperienceStep(character)}`;
+    case "review":
+      return `<p class="progression-stage-copy">Revise as escolhas antes de aplicá-las definitivamente à ficha.</p>${dependencies.renderProgressionReview(character)}`;
+  }
 }

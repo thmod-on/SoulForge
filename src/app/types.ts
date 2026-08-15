@@ -3,6 +3,7 @@ import type { CharacterMulticlass, ItemDefinition, PackBundle, PackManifest, Pro
 export type Page = "overview" | "skills" | "inventory" | "progression" | "notes" | "compendium" | "settings" | "storedCards";
 export type InventoryFilter = "todos" | ItemDefinition["category"];
 export type ProgressionTierNumber = 2 | 3 | 4;
+export type ProgressionFlowStep = "advances" | "domain-card" | "tier-experience" | "review";
 export type SettingsSection = "general" | "localData" | "loadRules" | "appearance" | "progression";
 export type CompendiumView = "index" | "cards" | "domains" | "items" | "classes" | "ancestries";
 export type CompendiumSpread = 1 | 2 | 3;

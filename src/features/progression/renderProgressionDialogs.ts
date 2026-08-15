@@ -14,7 +14,6 @@ export type ProgressionDialogState = {
   progressionTierExperienceOpen: boolean;
   progressionTierExperience?: { name: string; description: string };
   progressionTierExperienceError?: string;
-  progressionConfirmationOpen: boolean;
   progressionMulticlassOpen: boolean;
   progressionMulticlassTier?: ProgressionTierNumber;
   progressionMulticlassDraft: ProgressionMulticlassDraft;
@@ -73,17 +72,6 @@ export function renderTierExperienceModal(dependencies: ProgressionDialogDepende
   if (!state.progressionTierExperienceOpen) return "";
   const experience = state.progressionTierExperience;
   return `<div class="modal-backdrop" data-modal-backdrop><section class="progression-picker-modal tier-experience-modal" role="dialog" aria-modal="true" aria-labelledby="tier-experience-title"><button class="modal-close" data-modal-close aria-label="Fechar experiencia de Tier">x</button><span class="resource-modal-label">Conquista de Tier</span><h2 id="tier-experience-title">Nova Experiencia +2</h2><p>Escolha uma experiencia que represente o marco alcançado pelo personagem.</p><label class="form-field"><span>Nome *</span><input data-tier-experience-name value="${escapeHtml(experience?.name ?? "")}" placeholder="Ex.: Defensor das muralhas" /></label><label class="form-field"><span>Descricao</span><textarea data-tier-experience-description placeholder="Como essa experiencia ajuda o personagem?">${escapeHtml(experience?.description ?? "")}</textarea></label>${state.progressionTierExperienceError ? `<p class="form-error">${escapeHtml(state.progressionTierExperienceError)}</p>` : ""}<button class="primary-action" type="button" data-action="save-tier-experience">Definir experiencia +2</button></section></div>`;
-}
-
-export function renderProgressionConfirmationModal(dependencies: ProgressionDialogDependencies): string {
-  const { state, escapeHtml, requiresTierExperience, findCard } = dependencies;
-  const character = state.character;
-  if (!state.progressionConfirmationOpen || !character) return "";
-  const nextLevel = Math.min(character.identity.level + 1, 10);
-  const tierAchievement = [2, 5, 8].includes(nextLevel) ? "Conquista do Tier: nova Experiencia +2 e Proficiencia +1." : "Sem conquista automatica de Tier neste nivel.";
-  const tierExperience = requiresTierExperience(character) ? state.progressionTierExperience : undefined;
-  const selectedCard = state.progressionCardId ? findCard(state.progressionCardId) : undefined;
-  return `<div class="modal-backdrop" data-modal-backdrop><section class="progression-picker-modal" role="dialog" aria-modal="true" aria-labelledby="progression-confirmation-title"><button class="modal-close" data-modal-close aria-label="Cancelar evolução">x</button><span class="resource-modal-label">Confirmar evolução</span><h2 id="progression-confirmation-title">Nível ${character.identity.level} para ${nextLevel}</h2><p>${tierAchievement}</p>${tierExperience ? `<p><strong>Experiência de Tier +2:</strong> ${escapeHtml(tierExperience.name)}</p>` : ""}<ul class="progression-confirmation-list">${state.progressionDraft.map((choice) => `<li>${escapeHtml(choice.label)}</li>`).join("")}${selectedCard ? `<li>Carta de Domínio: ${escapeHtml(selectedCard.name)} → Vault</li>` : ""}</ul><div class="confirmation-actions"><button class="secondary-action" type="button" data-modal-close>Voltar</button><button class="primary-action" type="button" data-action="apply-progression">Aplicar evolução</button></div></section></div>`;
 }
 
 export function renderProgressionMulticlassModal(dependencies: ProgressionDialogDependencies): string {

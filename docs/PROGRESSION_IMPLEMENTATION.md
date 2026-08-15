@@ -117,6 +117,17 @@ Evasão base e HP inicial permanecem vinculados à classe principal. Uma multicl
 
 O assistente de progressão deve trabalhar somente do nível atual para o próximo nível. Não permitir pular níveis no primeiro recorte.
 
+### Assistente por etapas
+
+Para reduzir a sobrecarga visual, a interface apresenta uma etapa temática de cada vez, mantendo um indicador de avanço e as etapas restantes visíveis. O estado transitório do assistente é `progressionStep`; as escolhas só são aplicadas à ficha na revisão final.
+
+1. **Avanços:** escolha exatamente dois espaços de evolução, respeitando custos, pré-requisitos e exclusões.
+2. **Carta de Domínio:** escolha a carta obrigatória; ela entra no Vault, não no Loadout.
+3. **Conquista de Tier:** exibida apenas nos níveis 2, 5 e 8, para registrar a nova Experiência +2.
+4. **Revisão:** consolida as decisões e oferece a ação atômica de aplicar a evolução.
+
+Cada etapa bloqueia o avanço apenas quando faltar uma escolha obrigatória daquele tema. Voltar mantém o rascunho atual para que o jogador possa revisar uma decisão antes da confirmação final.
+
 1. **Início:** apresentar o novo nível, tier e efeitos obrigatórios.
 2. **Conquista de tier:** aplicar o ganho dos níveis 2, 5 e 8; quando aplicável, solicitar a nova Experiência `+2` e limpar marcações de atributos.
 3. **Dois avanços:** permitir escolher avanços elegíveis, mostrando custo, espaços disponíveis e bloqueios.

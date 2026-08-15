@@ -1,4 +1,5 @@
 import type { Catalog } from "../../domain/catalog";
+import { getSpellcastAttributeId } from "../../content/spellcastAttributes";
 import type { CardDefinition, Character, CharacterGameMarkerState, ClassDefinition, FeatureDefinition, GameMarkerDefinition, GameMarkerQuantity } from "../../domain/types";
 
 export type ActiveGameMarker = { key: string; sourceDefinitionId: string; sourceLabel: string; definition: GameMarkerDefinition; state: CharacterGameMarkerState };
@@ -124,7 +125,7 @@ function getMarkerQuantity(quantity: GameMarkerQuantity, character: Character, c
   const subclass = feature?.sourceType === "subclass"
     ? catalog.subclasses.find((entry) => entry.id === feature.sourceId)
     : findCharacterSubclass(character, catalog, findCharacterClass(character, catalog));
-  const attributeId = subclass?.spellcastAttributeId;
+  const attributeId = getSpellcastAttributeId(subclass?.id ?? character.identity.primarySubclassId, subclass);
   return Math.max(0, character.attributes.find((attribute) => attribute.id === attributeId)?.value ?? 0);
 }
 
