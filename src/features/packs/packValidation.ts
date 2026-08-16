@@ -20,6 +20,9 @@ export function validatePackBundle(value: unknown): PackBundle {
   }
 
   const definitions = bundle.definitions as Definition[];
+  for (const feature of definitions.filter((definition) => definition.type === "feature")) {
+    if (!isSheetModifierListValid(feature.sheetModifiers)) throw new Error(`A Feature “${feature.name}” possui modificadores de ficha inválidos.`);
+  }
   for (const community of definitions.filter((definition) => definition.type === "community")) {
     if (!Array.isArray(community.adjectives) || community.adjectives.length !== 6 || community.adjectives.some((value) => typeof value !== "string" || !value.trim())) {
       throw new Error(`A comunidade “${community.name}” precisa declarar exatamente seis adjetivos.`);
@@ -35,5 +38,18 @@ export function validatePackBundle(value: unknown): PackBundle {
     if (!definition || typeof definition !== "object") return false;
     const candidate = definition as { type?: string; id?: string; name?: string; summary?: string; packId?: string };
     return Boolean(knownTypes.has(candidate.type ?? "") && candidate.id && candidate.name && candidate.summary && candidate.packId === candidateManifest.id);
+  }
+
+  function isSheetModifierListValid(value: unknown): boolean {
+    if (value === undefined) return true;
+    if (!Array.isArray(value)) return false;
+    return value.every((modifier) => {
+      if (!modifier || typeof modifier !== "object") return false;
+      const candidate = modifier as { kind?: string; resourceId?: unknown; field?: unknown; amount?: unknown };
+      if (!Number.isFinite(candidate.amount)) return false;
+      if (candidate.kind === "resource-max") return typeof candidate.resourceId === "string" && Boolean(candidate.resourceId);
+      if (candidate.kind === "defense") return typeof candidate.field === "string" && ["evasion", "armor", "minor", "major"].includes(candidate.field);
+      return candidate.kind === "defense-per-proficiency" && (candidate.field === "minor" || candidate.field === "major");
+    });
   }
 }

@@ -10,6 +10,7 @@ import { deleteCustomDefinition, loadCardMarkerOverrides, loadCustomDefinitions,
 import { installLocalPack, loadInstalledPacks, removeLocalPack } from "./storage/packRepository";
 import { renderSettings as renderSettingsPage, getPackDefinitionSummary } from "./features/settings/renderSettings";
 import { getPackDisplayDescription, getPackDisplayName, getPackOriginName } from "./features/compendium/packPresentation";
+import { getOriginalClassName } from "./features/compendium/classPresentation";
 import { getProgressionChoiceCost as getProgressionChoiceCostForKind, getTierForLevel, progressionAdvanceLabels } from "./features/progression/progressionRules";
 import { buildMulticlassChoice, canChooseMulticlass, canLearnMulticlassDomainCard, getEligibleMulticlassClasses, isSubclassAdvanceBlockedByMulticlass } from "./features/progression/multiclassRules";
 import { nextCharacterCreationStep, previousCharacterCreationStep, type CharacterCreationStep } from "./features/character-creation/creationFlow";
@@ -66,6 +67,10 @@ import {
   type InventoryDragDependencies
 } from "./features/inventory/bindInventoryDrag";
 import { getEffectiveDefense, synchronizeArmorResource } from "./features/inventory/combatModifiers";
+import { synchronizeCharacterSheetModifiers } from "./features/player/sheetModifiers";
+import type { RestKind, RestMoveChoice } from "./features/rest/restRules";
+import { renderRestModal as renderRestModalView } from "./features/rest/renderRest";
+import { handleRestAction, handleRestRollInput } from "./features/rest/restActions";
 import {
   renderEditorHeader as renderEditorHeaderView,
   renderResourceIndicator as renderResourceIndicatorView,
@@ -148,7 +153,8 @@ let modalBackdropPointerDown = false;
 /** Centraliza a persistencia para que todo personagem salvo mantenha os marcadores sincronizados. */
 async function saveCharacter(character: Character): Promise<void> {
   const withSynchronizedArmor = synchronizeArmorResource(character, getItemDefinition);
-  const synchronized = synchronizeGameMarkers(withSynchronizedArmor, catalog);
+  const withSynchronizedSheet = synchronizeCharacterSheetModifiers(withSynchronizedArmor, catalog);
+  const synchronized = synchronizeGameMarkers(withSynchronizedSheet, catalog);
   if (synchronized !== character) {
     Object.assign(character, synchronized);
   }
@@ -226,6 +232,9 @@ const state: {
   characterPortraitModalOpen: boolean;
   characterPortraitPreviewOpen: boolean;
   gameMarkerDieDialog?: { markerKey: string; dieId: string; mode: "result" | "consume" };
+  restDialogKind?: RestKind;
+  restChoices: RestMoveChoice[];
+  restError?: string;
   characterCreationOpen: boolean;
   characterCreationStep: CharacterCreationStep;
   characterCreationName: string;
@@ -292,6 +301,7 @@ const state: {
   characterSelectionOpen: true,
   characterPortraitModalOpen: false,
   characterPortraitPreviewOpen: false,
+  restChoices: [],
   characterCreationOpen: false,
   characterCreationStep: 1,
   characterCreationName: "",
@@ -316,7 +326,7 @@ const state: {
   }
 };
 
-const appVersion = "0.19.0";
+const appVersion = "0.20.0";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -1494,16 +1504,6 @@ function enhanceCompendiumClassResults(): void {
   });
 }
 
-function getOriginalClassName(classId: string): string | undefined {
-  return {
-    "class.core.bardo": "Bard", "class.core.druida": "Druid", "class.core.guardiao": "Guardian",
-    "class.core.ranger": "Ranger", "class.core.ladino": "Rogue", "class.core.serafim": "Seraph",
-    "class.core.feiticeiro": "Sorcerer", "class.core.guerreiro": "Warrior", "class.core.mago": "Wizard",
-    "class.hope-fear.assassin": "Assassin", "class.hope-fear.brawler": "Brawler",
-    "class.hope-fear.warlock": "Warlock", "class.hope-fear.witch": "Witch"
-  }[classId];
-}
-
 function configureGameMarkerAuthoringForm(form: HTMLElement): void {
   const kind = form.querySelector<HTMLSelectElement>("[data-game-marker-kind]");
   const quantityKind = form.querySelector<HTMLSelectElement>("[data-game-marker-quantity-kind]");
@@ -1605,7 +1605,8 @@ function render(options: { preserveMainScroll?: boolean } = {}): void {
     return;
   }
   const characterWithSynchronizedArmor = synchronizeArmorResource(currentCharacter, getItemDefinition);
-  const synchronizedCharacter = synchronizeGameMarkers(characterWithSynchronizedArmor, catalog);
+  const characterWithSynchronizedSheet = synchronizeCharacterSheetModifiers(characterWithSynchronizedArmor, catalog);
+  const synchronizedCharacter = synchronizeGameMarkers(characterWithSynchronizedSheet, catalog);
   if (synchronizedCharacter !== currentCharacter) {
     state.character = synchronizedCharacter;
     void persistCharacter(synchronizedCharacter);
@@ -1680,6 +1681,7 @@ function render(options: { preserveMainScroll?: boolean } = {}): void {
     ${renderCharacterPortraitModal()}
     ${renderCharacterPortraitPreviewModal()}
     ${renderGameMarkerDieDialog()}
+    ${renderRestModalView(character, state.restDialogKind, state.restChoices, state.restError, { escapeHtml })}
     ${renderPackImportModal()}
     ${renderRemoveInstalledPackModal()}
   `;
@@ -2337,6 +2339,9 @@ function bindEvents(): void {
       state.characterPortraitModalOpen = false;
       state.characterPortraitPreviewOpen = false;
       state.gameMarkerDieDialog = undefined;
+      state.restDialogKind = undefined;
+      state.restChoices = [];
+      state.restError = undefined;
       render({ preserveMainScroll: true });
       return;
     }
@@ -2396,6 +2401,9 @@ function bindEvents(): void {
       state.characterPortraitModalOpen = false;
       state.characterPortraitPreviewOpen = false;
       state.gameMarkerDieDialog = undefined;
+      state.restDialogKind = undefined;
+      state.restChoices = [];
+      state.restError = undefined;
       render();
       return;
     }
@@ -2448,13 +2456,7 @@ function bindEvents(): void {
       return;
     }
 
-    if (target.closest('[data-action="rest-short"]')) {
-      void applyGameMarkerReset("short-rest");
-      return;
-    }
-
-    if (target.closest('[data-action="rest-long"]')) {
-      void applyGameMarkerReset("long-rest");
+    if (handleRestAction(target, state, { catalog, saveCharacter, render: () => render({ preserveMainScroll: true }) })) {
       return;
     }
 
@@ -3527,6 +3529,10 @@ function bindEvents(): void {
 
   document.addEventListener("change", (event) => {
     const target = event.target;
+    if (target instanceof HTMLInputElement && target.matches("[data-rest-roll-index]")) {
+      handleRestRollInput(target, state);
+      return;
+    }
     if (target instanceof HTMLSelectElement && target.matches("[data-compendium-community-pack-filter]")) {
       state.compendiumCommunityPackId = target.value;
       render({ preserveMainScroll: true });

@@ -36,16 +36,18 @@ export function synchronizeArmorResource(character: Character, findItem: (id: st
   if (resourceIndex < 0) return character;
 
   const current = character.resources[resourceIndex];
+  const previousBaseMax = current.baseMax ?? current.max;
   // Uma nova quantidade de slots representa uma armadura diferente (ou a
   // remoção dela); nesse caso, a trilha inicia com todos os slots disponíveis.
   // Se a mesma armadura continuar equipada, marcas já usadas são preservadas.
-  const value = current.max === armorSlots ? Math.min(current.value, armorSlots) : armorSlots;
-  if (current.label === "Armadura" && current.max === armorSlots && current.value === value) return character;
+  const effectBonus = Math.max(0, current.max - previousBaseMax);
+  const value = previousBaseMax === armorSlots ? Math.min(current.value, armorSlots + effectBonus) : armorSlots + effectBonus;
+  if (current.label === "Armadura" && current.baseMax === armorSlots && current.value === value) return character;
 
   return {
     ...character,
     resources: character.resources.map((resource, index) => index === resourceIndex
-      ? { ...resource, label: "Armadura", max: armorSlots, value }
+      ? { ...resource, label: "Armadura", baseMax: armorSlots, max: armorSlots, value }
       : resource)
   };
 }

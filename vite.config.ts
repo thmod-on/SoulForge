@@ -8,7 +8,7 @@ export default defineConfig({
   plugins: [
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.svg"],
+      includeAssets: ["favicon.svg", "apple-touch-icon.png"],
       manifest: {
         name: "SoulForge",
         short_name: "SoulForge",

@@ -4,6 +4,26 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.20.0]
+
+### Adicionado
+
+- downtime guiado para descansos breve e longo, com movimentos e recuperação declarada;
+- modificadores declarativos de ficha em Features de ancestralidade, para recursos e defesa;
+- suporte a bônus de Estresse do Humano, PV do Gigante, defesa do Galapa e Simiah, e Armadura do Terrano;
+- edição local de ancestralidades com bônus máximo de recurso;
+- ícones específicos do SoulForge para instalação como PWA e tela inicial do dispositivo.
+
+### Alterado
+
+- recursos de Armadura passam a preservar seu máximo-base antes de modificadores permanentes;
+- formulários e fluxo de criação de personagem receberam ajustes de apresentação e navegação;
+- o módulo de ancestralidades foi reorganizado para concentrar autoria e persistência local.
+
+### Corrigido
+
+- sincronização da ficha agora aplica os efeitos estruturados das Features de ancestralidade selecionadas.
+
 ## [0.19.0]
 
 ### Adicionado

@@ -1,6 +1,7 @@
 import type { Catalog } from "../../domain/catalog";
 import type { AncestryDefinition, Attribute, Character, CharacterSkill, ClassDefinition, CommunityDefinition, FeatureDefinition, SubclassDefinition } from "../../domain/types";
 import type { CharacterCreationStep } from "./creationFlow";
+import { synchronizeCharacterSheetModifiers } from "../player/sheetModifiers";
 
 export type CharacterCreationDraft = {
   name: string;
@@ -74,16 +75,17 @@ export function buildCharacterFromDraft(draft: CharacterCreationDraft, catalog: 
   const subclassSkills = getSubclassSkills(subclassDefinition, features);
   const skills = subclassSkills.length ? subclassSkills : subclassDefinition.id === fallback.subclassDefinition.id ? fallback.skills.filter((skill) => skill.source === "class") : [];
   const hp = classDefinition.startingHitPoints;
-  return {
+  const character: Character = {
     id: `character.local.${crypto.randomUUID()}`,
     identity: { name: draft.name.trim(), ancestry: ancestries.map((entry) => entry.name).join(" + "), primaryAncestryId: ancestries[0].id, ancestryIds: draft.ancestryIds.slice(0, 2), ancestryFeatureIds: { top: draft.topFeatureId, bottom: draft.bottomFeatureId }, className: classDefinition.name, primaryClassId: classDefinition.id, subclassName: subclassDefinition.name, primarySubclassId: subclassDefinition.id, primaryDomainIds: classDefinition.domainIds, community: draft.community.trim(), primaryCommunityId: community.id, level: 1, xp: 0, nextLevelXp: 10, quote: "", portraitImage: draft.portraitImage },
     attributes: [{ id: "dex", label: "AGI", value: draft.attributeValues.dex }, { id: "for", label: "FOR", value: draft.attributeValues.for }, { id: "cha", label: "FIN", value: draft.attributeValues.cha }, { id: "wil", label: "INS", value: draft.attributeValues.wil }, { id: "con", label: "PRE", value: draft.attributeValues.con }, { id: "int", label: "CON", value: draft.attributeValues.int }],
-    defense: { evasion: classDefinition.startingEvasion, armor: 0, minor: 0, major: 0 }, proficiency: 1,
+    defense: { evasion: classDefinition.startingEvasion, armor: 0, minor: 0, major: 0 }, baseDefense: { evasion: classDefinition.startingEvasion, armor: 0, minor: 0, major: 0 }, proficiency: 1,
     progression: { attributeMarks: {}, acquiredSubclassTiers: ["foundation"], advancementSelections: [], history: [] },
-    resources: [{ id: "hp", label: "PV", value: hp, max: hp, tone: "hp" }, { id: "stress", label: "Estresse", value: 0, max: 6, tone: "stress" }, { id: "armor-slots", label: "Armadura", value: 0, max: 0, tone: "focus" }, { id: "hope", label: "Esperanca", value: 2, max: 6, tone: "hope" }],
+    resources: [{ id: "hp", label: "PV", value: hp, max: hp, baseMax: hp, tone: "hp" }, { id: "stress", label: "Estresse", value: 0, max: 6, baseMax: 6, tone: "stress" }, { id: "armor-slots", label: "Armadura", value: 0, max: 0, baseMax: 0, tone: "focus" }, { id: "hope", label: "Esperanca", value: 2, max: 6, baseMax: 6, tone: "hope" }],
     skills: [...skills, { id: communityFeature.id, name: communityFeature.name, source: "community", description: communityFeature.summary }], experiences: experiences.map((entry) => ({ id: `experience.local.${crypto.randomUUID()}`, name: entry.name, value: 2, description: entry.description || undefined })), notes: [],
     deck: { activeCardIds: cards, learnedCardIds: cards }, inventory: { capacity: 30, compartments: [{ id: "equipped", name: "Equipados", source: "character" }, { id: "backpack", name: "Mochila", capacity: 30, source: "character" }], entries: [] }
   };
+  return synchronizeCharacterSheetModifiers(character, catalog);
 }
 
 function hasValidStartingExperiences(experiences: Array<{ name: string }>): boolean {

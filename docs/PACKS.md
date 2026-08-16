@@ -56,6 +56,30 @@ Os arquivos seguem as convenções descritas em [JSON_CONVENTIONS.md](JSON_CONVE
 - conteúdo é declarativo; regras específicas não devem ser codificadas na interface;
 - relações entre Definitions usam IDs.
 
+### Modificadores de ficha em Features
+
+Features podem declarar `sheetModifiers` para efeitos mecânicos que o
+SoulForge sabe calcular. Cada modificador é estruturado e validado na
+importação; textos em `summary` nunca geram efeitos automáticos.
+
+- `resource-max`: aumenta o máximo de um recurso (`resourceId` e `amount`);
+- `defense`: altera uma defesa fixa (`field` e `amount`);
+- `defense-per-proficiency`: altera Limiar menor ou maior proporcionalmente à
+  Proficiência.
+
+O estado variável — por exemplo, quantos espaços de Estresse estão marcados —
+continua pertencendo ao personagem. O Pack declara somente a regra reutilizável.
+
+### Itens oficiais
+
+Um pack de itens pode declarar, além dos campos comuns, `weaponProfile` e `armorProfile`. Esses metadados registram os dados oficiais de arma e armadura sem depender da interpretação de descrições livres.
+
+- `weaponProfile`: categoria primária ou secundária, atributo de ataque, alcance, dano, tipo de dano e carga em mãos;
+- `armorProfile`: Pontos de Armadura e os dois limiares-base;
+- `combatModifiers`: somente modificadores que o SoulForge aplica automaticamente enquanto o item estiver equipado.
+
+O Core e *Hope & Fear* não recebem um peso universal nem uma capacidade geral de mochila no SoulForge. Por isso, seus itens oficiais usam `weight: 0`: o aplicativo não impõe limite de armas, poções ou itens similares. A carga em mãos das armas continua declarada em `weaponProfile.burden`; limites narrativos e de quantidade ficam a critério da mesa.
+
 Quando um Pack acrescentar Classes, Subclasses, Features ou conteúdo de progressão, ele deve ser compatível com o ruleset ativo. As regras comuns do Core são definidas em [PROGRESSION_IMPLEMENTATION.md](PROGRESSION_IMPLEMENTATION.md); um Pack não deve sobrescrevê-las implicitamente.
 
 ## Ciclo de vida

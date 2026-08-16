@@ -148,6 +148,34 @@ Para evitar fontes de verdade duplicadas:
 - recursos temporários, usos por descanso e texto livre de regras não devem ser executados automaticamente no primeiro recorte;
 - efeitos estruturados seguros podem ser aplicados por Behaviors declarativos, conforme `DOMAIN_BEHAVIORS.md`.
 
+### Modificadores declarativos de ficha
+
+Uma Feature pode declarar `sheetModifiers` quando o efeito for estrutural e
+seguro de calcular. O SoulForge **nunca** deduz um bônus a partir de `summary`
+ou de outro texto livre.
+
+```ts
+sheetModifiers: [
+  { kind: "resource-max", resourceId: "stress", amount: 1 },
+  { kind: "defense", field: "evasion", amount: 1 },
+  { kind: "defense-per-proficiency", field: "minor", amount: 1 }
+]
+```
+
+- `resource-max` aumenta o máximo do recurso indicado e preserva o valor já
+  marcado, limitado ao novo máximo;
+- `defense` aplica um bônus fixo à defesa indicada;
+- `defense-per-proficiency` aplica um bônus que acompanha a Proficiência.
+
+Os valores-base ficam persistidos na ficha (`ResourceTrack.baseMax` e
+`Character.baseDefense`). A sincronização coleta as Features Top e Bottom
+ativas e recalcula apenas os valores derivados. Portanto, ao remover uma
+Feature, seu bônus desaparece sem apagar o estado independente da ficha.
+
+Nesta etapa, a coleta automática cobre as Features de ancestralidade. O mesmo
+contrato foi preparado para ser reutilizado posteriormente por classes, cartas
+e outras fontes ativas.
+
 ## Fluxo de criação de personagem
 
 1. apresentar a escolha entre ancestralidade única e mista;

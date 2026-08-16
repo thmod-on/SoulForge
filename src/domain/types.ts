@@ -5,6 +5,8 @@ export type ResourceTrack = {
   label: string;
   value: number;
   max: number;
+  /** Máximo próprio da ficha, antes dos bônus declarados pelas suas fontes. */
+  baseMax?: number;
   tone: "hope" | "stress" | "hp" | "shadow" | "focus";
 };
 
@@ -77,6 +79,17 @@ export type Defense = {
   minor: number;
   major: number;
 };
+
+/**
+ * Efeito mecânico declarado por uma definição do Compendium.
+ *
+ * A definição descreve o bônus; a ficha preserva apenas seus valores atuais.
+ * Novas fontes (cartas, classes e itens) podem reutilizar os mesmos tipos.
+ */
+export type CharacterSheetModifier =
+  | { kind: "resource-max"; resourceId: string; amount: number }
+  | { kind: "defense"; field: keyof Defense; amount: number }
+  | { kind: "defense-per-proficiency"; field: "minor" | "major"; amount: number };
 
 /** Bônus declarados por um item enquanto ele estiver em Equipados. */
 export type ItemCombatModifiers = Partial<Defense>;
@@ -190,6 +203,25 @@ export type ItemDefinition = BaseDefinition & {
   value?: number;
   traits?: string[];
   combatModifiers?: ItemCombatModifiers;
+  weaponProfile?: WeaponProfile;
+  armorProfile?: ArmorProfile;
+};
+
+/** Dados oficiais de ataque; a interface ainda pode apresentar esses valores como propriedades do item. */
+export type WeaponProfile = {
+  category: "primaria" | "secundaria";
+  attackTrait: Attribute["id"] | "conjuracao";
+  range: "corpo-a-corpo" | "muito-proximo" | "proximo" | "longe" | "muito-longe";
+  damage: string;
+  damageType: "fisico" | "magico" | "fisico-ou-magico";
+  burden: 1 | 2;
+};
+
+/** Valores-base da armadura antes de bônus de classe, nível ou outros equipamentos. */
+export type ArmorProfile = {
+  armor: number;
+  minorThreshold: number;
+  majorThreshold: number;
 };
 
 export type ClassDefinition = BaseDefinition & {
@@ -235,6 +267,7 @@ export type FeatureDefinition = BaseDefinition & {
   tier: "class" | "hope" | "foundation" | "specialization" | "mastery" | "top" | "bottom" | "community";
   hopeCost?: number;
   gameMarkers?: GameMarkerDefinition[];
+  sheetModifiers?: CharacterSheetModifier[];
 };
 
 export type Definition = DomainDefinition | CardDefinition | ItemDefinition | ClassDefinition | SubclassDefinition | AncestryDefinition | CommunityDefinition | FeatureDefinition;
@@ -283,6 +316,8 @@ export type Character = {
   };
   attributes: Attribute[];
   defense: Defense;
+  /** Defesa sem efeitos declarados por ancestralidades, classes ou cartas. */
+  baseDefense?: Defense;
   proficiency: number;
   progression?: CharacterProgression;
   resources: ResourceTrack[];
