@@ -326,7 +326,7 @@ const state: {
   }
 };
 
-const appVersion = "0.20.0";
+const appVersion = "0.20.1";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",

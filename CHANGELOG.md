@@ -4,6 +4,13 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.20.1]
+
+### Corrigido
+
+- aberturas do Compendium agora calculam a altura pela página com mais conteúdo, mantêm as duas folhas alinhadas e usam rolagem interna sem cortar cards longos;
+- cabeçalho compacto do editor mantém a ação de retorno à ficha em posição estável.
+
 ## [0.20.0]
 
 ### Adicionado

@@ -948,6 +948,16 @@ button {
   min-height: 0;
 }
 
+/* O cabeçalho do editor permanece visível; cada página editorial rola sozinha. */
+.editor-shell > .compendium-content {
+  block-size: 100%;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
 .sidebar {
   display: flex;
   flex-direction: column;
@@ -4266,6 +4276,11 @@ body.has-modal {
 .compendium-spread {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: max-content;
+  /* Em um content grid com altura limitada, a abertura precisa contribuir com
+     toda a altura de suas folhas para que a rolagem externa seja acionada. */
+  min-height: max-content;
+  align-items: stretch;
   gap: 0;
   border: 1px solid rgba(137, 94, 43, 0.56);
   border-radius: 10px;
@@ -4283,9 +4298,11 @@ body.has-modal {
 .compendium-page {
   position: relative;
   display: grid;
+  grid-template-rows: minmax(0, 1fr);
   align-content: start;
   gap: 0.85rem;
   min-height: 26rem;
+  height: auto;
   padding: 1.05rem;
   background:
     linear-gradient(180deg, rgba(78, 46, 23, 0.34), rgba(11, 7, 14, 0.42)),
@@ -4337,9 +4354,11 @@ body.has-modal {
 .compendium-index-card {
   position: relative;
   display: grid;
+  align-self: stretch;
   align-content: start;
   gap: 1rem;
-  min-height: 100%;
+  /* A página cresce pelo conteúdo, em vez de comprimir a lista no card. */
+  min-height: auto;
   border: 1px solid rgba(244, 234, 219, 0.16);
   border-radius: 8px;
   background:
@@ -5813,12 +5832,13 @@ body.has-modal {
   }
 
   .editor-header {
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: minmax(10rem, auto) minmax(0, 1fr) auto;
+    gap: 0.7rem;
   }
 
   .editor-context {
-    grid-column: 1 / -1;
-    justify-content: space-between;
+    grid-column: auto;
+    justify-content: flex-end;
   }
 
   .content-with-panel {
@@ -6045,14 +6065,16 @@ body.has-modal {
   }
 
   .editor-header {
-    grid-template-columns: 1fr;
-    align-items: stretch;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
   }
 
-  .editor-nav,
-  .editor-context {
+  .editor-nav {
+    grid-column: 1 / -1;
     justify-content: start;
   }
+
+  .editor-context { grid-column: 2; grid-row: 1; justify-content: flex-end; }
 
   .sidebar {
     position: static;
