@@ -68,6 +68,7 @@ import {
 } from "./features/inventory/bindInventoryDrag";
 import { getEffectiveDefense, synchronizeArmorResource } from "./features/inventory/combatModifiers";
 import { synchronizeCharacterSheetModifiers } from "./features/player/sheetModifiers";
+import { getSubclassStageSkills } from "./features/player/subclassTrack";
 import type { RestKind, RestMoveChoice } from "./features/rest/restRules";
 import { renderRestModal as renderRestModalView } from "./features/rest/renderRest";
 import { handleRestAction, handleRestRollInput } from "./features/rest/restActions";
@@ -123,6 +124,7 @@ import {
   type ClassFeatureDependencies
 } from "./features/compendium/classes";
 import {
+  handleAncestryAction,
   removeCompendiumAncestry as removeCompendiumAncestryAction,
   renderCompendiumAncestriesManager as renderCompendiumAncestriesManagerView,
   renderCompendiumAncestryFormModal as renderCompendiumAncestryFormModalView,
@@ -227,6 +229,8 @@ const state: {
   communityModalOpen: boolean; editingCompendiumCommunityId?: string; deletingCompendiumCommunityId?: string;
   editingCompendiumAncestryId?: string;
   deletingCompendiumAncestryId?: string;
+  compendiumAncestryPreviewId?: string;
+  compendiumCommunityPreviewId?: string;
   characterSelectionOpen: boolean;
   deletingCharacterId?: string;
   characterPortraitModalOpen: boolean;
@@ -326,7 +330,7 @@ const state: {
   }
 };
 
-const appVersion = "0.20.1";
+const appVersion = "0.21.0";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -485,11 +489,9 @@ function getPlayerOverviewDependencies(): PlayerOverviewDependencies {
     escapeHtml,
     renderResources: (character) => renderResourcesView(character, getPlayerShellDependencies()),
     renderEmptyInline,
-    getActiveCards,
-    getInactiveCardCount,
-    getStoredCards,
+    getActiveCards, getInactiveCardCount, getStoredCards,
     getAcquiredSubclassTiers: (character) => getProgression(character).acquiredSubclassTiers,
-    getActiveGameMarkers: (character) => getActiveGameMarkers(character, catalog)
+    getActiveGameMarkers: (character) => getActiveGameMarkers(character, catalog), getSubclassStageSkills: (character, tier) => getSubclassStageSkills(character, catalog, tier), modalCardId: state.modalCardId
   };
 }
 
@@ -1584,7 +1586,7 @@ function render(options: { preserveMainScroll?: boolean } = {}): void {
     const editorContextCharacter = currentCharacter ?? state.characters[0] ?? demoCharacter;
     const editorScreen = state.page === "compendium" ? renderCompendium() : renderSettings(editorContextCharacter);
     appRoot.innerHTML = `<div class="editor-shell">${renderEditorHeaderView(getPlayerShellDependencies())}${editorScreen}</div>${renderPackImportModal()}${renderRemoveInstalledPackModal()}${renderDomainModalView(getDomainFeatureDependencies())}${renderDeleteDomainModalView(getDomainFeatureDependencies())}${renderCompendiumCardFormModalView(getCardFeatureDependencies())}${renderDeleteCompendiumCardModalView(getCardFeatureDependencies())}${renderCompendiumItemFormModalView(getItemFeatureDependencies())}${renderDeleteCompendiumItemModalView(getItemFeatureDependencies())}${renderCompendiumItemPreviewModalView(getItemFeatureDependencies())}${renderCompendiumClassPreviewModalView(getClassFeatureDependencies())}${renderCompendiumClassFormModalView(getClassFeatureDependencies())}${renderDeleteCompendiumClassModalView(getClassFeatureDependencies())}${renderCompendiumAncestryFormModalView(getAncestryFeatureDependencies())}${renderDeleteCompendiumAncestryModalView(getAncestryFeatureDependencies())}`;
-    document.body.classList.toggle("has-modal", state.packImportOpen || Boolean(state.deletingInstalledPackId) || state.domainModalOpen || Boolean(state.deletingDomainId) || state.cardModalOpen || Boolean(state.deletingCompendiumCardId) || state.itemDefinitionModalOpen || Boolean(state.deletingCompendiumItemId) || Boolean(state.compendiumItemPreviewId) || state.classModalOpen || Boolean(state.deletingCompendiumClassId) || Boolean(state.compendiumClassPreviewId) || state.ancestryModalOpen || Boolean(state.deletingCompendiumAncestryId));
+    document.body.classList.toggle("has-modal", state.packImportOpen || Boolean(state.deletingInstalledPackId) || state.domainModalOpen || Boolean(state.deletingDomainId) || state.cardModalOpen || Boolean(state.deletingCompendiumCardId) || state.itemDefinitionModalOpen || Boolean(state.deletingCompendiumItemId) || Boolean(state.compendiumItemPreviewId) || state.classModalOpen || Boolean(state.deletingCompendiumClassId) || Boolean(state.compendiumClassPreviewId) || state.ancestryModalOpen || Boolean(state.deletingCompendiumAncestryId) || Boolean(state.compendiumAncestryPreviewId) || Boolean(state.compendiumCommunityPreviewId));
     return;
   }
 
@@ -2235,6 +2237,7 @@ function bindEvents(): void {
       return;
     }
 
+    if (handleAncestryAction(target, getAncestryFeatureDependencies())) return;
     if (handleCommunityAction(target, { state, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render })) return;
 
     const attributeAllocation = target.closest<HTMLElement>("[data-character-attribute-allocation]");
@@ -2331,6 +2334,8 @@ function bindEvents(): void {
       state.ancestryModalOpen = false;
       state.editingCompendiumAncestryId = undefined;
       state.deletingCompendiumAncestryId = undefined;
+      state.compendiumAncestryPreviewId = undefined;
+      state.compendiumCommunityPreviewId = undefined;
       state.packImportOpen = false;
       state.pendingPackBundle = undefined;
       state.packImportError = undefined;
@@ -2393,6 +2398,8 @@ function bindEvents(): void {
       state.ancestryModalOpen = false;
       state.editingCompendiumAncestryId = undefined;
       state.deletingCompendiumAncestryId = undefined;
+      state.compendiumAncestryPreviewId = undefined;
+      state.compendiumCommunityPreviewId = undefined;
       state.packImportOpen = false;
       state.pendingPackBundle = undefined;
       state.packImportError = undefined;

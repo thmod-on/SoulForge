@@ -93,7 +93,7 @@ function hasValidStartingExperiences(experiences: Array<{ name: string }>): bool
   return names.length === 2 && names.every(Boolean) && new Set(names.map((name) => name.toLocaleLowerCase("pt-BR"))).size === 2;
 }
 
-function getSubclassSkills(subclass: SubclassDefinition, features: FeatureDefinition[]): CharacterSkill[] {
+export function getSubclassSkills(subclass: SubclassDefinition, features: FeatureDefinition[]): CharacterSkill[] {
   return ([
     ["foundation", subclass.foundationFeatureIds], ["specialized", subclass.specializationFeatureIds], ["mastery", subclass.masteryFeatureIds]
   ] as const).flatMap(([tier, ids]) => ids.flatMap((id) => {

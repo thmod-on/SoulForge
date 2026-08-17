@@ -11,6 +11,8 @@ export type PlayerOverviewDependencies = {
   getStoredCards: (character: Character) => CardDefinition[];
   getAcquiredSubclassTiers: (character: Character) => Array<NonNullable<CharacterSkill["tier"]>>;
   getActiveGameMarkers: (character: Character) => ActiveGameMarker[];
+  getSubclassStageSkills: (character: Character, tier: NonNullable<CharacterSkill["tier"]>) => CharacterSkill[];
+  modalCardId?: string;
 };
 
 export function renderOverview(character: Character, dependencies: PlayerOverviewDependencies): string {
@@ -18,7 +20,7 @@ export function renderOverview(character: Character, dependencies: PlayerOvervie
   const inactiveCards = dependencies.getInactiveCardCount(character);
   const gameMarkers = dependencies.getActiveGameMarkers(character);
   const hasSessionReset = gameMarkers.some((marker) => marker.definition.reset === "session");
-  return `<main class="content">${dependencies.renderResources(character)}${renderGameMarkers(gameMarkers, dependencies.escapeHtml)}${renderSubclassTrack(character, dependencies)}${renderMulticlassTrack(character, dependencies)}<section class="band"><div class="section-heading"><h2>Cartas ativas</h2><span>${activeCards.length} / 5 ativas</span></div><div class="card-row">${activeCards.map((card) => renderCardTile(card, dependencies)).join("")}</div><button class="deck-drawer-button" data-action="open-stored-cards">Ver Vault (${inactiveCards})</button></section><section class="quick-actions"><button data-action="open-rest" aria-label="Abrir downtime" title="Downtime"><span aria-hidden="true">🛏</span> Downtime</button>${hasSessionReset ? '<button data-action="reset-game-markers-session"><span>NEW</span> Nova sessao</button>' : ""}<button data-page="skills"><span>XP</span> Registrar experiencia</button></section></main>`;
+  return `<main class="content">${dependencies.renderResources(character)}${renderGameMarkers(gameMarkers, dependencies.escapeHtml)}${renderSubclassTrack(character, dependencies)}${renderMulticlassTrack(character, dependencies)}<section class="band"><div class="section-heading"><h2>Cartas ativas</h2><span>${activeCards.length} / 5 ativas</span></div><div class="card-row">${activeCards.map((card) => renderCardTile(card, dependencies)).join("")}</div><button class="deck-drawer-button" data-action="open-stored-cards">Ver Vault (${inactiveCards})</button></section><section class="quick-actions"><button data-action="open-rest" aria-label="Abrir downtime" title="Downtime"><span aria-hidden="true">🛏</span> Downtime</button>${hasSessionReset ? '<button data-action="reset-game-markers-session"><span>NEW</span> Nova sessao</button>' : ""}<button data-page="skills"><span>XP</span> Registrar experiencia</button></section></main>${renderSubclassFeatureModal(character, dependencies)}`;
 }
 
 export function renderStoredCards(character: Character, dependencies: PlayerOverviewDependencies): string {
@@ -39,13 +41,25 @@ function renderSubclassTrack(character: Character, dependencies: PlayerOverviewD
   ];
   const acquired = dependencies.getAcquiredSubclassTiers(character);
   const cards = stages.map((stage) => {
-    const skill = character.skills.find((entry) => entry.source === "class" && entry.tier === stage.tier);
+    const skills = dependencies.getSubclassStageSkills(character, stage.tier);
     const isActive = acquired.includes(stage.tier);
     const isEligible = !isActive && character.identity.level >= stage.unlockLevel;
     const status = isActive ? "Ativa" : isEligible ? "Disponivel como avanço" : `Bloqueada - ${stage.unlockTier} (nivel ${stage.unlockLevel})`;
-    return `<article class="subclass-track-card ${isActive ? "is-active" : "is-locked"}"><span class="subclass-track-stage">${stage.label}</span><h3>${dependencies.escapeHtml(skill?.name ?? `Carta de ${stage.label}`)}</h3><p>${dependencies.escapeHtml(skill?.description ?? "Caracteristica da subclasse ainda nao definida.")}</p><small>${status}</small></article>`;
+    const names = skills.length ? skills.map((skill) => dependencies.escapeHtml(skill.name)).join(" · ") : `Feature de ${stage.label}`;
+    return `<button class="subclass-track-card ${isActive ? "is-active" : "is-locked"}" type="button" data-card-modal-id="subclass-feature:${stage.tier}" aria-label="Ver detalhes de ${dependencies.escapeHtml(stage.label)}"><span class="subclass-track-stage">${stage.label}</span><h3>${names}</h3><small>${status}</small></button>`;
   });
   return `<section class="band subclass-track-band"><div class="section-heading"><div><h2>${dependencies.escapeHtml(character.identity.subclassName ?? "Subclasse nao definida")}</h2></div></div><div class="subclass-track-grid">${cards.join("")}</div></section>`;
+}
+
+function renderSubclassFeatureModal(character: Character, dependencies: PlayerOverviewDependencies): string {
+  const selectedTier = dependencies.modalCardId?.startsWith("subclass-feature:") ? dependencies.modalCardId.replace("subclass-feature:", "") as CharacterSkill["tier"] : undefined;
+  if (!selectedTier) return "";
+  const stage = ({ foundation: { label: "Fundação", unlockLevel: 1 }, specialized: { label: "Especialização", unlockLevel: 5 }, mastery: { label: "Maestria", unlockLevel: 8 } } as const)[selectedTier];
+  if (!stage) return "";
+  const skills = dependencies.getSubclassStageSkills(character, selectedTier);
+  const acquired = dependencies.getAcquiredSubclassTiers(character);
+  const status = acquired.includes(selectedTier) ? "Ativa na ficha" : character.identity.level >= stage.unlockLevel ? "Disponível como avanço" : `Bloqueada até o nível ${stage.unlockLevel}`;
+  return `<div class="modal-backdrop" data-modal-backdrop><section class="class-detail-modal subclass-feature-modal" role="dialog" aria-modal="true" aria-labelledby="subclass-feature-modal-title"><button class="modal-close" data-modal-close aria-label="Fechar detalhes da feature">x</button><div class="class-detail-art subclass-feature-modal-art" aria-hidden="true">${dependencies.escapeHtml(stage.label)}</div><div class="class-detail-body"><span class="resource-modal-label">${dependencies.escapeHtml(character.identity.subclassName ?? "Subclasse")}</span><h2 id="subclass-feature-modal-title">${dependencies.escapeHtml(stage.label)}</h2><p class="class-detail-summary">${status}</p><section class="class-detail-section"><h3>Features</h3><div class="class-detail-feature-grid">${skills.length ? skills.map((skill) => `<article class="class-detail-feature"><h3>${dependencies.escapeHtml(skill.name)}</h3><p>${dependencies.escapeHtml(skill.description)}</p></article>`).join("") : '<p class="class-detail-summary">Nenhuma feature foi encontrada para esta etapa.</p>'}</div></section></div></section></div>`;
 }
 
 function renderMulticlassTrack(character: Character, dependencies: PlayerOverviewDependencies): string {

@@ -4,6 +4,19 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.21.0]
+
+### Alterado
+
+- páginas de consulta do Compendium adotam uma estrutura visual comum e mais compacta para domínios, cartas, itens, classes, ancestralidades e comunidades;
+- Visão Geral apresenta as features de subclasse como cartões compactos, com detalhes completos acessíveis por toque;
+- navegação superior da ficha passa a usar abas mais discretas, com destaque visual na seção ativa.
+
+### Corrigido
+
+- detalhes de features de subclasse agora usam a definição atual do Pack instalado após uma reimportação;
+- ancestralidades e comunidades do Compendium passam a abrir seus detalhes ao selecionar o cartão.
+
 ## [0.20.1]
 
 ### Corrigido
