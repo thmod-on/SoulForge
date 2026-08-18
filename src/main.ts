@@ -38,6 +38,7 @@ import {
   type ProgressionWorkspaceDependencies
 } from "./features/progression/renderProgressionWorkspace";
 import { advanceProgressionFlow, goBackInProgressionFlow } from "./features/progression/progressionFlow";
+import { handleProgressionCardPickerAction } from "./features/progression/cardPickerActions";
 import {
   renderDeleteNoteModal as renderDeleteNoteModalView,
   renderNoteModal as renderNoteModalView,
@@ -193,7 +194,7 @@ const state: {
   progressionCardPickerMode?: "mandatory" | "advance";
   progressionCardTierFilter: "todos" | number;
   progressionCardPickerTier?: ProgressionTierNumber;
-  progressionCardId?: string;
+  progressionCardId?: string; progressionCardPickerSelectionId?: string;
   progressionTierExperienceOpen: boolean;
   progressionTierExperience?: { name: string; description: string };
   progressionTierExperienceError?: string;
@@ -250,7 +251,7 @@ const state: {
   characterCreationAncestryIds: string[];
   characterCreationAncestrySearch: string;
   characterCreationCardIds: string[];
-  characterCreationCardDomainId?: string;
+  characterCreationCardDomainId?: string; characterCreationFocusedCardId?: string;
   characterCreationExperiences: Array<{ name: string; description: string }>;
   characterCreationAttributeValues: Record<Attribute["id"], number>;
   characterCreationSelectedAttributeValue?: number;
@@ -330,7 +331,7 @@ const state: {
   }
 };
 
-const appVersion = "0.21.0";
+const appVersion = "0.21.1";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -475,7 +476,6 @@ function getPlayerShellDependencies(): PlayerShellDependencies {
     escapeHtml,
     attributeTitle,
     progressPercent,
-    getCommunityName: (character) => catalog.communities.find((community) => community.id === character.identity.primaryCommunityId)?.name,
     getSpellcastAttributeId: (character) => getSpellcastAttributeId(character.identity.primarySubclassId, catalog.subclasses.find((subclass) => subclass.id === character.identity.primarySubclassId)),
     getEffectiveDefense: (character) => getEffectiveDefense(character, (definitionId) => {
       const definition = findDefinition(catalog, definitionId);
@@ -584,6 +584,7 @@ function renderSkills(character: Character): string {
           <p>Experiencias e habilidades de origem que definem o personagem fora do Loadout.</p>
         </div>
       </div>
+      <section class="traits-character-identity" aria-label="Classe e subclasse"><div><span>Classe</span><strong>${escapeHtml(character.identity.className)}</strong></div><div><span>Subclasse</span><strong>${escapeHtml(character.identity.subclassName ?? "Não definida")}</strong></div></section>
       <section class="traits-experience-section">
         <div class="section-heading">
           <h2>Experiencias</h2>
@@ -1101,7 +1102,7 @@ function renderCompendium(): string {
   if (state.compendiumView === "communities") return renderCompendiumCommunitiesManagerView({ state, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render });
 
   return `
-    <main class="content compendium-content">
+    <main class="content compendium-content compendium-index-content">
       <div class="screen-title">
         <div>
           <h1>Compendium</h1>
@@ -1212,7 +1213,7 @@ function renderCompendiumThirdSpread(): string {
       <section class="compendium-spread compendium-index-spread" aria-label="Ancestralidades e comunidades do Compendium">
         <article class="compendium-page">
           ${renderCompendiumChapterCard({
-            eyebrow: "Heranca",
+            eyebrow: "",
             title: "Ancestralidades",
             summary: "Linhagens que concedem duas features permanentes: uma Top Feature e uma Bottom Feature.",
             count: catalog.ancestries.length,
@@ -1231,7 +1232,7 @@ function renderCompendiumThirdSpread(): string {
         </article>
         <article class="compendium-page">
           ${renderCompendiumChapterCard({
-            eyebrow: "Herança",
+            eyebrow: "",
             title: "Comunidades",
             summary: "Origens culturais, sociais ou ambientais que concedem uma Feature permanente.",
             count: catalog.communities.length,
@@ -1441,7 +1442,7 @@ function renderCharacterCreationModal(): string {
         ${renderCreationCommunityStep({ communities: catalog.communities, features: catalog.features, selectedId: state.characterCreationCommunityId, search: state.characterCreationCommunitySearch, packId: state.characterCreationCommunityPackId, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs) }, escapeHtml)}
         ${renderCreationClassStep({ classes, selectedClass, subclasses, selectedSubclassId: selectedSubclass?.id, features: catalog.features }, escapeHtml)}
         ${renderCreationAttributesStep(state.characterCreationAttributeValues, state.characterCreationSelectedAttributeValue, spellcastAttributeId)}
-        <section class="character-domain-card-picker creation-step-panel" data-creation-panel="7"><div><span>Loadout inicial</span><h3>Escolha 2 cartas de Domínio</h3><p>Cartas de nível 1 dos domínios liberados pela sua classe. Você pode escolher as duas do mesmo domínio.</p></div><div class="character-domain-card-toolbar"><span>${state.characterCreationCardIds.length} / 2 selecionadas</span><div>${selectedClass.domainIds.map((domainId) => { const domain = findDomain(catalog, domainId); return `<button type="button" class="chip ${selectedCardDomainId === domainId ? "is-active" : ""}" data-character-card-domain-id="${escapeHtml(domainId)}">${escapeHtml(domain?.name ?? "Domínio")}</button>`; }).join("")}</div></div>${eligibleStartingCards.length ? `<div class="character-domain-card-grid">${visibleStartingCards.map((card) => `<button type="button" class="character-domain-card ${state.characterCreationCardIds.includes(card.id) ? "is-selected" : ""}" data-character-starting-card-id="${escapeHtml(card.id)}"><span class="character-domain-card-art">${card.image ? `<img src="${escapeHtml(card.image)}" alt="" />` : ""}</span><strong>${escapeHtml(card.name)}</strong><small>${escapeHtml(findDomain(catalog, card.domainId)?.name ?? "Domínio")} · Nível ${card.tier}</small><p>${escapeHtml(card.summary)}</p></button>`).join("")}</div>` : `<p class="form-error">Não há cartas de nível 1 para os domínios desta classe. Importe o Pack correspondente antes de criar a ficha.</p>`}</section>
+        <section class="character-domain-card-picker creation-step-panel" data-creation-panel="7"><div><span>Loadout inicial</span><h3>Escolha 2 cartas de Domínio</h3><p>Toque em uma carta para selecioná-la e ler o efeito completo. Você pode escolher as duas do mesmo domínio.</p></div><div class="character-domain-card-toolbar"><span>${state.characterCreationCardIds.length} / 2 selecionadas</span><div>${selectedClass.domainIds.map((domainId) => { const domain = findDomain(catalog, domainId); return `<button type="button" class="chip ${selectedCardDomainId === domainId ? "is-active" : ""}" data-character-card-domain-id="${escapeHtml(domainId)}">${escapeHtml(domain?.name ?? "Domínio")}</button>`; }).join("")}</div></div>${eligibleStartingCards.length ? `<div class="character-domain-card-grid">${visibleStartingCards.map((card) => { const selected = state.characterCreationCardIds.includes(card.id); const focused = selected && state.characterCreationFocusedCardId === card.id; return `<button type="button" class="character-domain-card ${selected ? "is-selected" : ""} ${focused ? "is-focused" : ""}" data-character-starting-card-id="${escapeHtml(card.id)}" aria-pressed="${selected}"><span class="character-domain-card-art">${card.image ? `<img src="${escapeHtml(card.image)}" alt="" />` : ""}</span><strong>${escapeHtml(card.name)}</strong><small>${escapeHtml(findDomain(catalog, card.domainId)?.name ?? "Domínio")} · Nível ${card.tier}</small>${selected ? '<b class="character-domain-card-selected">Selecionada</b>' : ""}<p>${escapeHtml(card.summary)}</p>${focused ? `<span class="character-domain-card-detail">${escapeHtml(card.effect)}</span>` : ""}</button>`; }).join("")}</div>` : `<p class="form-error">Não há cartas de nível 1 para os domínios desta classe. Importe o Pack correspondente antes de criar a ficha.</p>`}</section>
         ${renderCreationExperiencesStep(state.characterCreationExperiences, escapeHtml)}
         ${renderCreationReviewStep({ name: state.characterCreationName, community: catalog.communities.find((entry) => entry.id === state.characterCreationCommunityId)?.name ?? state.characterCreationCommunity, ancestries: selectedAncestries.map((ancestry) => ancestry.name).join(" + "), topFeature: selectedTopFeature?.name, bottomFeature: selectedBottomFeature?.name, attributes: characterCreationAttributes.map((attribute) => ({ label: attribute.label, value: state.characterCreationAttributeValues[attribute.id] })), className: selectedClass.name, subclassName: selectedSubclass?.name, hitPoints: selectedClass.startingHitPoints, evasion: selectedClass.startingEvasion, cards: state.characterCreationCardIds.map((id) => catalog.cards.find((card) => card.id === id)?.name ?? "").filter(Boolean).join(" · "), experiences: state.characterCreationExperiences.map((experience) => experience.name).filter(Boolean).join(" · ") }, escapeHtml)}
         ${state.characterCreationError ? `<p class="form-error">${escapeHtml(state.characterCreationError)}</p>` : ""}
@@ -2570,7 +2571,7 @@ function bindEvents(): void {
       state.characterCreationCommunitySearch = ""; state.characterCreationCommunityPackId = "todos";
       state.characterCreationAncestryIds = getCharacterCreationAncestries().slice(0, 1).map((ancestry) => ancestry.id);
       state.characterCreationAncestrySearch = "";
-      state.characterCreationCardIds = [];
+      state.characterCreationCardIds = []; state.characterCreationFocusedCardId = undefined;
       state.characterCreationExperiences = [{ name: "", description: "" }, { name: "", description: "" }];
       state.characterCreationAttributeValues = createEmptyCreationAttributeValues();
       state.characterCreationSelectedAttributeValue = undefined;
@@ -2588,7 +2589,7 @@ function bindEvents(): void {
       state.characterCreationStep = 1;
       state.characterCreationAncestryIds = [];
       state.characterCreationAncestrySearch = "";
-      state.characterCreationCardIds = [];
+      state.characterCreationCardIds = []; state.characterCreationFocusedCardId = undefined;
       state.characterCreationAttributeValues = createEmptyCreationAttributeValues();
       state.characterCreationSelectedAttributeValue = undefined;
       state.characterCreationPortraitImage = undefined;
@@ -2635,6 +2636,7 @@ function bindEvents(): void {
       state.characterCreationCardIds = state.characterCreationCardIds.includes(cardId)
         ? state.characterCreationCardIds.filter((id) => id !== cardId)
         : state.characterCreationCardIds.length < 2 ? [...state.characterCreationCardIds, cardId] : state.characterCreationCardIds;
+      state.characterCreationFocusedCardId = state.characterCreationCardIds.includes(cardId) ? cardId : state.characterCreationCardIds[0];
       state.characterCreationError = undefined;
       render();
       return;
@@ -3011,6 +3013,7 @@ function bindEvents(): void {
         state.progressionCardPickerMode = "advance";
         state.progressionCardPickerTier = Number(progressionAdvanceButton.dataset.progressionTier) as ProgressionTierNumber;
         state.progressionCardTierFilter = "todos";
+        state.progressionCardPickerSelectionId = undefined;
       } else if (kind === "subclass") {
         const character = state.character;
         if (character) {
@@ -3113,6 +3116,7 @@ function bindEvents(): void {
       state.progressionCardPickerMode = "mandatory";
       state.progressionCardPickerTier = undefined;
       state.progressionCardTierFilter = "todos";
+      state.progressionCardPickerSelectionId = state.progressionCardId;
       render({ preserveMainScroll: true });
       return;
     }
@@ -3147,18 +3151,7 @@ function bindEvents(): void {
       return;
     }
 
-    const progressionCardChoice = target.closest<HTMLElement>('[data-action="select-progression-card"]');
-    if (progressionCardChoice) {
-      const cardId = progressionCardChoice.dataset.progressionCardId;
-      if (state.progressionCardPickerMode === "advance" && cardId) {
-        addProgressionChoice({ kind: "domain", tier: state.progressionCardPickerTier ?? 2, cardId, label: `Carta adicional: ${(findDefinition(catalog, cardId) as CardDefinition | undefined)?.name ?? "Carta"}` });
-      } else {
-        state.progressionCardId = cardId;
-        state.progressionError = undefined;
-      }
-      state.progressionCardPickerMode = undefined;
-      state.progressionCardPickerTier = undefined;
-      state.progressionCardTierFilter = "todos";
+    if (handleProgressionCardPickerAction(target, { state, addChoice: addProgressionChoice, findCard: (id) => findDefinition(catalog, id) as CardDefinition | undefined })) {
       render({ preserveMainScroll: true });
       return;
     }
@@ -3630,7 +3623,7 @@ function bindEvents(): void {
     if (target instanceof HTMLSelectElement && target.matches("[data-character-class]")) {
       state.characterCreationClassId = target.value;
       state.characterCreationSubclassId = getCharacterCreationSubclasses(target.value)[0]?.id;
-      state.characterCreationCardIds = [];
+      state.characterCreationCardIds = []; state.characterCreationFocusedCardId = undefined;
       state.characterCreationCardDomainId = undefined;
       state.characterCreationError = undefined;
       render();

@@ -251,6 +251,8 @@ button {
   box-shadow: 0 28px 90px rgba(0, 0, 0, 0.56);
   overflow: hidden;
   padding: 0;
+  isolation: isolate;
+  touch-action: manipulation;
 }
 
 .character-creation-scroll {
@@ -336,6 +338,10 @@ button {
   border-top: 1px solid rgba(244, 234, 219, 0.12);
   background: #0d0715;
   padding: 0.9rem 1.35rem 1.1rem;
+  flex: 0 0 auto;
+  pointer-events: auto;
+  touch-action: manipulation;
+  transform: translateZ(0);
 }
 
 .character-creation-arrow {
@@ -348,6 +354,7 @@ button {
   background: rgba(217, 154, 61, 0.07);
   font-size: 1.3rem;
   line-height: 1;
+  touch-action: manipulation;
 }
 
 .character-creation-arrow:hover:not(:disabled) {
@@ -833,6 +840,7 @@ button {
 }
 
 .character-domain-card {
+  position: relative;
   display: grid;
   grid-template-columns: 4.4rem minmax(0, 1fr);
   grid-template-rows: auto auto 1fr;
@@ -873,6 +881,48 @@ button {
   margin: 0.15rem 0 0;
   font-size: 0.75rem;
   line-height: 1.35;
+}
+
+.character-domain-card:not(.is-focused) p,
+.progression-card-choice-list button:not(.is-focused) em {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.character-domain-card-detail {
+  display: none;
+}
+
+.character-domain-card-selected,
+.progression-card-choice-list button > span:last-child > b {
+  color: var(--color-gold);
+  font-size: 0.66rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.character-domain-card.is-focused {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(7rem, 0.32fr) minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  min-height: 13rem;
+}
+
+.character-domain-card.is-focused .character-domain-card-art {
+  grid-row: 1 / 5;
+  min-height: 12rem;
+}
+
+.character-domain-card.is-focused .character-domain-card-detail {
+  display: block;
+  max-height: 9rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
 }
 
 .class-detail-body > .resource-modal-label {
@@ -1518,6 +1568,8 @@ button {
 }
 
 .editor-nav-button {
+  position: relative;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
@@ -1526,17 +1578,50 @@ button {
   color: var(--color-text);
   background: transparent;
   padding: 0.45rem 0.75rem;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.editor-nav-button::before {
+  content: "";
+  position: absolute;
+  inset: 0.62rem 0.35rem;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 24% 54%, rgba(255, 244, 225, 0.42), transparent 30%),
+    radial-gradient(ellipse at 66% 42%, rgba(194, 40, 58, 0.52), transparent 38%),
+    linear-gradient(90deg, rgba(50, 10, 16, 0.32), rgba(126, 28, 42, 0.34), rgba(42, 8, 14, 0.32));
+  filter: blur(0.42rem);
+  opacity: 0;
+  transform: scale(0.88, 0.72);
+  transition: opacity 160ms ease;
 }
 
 .editor-nav-button span {
   color: var(--color-gold);
 }
 
-.editor-nav-button:hover,
+.editor-nav-button:hover {
+  border-color: transparent;
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.025);
+}
+
 .editor-nav-button.is-active {
-  border-color: var(--color-gold);
+  border-color: transparent;
   color: var(--color-gold);
-  background: rgba(217, 154, 61, 0.13);
+  background: transparent;
+  font-weight: 700;
+}
+
+.editor-nav-button.is-active::before {
+  opacity: 1;
+}
+
+.editor-nav-button:focus-visible {
+  outline: 1px solid var(--color-gold);
+  outline-offset: -0.2rem;
 }
 
 .editor-context {
@@ -2288,6 +2373,35 @@ button {
   display: grid;
   gap: 0.75rem;
   margin-bottom: 1rem;
+}
+
+.traits-character-identity {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  border: 1px solid rgba(217, 154, 61, 0.24);
+  background: linear-gradient(90deg, rgba(217, 154, 61, 0.08), rgba(142, 79, 196, 0.06));
+  padding: 0.7rem 0.85rem;
+}
+
+.traits-character-identity > div {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.traits-character-identity span {
+  color: var(--color-muted);
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.traits-character-identity strong {
+  overflow: hidden;
+  color: var(--color-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .traits-experience-section .section-heading {
@@ -3633,6 +3747,16 @@ button {
   background: rgba(217, 154, 61, 0.1);
 }
 
+.progression-card-choice-list button.is-focused {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(7rem, 0.3fr) minmax(0, 1fr);
+  min-height: 13rem;
+}
+
+.progression-card-choice-list button.is-focused .progression-card-choice-art {
+  min-height: 12rem;
+}
+
 .progression-card-choice-art {
   display: grid;
   place-items: center;
@@ -3663,6 +3787,21 @@ button {
   font-size: 0.75rem;
   font-style: normal;
   line-height: 1.35;
+}
+
+.progression-card-choice-details {
+  display: block;
+  max-height: 9rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.progression-card-picker-confirm {
+  width: 100%;
+  margin-top: 0.75rem;
 }
 
 .progression-picker-list button {
@@ -4365,6 +4504,20 @@ body.has-modal {
   overflow: hidden;
 }
 
+/* Aberturas ocupam a altura livre do editor; as duas folhas permanecem alinhadas
+   e passam a rolar individualmente quando o conteúdo ultrapassa esse espaço. */
+.editor-shell > .compendium-index-content {
+  grid-template-rows: auto auto minmax(0, 1fr);
+  align-content: stretch;
+  overflow: hidden;
+}
+
+.compendium-index-content > .compendium-spread {
+  min-height: 0;
+  height: 100%;
+  grid-template-rows: minmax(0, 1fr);
+}
+
 .compendium-page {
   position: relative;
   display: grid;
@@ -4378,6 +4531,20 @@ body.has-modal {
     linear-gradient(180deg, rgba(78, 46, 23, 0.34), rgba(11, 7, 14, 0.42)),
     rgba(255, 255, 255, 0.012);
   isolation: isolate;
+}
+
+.compendium-index-content .compendium-page {
+  min-height: 0;
+  height: auto;
+  overflow: hidden;
+}
+
+.compendium-index-content .compendium-index-card {
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .compendium-page::before {

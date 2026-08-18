@@ -8,9 +8,12 @@ export type ProgressionDialogState = {
   progressionPickerTier?: ProgressionTierNumber;
   progressionPickerIds: string[];
   progressionDraft: ProgressionDraftChoice[];
+  progressionError?: string;
   progressionCardPickerMode?: "mandatory" | "advance";
   progressionCardTierFilter: "todos" | number;
+  progressionCardPickerTier?: ProgressionTierNumber;
   progressionCardId?: string;
+  progressionCardPickerSelectionId?: string;
   progressionTierExperienceOpen: boolean;
   progressionTierExperience?: { name: string; description: string };
   progressionTierExperienceError?: string;
@@ -64,7 +67,8 @@ export function renderProgressionCardPickerModal(dependencies: ProgressionDialog
   const tiers = [...new Set(allCards.map((card) => card.tier))].sort((a, b) => a - b);
   const cards = state.progressionCardTierFilter !== "todos" ? allCards.filter((card) => card.tier === state.progressionCardTierFilter) : allCards;
   const levelTabs = `<div class="progression-card-tier-tabs" role="tablist" aria-label="Filtrar cartas por nível"><button class="${state.progressionCardTierFilter === "todos" ? "is-active" : ""}" type="button" data-action="filter-progression-card-tier" data-progression-card-tier="todos">Todos</button>${tiers.map((tier) => `<button class="${state.progressionCardTierFilter === tier ? "is-active" : ""}" type="button" data-action="filter-progression-card-tier" data-progression-card-tier="${tier}">Nível ${tier}</button>`).join("")}</div>`;
-  return `<div class="modal-backdrop" data-modal-backdrop><section class="progression-picker-modal progression-card-picker-modal" role="dialog" aria-modal="true" aria-labelledby="progression-card-picker-title"><button class="modal-close" data-modal-close aria-label="Fechar escolha de carta">x</button><span class="resource-modal-label">${mandatory ? "Carta obrigatória" : "Avanço opcional"}</span><h2 id="progression-card-picker-title">Escolha uma carta de Domínio</h2><p>Somente cartas dos Domínios da classe e de nível permitido aparecem aqui. A carta aprendida será enviada ao Vault.</p>${levelTabs}<div class="progression-card-choice-list">${cards.map((card) => `<button class="${state.progressionCardId === card.id ? "is-selected" : ""}" type="button" data-action="select-progression-card" data-progression-card-id="${card.id}"><span class="progression-card-choice-art">${card.image ? `<img src="${escapeHtml(card.image)}" alt="" />` : ""}</span><span><strong>${escapeHtml(card.name)}</strong><small>${escapeHtml(findDomainName(card.domainId) ?? "Domínio")} · Nível ${card.tier}</small><em>${escapeHtml(card.summary)}</em></span></button>`).join("") || "<p>Nenhuma carta elegível neste nível.</p>"}</div></section></div>`;
+  const selectedCardId = state.progressionCardPickerSelectionId;
+  return `<div class="modal-backdrop" data-modal-backdrop><section class="progression-picker-modal progression-card-picker-modal" role="dialog" aria-modal="true" aria-labelledby="progression-card-picker-title"><button class="modal-close" data-modal-close aria-label="Fechar escolha de carta">x</button><span class="resource-modal-label">${mandatory ? "Carta obrigatória" : "Avanço opcional"}</span><h2 id="progression-card-picker-title">Escolha uma carta de Domínio</h2><p>Toque em uma carta para selecioná-la e ler o efeito completo. A carta aprendida será enviada ao Vault.</p>${levelTabs}<div class="progression-card-choice-list">${cards.map((card) => { const focused = selectedCardId === card.id; return `<button class="${focused ? "is-selected is-focused" : ""}" type="button" data-action="select-progression-card" data-progression-card-id="${card.id}" aria-pressed="${focused}"><span class="progression-card-choice-art">${card.image ? `<img src="${escapeHtml(card.image)}" alt="" />` : ""}</span><span><strong>${escapeHtml(card.name)}</strong><small>${escapeHtml(findDomainName(card.domainId) ?? "Domínio")} · Nível ${card.tier}</small><em>${escapeHtml(card.summary)}</em>${focused ? `<span class="progression-card-choice-details">${escapeHtml(card.effect)}</span><b>Selecionada</b>` : ""}</span></button>`; }).join("") || "<p>Nenhuma carta elegível neste nível.</p>"}</div><button class="primary-action progression-card-picker-confirm" type="button" data-action="confirm-progression-card-picker" ${selectedCardId ? "" : "disabled"}>Confirmar carta</button></section></div>`;
 }
 
 export function renderTierExperienceModal(dependencies: ProgressionDialogDependencies): string {

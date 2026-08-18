@@ -4,6 +4,19 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.21.1]
+
+### Alterado
+
+- seleção de cartas na criação e na progressão mantém cartões compactos e expande apenas a carta em foco para leitura completa;
+- Traços passa a concentrar a identificação de classe e subclasse, enquanto a sidebar preserva nome e origem narrativa;
+- navegação do editor recebe o mesmo destaque discreto usado na ficha do personagem.
+
+### Corrigido
+
+- cartões da abertura do Compendium mantêm textos extensos em sua área, com rolagem interna quando necessária;
+- controles de avanço da criação recebem ajustes defensivos para interação por toque em iPad.
+
 ## [0.21.0]
 
 ### Alterado
