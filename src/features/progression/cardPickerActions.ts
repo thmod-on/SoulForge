@@ -9,6 +9,12 @@ type Dependencies = {
 };
 
 export function handleProgressionCardPickerAction(target: HTMLElement, dependencies: Dependencies): boolean {
+  const domainFilter = target.closest<HTMLElement>('[data-action="filter-progression-card-domain"]');
+  if (domainFilter) {
+    dependencies.state.progressionCardDomainFilter = domainFilter.dataset.progressionCardDomain;
+    dependencies.state.progressionCardPickerSelectionId = undefined;
+    return true;
+  }
   const selection = target.closest<HTMLElement>('[data-action="select-progression-card"]');
   if (selection) {
     dependencies.state.progressionCardPickerSelectionId = selection.dataset.progressionCardId;
@@ -28,5 +34,6 @@ export function handleProgressionCardPickerAction(target: HTMLElement, dependenc
   state.progressionCardPickerTier = undefined;
   state.progressionCardPickerSelectionId = undefined;
   state.progressionCardTierFilter = "todos";
+  state.progressionCardDomainFilter = undefined;
   return true;
 }

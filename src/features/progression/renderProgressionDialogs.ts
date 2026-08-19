@@ -11,6 +11,7 @@ export type ProgressionDialogState = {
   progressionError?: string;
   progressionCardPickerMode?: "mandatory" | "advance";
   progressionCardTierFilter: "todos" | number;
+  progressionCardDomainFilter?: string;
   progressionCardPickerTier?: ProgressionTierNumber;
   progressionCardId?: string;
   progressionCardPickerSelectionId?: string;
@@ -29,6 +30,7 @@ export type ProgressionDialogDependencies = {
   getTierForLevel: (level: number) => ProgressionTierNumber;
   getProgression: (character: Character) => Character["progression"] & { attributeMarks: Record<string, string[]> };
   getProgressionCardCandidates: (character: Character) => CardDefinition[];
+  getPrimaryDomainIds: (character: Character) => string[];
   requiresTierExperience: (character: Character) => boolean;
   findCard: (cardId: string) => CardDefinition | undefined;
   findDomainName: (domainId: string) => string | undefined;
@@ -59,16 +61,19 @@ export function renderProgressionPickerModal(dependencies: ProgressionDialogDepe
 }
 
 export function renderProgressionCardPickerModal(dependencies: ProgressionDialogDependencies): string {
-  const { state, escapeHtml, getProgressionCardCandidates, findDomainName } = dependencies;
+  const { state, escapeHtml, getProgressionCardCandidates, getPrimaryDomainIds, findDomainName } = dependencies;
   const character = state.character;
   if (!character || !state.progressionCardPickerMode) return "";
   const allCards = getProgressionCardCandidates(character);
   const mandatory = state.progressionCardPickerMode === "mandatory";
+  const domains = [...new Set([...getPrimaryDomainIds(character), ...allCards.map((card) => card.domainId)])];
+  const activeDomainId = domains.includes(state.progressionCardDomainFilter ?? "") ? state.progressionCardDomainFilter : allCards[0]?.domainId ?? domains[0];
   const tiers = [...new Set(allCards.map((card) => card.tier))].sort((a, b) => a - b);
-  const cards = state.progressionCardTierFilter !== "todos" ? allCards.filter((card) => card.tier === state.progressionCardTierFilter) : allCards;
-  const levelTabs = `<div class="progression-card-tier-tabs" role="tablist" aria-label="Filtrar cartas por nível"><button class="${state.progressionCardTierFilter === "todos" ? "is-active" : ""}" type="button" data-action="filter-progression-card-tier" data-progression-card-tier="todos">Todos</button>${tiers.map((tier) => `<button class="${state.progressionCardTierFilter === tier ? "is-active" : ""}" type="button" data-action="filter-progression-card-tier" data-progression-card-tier="${tier}">Nível ${tier}</button>`).join("")}</div>`;
+  const cards = allCards.filter((card) => card.domainId === activeDomainId && (state.progressionCardTierFilter === "todos" || card.tier === state.progressionCardTierFilter));
+  const domainTabs = `<div class="progression-card-filter-group" role="tablist" aria-label="Filtrar cartas por domínio"><span>Domínio</span>${domains.map((domainId) => `<button class="${activeDomainId === domainId ? "is-active" : ""}" type="button" data-action="filter-progression-card-domain" data-progression-card-domain="${escapeHtml(domainId)}" aria-pressed="${activeDomainId === domainId}">${escapeHtml(findDomainName(domainId) ?? "Domínio")}</button>`).join("")}</div>`;
+  const levelTabs = `<div class="progression-card-filter-group" role="tablist" aria-label="Filtrar cartas por nível"><span>Nível</span><button class="${state.progressionCardTierFilter === "todos" ? "is-active" : ""}" type="button" data-action="filter-progression-card-tier" data-progression-card-tier="todos" aria-pressed="${state.progressionCardTierFilter === "todos"}">Todos</button>${tiers.map((tier) => `<button class="${state.progressionCardTierFilter === tier ? "is-active" : ""}" type="button" data-action="filter-progression-card-tier" data-progression-card-tier="${tier}" aria-pressed="${state.progressionCardTierFilter === tier}">${tier}</button>`).join("")}</div>`;
   const selectedCardId = state.progressionCardPickerSelectionId;
-  return `<div class="modal-backdrop" data-modal-backdrop><section class="progression-picker-modal progression-card-picker-modal" role="dialog" aria-modal="true" aria-labelledby="progression-card-picker-title"><button class="modal-close" data-modal-close aria-label="Fechar escolha de carta">x</button><span class="resource-modal-label">${mandatory ? "Carta obrigatória" : "Avanço opcional"}</span><h2 id="progression-card-picker-title">Escolha uma carta de Domínio</h2><p>Toque em uma carta para selecioná-la e ler o efeito completo. A carta aprendida será enviada ao Vault.</p>${levelTabs}<div class="progression-card-choice-list">${cards.map((card) => { const focused = selectedCardId === card.id; return `<button class="${focused ? "is-selected is-focused" : ""}" type="button" data-action="select-progression-card" data-progression-card-id="${card.id}" aria-pressed="${focused}"><span class="progression-card-choice-art">${card.image ? `<img src="${escapeHtml(card.image)}" alt="" />` : ""}</span><span><strong>${escapeHtml(card.name)}</strong><small>${escapeHtml(findDomainName(card.domainId) ?? "Domínio")} · Nível ${card.tier}</small><em>${escapeHtml(card.summary)}</em>${focused ? `<span class="progression-card-choice-details">${escapeHtml(card.effect)}</span><b>Selecionada</b>` : ""}</span></button>`; }).join("") || "<p>Nenhuma carta elegível neste nível.</p>"}</div><button class="primary-action progression-card-picker-confirm" type="button" data-action="confirm-progression-card-picker" ${selectedCardId ? "" : "disabled"}>Confirmar carta</button></section></div>`;
+  return `<div class="modal-backdrop" data-modal-backdrop><section class="progression-picker-modal progression-card-picker-modal" role="dialog" aria-modal="true" aria-labelledby="progression-card-picker-title"><button class="modal-close" data-modal-close aria-label="Fechar escolha de carta">x</button><span class="resource-modal-label">${mandatory ? "Carta obrigatória" : "Avanço opcional"}</span><h2 id="progression-card-picker-title">Escolha uma carta de Domínio</h2><p class="progression-card-picker-intro">Escolha um domínio e uma carta. Ela será aprendida no Vault.</p><div class="progression-card-filter-row">${domainTabs}${levelTabs}</div><div class="progression-card-choice-list">${cards.map((card) => { const focused = selectedCardId === card.id; return `<button class="${focused ? "is-selected is-focused" : ""}" type="button" data-action="select-progression-card" data-progression-card-id="${card.id}" aria-pressed="${focused}"><span class="progression-card-choice-art">${card.image ? `<img src="${escapeHtml(card.image)}" alt="" />` : ""}</span><span><strong>${escapeHtml(card.name)}</strong><small>${escapeHtml(findDomainName(card.domainId) ?? "Domínio")} · Nível ${card.tier}</small><em>${escapeHtml(card.summary)}</em>${focused ? `<span class="progression-card-choice-details">${escapeHtml(card.effect)}</span><b>Selecionada</b>` : ""}</span></button>`; }).join("") || "<p>Nenhuma carta elegível neste domínio e nível.</p>"}</div><button class="primary-action progression-card-picker-confirm" type="button" data-action="confirm-progression-card-picker" ${selectedCardId ? "" : "disabled"}>Confirmar carta</button></section></div>`;
 }
 
 export function renderTierExperienceModal(dependencies: ProgressionDialogDependencies): string {

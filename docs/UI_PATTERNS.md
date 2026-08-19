@@ -44,6 +44,32 @@ Consulte também [UX_GUIDELINES.md](UX_GUIDELINES.md).
 - componentes densos podem reduzir espaçamento e tipografia nos breakpoints de tablet, sem sacrificar legibilidade;
 - rótulos e estados não devem depender apenas de cor.
 
+## Primitives de interface
+
+Controles repetidos devem usar as primitives abaixo. Elas representam a intenção da ação, não a área da tela onde aparecem, para que uma alteração visual seja refletida de forma consistente em todo o SoulForge.
+
+### Busca
+
+- use `sf-search-field` em todo campo de pesquisa;
+- a classe define ícone, espaçamento, borda, fundo e comportamento responsivo;
+- filtros complementares, como Pack, ficam em controles separados e não reduzem a largura do campo de busca principal.
+
+### Ações
+
+- `sf-action sf-action--primary`: confirmar, criar, salvar, aplicar ou avançar um fluxo;
+- `sf-action sf-action--secondary`: cancelar, voltar, alterar ou executar uma ação neutra;
+- `sf-action sf-action--danger`: excluir, descartar ou remover dados;
+- `sf-action--icon`: versão de ícone para ações com rótulo acessível (`aria-label` e `title`);
+- `sf-action--compact`: reservada a ações densas de barras, cabeçalhos e listas, quando necessária.
+
+As classes históricas `primary-action`, `secondary-action`, `danger-action` e `search-box` permanecem como aliases temporários para conteúdos existentes. Toda interface nova ou revisada deve usar as classes `sf-*`; a migração das telas antigas ocorre por área funcional, sem alterar seu comportamento.
+
+### Escolhas com detalhe
+
+- quando uma opção precisa revelar texto complementar, a opção selecionada deve expandir no próprio card;
+- use o estado `is-selected is-focused` para que apenas uma opção revele o detalhe por vez;
+- não crie um painel separado abaixo da lista quando a informação explica diretamente a escolha feita; isso evita deslocamentos e rolagem de ida e volta em tablet.
+
 ## Compendium
 
 O Compendium usa uma metáfora leve de livro de consulta. Em paisagem, apresenta duas páginas por abertura; em larguras menores, organiza essas páginas em sequência vertical. Detalhes completos estão em [COMPENDIUM.md](COMPENDIUM.md).

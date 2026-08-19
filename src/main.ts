@@ -194,7 +194,7 @@ const state: {
   progressionDraft: ProgressionDraftChoice[];
   progressionError?: string;
   progressionCardPickerMode?: "mandatory" | "advance";
-  progressionCardTierFilter: "todos" | number;
+  progressionCardTierFilter: "todos" | number; progressionCardDomainFilter?: string;
   progressionCardPickerTier?: ProgressionTierNumber;
   progressionCardId?: string; progressionCardPickerSelectionId?: string;
   progressionTierExperienceOpen: boolean;
@@ -293,7 +293,7 @@ const state: {
   progressionHistoryOpen: false,
   progressionPickerIds: [],
   progressionDraft: [],
-  progressionCardTierFilter: "todos",
+  progressionCardTierFilter: "todos", progressionCardDomainFilter: undefined,
   progressionTierExperienceOpen: false,
   progressionMulticlassOpen: false,
   progressionMulticlassDraft: {},
@@ -334,7 +334,7 @@ const state: {
   }
 };
 
-const appVersion = "0.21.2";
+const appVersion = "0.21.3";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -1002,7 +1002,7 @@ function getProgressionDialogDependencies(): ProgressionDialogDependencies {
     attributeTitle,
     getTierForLevel,
     getProgression,
-    getProgressionCardCandidates,
+    getProgressionCardCandidates, getPrimaryDomainIds,
     requiresTierExperience,
     getEligibleMulticlassClasses: (character) => getEligibleMulticlassClasses(character, catalog),
     subclasses: catalog.subclasses,
@@ -1424,13 +1424,13 @@ function renderCharacterCreationModal(): string {
     <div class="modal-backdrop" data-modal-backdrop>
       <form class="modal character-creation-modal" data-creation-step="${state.characterCreationStep}" onsubmit="return false;" aria-labelledby="character-creation-title">
         <button class="modal-close" type="button" data-action="cancel-new-character" aria-label="Fechar">×</button>
-        <div class="character-creation-scroll">
+        <div class="character-creation-header">
         ${renderCreationProgress({ step: state.characterCreationStep })}
-        ${renderCreationTitle({ step: state.characterCreationStep })}
+        ${renderCreationTitle({ step: state.characterCreationStep })}</div><div class="character-creation-scroll">
         ${renderCreationIdentityStep({ name: state.characterCreationName, community: state.characterCreationCommunity, portraitImage: state.characterCreationPortraitImage }, escapeHtml)}
         <section class="character-ancestry-picker creation-step-panel" data-creation-panel="2">
           <div><span>Origem</span><p>Escolha uma ou duas. Com duas, combine livremente a Feature Top e a Feature Bottom.</p></div>
-          <label class="search-box character-ancestry-search"><span aria-hidden="true">⌕</span><input type="search" data-character-ancestry-search value="${escapeHtml(state.characterCreationAncestrySearch)}" placeholder="Pesquisar ancestralidade" aria-label="Pesquisar ancestralidade" /></label>
+          <label class="sf-search-field character-creation-search"><span aria-hidden="true">⌕</span><input type="search" data-character-ancestry-search value="${escapeHtml(state.characterCreationAncestrySearch)}" placeholder="Pesquisar ancestralidade" aria-label="Pesquisar ancestralidade" /></label>
           ${ancestries.length ? `<div class="character-ancestry-choice-grid">${visibleAncestries.map((ancestry) => { const selected = selectedAncestryIds.includes(ancestry.id); const disabled = !selected && selectedAncestryIds.length >= 2; return `<label class="character-ancestry-choice ${selected ? "is-selected" : ""}"><input type="checkbox" data-character-ancestry-id="${escapeHtml(ancestry.id)}" ${selected ? "checked" : ""} ${disabled ? "disabled" : ""}/><span><strong>${escapeHtml(ancestry.name)}</strong><small>${escapeHtml(ancestry.summary)}</small></span></label>`; }).join("") || `<p class="form-error">Nenhuma ancestralidade encontrada.</p>`}</div>` : `<p class="form-error">Importe um Pack de ancestralidades no Compendium antes de criar a ficha.</p>`}
           ${selectedAncestries.length ? `<div class="character-feature-choice-grid"><label class="form-field"><span>Feature Top</span>${topFeatures.length > 1 ? `<select data-character-top-feature>${topFeatures.map((feature) => { const origin = selectedAncestries.find((ancestry) => ancestry.topFeatureId === feature.id); return `<option value="${escapeHtml(feature.id)}" ${feature.id === topFeatureId ? "selected" : ""}>${escapeHtml(origin?.name ?? "Ancestralidade")} - ${escapeHtml(feature.name)}</option>`; }).join("")}</select>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(topFeatures[0]?.name ?? "Feature indisponivel")}</strong><small>${escapeHtml(topFeatures[0]?.summary ?? "")}</small></div>`}</label><label class="form-field"><span>Feature Bottom</span>${bottomFeatures.length > 1 ? `<select data-character-bottom-feature>${bottomFeatures.map((feature) => { const origin = selectedAncestries.find((ancestry) => ancestry.bottomFeatureId === feature.id); return `<option value="${escapeHtml(feature.id)}" ${feature.id === bottomFeatureId ? "selected" : ""}>${escapeHtml(origin?.name ?? "Ancestralidade")} - ${escapeHtml(feature.name)}</option>`; }).join("")}</select>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(bottomFeatures[0]?.name ?? "Feature indisponivel")}</strong><small>${escapeHtml(bottomFeatures[0]?.summary ?? "")}</small></div>`}</label></div>` : ""}
         </section>
@@ -1572,8 +1572,8 @@ function updateGameMarkerAuthoringForm(target: HTMLSelectElement): void {
   configureGameMarkerAuthoringForm(form);
 }
 
-function render(options: { preserveMainScroll?: boolean } = {}): void {
-  const previousCharacterCreationScrollTop = state.characterSelectionOpen && state.characterCreationOpen
+function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: boolean } = {}): void {
+  const previousCharacterCreationScrollTop = !options.resetCreationScroll && state.characterSelectionOpen && state.characterCreationOpen
     ? appRoot.querySelector<HTMLElement>(".character-creation-scroll")?.scrollTop
     : undefined;
   const previousMainScrollTop = options.preserveMainScroll
@@ -2607,7 +2607,7 @@ function bindEvents(): void {
       syncCharacterCreationDraft();
       state.characterCreationStep = previousCharacterCreationStep(state.characterCreationStep);
       state.characterCreationError = undefined;
-      render();
+      render({ resetCreationScroll: true });
       return;
     }
 
@@ -2620,7 +2620,7 @@ function bindEvents(): void {
         state.characterCreationCardDomainId = getCharacterCreationClasses().find((entry) => entry.id === state.characterCreationClassId)?.domainIds[0];
       }
       state.characterCreationStep = nextCharacterCreationStep(state.characterCreationStep);
-      render();
+      render({ resetCreationScroll: true });
       return;
     }
 
@@ -3014,7 +3014,7 @@ function bindEvents(): void {
       } else if (kind === "domain") {
         state.progressionCardPickerMode = "advance";
         state.progressionCardPickerTier = Number(progressionAdvanceButton.dataset.progressionTier) as ProgressionTierNumber;
-        state.progressionCardTierFilter = "todos";
+        state.progressionCardTierFilter = "todos"; state.progressionCardDomainFilter = undefined;
         state.progressionCardPickerSelectionId = undefined;
       } else if (kind === "subclass") {
         const character = state.character;
@@ -3117,7 +3117,7 @@ function bindEvents(): void {
     if (target.closest('[data-action="open-progression-card-picker"]')) {
       state.progressionCardPickerMode = "mandatory";
       state.progressionCardPickerTier = undefined;
-      state.progressionCardTierFilter = "todos";
+      state.progressionCardTierFilter = "todos"; state.progressionCardDomainFilter = undefined;
       state.progressionCardPickerSelectionId = state.progressionCardId;
       render({ preserveMainScroll: true });
       return;

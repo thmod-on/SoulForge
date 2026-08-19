@@ -4,6 +4,18 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.21.3]
+
+### Alterado
+
+- criação de personagem passa a manter cabeçalho estável entre etapas e apresenta comunidade com busca, filtro de Pack e benefício expandido no próprio card;
+- escolha de cartas da Progressão recebe filtros compactos por domínio e nível, além de estado ativo alinhado à navegação da ficha;
+- modais de escolha de carta passam a reservar altura compatível com a tela e rolar somente a lista de cartas.
+
+### Corrigido
+
+- cards compactos e expandidos de cartas preservam arte, texto e limites de leitura mesmo com títulos ou efeitos longos.
+
 ## [0.21.2]
 
 ### Adicionado
