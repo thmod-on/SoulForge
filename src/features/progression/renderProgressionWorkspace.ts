@@ -37,16 +37,16 @@ export function renderProgressionOptions(character: Character, dependencies: Pro
     { kind: "proficiency", description: "Ganhe +1 em Proficiência. Consome as duas escolhas.", disabled: usedChoices > 0 },
     { kind: "multiclass", description: "Escolha outra classe, um Domínio, uma característica e uma Fundação. Consome as duas escolhas.", disabled: hasSubclassDraft || !canChooseMulticlass(character, tier) || usedChoices > 0 }
   ];
-  return `<section class="progression-tier-options"><h3>Escolhas do Tier ${tier}</h3><div class="progression-option-list">${options.filter((option) => progressionAdvanceRules[option.kind].slotCount[tier] > 0).map((option) => renderProgressionOption(option, character, tier, usedChoices, dependencies)).join("")}</div></section>`;
+  return `<section class="progression-tier-options"><h3>Avanços disponíveis</h3><div class="progression-option-list">${options.filter((option) => progressionAdvanceRules[option.kind].slotCount[tier] > 0).map((option) => renderProgressionOption(option, character, tier, usedChoices, dependencies)).join("")}</div></section>`;
 }
 
 export function renderProgressionAdvanceSummary(dependencies: ProgressionWorkspaceDependencies): string {
   const { state, escapeHtml, getProgressionChoiceCount } = dependencies;
   const choiceCount = getProgressionChoiceCount();
   const choices = state.progressionDraft.length
-    ? state.progressionDraft.map((choice, index) => `<li><span>${escapeHtml(choice.label)}</span><button type="button" data-action="remove-progression-choice" data-progression-choice-index="${index}" aria-label="Remover ${escapeHtml(choice.label)}">x</button></li>`).join("")
-    : "<li><span>Nenhuma escolha preparada.</span></li>";
-  return `<section class="progression-advance-summary"><div><strong>Avanços preparados</strong><span>${choiceCount} / 2 escolhas</span></div><ul>${choices}</ul><small>${choiceCount === 2 ? "As duas escolhas foram definidas. Você pode continuar." : "Escolha os avanços antes de continuar."}</small></section>`;
+    ? `<ul>${state.progressionDraft.map((choice, index) => `<li><span>${escapeHtml(choice.label)}</span><button type="button" data-action="remove-progression-choice" data-progression-choice-index="${index}" aria-label="Remover ${escapeHtml(choice.label)}">x</button></li>`).join("")}</ul>`
+    : "";
+  return `<section class="progression-advance-summary"><div><strong>Avanços preparados</strong><span><b>${choiceCount} / 2</b> escolhas</span></div>${choices}</section>`;
 }
 
 export function renderProgressionDomainStep(character: Character, dependencies: ProgressionWorkspaceDependencies): string {
@@ -80,5 +80,5 @@ function renderProgressionOption(option: { kind: ProgressionAdvanceKind; descrip
   const slotsUsed = getAdvanceSlotsUsed(character, tier, option.kind);
   const cost = option.kind === "proficiency" || option.kind === "multiclass" ? 2 : 1;
   const disabled = Boolean(option.disabled) || tier < rule.minimumTier || slotsUsed >= slots || usedChoices + cost > 2;
-  return `<button class="progression-option" type="button" data-action="select-progression-advance" data-progression-advance="${option.kind}" data-progression-tier="${tier}" ${disabled ? "disabled" : ""}><i aria-hidden="true"></i><span><strong>${escapeHtml(progressionAdvanceLabels[option.kind])}</strong>${escapeHtml(option.description)}<small>Espaços: ${slotsUsed} / ${slots}</small></span></button>`;
+  return `<button class="progression-option" type="button" data-action="select-progression-advance" data-progression-advance="${option.kind}" data-progression-tier="${tier}" ${disabled ? "disabled" : ""}><i aria-hidden="true"></i><span><strong>${escapeHtml(progressionAdvanceLabels[option.kind])}</strong><em>${escapeHtml(option.description)}</em><small><b>${slotsUsed} / ${slots}</b> disponíveis</small></span></button>`;
 }

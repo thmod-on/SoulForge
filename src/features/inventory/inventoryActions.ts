@@ -12,6 +12,7 @@ export type InventoryActionState = {
   addContainerOpen: boolean;
   deleteContainerId?: string;
   deletingItemId?: string;
+  deletingItemQuantity?: number;
 };
 
 export type InventoryActionDependencies = {
@@ -27,18 +28,60 @@ export type InventoryActionDependencies = {
   render: (options?: { preserveMainScroll?: boolean }) => void;
 };
 
-export async function moveItemToCompartment(itemId: string | undefined, targetCompartmentId: string | undefined, sourceCompartmentId: string | undefined, dependencies: InventoryActionDependencies): Promise<void> {
+function getEntryId(entry: Character["inventory"]["entries"][number]): string {
+  return entry.id ?? entry.definitionId;
+}
+
+function getManagedQuantity(entry: Character["inventory"]["entries"][number]): number {
+  const value = Number(document.querySelector<HTMLInputElement>("[data-item-managed-quantity]")?.value ?? entry.quantity);
+  return Number.isInteger(value) ? Math.max(1, Math.min(entry.quantity, value)) : entry.quantity;
+}
+
+function withEntryIds(entries: Character["inventory"]["entries"]): Character["inventory"]["entries"] {
+  return entries.map((entry) => entry.id ? entry : { ...entry, id: crypto.randomUUID() });
+}
+
+export async function moveItemToCompartment(entryId: string | undefined, targetCompartmentId: string | undefined, dependencies: InventoryActionDependencies): Promise<void> {
   const { state, getItemEntries, getInventoryCompartments, getEntryCompartmentId, canCompartmentAcceptItem, wouldFitCompartment, saveCharacter, render } = dependencies;
   const character = state.character;
-  if (!character || !itemId || !targetCompartmentId) return;
+  const selectedTargetId = targetCompartmentId ?? document.querySelector<HTMLSelectElement>("[data-item-move-destination]")?.value;
+  if (!character || !entryId || !selectedTargetId) return;
   const entries = getItemEntries(character);
-  const targetEntry = entries.find(({ item, entry }) => item.id === itemId && (!sourceCompartmentId || getEntryCompartmentId(entry) === sourceCompartmentId));
-  const targetCompartment = getInventoryCompartments(character).find((compartment) => compartment.id === targetCompartmentId);
+  const targetEntry = entries.find(({ entry }) => getEntryId(entry) === entryId);
+  const targetCompartment = getInventoryCompartments(character).find((compartment) => compartment.id === selectedTargetId);
   if (!targetEntry || !targetCompartment) return;
   const currentCompartmentId = getEntryCompartmentId(targetEntry.entry);
-  if (!canCompartmentAcceptItem(targetCompartment, targetEntry.item) || !wouldFitCompartment(targetCompartment, entries, targetEntry.item, targetEntry.entry.quantity, currentCompartmentId)) return;
-  const updatedCharacter: Character = { ...character, inventory: { ...character.inventory, entries: character.inventory.entries.map((entry) => entry.definitionId === itemId && getEntryCompartmentId(entry) === currentCompartmentId ? { ...entry, compartmentId: targetCompartmentId, equipped: targetCompartmentId === "equipped" } : entry) } };
+  const quantity = getManagedQuantity(targetEntry.entry);
+  if (!canCompartmentAcceptItem(targetCompartment, targetEntry.item) || !wouldFitCompartment(targetCompartment, entries, targetEntry.item, quantity, currentCompartmentId)) return;
+  const normalizedEntries = withEntryIds(character.inventory.entries);
+  const sourceIndex = character.inventory.entries.findIndex((entry) => getEntryId(entry) === entryId);
+  const sourceEntry = normalizedEntries[sourceIndex];
+  if (!sourceEntry) return;
+  const updatedEntries = quantity === sourceEntry.quantity
+    ? normalizedEntries.map((entry, index) => index === sourceIndex ? { ...entry, compartmentId: selectedTargetId, equipped: selectedTargetId === "equipped" } : entry)
+    : normalizedEntries.flatMap((entry, index) => index !== sourceIndex ? [entry] : [{ ...entry, quantity: entry.quantity - quantity }, { ...entry, id: crypto.randomUUID(), quantity, compartmentId: selectedTargetId, equipped: selectedTargetId === "equipped" }]);
+  const updatedCharacter: Character = { ...character, inventory: { ...character.inventory, entries: updatedEntries } };
   state.character = updatedCharacter;
+  state.selectedItemId = quantity === sourceEntry.quantity ? undefined : getEntryId(sourceEntry);
+  await saveCharacter(updatedCharacter);
+  render({ preserveMainScroll: true });
+}
+
+export async function splitInventoryItem(entryId: string | undefined, dependencies: InventoryActionDependencies): Promise<void> {
+  const { state, getItemEntries, getEntryCompartmentId, saveCharacter, render } = dependencies;
+  const character = state.character;
+  if (!character || !entryId) return;
+  const selected = getItemEntries(character).find(({ entry }) => getEntryId(entry) === entryId);
+  if (!selected || selected.entry.quantity < 2) return;
+  const quantity = getManagedQuantity(selected.entry);
+  if (quantity >= selected.entry.quantity) return;
+  const normalizedEntries = withEntryIds(character.inventory.entries);
+  const sourceIndex = character.inventory.entries.findIndex((entry) => getEntryId(entry) === entryId);
+  const sourceEntry = normalizedEntries[sourceIndex];
+  if (!sourceEntry) return;
+  const updatedCharacter: Character = { ...character, inventory: { ...character.inventory, entries: normalizedEntries.flatMap((entry, index) => index !== sourceIndex ? [entry] : [{ ...entry, quantity: entry.quantity - quantity }, { ...entry, id: crypto.randomUUID(), quantity, compartmentId: getEntryCompartmentId(entry), equipped: entry.equipped }]) } };
+  state.character = updatedCharacter;
+  state.selectedItemId = getEntryId(sourceEntry);
   await saveCharacter(updatedCharacter);
   render({ preserveMainScroll: true });
 }
@@ -63,7 +106,7 @@ export async function addItemToContainer(dependencies: InventoryActionDependenci
     return;
   }
   const existingEntry = character.inventory.entries.find((entry) => entry.definitionId === definition.id && getEntryCompartmentId(entry) === compartmentId);
-  const updatedEntries = existingEntry ? character.inventory.entries.map((entry) => entry === existingEntry ? { ...entry, quantity: entry.quantity + quantity } : entry) : [...character.inventory.entries, { definitionId: definition.id, quantity, compartmentId, equipped: compartmentId === "equipped" }];
+  const updatedEntries = existingEntry ? character.inventory.entries.map((entry) => entry === existingEntry ? { ...entry, quantity: entry.quantity + quantity } : entry) : [...character.inventory.entries, { id: crypto.randomUUID(), definitionId: definition.id, quantity, compartmentId, equipped: compartmentId === "equipped" }];
   const updatedCharacter: Character = { ...character, inventory: { ...character.inventory, entries: updatedEntries } };
   state.character = updatedCharacter;
   state.addItemToCompartmentId = undefined;
@@ -107,7 +150,7 @@ export async function deleteInventoryContainer(compartmentId: string | undefined
   const compartments = getInventoryCompartments(character);
   const compartment = compartments.find((entry) => entry.id === compartmentId);
   if (!compartment || compartment.source === "character") return;
-  const selectedEntryWasInDeletedCompartment = character.inventory.entries.some((entry) => entry.definitionId === state.selectedItemId && getEntryCompartmentId(entry) === compartmentId);
+  const selectedEntryWasInDeletedCompartment = character.inventory.entries.some((entry) => getEntryId(entry) === state.selectedItemId && getEntryCompartmentId(entry) === compartmentId);
   const updatedCharacter: Character = { ...character, inventory: { ...character.inventory, compartments: compartments.filter((entry) => entry.id !== compartmentId), entries: character.inventory.entries.filter((entry) => getEntryCompartmentId(entry) !== compartmentId) } };
   state.character = updatedCharacter;
   state.deleteContainerId = undefined;
@@ -116,14 +159,34 @@ export async function deleteInventoryContainer(compartmentId: string | undefined
   render();
 }
 
-export async function deleteInventoryItem(itemId: string | undefined, dependencies: InventoryActionDependencies): Promise<void> {
+export function prepareDeleteInventoryItem(entryId: string | undefined, dependencies: InventoryActionDependencies): void {
+  const { state, getItemEntries } = dependencies;
+  const character = state.character;
+  if (!character || !entryId) return;
+  const selected = getItemEntries(character).find(({ entry }) => getEntryId(entry) === entryId);
+  if (!selected) return;
+  state.deletingItemId = entryId;
+  state.deletingItemQuantity = getManagedQuantity(selected.entry);
+  state.selectedItemId = undefined;
+}
+
+export async function deleteInventoryItem(entryId: string | undefined, dependencies: InventoryActionDependencies): Promise<void> {
   const { state, saveCharacter, render } = dependencies;
   const character = state.character;
-  if (!character || !itemId) return;
-  const updatedCharacter: Character = { ...character, inventory: { ...character.inventory, entries: character.inventory.entries.filter((entry) => entry.definitionId !== itemId) } };
+  if (!character || !entryId) return;
+  const normalizedEntries = withEntryIds(character.inventory.entries);
+  const entryIndex = character.inventory.entries.findIndex((candidate) => getEntryId(candidate) === entryId);
+  const entry = normalizedEntries[entryIndex];
+  if (!entry) return;
+  const quantity = Math.max(1, Math.min(entry.quantity, state.deletingItemQuantity ?? entry.quantity));
+  const updatedEntries = quantity === entry.quantity
+    ? normalizedEntries.filter((_, index) => index !== entryIndex)
+    : normalizedEntries.map((candidate, index) => index === entryIndex ? { ...candidate, quantity: candidate.quantity - quantity } : candidate);
+  const updatedCharacter: Character = { ...character, inventory: { ...character.inventory, entries: updatedEntries } };
   state.character = updatedCharacter;
   state.selectedItemId = undefined;
   state.deletingItemId = undefined;
+  state.deletingItemQuantity = undefined;
   await saveCharacter(updatedCharacter);
   render();
 }

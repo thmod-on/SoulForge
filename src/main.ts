@@ -60,6 +60,8 @@ import {
   deleteInventoryContainer as deleteInventoryContainerAction,
   deleteInventoryItem as deleteInventoryItemAction,
   moveItemToCompartment as moveItemToCompartmentAction,
+  prepareDeleteInventoryItem as prepareDeleteInventoryItemAction,
+  splitInventoryItem as splitInventoryItemAction,
   type InventoryActionDependencies
 } from "./features/inventory/inventoryActions";
 import {
@@ -204,6 +206,7 @@ const state: {
   addContainerOpen: boolean;
   deleteContainerId?: string;
   deletingItemId?: string;
+  deletingItemQuantity?: number;
   noteModalOpen: boolean;
   editingNoteId?: string;
   viewingNoteId?: string;
@@ -331,7 +334,7 @@ const state: {
   }
 };
 
-const appVersion = "0.21.1";
+const appVersion = "0.21.2";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -983,7 +986,6 @@ function getProgressionRenderDependencies(): ProgressionRenderDependencies {
   return {
     state,
     escapeHtml,
-    progressPercent,
     requiresTierExperience,
     renderProgressionOptions: (character) => renderProgressionOptionsView(character, getProgressionWorkspaceDependencies()),
     renderProgressionAdvanceSummary: () => renderProgressionAdvanceSummaryView(getProgressionWorkspaceDependencies()),
@@ -1078,8 +1080,8 @@ function getInventoryDragDependencies(): InventoryDragDependencies {
     getEntryCompartmentId,
     canCompartmentAcceptItem,
     wouldFitCompartment,
-    moveItemToCompartment: (itemId, targetCompartmentId, sourceCompartmentId) =>
-      moveItemToCompartmentAction(itemId, targetCompartmentId, sourceCompartmentId, getInventoryActionDependencies())
+    moveItemToCompartment: (entryId, targetCompartmentId) =>
+      moveItemToCompartmentAction(entryId, targetCompartmentId, getInventoryActionDependencies())
   };
 }
 
@@ -3224,14 +3226,14 @@ function bindEvents(): void {
 
     const deleteItemButton = target.closest<HTMLElement>('[data-action="delete-item"]');
     if (deleteItemButton) {
-      state.deletingItemId = deleteItemButton.dataset.itemId;
-      state.selectedItemId = undefined;
+      prepareDeleteInventoryItemAction(deleteItemButton.dataset.inventoryEntryId, getInventoryActionDependencies());
       render();
       return;
     }
 
     if (target.closest('[data-action="cancel-delete-item"]')) {
       state.deletingItemId = undefined;
+      state.deletingItemQuantity = undefined;
       render();
       return;
     }
@@ -3301,7 +3303,13 @@ function bindEvents(): void {
 
     const moveItemButton = target.closest<HTMLElement>('[data-action="move-item"]');
     if (moveItemButton) {
-      void moveItemToCompartmentAction(moveItemButton.dataset.itemId, moveItemButton.dataset.targetCompartmentId, moveItemButton.dataset.sourceCompartmentId, getInventoryActionDependencies());
+      void moveItemToCompartmentAction(moveItemButton.dataset.inventoryEntryId, moveItemButton.dataset.targetCompartmentId, getInventoryActionDependencies());
+      return;
+    }
+
+    const splitItemButton = target.closest<HTMLElement>('[data-action="split-item"]');
+    if (splitItemButton) {
+      void splitInventoryItemAction(splitItemButton.dataset.inventoryEntryId, getInventoryActionDependencies());
       return;
     }
 
@@ -3314,7 +3322,7 @@ function bindEvents(): void {
 
     const itemButton = target.closest<HTMLElement>("[data-item-id]");
     if (itemButton) {
-      state.selectedItemId = itemButton.dataset.itemId;
+      state.selectedItemId = itemButton.dataset.inventoryEntryId;
       render();
       return;
     }

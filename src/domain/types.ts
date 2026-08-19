@@ -273,6 +273,8 @@ export type FeatureDefinition = BaseDefinition & {
 export type Definition = DomainDefinition | CardDefinition | ItemDefinition | ClassDefinition | SubclassDefinition | AncestryDefinition | CommunityDefinition | FeatureDefinition;
 
 export type InventoryEntry = {
+  /** Identificador da pilha no inventário. Ausente em fichas antigas e atribuído na próxima alteração. */
+  id?: string;
   definitionId: string;
   quantity: number;
   compartmentId?: string;

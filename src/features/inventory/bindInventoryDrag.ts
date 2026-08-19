@@ -3,8 +3,7 @@ import type { Character, InventoryCompartment, ItemDefinition } from "../../doma
 type InventoryItemEntry = { entry: Character["inventory"]["entries"][number]; item: ItemDefinition };
 
 type DragState = {
-  itemId?: string;
-  sourceCompartmentId?: string;
+  entryId?: string;
   pointerId?: number;
   startX: number;
   startY: number;
@@ -23,7 +22,7 @@ export type InventoryDragDependencies = {
   getEntryCompartmentId: (entry: InventoryItemEntry["entry"]) => string;
   canCompartmentAcceptItem: (compartment: InventoryCompartment, item: ItemDefinition) => boolean;
   wouldFitCompartment: (compartment: InventoryCompartment, entries: InventoryItemEntry[], item: ItemDefinition, quantity: number, currentCompartmentId: string) => boolean;
-  moveItemToCompartment: (itemId: string | undefined, targetCompartmentId: string | undefined, sourceCompartmentId: string | undefined) => Promise<void>;
+  moveItemToCompartment: (entryId: string | undefined, targetCompartmentId: string | undefined) => Promise<void>;
 };
 
 export function consumeInventoryDragClickSuppression(): boolean {
@@ -35,10 +34,9 @@ export function consumeInventoryDragClickSuppression(): boolean {
 export function bindInventoryDragEvents(dependencies: InventoryDragDependencies): void {
   document.addEventListener("pointerdown", (event) => {
     if (!(event.target instanceof HTMLElement) || event.button !== 0) return;
-    const tile = event.target.closest<HTMLElement>("[data-item-id]");
-    if (!tile || !tile.dataset.itemCompartmentId) return;
-    dragState.itemId = tile.dataset.itemId;
-    dragState.sourceCompartmentId = tile.dataset.itemCompartmentId;
+    const tile = event.target.closest<HTMLElement>("[data-inventory-entry-id]");
+    if (!tile || !tile.dataset.itemCompartmentId || !tile.dataset.inventoryEntryId) return;
+    dragState.entryId = tile.dataset.inventoryEntryId;
     dragState.pointerId = event.pointerId;
     dragState.startX = event.clientX;
     dragState.startY = event.clientY;
@@ -47,11 +45,11 @@ export function bindInventoryDragEvents(dependencies: InventoryDragDependencies)
   });
 
   document.addEventListener("pointermove", (event) => {
-    if (!dragState.itemId || dragState.pointerId !== event.pointerId) return;
+    if (!dragState.entryId || dragState.pointerId !== event.pointerId) return;
     if (!dragState.dragging && Math.hypot(event.clientX - dragState.startX, event.clientY - dragState.startY) < 8) return;
     event.preventDefault();
     if (!dragState.dragging) {
-      const tile = document.querySelector<HTMLElement>(`[data-item-id="${CSS.escape(dragState.itemId)}"]`);
+      const tile = document.querySelector<HTMLElement>(`[data-inventory-entry-id="${CSS.escape(dragState.entryId)}"]`);
       if (tile) createDragGhost(tile, event.clientX, event.clientY);
       dragState.dragging = true;
       dragState.suppressNextClick = true;
@@ -61,7 +59,7 @@ export function bindInventoryDragEvents(dependencies: InventoryDragDependencies)
   });
 
   document.addEventListener("pointerup", (event) => {
-    if (!dragState.itemId || dragState.pointerId !== event.pointerId) return;
+    if (!dragState.entryId || dragState.pointerId !== event.pointerId) return;
     if (!dragState.dragging) {
       endItemDrag();
       return;
@@ -82,8 +80,7 @@ function clearDropTargetStyles(): void {
 function endItemDrag(): void {
   dragState.ghost?.remove();
   dragState.ghost = undefined;
-  dragState.itemId = undefined;
-  dragState.sourceCompartmentId = undefined;
+  dragState.entryId = undefined;
   dragState.pointerId = undefined;
   dragState.currentDropTargetId = undefined;
   dragState.dragging = false;
@@ -114,18 +111,18 @@ function updateDropTarget(clientX: number, clientY: number, dependencies: Invent
 
 function isValidDropTarget(targetCompartmentId: string | undefined, dependencies: InventoryDragDependencies): boolean {
   const character = dependencies.getCharacter();
-  if (!character || !dragState.itemId || !targetCompartmentId || targetCompartmentId === dragState.sourceCompartmentId) return false;
+  if (!character || !dragState.entryId || !targetCompartmentId) return false;
   const entries = dependencies.getItemEntries(character);
-  const draggedEntry = entries.find(({ item, entry }) => item.id === dragState.itemId && dependencies.getEntryCompartmentId(entry) === dragState.sourceCompartmentId);
+  const draggedEntry = entries.find(({ entry }) => (entry.id ?? entry.definitionId) === dragState.entryId);
+  if (draggedEntry && targetCompartmentId === dependencies.getEntryCompartmentId(draggedEntry.entry)) return false;
   const targetCompartment = dependencies.getInventoryCompartments(character).find((compartment) => compartment.id === targetCompartmentId);
   return Boolean(draggedEntry && targetCompartment && dependencies.canCompartmentAcceptItem(targetCompartment, draggedEntry.item) && dependencies.wouldFitCompartment(targetCompartment, entries, draggedEntry.item, draggedEntry.entry.quantity, dependencies.getEntryCompartmentId(draggedEntry.entry)));
 }
 
 async function finishItemDrag(dependencies: InventoryDragDependencies): Promise<void> {
   const targetCompartmentId = dragState.currentDropTargetId;
-  const itemId = dragState.itemId;
-  const sourceCompartmentId = dragState.sourceCompartmentId;
+  const entryId = dragState.entryId;
   const validDrop = isValidDropTarget(targetCompartmentId, dependencies);
   endItemDrag();
-  if (validDrop) await dependencies.moveItemToCompartment(itemId, targetCompartmentId, sourceCompartmentId);
+  if (validDrop) await dependencies.moveItemToCompartment(entryId, targetCompartmentId);
 }

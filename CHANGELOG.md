@@ -4,6 +4,22 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.21.2]
+
+### Adicionado
+
+- inventário passa a suportar pilhas independentes: separar, mover parcialmente ou descartar apenas a quantidade escolhida;
+- seleção compacta de compartimento no modal de item, adequada também para fichas com muitos containers.
+
+### Alterado
+
+- fluxo de Progressão foi simplificado e alinhado às seções da ficha: contexto enxuto, histórico compacto e avanços em duas colunas;
+- nível e experiência passam a ser exibidos de forma discreta no rodapé da sidebar.
+
+### Corrigido
+
+- ações do modal de item permanecem acessíveis em telas baixas, com descarte fixo no rodapé interno.
+
 ## [0.21.1]
 
 ### Alterado
