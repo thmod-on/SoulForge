@@ -24,13 +24,15 @@ export function getEffectiveDefense(character: Character, findItem: (id: string)
     }, baseDefense);
 }
 
-/** Mantém os slots de Armadura alinhados à armadura atualmente equipada. */
+/** Mantém os slots de Armadura alinhados a todos os bônus de armadura equipados. */
 export function synchronizeArmorResource(character: Character, findItem: (id: string) => ItemDefinition | undefined): Character {
   const armorSlots = character.inventory.entries
     .filter((entry) => (entry.compartmentId ?? (entry.equipped ? "equipped" : "backpack")) === "equipped")
     .reduce((total, entry) => {
       const item = findItem(entry.definitionId);
-      return item?.category === "armadura" ? total + (item.combatModifiers?.armor ?? 0) * entry.quantity : total;
+      // Um escudo, acessório ou qualquer outro item equipado também pode
+      // declarar Armadura. A categoria do item não altera esse efeito.
+      return total + (item?.combatModifiers?.armor ?? 0) * entry.quantity;
     }, 0);
   const resourceIndex = character.resources.findIndex((resource) => resource.id === "armor-slots");
   if (resourceIndex < 0) return character;

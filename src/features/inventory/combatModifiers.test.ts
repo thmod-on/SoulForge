@@ -13,6 +13,7 @@ const character: Character = {
 };
 
 const armor: ItemDefinition = { id: "item.armor", type: "item", packId: "test", name: "Armadura", summary: "", category: "armadura", weight: 1, combatModifiers: { armor: 2, minor: 1, major: 2, evasion: -1 } };
+const shield: ItemDefinition = { id: "item.shield", type: "item", packId: "test", name: "Escudo", summary: "", category: "equipamento", weight: 1, combatModifiers: { armor: 1 } };
 
 describe("getEffectiveDefense", () => {
   it("aplica somente modificadores de itens equipados", () => {
@@ -24,13 +25,14 @@ describe("getEffectiveDefense", () => {
     expect(getEffectiveDefense(levelFourCharacter, () => undefined)).toEqual({ evasion: 10, armor: 0, minor: 9, major: 14 });
   });
 
-  it("sincroniza os slots de Armadura apenas com a armadura equipada", () => {
+  it("sincroniza os slots de Armadura com todos os itens equipados que concedem Armadura", () => {
     const characterWithArmorResource: Character = {
       ...character,
-      resources: [{ id: "armor-slots", label: "Armadura", value: 5, max: 6, tone: "focus" }]
+      resources: [{ id: "armor-slots", label: "Armadura", value: 5, max: 6, tone: "focus" }],
+      inventory: { ...character.inventory, entries: [...character.inventory.entries, { definitionId: "item.shield", quantity: 1, compartmentId: "equipped" }] }
     };
-    const synchronized = synchronizeArmorResource(characterWithArmorResource, (id) => id === armor.id ? armor : undefined);
+    const synchronized = synchronizeArmorResource(characterWithArmorResource, (id) => id === armor.id ? armor : id === shield.id ? shield : undefined);
 
-    expect(synchronized.resources[0]).toMatchObject({ value: 2, max: 2 });
+    expect(synchronized.resources[0]).toMatchObject({ value: 3, max: 3 });
   });
 });

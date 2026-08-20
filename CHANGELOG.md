@@ -4,6 +4,17 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.22.1]
+
+### Alterado
+
+- seção de Combate da sidebar adota cartões compactos e consistentes para Evasão, Armadura, Proficiência e limiares;
+- cartões de recursos ficam mais compactos, preservando os controles diretos de aumentar e reduzir para uso em iPad.
+
+### Corrigido
+
+- marcadores de recurso de Armadura agora somam os bônus declarados por todos os itens equipados, incluindo escudos e outros equipamentos.
+
 ## [0.22.0]
 
 ### Adicionado
