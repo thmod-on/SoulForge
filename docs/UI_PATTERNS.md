@@ -54,6 +54,12 @@ Controles repetidos devem usar as primitives abaixo. Elas representam a intenç�
 - a classe define ícone, espaçamento, borda, fundo e comportamento responsivo;
 - filtros complementares, como Pack, ficam em controles separados e não reduzem a largura do campo de busca principal.
 
+### Filtros
+
+- use `sf-filter-option` em filtros compactos de categoria, domínio e nível;
+- o estado ativo usa a mesma névoa discreta da navegação superior, sem transformar o filtro em um botão pesado;
+- filtros de nível exibem o rótulo `Nível` uma vez e usam valores curtos (`Todos`, `1`, `2`...), preservando a leitura em tablet.
+
 ### Ações
 
 - `sf-action sf-action--primary`: confirmar, criar, salvar, aplicar ou avançar um fluxo;

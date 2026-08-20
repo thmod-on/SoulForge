@@ -8,6 +8,9 @@ export type InventoryActionState = {
   addItemToCompartmentId?: string;
   addingDefinitionItemId?: string;
   addItemCatalogFilter: "todos" | ItemDefinition["category"];
+  addItemCatalogTierFilter: string;
+  addItemCatalogSearch: string;
+  addItemPreviewDefinitionId?: string;
   addItemError?: string;
   addContainerOpen: boolean;
   deleteContainerId?: string;
@@ -112,6 +115,9 @@ export async function addItemToContainer(dependencies: InventoryActionDependenci
   state.addItemToCompartmentId = undefined;
   state.addingDefinitionItemId = undefined;
   state.addItemCatalogFilter = "todos";
+  state.addItemCatalogTierFilter = "todos";
+  state.addItemCatalogSearch = "";
+  state.addItemPreviewDefinitionId = undefined;
   state.addItemError = undefined;
   await saveCharacter(updatedCharacter);
   render();

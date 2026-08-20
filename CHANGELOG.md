@@ -4,6 +4,22 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.22.0]
+
+### Adicionado
+
+- catálogo de adição de itens passa a oferecer busca textual, filtros por nível e consulta detalhada antes da seleção;
+- seleção de item preserva a posição de rolagem da ficha e da lista interna ao abrir e fechar detalhes.
+
+### Alterado
+
+- filtros de categoria e nível do Inventário e Compendium usam o mesmo estado visual ativo da navegação da ficha;
+- filtros de nível de itens seguem a leitura compacta `Nível · Todos · 1 · 2...` usada na seleção de cartas.
+
+### Corrigido
+
+- catálogo de itens mantém sua área estável ao trocar filtros e não corta a indicação do item selecionado.
+
 ## [0.21.3]
 
 ### Alterado

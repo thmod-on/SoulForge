@@ -1,10 +1,12 @@
 import type { Catalog } from "../../domain/catalog";
 import type { Character, ItemDefinition } from "../../domain/types";
 import type { InventoryFilter } from "../../app/types";
+import { getItemTierFilterOptions, matchesItemTierFilter } from "../items/itemTierFilters";
 
 export type ItemFeatureState = {
   compendiumItemSearch: string;
   compendiumItemFilter: InventoryFilter;
+  compendiumItemTierFilter: string;
   itemDefinitionModalOpen: boolean;
   editingCompendiumItemId?: string;
   deletingCompendiumItemId?: string;
@@ -28,7 +30,8 @@ export type ItemFeatureDependencies = {
 export function renderCompendiumItemsManager(dependencies: ItemFeatureDependencies): string {
   const { state, itemFilterLabels, escapeHtml, renderEmptyInline } = dependencies;
   const items = getFilteredItems(dependencies);
-  return `<main class="content compendium-content"><div class="screen-title compendium-index-heading"><div><div class="compendium-index-title-row"><h1>Itens</h1><span class="compendium-index-count">${dependencies.catalog.items.length} ${dependencies.catalog.items.length === 1 ? "item" : "itens"}</span></div><p>Crie e organize os itens que poderao ser usados nos inventarios.</p></div><div class="compendium-index-heading-actions"><button class="primary-action" type="button" data-action="new-compendium-item">Novo item</button><button class="secondary-action screen-title-action" type="button" data-action="back-compendium-index">Voltar ao indice</button></div></div><section class="compendium-book-index compendium-item-index"><label class="search-box compendium-index-search"><span>BUSCA</span><input type="search" placeholder="Procurar item..." aria-label="Procurar item" data-compendium-item-search value="${escapeHtml(state.compendiumItemSearch)}" /></label><div class="compendium-filter-block"><span>Categoria</span><div class="filter-row compendium-filter-row">${(Object.keys(itemFilterLabels) as InventoryFilter[]).map((category) => `<button class="chip ${state.compendiumItemFilter === category ? "is-active" : ""}" type="button" data-compendium-item-filter="${category}">${itemFilterLabels[category]}</button>`).join("")}</div></div><div class="compendium-results-heading"><strong>${items.length}</strong><span>${items.length === 1 ? "item encontrado" : "itens encontrados"}</span></div>${items.length ? `<div class="item-grid compendium-item-results">${items.map((item) => renderItemResult(item, dependencies)).join("")}</div>` : renderEmptyInline("Nenhum item encontrado com os filtros atuais.")}</section></main>`;
+  const tierOptions = getItemTierFilterOptions(dependencies.catalog.items);
+    return `<main class="content compendium-content"><div class="screen-title compendium-index-heading"><div><div class="compendium-index-title-row"><h1>Itens</h1><span class="compendium-index-count">${dependencies.catalog.items.length} ${dependencies.catalog.items.length === 1 ? "item" : "itens"}</span></div><p>Crie e organize os itens que poderao ser usados nos inventarios.</p></div><div class="compendium-index-heading-actions"><button class="primary-action" type="button" data-action="new-compendium-item">Novo item</button><button class="secondary-action screen-title-action" type="button" data-action="back-compendium-index">Voltar ao indice</button></div></div><section class="compendium-book-index compendium-item-index"><label class="search-box compendium-index-search"><span>BUSCA</span><input type="search" placeholder="Procurar item..." aria-label="Procurar item" data-compendium-item-search value="${escapeHtml(state.compendiumItemSearch)}" /></label><div class="compendium-filter-block"><span>Categoria</span><div class="filter-row compendium-filter-row">${(Object.keys(itemFilterLabels) as InventoryFilter[]).map((category) => `<button class="chip sf-filter-option ${state.compendiumItemFilter === category ? "is-active" : ""}" type="button" data-compendium-item-filter="${category}">${itemFilterLabels[category]}</button>`).join("")}</div><span>Nível</span><div class="filter-row compendium-filter-row">${tierOptions.map((option) => `<button class="chip sf-filter-option ${state.compendiumItemTierFilter === option.value ? "is-active" : ""}" type="button" data-compendium-item-tier-filter="${option.value}">${option.label}</button>`).join("")}</div></div><div class="compendium-results-heading"><strong>${items.length}</strong><span>${items.length === 1 ? "item encontrado" : "itens encontrados"}</span></div>${items.length ? `<div class="item-grid compendium-item-results">${items.map((item) => renderItemResult(item, dependencies)).join("")}</div>` : renderEmptyInline("Nenhum item encontrado com os filtros atuais.")}</section></main>`;
 }
 
 export function renderCompendiumItemFormModal(dependencies: ItemFeatureDependencies): string {
@@ -86,7 +89,7 @@ export async function removeCompendiumItem(dependencies: ItemFeatureDependencies
 
 function getFilteredItems(dependencies: ItemFeatureDependencies): ItemDefinition[] {
   const { state, catalog, itemFilterLabels } = dependencies; const search = state.compendiumItemSearch.trim().toLowerCase();
-  return catalog.items.filter((item) => (state.compendiumItemFilter === "todos" || item.category === state.compendiumItemFilter) && (!search || [item.name, item.summary, itemFilterLabels[item.category], item.tier ?? "", item.weight, item.value ?? "", ...(item.traits ?? [])].join(" ").toLowerCase().includes(search)));
+  return catalog.items.filter((item) => (state.compendiumItemFilter === "todos" || item.category === state.compendiumItemFilter) && matchesItemTierFilter(item, state.compendiumItemTierFilter) && (!search || [item.name, item.summary, itemFilterLabels[item.category], item.tier ?? "", item.weight, item.value ?? "", ...(item.traits ?? [])].join(" ").toLowerCase().includes(search)));
 }
 
 function renderItemResult(item: ItemDefinition, dependencies: ItemFeatureDependencies): string {

@@ -22,7 +22,7 @@
 
 /* O seletor de itens usa uma única região rolável: a lista interna. */
 .container-modal.add-item-modal {
-  grid-template-rows: auto auto auto minmax(0, 1fr) minmax(5.6rem, auto);
+  grid-template-rows: auto auto auto auto minmax(0, 1fr) minmax(5.6rem, auto);
   width: min(68rem, calc(100vw - 3rem));
   height: min(46rem, calc(100svh - 3rem));
   max-height: min(46rem, calc(100svh - 3rem));
@@ -1903,6 +1903,58 @@ button {
 }
 
 .top-link:focus-visible {
+  outline: 1px solid var(--color-gold);
+  outline-offset: -0.2rem;
+}
+
+/* Filtros compactos usam a mesma névoa localizada da navegação ativa. */
+.sf-filter-option {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+  min-height: 2rem;
+  overflow: hidden;
+  border-color: transparent;
+  color: var(--color-muted);
+  background: transparent;
+  padding: 0.28rem 0.55rem;
+  font-size: 0.78rem;
+}
+
+.sf-filter-option::before {
+  content: "";
+  position: absolute;
+  inset: 0.24rem 0.16rem;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 24% 54%, rgba(255, 244, 225, 0.42), transparent 30%),
+    radial-gradient(ellipse at 66% 42%, rgba(194, 40, 58, 0.52), transparent 38%),
+    linear-gradient(90deg, rgba(50, 10, 16, 0.32), rgba(126, 28, 42, 0.34), rgba(42, 8, 14, 0.32));
+  filter: blur(0.42rem);
+  opacity: 0;
+  transform: scale(0.88, 0.72);
+  transition: opacity 160ms ease;
+}
+
+.sf-filter-option:hover {
+  border-color: transparent;
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.sf-filter-option.is-active {
+  border-color: transparent;
+  color: var(--color-gold);
+  background: transparent;
+  font-weight: 700;
+}
+
+.sf-filter-option.is-active::before {
+  opacity: 1;
+}
+
+.sf-filter-option:focus-visible {
   outline: 1px solid var(--color-gold);
   outline-offset: -0.2rem;
 }
@@ -3960,50 +4012,6 @@ button {
   text-transform: uppercase;
 }
 
-.progression-card-filter-group button {
-  position: relative;
-  z-index: 0;
-  isolation: isolate;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  background: transparent;
-  color: var(--muted);
-  min-height: 2rem;
-  padding: 0.28rem 0.55rem;
-  font-size: 0.78rem;
-}
-
-.progression-card-filter-group button::before {
-  content: "";
-  position: absolute;
-  inset: 0.24rem 0.16rem;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse at 24% 54%, rgba(255, 244, 225, 0.42), transparent 30%),
-    radial-gradient(ellipse at 66% 42%, rgba(194, 40, 58, 0.52), transparent 38%),
-    linear-gradient(90deg, rgba(50, 10, 16, 0.32), rgba(126, 28, 42, 0.34), rgba(42, 8, 14, 0.32));
-  filter: blur(0.42rem);
-  opacity: 0;
-  transform: scale(0.88, 0.72);
-  transition: opacity 160ms ease;
-}
-
-.progression-card-filter-group button.is-active {
-  border-color: transparent;
-  color: var(--color-gold);
-  background: transparent;
-  font-weight: 700;
-}
-
-.progression-card-filter-group button.is-active::before {
-  opacity: 0.7;
-}
-
-.progression-card-filter-group:first-child button.is-active::before {
-  opacity: 1;
-}
-
 .progression-card-picker-intro {
   margin: 0.25rem 0 0;
   color: var(--color-muted);
@@ -4311,6 +4319,70 @@ body.has-modal {
   margin: 0;
 }
 
+.add-item-filter-stack {
+  display: grid;
+  align-content: start;
+  gap: 0.45rem;
+  min-height: 4.5rem;
+}
+
+.add-item-search {
+  width: min(30rem, 100%);
+}
+
+.add-item-detail-modal {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.add-item-preview {
+  display: grid;
+  grid-template-columns: minmax(12rem, 0.72fr) minmax(18rem, 1.28fr);
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid rgba(244, 234, 219, 0.11);
+  background: rgba(6, 4, 12, 0.42);
+}
+
+.add-item-preview-art {
+  display: grid;
+  min-height: 100%;
+  place-items: center;
+  overflow: hidden;
+  border-right: 1px solid rgba(244, 234, 219, 0.08);
+  background:
+    radial-gradient(circle at 54% 42%, rgba(242, 165, 22, 0.28), transparent 9rem),
+    linear-gradient(145deg, #111a22, #080511);
+  color: #f2a516;
+  font-size: 5rem;
+}
+
+.add-item-preview-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.add-item-preview-body {
+  display: grid;
+  align-content: start;
+  gap: 0.85rem;
+  overflow: auto;
+  padding: 1.15rem;
+}
+
+.add-item-preview-body > span:not(.resource-modal-label),
+.add-item-preview-body > p {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.add-item-preview-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: auto;
+}
+
 .add-item-catalog {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(10.25rem, 1fr));
@@ -4321,6 +4393,7 @@ body.has-modal {
 }
 
 .add-item-choice {
+  position: relative;
   width: 100%;
 }
 
@@ -4328,6 +4401,19 @@ body.has-modal {
 .add-item-choice.is-active {
   border-color: rgba(217, 154, 61, 0.62);
   background: rgba(217, 154, 61, 0.09);
+}
+
+.item-selection-state {
+  position: absolute;
+  top: 0.42rem;
+  right: 0.42rem;
+  border: 1px solid rgba(217, 154, 61, 0.52);
+  padding: 0.16rem 0.32rem;
+  color: var(--color-gold);
+  background: rgba(13, 7, 21, 0.86);
+  font-size: 0.66rem;
+  font-style: normal;
+  line-height: 1;
 }
 .add-item-confirm > span {
   margin-top: 0.2rem;
@@ -6413,6 +6499,16 @@ body.has-modal {
 .note-modal label {
   display: grid;
   gap: 0.45rem;
+}
+
+.container-modal .sf-search-field {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.container-modal .sf-search-field > span {
+  flex: 0 0 auto;
 }
 
 .container-modal label span,

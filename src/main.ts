@@ -176,7 +176,7 @@ const state: {
   compendiumDomainFilter: string;
   compendiumTierFilter: string;
   compendiumItemSearch: string;
-  compendiumItemFilter: InventoryFilter;
+  compendiumItemFilter: InventoryFilter; compendiumItemTierFilter: string;
   compendiumAncestrySearch: string;
   compendiumCommunitySearch: string;
   compendiumCommunityPackId: string;
@@ -226,7 +226,7 @@ const state: {
   cardActivationError?: string;
   addItemToCompartmentId?: string;
   addingDefinitionItemId?: string;
-  addItemCatalogFilter: InventoryFilter;
+  addItemCatalogFilter: InventoryFilter; addItemCatalogTierFilter: string; addItemCatalogSearch: string; addItemPreviewDefinitionId?: string; addItemCatalogScrollTop?: number;
   addItemError?: string;
   classModalOpen: boolean;
   ancestryModalOpen: boolean;
@@ -282,7 +282,7 @@ const state: {
   compendiumDomainFilter: "todos",
   compendiumTierFilter: "todos",
   compendiumItemSearch: "",
-  compendiumItemFilter: "todos",
+  compendiumItemFilter: "todos", compendiumItemTierFilter: "todos",
   compendiumAncestrySearch: "",
   compendiumCommunitySearch: "",
   compendiumCommunityPackId: "todos",
@@ -302,7 +302,7 @@ const state: {
   domainModalOpen: false,
   cardModalOpen: false,
   itemDefinitionModalOpen: false,
-  addItemCatalogFilter: "todos",
+  addItemCatalogFilter: "todos", addItemCatalogTierFilter: "todos", addItemCatalogSearch: "",
   classModalOpen: false,
   ancestryModalOpen: false,
   communityModalOpen: false,
@@ -334,7 +334,7 @@ const state: {
   }
 };
 
-const appVersion = "0.21.3";
+const appVersion = "0.22.0";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -1693,6 +1693,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
   injectGameMarkerAuthoringFields();
   enhanceCompendiumClassResults();
   document.body.classList.toggle("has-modal", Boolean(appRoot.querySelector(".modal-backdrop")));
+  if (state.addItemToCompartmentId && state.addItemCatalogScrollTop) requestAnimationFrame(() => { const catalog = appRoot.querySelector<HTMLElement>(".add-item-catalog"); if (catalog) catalog.scrollTop = state.addItemCatalogScrollTop ?? 0; });
   if (previousMainScrollTop !== undefined) {
     requestAnimationFrame(() => {
       const mainShell = appRoot.querySelector<HTMLElement>(".main-shell");
@@ -2328,7 +2329,7 @@ function bindEvents(): void {
       state.compendiumClassPreviewId = undefined;
       state.activatingStoredCardId = undefined;
       state.cardActivationError = undefined;
-      state.addItemToCompartmentId = undefined;
+      state.addItemToCompartmentId = undefined; state.addItemPreviewDefinitionId = undefined;
       state.addingDefinitionItemId = undefined;
       state.addItemError = undefined;
       state.classModalOpen = false;
@@ -2392,7 +2393,7 @@ function bindEvents(): void {
       state.compendiumClassPreviewId = undefined;
       state.activatingStoredCardId = undefined;
       state.cardActivationError = undefined;
-      state.addItemToCompartmentId = undefined;
+      state.addItemToCompartmentId = undefined; state.addItemPreviewDefinitionId = undefined;
       state.addingDefinitionItemId = undefined;
       state.addItemError = undefined;
       state.classModalOpen = false;
@@ -2838,12 +2839,8 @@ function bindEvents(): void {
       return;
     }
 
-    const compendiumItemFilterButton = target.closest<HTMLElement>("[data-compendium-item-filter]");
-    if (compendiumItemFilterButton) {
-      state.compendiumItemFilter = compendiumItemFilterButton.dataset.compendiumItemFilter as InventoryFilter;
-      render();
-      return;
-    }
+    const compendiumItemFilterButton = target.closest<HTMLElement>("[data-compendium-item-filter],[data-compendium-item-tier-filter]");
+    if (compendiumItemFilterButton) { const tier = compendiumItemFilterButton.dataset.compendiumItemTierFilter; if (tier) state.compendiumItemTierFilter = tier; else state.compendiumItemFilter = compendiumItemFilterButton.dataset.compendiumItemFilter as InventoryFilter; render(); return; }
 
     const editCompendiumCardButton = target.closest<HTMLElement>('[data-action="edit-compendium-card"]');
     if (editCompendiumCardButton) {
@@ -3172,29 +3169,22 @@ function bindEvents(): void {
     const openAddItemButton = target.closest<HTMLElement>('[data-action="open-add-item-to-container"]');
     if (openAddItemButton) {
       state.addItemToCompartmentId = openAddItemButton.dataset.compartmentId;
-      state.addingDefinitionItemId = undefined;
-      state.addItemCatalogFilter = "todos";
+      state.addingDefinitionItemId = undefined; state.addItemPreviewDefinitionId = undefined; state.addItemCatalogScrollTop = 0;
+      state.addItemCatalogFilter = "todos"; state.addItemCatalogTierFilter = "todos"; state.addItemCatalogSearch = "";
       state.addItemError = undefined;
       render();
       return;
     }
 
-    const addItemFilterButton = target.closest<HTMLElement>("[data-add-item-filter]");
-    if (addItemFilterButton) {
-      state.addItemCatalogFilter = addItemFilterButton.dataset.addItemFilter as InventoryFilter;
-      state.addingDefinitionItemId = undefined;
-      state.addItemError = undefined;
-      render();
-      return;
-    }
+    const addItemFilterButton = target.closest<HTMLElement>("[data-add-item-filter],[data-add-item-tier-filter]");
+    if (addItemFilterButton) { const tier = addItemFilterButton.dataset.addItemTierFilter; if (tier) state.addItemCatalogTierFilter = tier; else state.addItemCatalogFilter = addItemFilterButton.dataset.addItemFilter as InventoryFilter; state.addingDefinitionItemId = undefined; state.addItemCatalogScrollTop = 0; state.addItemError = undefined; render({ preserveMainScroll: true }); return; }
 
-    const addItemDefinitionButton = target.closest<HTMLElement>("[data-add-item-definition-id]");
-    if (addItemDefinitionButton) {
-      state.addingDefinitionItemId = addItemDefinitionButton.dataset.addItemDefinitionId;
-      state.addItemError = undefined;
-      render();
-      return;
-    }
+    const addItemPreviewButton = target.closest<HTMLElement>("[data-add-item-preview-definition-id]");
+    if (addItemPreviewButton) { state.addItemCatalogScrollTop = appRoot.querySelector<HTMLElement>(".add-item-catalog")?.scrollTop ?? 0; state.addItemPreviewDefinitionId = addItemPreviewButton.dataset.addItemPreviewDefinitionId; state.addItemError = undefined; render({ preserveMainScroll: true }); return; }
+
+    if (target.closest('[data-action="close-add-item-preview"]')) { state.addItemPreviewDefinitionId = undefined; render({ preserveMainScroll: true }); return; }
+    const selectAddItemFromPreviewButton = target.closest<HTMLElement>('[data-action="select-add-item-from-preview"]');
+    if (selectAddItemFromPreviewButton) { state.addingDefinitionItemId = selectAddItemFromPreviewButton.dataset.itemId; state.addItemPreviewDefinitionId = undefined; state.addItemError = undefined; render({ preserveMainScroll: true }); return; }
 
     if (target.closest('[data-action="confirm-add-item-to-container"]')) {
       void addItemToContainerAction(getInventoryActionDependencies());
@@ -3387,7 +3377,7 @@ function bindEvents(): void {
     }
 
     if (event.key === "Escape" && state.addItemToCompartmentId) {
-      state.addItemToCompartmentId = undefined;
+      state.addItemToCompartmentId = undefined; state.addItemPreviewDefinitionId = undefined;
       state.addingDefinitionItemId = undefined;
       state.addItemError = undefined;
       render();
@@ -3513,6 +3503,8 @@ function bindEvents(): void {
         input?.setSelectionRange(input.value.length, input.value.length);
       });
     }
+
+    if (target.matches("[data-add-item-catalog-search]")) { state.addItemCatalogSearch = target.value; state.addItemCatalogScrollTop = 0; render({ preserveMainScroll: true }); requestAnimationFrame(() => { const input = document.querySelector<HTMLInputElement>("[data-add-item-catalog-search]"); input?.focus({ preventScroll: true }); input?.setSelectionRange(input.value.length, input.value.length); }); }
 
     if (target.matches("[data-compendium-ancestry-search]")) {
       state.compendiumAncestrySearch = target.value;
