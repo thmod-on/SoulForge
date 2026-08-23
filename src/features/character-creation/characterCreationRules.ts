@@ -48,7 +48,13 @@ export function hasValidCreationAttributes(values: Record<Attribute["id"], numbe
 export function validateCreationStep(step: CharacterCreationStep, draft: CharacterCreationDraft, catalog: Catalog, _fallback: CharacterCreationFallback): string | undefined {
   if (step === 1 && !draft.name.trim()) return "Informe o nome do personagem.";
   if (step === 2 && (draft.ancestryIds.length < 1 || draft.ancestryIds.length > 2)) return "Escolha uma ou duas ancestralidades.";
-  if (step === 3 && (!draft.topFeatureId || !draft.bottomFeatureId)) return "Defina as Features Top e Bottom.";
+  if (step === 3) {
+    if (!draft.topFeatureId || !draft.bottomFeatureId) return "Defina as Features Top e Bottom.";
+    const ancestries = draft.ancestryIds.slice(0, 2).map((id) => catalog.ancestries.find((entry) => entry.id === id)).filter((entry): entry is AncestryDefinition => Boolean(entry));
+    const topOrigin = ancestries.find((entry) => entry.topFeatureId === draft.topFeatureId);
+    const bottomOrigin = ancestries.find((entry) => entry.bottomFeatureId === draft.bottomFeatureId);
+    if (ancestries.length === 2 && topOrigin?.id === bottomOrigin?.id) return "Em uma ancestralidade mista, escolha a Feature Top e a Bottom de origens diferentes.";
+  }
   if (step === 4 && (!draft.communityId || !catalog.communities.some((community) => community.id === draft.communityId))) return "Escolha uma comunidade.";
   if (step === 5 && (!draft.classId || !draft.subclassId)) return "Escolha uma classe e uma subclasse.";
   if (step === 6 && !hasValidCreationAttributes(draft.attributeValues)) return "Distribua uma vez cada valor: +2, +1, +1, +0, +0 e −1.";
@@ -66,9 +72,12 @@ export function buildCharacterFromDraft(draft: CharacterCreationDraft, catalog: 
   const communityFeature = community ? catalog.features.find((entry) => entry.id === community.featureId && entry.sourceType === "community" && entry.sourceId === community.id) : undefined;
   const validTop = ancestries.some((entry) => entry.topFeatureId === draft.topFeatureId);
   const validBottom = ancestries.some((entry) => entry.bottomFeatureId === draft.bottomFeatureId);
+  const topOrigin = ancestries.find((entry) => entry.topFeatureId === draft.topFeatureId);
+  const bottomOrigin = ancestries.find((entry) => entry.bottomFeatureId === draft.bottomFeatureId);
+  const hasValidMixedAncestryFeatures = ancestries.length !== 2 || topOrigin?.id !== bottomOrigin?.id;
   const cards = classDefinition ? draft.cardIds.filter((id) => catalog.cards.some((card) => card.id === id && card.tier === 1 && classDefinition.domainIds.includes(card.domainId))) : [];
   const experiences = draft.experiences.map((entry) => ({ ...entry, name: entry.name.trim(), description: entry.description.trim() }));
-  if (!draft.name.trim() || !community || !communityFeature || !classDefinition || !subclassDefinition || ancestries.length !== draft.ancestryIds.length || !ancestries.length || !validTop || !validBottom || !hasValidCreationAttributes(draft.attributeValues) || cards.length !== 2 || !hasValidStartingExperiences(experiences)) {
+  if (!draft.name.trim() || !community || !communityFeature || !classDefinition || !subclassDefinition || ancestries.length !== draft.ancestryIds.length || !ancestries.length || !validTop || !validBottom || !hasValidMixedAncestryFeatures || !hasValidCreationAttributes(draft.attributeValues) || cards.length !== 2 || !hasValidStartingExperiences(experiences)) {
     return new Error("Complete a ficha, escolha duas cartas de Domínio e defina duas Experiências diferentes.");
   }
   const features = catalog.features;

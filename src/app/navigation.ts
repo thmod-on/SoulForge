@@ -1,8 +1,7 @@
 import type { Page } from "./types";
 
 export const playerNavigation: Array<{ page: Page; label: string }> = [
-  { page: "overview", label: "Visao Geral" },
-  { page: "skills", label: "Tracos" },
+  { page: "skills", label: "Aptidoes" },
   { page: "inventory", label: "Inventario" },
   { page: "progression", label: "Progressao" },
   { page: "notes", label: "Anotacoes" }

@@ -18,7 +18,7 @@ import { buildCharacterFromDraft, getCreationAncestries, getCreationClasses, get
 import { renderCreationActions, renderCreationProgress, renderCreationTitle } from "./features/character-creation/renderCreationChrome";
 import { renderCreationAttributesStep, renderCreationClassStep, renderCreationCommunityStep, renderCreationExperiencesStep, renderCreationIdentityStep, renderCreationReviewStep } from "./features/character-creation/renderCreationSteps";
 import { characterCreationAttributes, createEmptyCreationAttributeValues, handleCreationAttributeAllocation } from "./features/character-creation/attributeAllocation";
-import { handleCommunityAction, renderCompendiumCommunitiesManager as renderCompendiumCommunitiesManagerView, renderCompendiumFourthSpread as renderCompendiumFourthSpreadView } from "./features/compendium/communities";
+import { handleCommunityAction, renderCompendiumCommunitiesManager as renderCompendiumCommunitiesManagerView, renderCompendiumCommunityPreviewModal as renderCompendiumCommunityPreviewModalView, renderCompendiumFourthSpread as renderCompendiumFourthSpreadView, type CommunityFeatureDependencies } from "./features/compendium/communities";
 import { validatePackBundle } from "./features/packs/packValidation";
 import { renderCharacterSelection as renderCharacterSelectionView } from "./features/character-selection/renderCharacterSelection";
 import { renderProgression as renderProgressionView, type ProgressionRenderDependencies } from "./features/progression/renderProgression";
@@ -71,6 +71,7 @@ import {
 } from "./features/inventory/bindInventoryDrag";
 import { getEffectiveDefense, synchronizeArmorResource } from "./features/inventory/combatModifiers";
 import { synchronizeCharacterSheetModifiers } from "./features/player/sheetModifiers";
+import { renderCharacterIdentityModal as renderCharacterIdentityModalView } from "./features/character-identity/renderCharacterIdentityModal";
 import { getSubclassStageSkills } from "./features/player/subclassTrack";
 import type { RestKind, RestMoveChoice } from "./features/rest/restRules";
 import { renderRestModal as renderRestModalView } from "./features/rest/renderRest";
@@ -239,6 +240,7 @@ const state: {
   deletingCharacterId?: string;
   characterPortraitModalOpen: boolean;
   characterPortraitPreviewOpen: boolean;
+  characterIdentityModalSection?: "character" | "class" | "ancestry" | "community";
   gameMarkerDieDialog?: { markerKey: string; dieId: string; mode: "result" | "consume" };
   restDialogKind?: RestKind;
   restChoices: RestMoveChoice[];
@@ -334,7 +336,7 @@ const state: {
   }
 };
 
-const appVersion = "0.22.1";
+const appVersion = "0.22.2";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -343,12 +345,6 @@ const itemFilterLabels: Record<InventoryFilter, string> = {
   consumivel: "Consumiveis",
   equipamento: "Equipamentos",
   loot: "Loot"
-};
-
-const skillSourceLabels: Record<Character["skills"][number]["source"], string> = {
-  class: "Classe",
-  ancestry: "Ancestralidade",
-  community: "Comunidade"
 };
 
 const noteCategoryLabels: Record<CharacterNoteCategory, string> = {
@@ -576,110 +572,35 @@ function getAncestryFeatureDependencies(): AncestryFeatureDependencies {
   };
 }
 
-function renderSkills(character: Character): string {
-  const communitySkills = character.skills.filter((skill) => skill.source === "community");
+function getCommunityFeatureDependencies(): CommunityFeatureDependencies {
+  return {
+    state,
+    catalog,
+    escapeHtml,
+    getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs),
+    saveCustomDefinition,
+    deleteCustomDefinition,
+    refreshCatalog,
+    render
+  };
+}
 
+function renderSkills(character: Character): string {
   return `
     <main class="content">
       <div class="screen-title">
         <div>
-          <h1>Tracos</h1>
-          <p>Experiencias e habilidades de origem que definem o personagem fora do Loadout.</p>
+          <h1>Aptidoes</h1>
+          <p>Experiencias que representam a historia, os conhecimentos e os talentos do personagem.</p>
         </div>
       </div>
-      <section class="traits-character-identity" aria-label="Classe e subclasse"><div><span>Classe</span><strong>${escapeHtml(character.identity.className)}</strong></div><div><span>Subclasse</span><strong>${escapeHtml(character.identity.subclassName ?? "Não definida")}</strong></div></section>
       <section class="traits-experience-section">
         <div class="section-heading">
           <h2>Experiencias</h2>
         </div>
         ${renderExperienceList(character)}
       </section>
-      <div class="traits-skill-layout">
-        <section class="skill-column">
-          <div class="section-heading">
-            <h2>Ancestralidade</h2>
-          </div>
-          ${renderAncestryFeatureSelection(character)}
-        </section>
-        <section class="skill-column">
-          <div class="section-heading">
-            <h2>${skillSourceLabels.community}</h2>
-          </div>
-          ${renderSkillList(communitySkills)}
-        </section>
-      </div>
     </main>
-  `;
-}
-
-function renderAncestryFeatureSelection(character: Character): string {
-  const compactName = (value: string) => value.replace(/\s*\([^)]*\)\s*/g, " ").trim().toLocaleLowerCase("pt-BR");
-  const selectedAncestries = (character.identity.ancestryIds?.length
-    ? character.identity.ancestryIds.map((id) => catalog.ancestries.find((ancestry) => ancestry.id === id))
-    : [character.identity.primaryAncestryId
-      ? catalog.ancestries.find((ancestry) => ancestry.id === character.identity.primaryAncestryId)
-      : catalog.ancestries.find((ancestry) => compactName(ancestry.name) === compactName(character.identity.ancestry))]
-  ).filter((ancestry): ancestry is AncestryDefinition => Boolean(ancestry));
-  const primaryAncestry = selectedAncestries[0];
-  const featureFor = (position: "top" | "bottom"): FeatureDefinition | undefined => {
-    const selectedId = character.identity.ancestryFeatureIds?.[position];
-    const defaultId = position === "top" ? primaryAncestry?.topFeatureId : primaryAncestry?.bottomFeatureId;
-    return catalog.features.find((feature) => feature.id === (selectedId ?? defaultId));
-  };
-  const top = featureFor("top");
-  const bottom = featureFor("bottom");
-
-  if (!primaryAncestry || !top || !bottom) {
-    return renderEmptyInline("Importe o Pack da ancestralidade para exibir as Features Top e Bottom deste personagem.");
-  }
-  const ancestryForFeature = (feature: FeatureDefinition) => selectedAncestries.find((ancestry) => ancestry.id === feature.sourceId) ?? primaryAncestry;
-  const ancestryLabel = selectedAncestries.map((ancestry) => ancestry.name).join(" + ");
-
-  return `
-    <div class="ancestry-traits" aria-label="Features de ${escapeHtml(ancestryLabel)}">
-      <div class="ancestry-traits-name">
-        <span>${selectedAncestries.length === 1 ? "Ancestralidade selecionada" : "Ancestralidades selecionadas"}</span>
-        <strong>${escapeHtml(ancestryLabel)}</strong>
-      </div>
-      <div class="ancestry-feature-grid">
-        ${renderAncestryFeatureCard("Top", top, ancestryForFeature(top))}
-        ${renderAncestryFeatureCard("Bottom", bottom, ancestryForFeature(bottom))}
-      </div>
-    </div>
-  `;
-}
-
-function renderAncestryFeatureCard(position: "Top" | "Bottom", feature: FeatureDefinition, ancestry: AncestryDefinition): string {
-  return `
-    <article class="ancestry-feature-card ancestry-feature-${position.toLowerCase()}">
-      <div><span>${position}</span><small>${escapeHtml(ancestry.name)}</small></div>
-      <strong>${escapeHtml(feature.name)}</strong>
-      <p>${escapeHtml(feature.summary)}</p>
-    </article>
-  `;
-}
-
-function renderSkillList(skills: Character["skills"]): string {
-  if (!skills.length) {
-    return renderEmptyInline("Nenhuma habilidade registrada.");
-  }
-
-  return `
-    <div class="info-list">
-      ${skills
-        .map(
-          (skill) => `
-            <article class="info-card">
-              <div>
-                <strong>${escapeHtml(skill.name)}</strong>
-                <span>${skillSourceLabels[skill.source]}</span>
-              </div>
-              <p>${escapeHtml(skill.description)}</p>
-            </article>
-          `
-        )
-        .join("")}
-    </div>
   `;
 }
 
@@ -1400,15 +1321,27 @@ function renderCharacterCreationModal(): string {
   const ancestries = getCharacterCreationAncestries();
   const selectedAncestryIds = state.characterCreationAncestryIds.filter((id) => ancestries.some((ancestry) => ancestry.id === id)).slice(0, 2);
   const selectedAncestries = selectedAncestryIds.map((id) => ancestries.find((ancestry) => ancestry.id === id)).filter((ancestry): ancestry is AncestryDefinition => Boolean(ancestry));
+  const needsAncestrySelection = state.characterCreationStep === 2 && selectedAncestries.length === 0;
   const topFeatures = selectedAncestries.map((ancestry) => catalog.features.find((feature) => feature.id === ancestry.topFeatureId)).filter((feature): feature is FeatureDefinition => Boolean(feature));
   const bottomFeatures = selectedAncestries.map((ancestry) => catalog.features.find((feature) => feature.id === ancestry.bottomFeatureId)).filter((feature): feature is FeatureDefinition => Boolean(feature));
-  const topFeatureId = topFeatures.some((feature) => feature.id === state.characterCreationTopFeatureId) ? state.characterCreationTopFeatureId : topFeatures[0]?.id;
-  const bottomFeatureId = bottomFeatures.some((feature) => feature.id === state.characterCreationBottomFeatureId) ? state.characterCreationBottomFeatureId : bottomFeatures[0]?.id;
+  const ancestryIdForFeature = (featureId: string | undefined, position: "top" | "bottom") => selectedAncestries.find((ancestry) => (position === "top" ? ancestry.topFeatureId : ancestry.bottomFeatureId) === featureId)?.id;
+  let topFeatureId = topFeatures.some((feature) => feature.id === state.characterCreationTopFeatureId) ? state.characterCreationTopFeatureId : topFeatures[0]?.id;
+  let bottomFeatureId = bottomFeatures.some((feature) => feature.id === state.characterCreationBottomFeatureId) ? state.characterCreationBottomFeatureId : bottomFeatures[0]?.id;
+  const hasMixedAncestry = selectedAncestries.length === 2;
+  if (hasMixedAncestry && ancestryIdForFeature(topFeatureId, "top") === ancestryIdForFeature(bottomFeatureId, "bottom")) {
+    topFeatureId = topFeatures[0]?.id;
+    bottomFeatureId = bottomFeatures.find((feature) => ancestryIdForFeature(feature.id, "bottom") !== ancestryIdForFeature(topFeatureId, "top"))?.id;
+  }
   const ancestrySearch = state.characterCreationAncestrySearch.trim().toLocaleLowerCase("pt-BR");
   const visibleAncestries = ancestries.filter((ancestry) => !ancestrySearch || `${ancestry.name} ${ancestry.summary}`.toLocaleLowerCase("pt-BR").includes(ancestrySearch));
   const featureOptionLabel = (feature: FeatureDefinition, position: "top" | "bottom") => {
     const source = selectedAncestries.find((ancestry) => (position === "top" ? ancestry.topFeatureId : ancestry.bottomFeatureId) === feature.id);
     return `${escapeHtml(source?.name ?? "Ancestralidade")} - ${escapeHtml(feature.name)}`;
+  };
+  const featureOption = (feature: FeatureDefinition, position: "top" | "bottom", selectedId: string | undefined, oppositeId: string | undefined) => {
+    const selected = feature.id === selectedId;
+    const disabled = hasMixedAncestry && ancestryIdForFeature(feature.id, position) === ancestryIdForFeature(oppositeId, position === "top" ? "bottom" : "top");
+    return `<option value="${escapeHtml(feature.id)}" ${selected ? "selected" : ""} ${disabled ? "disabled" : ""}>${featureOptionLabel(feature, position)}</option>`;
   };
   const selectedTopFeature = topFeatures.find((feature) => feature.id === topFeatureId);
   const selectedBottomFeature = bottomFeatures.find((feature) => feature.id === bottomFeatureId);
@@ -1429,16 +1362,17 @@ function renderCharacterCreationModal(): string {
         ${renderCreationTitle({ step: state.characterCreationStep })}</div><div class="character-creation-scroll">
         ${renderCreationIdentityStep({ name: state.characterCreationName, community: state.characterCreationCommunity, portraitImage: state.characterCreationPortraitImage }, escapeHtml)}
         <section class="character-ancestry-picker creation-step-panel" data-creation-panel="2">
-          <div><span>Origem</span><p>Escolha uma ou duas. Com duas, combine livremente a Feature Top e a Feature Bottom.</p></div>
+          <div><span>Origem</span></div>
+          ${needsAncestrySelection ? '<p class="character-creation-selection-hint" id="character-ancestry-selection-hint">Selecione ao menos uma, no máximo duas, ancestralidades para continuar.</p>' : ""}
           <label class="sf-search-field character-creation-search"><span aria-hidden="true">⌕</span><input type="search" data-character-ancestry-search value="${escapeHtml(state.characterCreationAncestrySearch)}" placeholder="Pesquisar ancestralidade" aria-label="Pesquisar ancestralidade" /></label>
           ${ancestries.length ? `<div class="character-ancestry-choice-grid">${visibleAncestries.map((ancestry) => { const selected = selectedAncestryIds.includes(ancestry.id); const disabled = !selected && selectedAncestryIds.length >= 2; return `<label class="character-ancestry-choice ${selected ? "is-selected" : ""}"><input type="checkbox" data-character-ancestry-id="${escapeHtml(ancestry.id)}" ${selected ? "checked" : ""} ${disabled ? "disabled" : ""}/><span><strong>${escapeHtml(ancestry.name)}</strong><small>${escapeHtml(ancestry.summary)}</small></span></label>`; }).join("") || `<p class="form-error">Nenhuma ancestralidade encontrada.</p>`}</div>` : `<p class="form-error">Importe um Pack de ancestralidades no Compendium antes de criar a ficha.</p>`}
-          ${selectedAncestries.length ? `<div class="character-feature-choice-grid"><label class="form-field"><span>Feature Top</span>${topFeatures.length > 1 ? `<select data-character-top-feature>${topFeatures.map((feature) => { const origin = selectedAncestries.find((ancestry) => ancestry.topFeatureId === feature.id); return `<option value="${escapeHtml(feature.id)}" ${feature.id === topFeatureId ? "selected" : ""}>${escapeHtml(origin?.name ?? "Ancestralidade")} - ${escapeHtml(feature.name)}</option>`; }).join("")}</select>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(topFeatures[0]?.name ?? "Feature indisponivel")}</strong><small>${escapeHtml(topFeatures[0]?.summary ?? "")}</small></div>`}</label><label class="form-field"><span>Feature Bottom</span>${bottomFeatures.length > 1 ? `<select data-character-bottom-feature>${bottomFeatures.map((feature) => { const origin = selectedAncestries.find((ancestry) => ancestry.bottomFeatureId === feature.id); return `<option value="${escapeHtml(feature.id)}" ${feature.id === bottomFeatureId ? "selected" : ""}>${escapeHtml(origin?.name ?? "Ancestralidade")} - ${escapeHtml(feature.name)}</option>`; }).join("")}</select>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(bottomFeatures[0]?.name ?? "Feature indisponivel")}</strong><small>${escapeHtml(bottomFeatures[0]?.summary ?? "")}</small></div>`}</label></div>` : ""}
+          ${selectedAncestries.length ? `${hasMixedAncestry ? '<p class="character-creation-selection-hint">Ancestralidade mista: escolha a Feature Top e a Bottom de origens diferentes.</p>' : ""}<div class="character-feature-choice-grid"><label class="form-field"><span>Feature Top</span>${topFeatures.length > 1 ? `<select data-character-top-feature>${topFeatures.map((feature) => featureOption(feature, "top", topFeatureId, bottomFeatureId)).join("")}</select>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(topFeatures[0]?.name ?? "Feature indisponivel")}</strong><small>${escapeHtml(topFeatures[0]?.summary ?? "")}</small></div>`}</label><label class="form-field"><span>Feature Bottom</span>${bottomFeatures.length > 1 ? `<select data-character-bottom-feature>${bottomFeatures.map((feature) => featureOption(feature, "bottom", bottomFeatureId, topFeatureId)).join("")}</select>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(bottomFeatures[0]?.name ?? "Feature indisponivel")}</strong><small>${escapeHtml(bottomFeatures[0]?.summary ?? "")}</small></div>`}</label></div>` : ""}
         </section>
         <section class="character-ancestry-picker creation-step-panel character-feature-step" data-creation-panel="3">
-          <div><span>Origem</span><p>${selectedAncestries.length === 2 ? "Escolha uma Feature Top e uma Feature Bottom entre as ancestralidades selecionadas." : "As duas Features abaixo foram definidas pela sua ancestralidade."}</p></div>
+          <div><span>Origem</span><p>${selectedAncestries.length === 2 ? "Escolha uma Feature Top e uma Feature Bottom de origens diferentes." : "As duas Features abaixo foram definidas pela sua ancestralidade."}</p></div>
           <div class="character-feature-choice-grid">
-            <label class="form-field"><span>Feature Top</span>${topFeatures.length > 1 ? `<select data-character-top-feature>${topFeatures.map((feature) => `<option value="${escapeHtml(feature.id)}" ${feature.id === topFeatureId ? "selected" : ""}>${featureOptionLabel(feature, "top")}</option>`).join("")}</select><div class="selected-feature-description"><strong>${escapeHtml(selectedTopFeature?.name ?? "Feature indisponível")}</strong><p>${escapeHtml(selectedTopFeature?.summary ?? "")}</p></div>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(topFeatures[0]?.name ?? "Feature indisponível")}</strong><small>${escapeHtml(topFeatures[0]?.summary ?? "")}</small></div>`}</label>
-            <label class="form-field"><span>Feature Bottom</span>${bottomFeatures.length > 1 ? `<select data-character-bottom-feature>${bottomFeatures.map((feature) => `<option value="${escapeHtml(feature.id)}" ${feature.id === bottomFeatureId ? "selected" : ""}>${featureOptionLabel(feature, "bottom")}</option>`).join("")}</select><div class="selected-feature-description"><strong>${escapeHtml(selectedBottomFeature?.name ?? "Feature indisponível")}</strong><p>${escapeHtml(selectedBottomFeature?.summary ?? "")}</p></div>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(bottomFeatures[0]?.name ?? "Feature indisponível")}</strong><small>${escapeHtml(bottomFeatures[0]?.summary ?? "")}</small></div>`}</label>
+            <label class="form-field"><span>Feature Top</span>${topFeatures.length > 1 ? `<select data-character-top-feature>${topFeatures.map((feature) => featureOption(feature, "top", topFeatureId, bottomFeatureId)).join("")}</select><div class="selected-feature-description"><strong>${escapeHtml(selectedTopFeature?.name ?? "Feature indisponível")}</strong><p>${escapeHtml(selectedTopFeature?.summary ?? "")}</p></div>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(topFeatures[0]?.name ?? "Feature indisponível")}</strong><small>${escapeHtml(topFeatures[0]?.summary ?? "")}</small></div>`}</label>
+            <label class="form-field"><span>Feature Bottom</span>${bottomFeatures.length > 1 ? `<select data-character-bottom-feature>${bottomFeatures.map((feature) => featureOption(feature, "bottom", bottomFeatureId, topFeatureId)).join("")}</select><div class="selected-feature-description"><strong>${escapeHtml(selectedBottomFeature?.name ?? "Feature indisponível")}</strong><p>${escapeHtml(selectedBottomFeature?.summary ?? "")}</p></div>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(bottomFeatures[0]?.name ?? "Feature indisponível")}</strong><small>${escapeHtml(bottomFeatures[0]?.summary ?? "")}</small></div>`}</label>
           </div>
         </section>
         ${renderCreationCommunityStep({ communities: catalog.communities, features: catalog.features, selectedId: state.characterCreationCommunityId, search: state.characterCreationCommunitySearch, packId: state.characterCreationCommunityPackId, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs) }, escapeHtml)}
@@ -1449,7 +1383,7 @@ function renderCharacterCreationModal(): string {
         ${renderCreationReviewStep({ name: state.characterCreationName, community: catalog.communities.find((entry) => entry.id === state.characterCreationCommunityId)?.name ?? state.characterCreationCommunity, ancestries: selectedAncestries.map((ancestry) => ancestry.name).join(" + "), topFeature: selectedTopFeature?.name, bottomFeature: selectedBottomFeature?.name, attributes: characterCreationAttributes.map((attribute) => ({ label: attribute.label, value: state.characterCreationAttributeValues[attribute.id] })), className: selectedClass.name, subclassName: selectedSubclass?.name, hitPoints: selectedClass.startingHitPoints, evasion: selectedClass.startingEvasion, cards: state.characterCreationCardIds.map((id) => catalog.cards.find((card) => card.id === id)?.name ?? "").filter(Boolean).join(" · "), experiences: state.characterCreationExperiences.map((experience) => experience.name).filter(Boolean).join(" · ") }, escapeHtml)}
         ${state.characterCreationError ? `<p class="form-error">${escapeHtml(state.characterCreationError)}</p>` : ""}
         </div>
-        ${renderCreationActions({ step: state.characterCreationStep })}
+        ${renderCreationActions({ step: state.characterCreationStep, nextDisabled: needsAncestrySelection, nextDescribedBy: needsAncestrySelection ? "character-ancestry-selection-hint" : undefined })}
       </form>
     </div>
   `;
@@ -1457,8 +1391,8 @@ function renderCharacterCreationModal(): string {
 
 function renderPlaceholder(page: Page): string {
   const labels: Record<Page, string> = {
-    overview: "Visao Geral",
-    skills: "Tracos",
+    overview: "Ficha",
+    skills: "Aptidoes",
     inventory: "Inventario",
     progression: "Progressao",
     notes: "Anotacoes",
@@ -1647,7 +1581,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
       <div class="app-shell">
         ${renderSidebarView(character, getPlayerShellDependencies())}
         <div class="main-shell">
-          ${renderTopbarView(getPlayerShellDependencies())}
+          ${renderTopbarView(character, getPlayerShellDependencies())}
           ${screen}
         </div>
       </div>
@@ -1685,6 +1619,8 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
     ${renderDeleteCompendiumAncestryModalView(getAncestryFeatureDependencies())}
     ${renderCharacterPortraitModal()}
     ${renderCharacterPortraitPreviewModal()}
+    ${renderCharacterIdentityModalView({ character: state.character, section: state.characterIdentityModalSection, catalog, escapeHtml })}
+    ${renderCompendiumCommunityPreviewModalView(getCommunityFeatureDependencies())}
     ${renderGameMarkerDieDialog()}
     ${renderRestModalView(character, state.restDialogKind, state.restChoices, state.restError, { escapeHtml })}
     ${renderPackImportModal()}
@@ -1996,8 +1932,9 @@ function validateCharacterCreationStep(): boolean {
   syncCharacterCreationDraft();
   if (state.characterCreationStep === 2) {
     const primaryAncestry = catalog.ancestries.find((ancestry) => ancestry.id === state.characterCreationAncestryIds[0]);
+    const secondaryAncestry = catalog.ancestries.find((ancestry) => ancestry.id === state.characterCreationAncestryIds[1]);
     state.characterCreationTopFeatureId = primaryAncestry?.topFeatureId;
-    state.characterCreationBottomFeatureId = primaryAncestry?.bottomFeatureId;
+    state.characterCreationBottomFeatureId = secondaryAncestry?.bottomFeatureId ?? primaryAncestry?.bottomFeatureId;
   }
   const error = validateCreationStep(state.characterCreationStep, getCharacterCreationDraft(), catalog, getCharacterCreationFallback());
   state.characterCreationError = error;
@@ -2347,6 +2284,7 @@ function bindEvents(): void {
       state.deletingCharacterId = undefined;
       state.characterPortraitModalOpen = false;
       state.characterPortraitPreviewOpen = false;
+      state.characterIdentityModalSection = undefined;
       state.gameMarkerDieDialog = undefined;
       state.restDialogKind = undefined;
       state.restChoices = [];
@@ -2411,6 +2349,7 @@ function bindEvents(): void {
       state.deletingCharacterId = undefined;
       state.characterPortraitModalOpen = false;
       state.characterPortraitPreviewOpen = false;
+      state.characterIdentityModalSection = undefined;
       state.gameMarkerDieDialog = undefined;
       state.restDialogKind = undefined;
       state.restChoices = [];
@@ -2520,6 +2459,23 @@ function bindEvents(): void {
       return;
     }
 
+    if (target.closest('[data-action="open-character-sheet"]')) {
+      state.page = "overview";
+      state.characterIdentityModalSection = undefined;
+      render({ preserveMainScroll: true });
+      return;
+    }
+
+    const identityButton = target.closest<HTMLElement>('[data-action="open-character-identity"]');
+    if (identityButton) {
+      const section = identityButton.dataset.identitySection;
+      if (section === "character" || section === "class" || section === "ancestry" || section === "community") {
+        state.characterIdentityModalSection = section;
+        render({ preserveMainScroll: true });
+      }
+      return;
+    }
+
     if (target.closest('[data-action="open-character-portrait"]')) {
       state.characterPortraitModalOpen = true;
       render();
@@ -2572,7 +2528,7 @@ function bindEvents(): void {
       state.characterCreationName = "";
       state.characterCreationCommunity = ""; state.characterCreationCommunityId = catalog.communities[0]?.id;
       state.characterCreationCommunitySearch = ""; state.characterCreationCommunityPackId = "todos";
-      state.characterCreationAncestryIds = getCharacterCreationAncestries().slice(0, 1).map((ancestry) => ancestry.id);
+      state.characterCreationAncestryIds = [];
       state.characterCreationAncestrySearch = "";
       state.characterCreationCardIds = []; state.characterCreationFocusedCardId = undefined;
       state.characterCreationExperiences = [{ name: "", description: "" }, { name: "", description: "" }];

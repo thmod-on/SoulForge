@@ -2,6 +2,8 @@ import { isFinalCharacterCreationStep, type CharacterCreationStep } from "./crea
 
 export type CreationChromeState = {
   step: CharacterCreationStep;
+  nextDisabled?: boolean;
+  nextDescribedBy?: string;
 };
 
 const steps = ["Identidade", "Ancestralidades", "Features", "Comunidade", "Classe", "Atributos", "Cartas", "Experiências", "Revisão"];
@@ -16,5 +18,8 @@ export function renderCreationTitle(state: CreationChromeState): string {
 }
 
 export function renderCreationActions(state: CreationChromeState): string {
-  return `<div class="modal-actions character-creation-actions">${state.step > 1 ? '<button class="sf-action sf-action--secondary sf-action--icon character-creation-arrow" type="button" data-action="character-creation-previous" aria-label="Voltar à etapa anterior" title="Voltar">←</button>' : "<span></span>"}${isFinalCharacterCreationStep(state.step) ? '<button class="sf-action sf-action--primary" type="button" data-action="save-new-character">Criar ficha</button>' : '<button class="sf-action sf-action--primary sf-action--icon character-creation-arrow" type="button" data-action="character-creation-next" aria-label="Avançar para a próxima etapa" title="Continuar">→</button>'}</div>`;
+  const nextAction = isFinalCharacterCreationStep(state.step)
+    ? '<button class="sf-action sf-action--primary" type="button" data-action="save-new-character">Criar ficha</button>'
+    : `<button class="sf-action sf-action--primary sf-action--icon character-creation-arrow" type="button" data-action="character-creation-next" aria-label="Avançar para a próxima etapa" title="Continuar" ${state.nextDisabled ? "disabled" : ""}${state.nextDescribedBy ? ` aria-describedby="${state.nextDescribedBy}"` : ""}>→</button>`;
+  return `<div class="modal-actions character-creation-actions">${state.step > 1 ? '<button class="sf-action sf-action--secondary sf-action--icon character-creation-arrow" type="button" data-action="character-creation-previous" aria-label="Voltar à etapa anterior" title="Voltar">←</button>' : "<span></span>"}${nextAction}</div>`;
 }

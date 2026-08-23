@@ -101,3 +101,16 @@ Remover um Pack não deve alterar silenciosamente um personagem. Caso alguma ref
 Packs que reproduzem conteúdo do Daggerheart SRD ou outro material da Darrington Press devem seguir [CONTENT_POLICY.md](CONTENT_POLICY.md).
 
 Em especial, um Pack oficial destinado exclusivamente ao uso privado deve ficar em `local-packs/`, fora do controle de versão e do build público. Ele nunca deve ser importado por `src/content/installedPacks.ts`, incluído em `packs/` ou enviado ao GitHub Pages sem uma revisão explícita da licença e autorização aplicável.
+
+### Organização de packs locais
+
+Para facilitar a importação manual, `local-packs/` separa o material de trabalho dos arquivos prontos para uso:
+
+```text
+local-packs/
+  imports/  # arquivos .soulforge-pack.json prontos para importar
+  sources/  # manifestos, definitions, revisões e material de trabalho por tipo
+  scripts/  # geradores locais de packs
+```
+
+Os arquivos em `imports/` devem permanecer em uma única pasta, com nomes completos e estáveis. Os geradores locais escrevem suas fontes em `sources/` e os bundles importáveis em `imports/`.

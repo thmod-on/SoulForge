@@ -624,6 +624,13 @@ button {
   line-height: 1.4;
 }
 
+.character-creation-selection-hint {
+  margin: 0;
+  color: var(--color-gold) !important;
+  font-size: 0.82rem !important;
+  font-weight: 650;
+}
+
 .character-ancestry-choice-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1442,6 +1449,19 @@ button {
     rgba(255, 255, 255, 0.025);
 }
 
+/* Quando Conjuração também foi aprimorada, o avanço permanente tem prioridade visual. */
+.attribute-badge.is-upgraded.is-spellcast::before {
+  border-color: rgba(217, 154, 61, 0.76);
+  background:
+    radial-gradient(circle at 82% 24%, rgba(182, 112, 235, 0.2), transparent 1.8rem),
+    radial-gradient(circle at 50% 18%, rgba(217, 154, 61, 0.2), transparent 2.7rem),
+    linear-gradient(180deg, rgba(244, 234, 219, 0.13), rgba(217, 154, 61, 0.045)),
+    rgba(255, 255, 255, 0.025);
+  box-shadow:
+    inset 0 0 0 1px rgba(8, 5, 17, 0.84),
+    0 0 16px rgba(217, 154, 61, 0.16);
+}
+
 .attribute-spellcast-icon {
   position: absolute;
   top: 0.38rem;
@@ -1812,13 +1832,118 @@ button {
 }
 
 .topbar {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  min-height: var(--brand-height);
+  display: grid;
+  grid-template-rows: auto auto;
+  min-height: 5.55rem;
   margin: var(--shell-gutter) var(--shell-gutter) 0;
-  padding: 0 1rem;
+  padding: 0;
   border-width: 1px;
+  overflow: hidden;
+}
+
+.topbar-identity,
+.topbar-navigation-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+}
+
+.topbar-identity {
+  gap: 0.2rem;
+  min-height: 2.35rem;
+  overflow-x: auto;
+  border-bottom: 1px solid rgba(244, 234, 219, 0.13);
+  padding: 0.18rem 0.72rem;
+  scrollbar-width: none;
+}
+
+.topbar-identity::-webkit-scrollbar,
+.top-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.topbar-identity-link {
+  position: relative;
+  z-index: 0;
+  display: inline-flex;
+  min-width: 0;
+  flex: 0 0 auto;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 0.22rem;
+  color: var(--color-muted);
+  background: transparent;
+  padding: 0.3rem 0.28rem;
+  text-align: left;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.topbar-identity-link::before {
+  content: "";
+  position: absolute;
+  inset: 0.22rem 0.12rem;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 24% 54%, rgba(255, 244, 225, 0.42), transparent 30%),
+    radial-gradient(ellipse at 66% 42%, rgba(194, 40, 58, 0.52), transparent 38%),
+    linear-gradient(90deg, rgba(50, 10, 16, 0.32), rgba(126, 28, 42, 0.34), rgba(42, 8, 14, 0.32));
+  filter: blur(0.42rem);
+  opacity: 0;
+  transform: scale(0.88, 0.72);
+  transition: opacity 160ms ease;
+}
+
+.topbar-identity-separator {
+  flex: 0 0 auto;
+  color: rgba(217, 154, 61, 0.72);
+  font-size: 0.53rem;
+}
+
+.topbar-identity-link > strong {
+  max-width: 12rem;
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: 0.82rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-identity-link:hover,
+.topbar-identity-link:focus-visible {
+  border-color: rgba(217, 154, 61, 0.45);
+  color: var(--color-gold);
+  background: rgba(217, 154, 61, 0.08);
+}
+
+.topbar-identity-link:hover > strong,
+.topbar-identity-link:focus-visible > strong {
+  color: var(--color-gold);
+}
+
+.topbar-identity-link.is-character > strong {
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.topbar-identity-link.is-active {
+  color: var(--color-gold);
+}
+
+.topbar-identity-link.is-active::before {
+  opacity: 1;
+}
+
+.topbar-identity-link.is-active > strong {
+  color: var(--color-gold);
+}
+
+.topbar-navigation-row {
+  min-height: 3.1rem;
+  gap: 0.65rem;
+  padding: 0 0.72rem;
 }
 
 .editor-header {
@@ -1932,11 +2057,13 @@ button {
 .top-nav {
   display: flex;
   flex: 1 1 auto;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   align-self: stretch;
   gap: 0.1rem;
   min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
 .top-link {
@@ -2098,6 +2225,141 @@ button {
 .topbar-brand strong {
   font-size: 0.85rem;
   letter-spacing: 0.08em;
+}
+
+.character-identity-modal {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(44rem, calc(100vw - 2rem));
+  max-width: 44rem;
+  max-height: min(42rem, calc(100dvh - 2rem));
+  overflow: hidden;
+  border: 1px solid rgba(217, 154, 61, 0.58);
+  border-radius: 8px;
+  background: #0d0715;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.6);
+}
+
+.character-identity-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid rgba(244, 234, 219, 0.14);
+  padding: 1.15rem 1.25rem 0.95rem;
+}
+
+.character-identity-modal-header h2 {
+  margin: 0.16rem 0 0.3rem;
+}
+
+.character-identity-modal-content {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1rem 1.25rem 1.25rem;
+  scrollbar-gutter: stable;
+}
+
+.character-identity-summary {
+  color: var(--color-gold);
+  font-weight: 700;
+}
+
+.character-identity-facts,
+.character-identity-feature-grid {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.character-identity-facts {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 1rem;
+}
+
+.character-identity-facts > span,
+.character-identity-feature {
+  border: 1px solid rgba(244, 234, 219, 0.14);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.character-identity-facts > span {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.65rem 0.7rem;
+  color: var(--color-text);
+  font-size: 0.82rem;
+}
+
+.character-identity-facts b,
+.character-identity-feature > span {
+  color: var(--color-muted);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.character-identity-quote {
+  margin: 1rem 0 0;
+  color: var(--color-muted);
+  font-style: italic;
+}
+
+.character-identity-detail-section {
+  margin-top: 1rem;
+  border-top: 1px solid rgba(244, 234, 219, 0.12);
+  padding-top: 0.9rem;
+}
+
+.character-identity-detail-section > h3 {
+  margin: 0 0 0.6rem;
+  color: var(--color-text);
+  font-size: 0.82rem;
+}
+
+.character-identity-feature-grid {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.character-identity-narrative {
+  margin: 0 0 0.9rem;
+  color: var(--color-muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.character-identity-ancestry-features {
+  margin-top: 0.15rem;
+}
+
+.character-identity-feature {
+  display: grid;
+  align-content: start;
+  gap: 0.38rem;
+  padding: 0.75rem;
+}
+
+.character-identity-feature h3,
+.character-identity-feature p {
+  margin: 0;
+}
+
+.character-identity-feature h3 {
+  color: var(--color-text);
+  font-size: 0.92rem;
+}
+
+.character-identity-feature p,
+.character-identity-feature small {
+  color: var(--color-muted);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.character-identity-feature small {
+  color: var(--color-gold);
 }
 
 .content {
@@ -6974,7 +7236,7 @@ body.has-modal {
   }
 
   .topbar {
-    padding: 0 0.7rem;
+    min-height: 5.3rem;
   }
 
   .top-link {
@@ -7137,7 +7399,7 @@ body.has-modal {
   .topbar,
   .screen-title {
     align-items: stretch;
-    flex-direction: column;
+    flex-direction: initial;
   }
 
   .compendium-index-heading-actions {
@@ -7153,15 +7415,15 @@ body.has-modal {
   }
 
   .topbar-brand {
-    margin-left: 0;
-    width: fit-content;
+    margin-left: auto;
+    width: auto;
   }
 
   .topbar-utilities {
-    border-top: 1px solid rgba(244, 234, 219, 0.14);
-    border-left: 0;
-    padding-top: 0.6rem;
-    padding-left: 0;
+    border-top: 0;
+    border-left: 1px solid rgba(244, 234, 219, 0.14);
+    padding-top: 0;
+    padding-left: 0.45rem;
   }
 
   .search-box {
@@ -7529,15 +7791,15 @@ body.has-modal {
 }
 
 .rest-move-option {
-  min-height: 6.25rem;
+  min-height: 5rem;
   text-align: left;
   border: 1px solid rgba(244, 234, 219, 0.18);
   background: rgba(8, 5, 17, 0.6);
   color: var(--color-text);
-  padding: 0.8rem;
+  padding: 0.65rem 0.75rem;
   display: grid;
   align-content: start;
-  gap: 0.35rem;
+  gap: 0.25rem;
 }
 
 .rest-guidance { margin: 0.75rem 0 1rem; color: var(--color-muted); }
