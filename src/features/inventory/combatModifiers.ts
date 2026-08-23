@@ -1,7 +1,7 @@
 import type { Character, Defense, ItemDefinition } from "../../domain/types";
 
 /** Calcula os valores exibidos na ficha sem alterar a defesa-base persistida. */
-export function getEffectiveDefense(character: Character, findItem: (id: string) => ItemDefinition | undefined): Defense {
+export function getEffectiveDefense(character: Character, findItem: (id: string) => ItemDefinition | undefined, activeFeatureModifiers: Partial<Defense> = {}): Defense {
   // Os limiares acompanham o nível atual do personagem e recebem, depois,
   // quaisquer bônus ou penalidades declarados nos itens equipados.
   const baseDefense: Defense = {
@@ -9,7 +9,7 @@ export function getEffectiveDefense(character: Character, findItem: (id: string)
     minor: character.defense.minor + character.identity.level,
     major: character.defense.major + character.identity.level
   };
-  return character.inventory.entries
+  const defenseWithItems = character.inventory.entries
     .filter((entry) => (entry.compartmentId ?? (entry.equipped ? "equipped" : "backpack")) === "equipped")
     .reduce<Defense>((defense, entry) => {
       const modifiers = findItem(entry.definitionId)?.combatModifiers;
@@ -22,6 +22,12 @@ export function getEffectiveDefense(character: Character, findItem: (id: string)
           }
         : defense;
     }, baseDefense);
+  return {
+    evasion: defenseWithItems.evasion + (activeFeatureModifiers.evasion ?? 0),
+    armor: defenseWithItems.armor + (activeFeatureModifiers.armor ?? 0),
+    minor: defenseWithItems.minor + (activeFeatureModifiers.minor ?? 0),
+    major: defenseWithItems.major + (activeFeatureModifiers.major ?? 0)
+  };
 }
 
 /** Mantém os slots de Armadura alinhados a todos os bônus de armadura equipados. */

@@ -70,6 +70,10 @@ importação; textos em `summary` nunca geram efeitos automáticos.
 O estado variável — por exemplo, quantos espaços de Estresse estão marcados —
 continua pertencendo ao personagem. O Pack declara somente a regra reutilizável.
 
+### Features ativáveis
+
+Features com custo, duração e modificadores temporários devem declarar `activation` de forma estruturada. Consulte [FEATURE_EFFECTS.md](FEATURE_EFFECTS.md) para o contrato, os custos por recurso ou marcador e as condições de término suportadas.
+
 ### Itens oficiais
 
 Um pack de itens pode declarar, além dos campos comuns, `weaponProfile` e `armorProfile`. Esses metadados registram os dados oficiais de arma e armadura sem depender da interpretação de descrições livres.

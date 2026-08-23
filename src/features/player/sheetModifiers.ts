@@ -28,7 +28,8 @@ export function synchronizeCharacterSheetModifiers(character: Character, catalog
 }
 
 export function getActiveSheetModifiers(character: Character, catalog: Catalog): CharacterSheetModifier[] {
-  return getActiveAncestryFeatures(character, catalog).flatMap((feature) => feature.sheetModifiers ?? []);
+  return [...getActiveAncestryFeatures(character, catalog), ...getActiveClassFeatures(character, catalog)]
+    .flatMap((feature) => feature.sheetModifiers ?? []);
 }
 
 function getActiveAncestryFeatures(character: Character, catalog: Catalog): FeatureDefinition[] {
@@ -37,6 +38,22 @@ function getActiveAncestryFeatures(character: Character, catalog: Catalog): Feat
   return [selected.top, selected.bottom]
     .flatMap((id) => id ? [catalog.features.find((feature) => feature.id === id)] : [])
     .filter((feature): feature is FeatureDefinition => Boolean(feature && feature.sourceType === "ancestry"));
+}
+
+function getActiveClassFeatures(character: Character, catalog: Catalog): FeatureDefinition[] {
+  const characterClass = catalog.classes.find((entry) => entry.id === character.identity.primaryClassId);
+  if (!characterClass) return [];
+  const featureIds = new Set([...characterClass.featureIds, characterClass.hopeFeatureId]);
+  const subclass = catalog.subclasses.find((entry) => entry.id === character.identity.primarySubclassId && entry.classId === characterClass.id);
+  if (subclass) {
+    const acquired = new Set(character.progression?.acquiredSubclassTiers ?? ["foundation"]);
+    if (acquired.has("foundation")) subclass.foundationFeatureIds.forEach((id) => featureIds.add(id));
+    if (acquired.has("specialized")) subclass.specializationFeatureIds.forEach((id) => featureIds.add(id));
+    if (acquired.has("mastery")) subclass.masteryFeatureIds.forEach((id) => featureIds.add(id));
+  }
+  return [...featureIds]
+    .flatMap((id) => [catalog.features.find((feature) => feature.id === id)])
+    .filter((feature): feature is FeatureDefinition => Boolean(feature));
 }
 
 function getResourceBonuses(modifiers: CharacterSheetModifier[]): Map<string, number> {

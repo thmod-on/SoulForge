@@ -16,8 +16,12 @@ export type GameMarkerQuantity =
   | { kind: "fixed"; value: number }
   | { kind: "attribute"; attributeId: Attribute["id"] }
   | { kind: "spellcast-trait" }
+  /** Quantidade acompanha a Proficiência atual do personagem. */
+  | { kind: "proficiency" }
   /** Quantidade acompanha o nível atual do personagem. */
   | { kind: "character-level" };
+
+export type GameMarkerDie = "d4" | "d6" | "d8" | "d10" | "d12" | "d20";
 
 export type CounterGameMarkerDefinition = {
   id: string;
@@ -37,7 +41,7 @@ export type DiceGameMarkerDefinition = {
   id: string;
   kind: "dice";
   label: string;
-  die: "d4" | "d6";
+  die: GameMarkerDie;
   quantity: GameMarkerQuantity;
   reset?: "session";
 };
@@ -59,12 +63,18 @@ export type DiceGameMarkerState = {
   sourceDefinitionId: string;
   markerId: string;
   kind: "dice";
-  die: "d4" | "d6";
+  die: GameMarkerDie;
   results: Array<{ id: string; value: number; used: boolean }>;
 };
 
 /** Estado variavel do personagem. E preservado mesmo se a fonte ficar inativa. */
 export type CharacterGameMarkerState = CounterGameMarkerState | DiceGameMarkerState;
+
+/** Estado persistido de uma Feature temporariamente ativa na ficha. */
+export type CharacterActiveFeatureEffect = {
+  featureId: string;
+  activatedAt: string;
+};
 
 export type Attribute = {
   id: "for" | "dex" | "con" | "int" | "wil" | "cha";
@@ -90,6 +100,30 @@ export type CharacterSheetModifier =
   | { kind: "resource-max"; resourceId: string; amount: number }
   | { kind: "defense"; field: keyof Defense; amount: number }
   | { kind: "defense-per-proficiency"; field: "minor" | "major"; amount: number };
+
+/** Custo declarativo de uma Feature que permanece ativa na ficha. */
+export type FeatureActivationCost =
+  | { kind: "resource"; resourceId: string; amount: number }
+  | { kind: "game-marker"; sourceDefinitionId: string; markerId: string; amount: number };
+
+/** Modificadores temporários que dependem do tier atual do personagem. */
+export type FeatureActivationModifier =
+  | { kind: "defense"; fields: Array<keyof Defense>; amount: number }
+  | { kind: "defense-per-tier"; fields: Array<"minor" | "major"> };
+
+export type FeatureEffectEndCondition = "scene-end" | "severe-damage" | "short-rest" | "long-rest" | "next-successful-attack";
+
+/**
+ * Metadados de uma Feature ativável. A Definition descreve a regra; a ficha
+ * guardará o estado temporário da ativação em uma etapa posterior.
+ */
+export type FeatureActivationDefinition = {
+  label: string;
+  costs: FeatureActivationCost[];
+  endsOn: FeatureEffectEndCondition[];
+  modifiers: FeatureActivationModifier[];
+  reminders?: string[];
+};
 
 /** Bônus declarados por um item enquanto ele estiver em Equipados. */
 export type ItemCombatModifiers = Partial<Defense>;
@@ -268,6 +302,7 @@ export type FeatureDefinition = BaseDefinition & {
   hopeCost?: number;
   gameMarkers?: GameMarkerDefinition[];
   sheetModifiers?: CharacterSheetModifier[];
+  activation?: FeatureActivationDefinition;
 };
 
 export type Definition = DomainDefinition | CardDefinition | ItemDefinition | ClassDefinition | SubclassDefinition | AncestryDefinition | CommunityDefinition | FeatureDefinition;
@@ -325,6 +360,8 @@ export type Character = {
   resources: ResourceTrack[];
   /** Estado de marcadores de jogo, separado das definicoes do Compendium. */
   gameMarkers?: CharacterGameMarkerState[];
+  /** Effects temporários ativados a partir de Features declaradas pelo Compendium. */
+  activeFeatureEffects?: CharacterActiveFeatureEffect[];
   skills: CharacterSkill[];
   experiences: CharacterExperience[];
   notes: CharacterNote[];

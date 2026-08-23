@@ -1,0 +1,34 @@
+import { describe, expect, it } from "vitest";
+import { validatePackBundle } from "./packValidation";
+
+const manifest = { id: "test-pack", name: "Pack de teste", version: "1.0.0", description: "Validação de metadados." };
+const feature = {
+  id: "feature.test.mantle", type: "feature" as const, packId: manifest.id, name: "Manto de teste", summary: "Efeito temporário.", sourceType: "subclass" as const, sourceId: "subclass.test", tier: "foundation" as const,
+  activation: {
+    label: "Ativar Manto",
+    costs: [{ kind: "game-marker" as const, sourceDefinitionId: "feature.test.favor", markerId: "favor", amount: 1 }],
+    endsOn: ["scene-end", "severe-damage"] as const,
+    modifiers: [{ kind: "defense-per-tier" as const, fields: ["minor", "major"] as const }],
+    reminders: ["Vantagem para intimidar."]
+  }
+};
+
+describe("validação de Packs", () => {
+  it("aceita metadados válidos de Feature ativável", () => {
+    expect(validatePackBundle({ format: "soulforge-pack-v1", manifest, definitions: [feature] }).definitions).toHaveLength(1);
+  });
+
+  it("rejeita custo inválido em Feature ativável", () => {
+    const invalidFeature = { ...feature, activation: { ...feature.activation, costs: [{ kind: "game-marker", sourceDefinitionId: "feature.test.favor", markerId: "favor", amount: 0 }] } };
+    expect(() => validatePackBundle({ format: "soulforge-pack-v1", manifest, definitions: [invalidFeature] })).toThrow("metadados de ativação inválidos");
+  });
+
+  it("aceita pools de dados declarados com Proficiência", () => {
+    const diceFeature = {
+      ...feature,
+      id: "feature.test.dados",
+      gameMarkers: [{ id: "dados", kind: "dice", label: "Dados do Matador", die: "d8", quantity: { kind: "proficiency" }, reset: "session" }]
+    };
+    expect(validatePackBundle({ format: "soulforge-pack-v1", manifest, definitions: [diceFeature] }).definitions).toHaveLength(1);
+  });
+});

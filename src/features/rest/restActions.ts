@@ -1,6 +1,7 @@
 import type { Catalog } from "../../domain/catalog";
 import type { Character } from "../../domain/types";
 import { resetGameMarkers } from "../game-markers/gameMarkerSync";
+import { endFeatureEffectsForCondition } from "../feature-effects/featureEffects";
 import { applyRestMoves, requiresRestRoll, type RestKind, type RestMoveChoice, type RestMoveId } from "./restRules";
 
 export type RestActionState = { character?: Character; restDialogKind?: RestKind; restChoices: RestMoveChoice[]; restError?: string };
@@ -38,8 +39,12 @@ async function confirmRest(state: RestActionState, dependencies: RestActionDepen
   if (!character || !kind || state.restChoices.length !== 2) return;
   if (state.restChoices.some((choice) => requiresRestRoll(kind, choice.id) && !choice.roll)) { state.restError = "Role ou informe o resultado de cada d4 antes de concluir."; dependencies.render(); return; }
   let updated = applyRestMoves(character, kind, state.restChoices);
+  updated = endFeatureEffectsForCondition(updated, dependencies.catalog, "short-rest");
   updated = resetGameMarkers(updated, dependencies.catalog, "short-rest");
-  if (kind === "long") updated = resetGameMarkers(updated, dependencies.catalog, "long-rest");
+  if (kind === "long") {
+    updated = endFeatureEffectsForCondition(updated, dependencies.catalog, "long-rest");
+    updated = resetGameMarkers(updated, dependencies.catalog, "long-rest");
+  }
   state.character = updated; state.restDialogKind = undefined; state.restChoices = []; state.restError = undefined;
   await dependencies.saveCharacter(updated); dependencies.render();
 }

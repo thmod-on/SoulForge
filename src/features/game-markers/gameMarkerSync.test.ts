@@ -50,6 +50,16 @@ describe("marcadores de jogo", () => {
     expect(synchronizeGameMarkers(character, catalog).gameMarkers?.[0]).toMatchObject({ kind: "counter", value: 3, max: 3 });
   });
 
+  it("resolve pool de dados pela Proficiência do personagem", () => {
+    const feature: FeatureDefinition = { id: "feature.test.slayer", type: "feature", packId: "test", name: "Dados do Matador", summary: "", sourceType: "class", sourceId: "class.test.warrior", tier: "class", gameMarkers: [{ id: "slayer-dice", kind: "dice", label: "Dados do Matador", die: "d8", quantity: { kind: "proficiency" }, reset: "session" }] };
+    const characterClass: ClassDefinition = { id: "class.test.warrior", type: "class", packId: "test", name: "Guerreiro", summary: "", domainIds: ["domain.a", "domain.b"], startingEvasion: 10, startingHitPoints: 6, featureIds: [feature.id], hopeFeatureId: "", subclassIds: ["subclass.test.warrior.a", "subclass.test.warrior.b"] };
+    const catalog = createCatalog([], [feature, characterClass]);
+    const character = { ...demoCharacter, proficiency: 3, identity: { ...demoCharacter.identity, primaryClassId: characterClass.id }, gameMarkers: undefined };
+    const marker = synchronizeGameMarkers(character, catalog).gameMarkers?.[0];
+    expect(marker).toMatchObject({ kind: "dice", die: "d8" });
+    expect(marker?.kind === "dice" ? marker.results : []).toHaveLength(3);
+  });
+
   it("mantem a fonte ativa quando uma ficha local possui IDs antigos, mas os mesmos nomes", () => {
     const feature: FeatureDefinition = { id: "feature.legacy.serafim.class", type: "feature", packId: "test", name: "Dados de Oração", summary: "", sourceType: "class", sourceId: "class.legacy.serafim", tier: "class", gameMarkers: [{ id: "prayer-dice", kind: "dice", label: "Dados de Oração", die: "d4", quantity: { kind: "spellcast-trait" }, reset: "session" }] };
     const subclass: SubclassDefinition = { id: "subclass.legacy.serafim.portador-divino", type: "subclass", packId: "test", name: "Portador Divino", summary: "", classId: "class.legacy.serafim", foundationFeatureIds: [], specializationFeatureIds: [], masteryFeatureIds: [], spellcastAttributeId: "for" };

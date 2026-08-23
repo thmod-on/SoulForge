@@ -1,6 +1,5 @@
 import type { Catalog } from "../../domain/catalog";
-import type { AncestryDefinition, Character, CharacterSkill, FeatureDefinition } from "../../domain/types";
-import { getSubclassStageSkills } from "../player/subclassTrack";
+import type { AncestryDefinition, Character, CharacterSkill, FeatureActivationDefinition, FeatureDefinition } from "../../domain/types";
 
 type CharacterIdentitySection = "character" | "class" | "ancestry" | "community";
 
@@ -9,6 +8,9 @@ export type CharacterIdentityModalDependencies = {
   section?: CharacterIdentitySection;
   catalog: Catalog;
   escapeHtml(value: string): string;
+  getFeatureActivation?: (character: Character, featureId: string) => FeatureActivationDefinition | undefined;
+  activeFeatureIds?: ReadonlySet<string>;
+  featureActivationError?: string;
 };
 
 export function renderCharacterIdentityModal(deps: CharacterIdentityModalDependencies): string {
@@ -43,12 +45,18 @@ export function renderCharacterIdentityModal(deps: CharacterIdentityModalDepende
   const classFeatures = classDefinition
     ? [...new Set([...classDefinition.featureIds, classDefinition.hopeFeatureId])].map((id) => catalog.features.find((entry) => entry.id === id)).filter((entry): entry is FeatureDefinition => Boolean(entry))
     : [];
-  const acquiredSubclassTiers = character.progression?.acquiredSubclassTiers ?? ["foundation"];
-  const subclassFeatures = acquiredSubclassTiers.flatMap((tier) => getSubclassStageSkills(character, catalog, tier));
-  const featureCard = (feature: FeatureDefinition | CharacterSkill | undefined, label: string, origin?: string) => {
+  const acquiredSubclassTiers = new Set(character.progression?.acquiredSubclassTiers ?? ["foundation"]);
+  const subclassFeatures = subclass ? ([
+    ["foundation", "Fundação", subclass.foundationFeatureIds],
+    ["specialized", "Especialização", subclass.specializationFeatureIds],
+    ["mastery", "Maestria", subclass.masteryFeatureIds]
+  ] as const).flatMap(([tier, label, ids]) => ids.map((id) => ({ feature: catalog.features.find((entry) => entry.id === id), label, locked: !acquiredSubclassTiers.has(tier) }))) : [];
+  const featureCard = (feature: FeatureDefinition | CharacterSkill | undefined, label: string, origin?: string, locked = false) => {
     if (!feature) return `<article class="character-identity-feature"><span>${escapeHtml(label)}</span><h3>Indisponível</h3><p>O conteúdo desta escolha não foi encontrado no Compendium instalado.</p></article>`;
     const modifiers = "sheetModifiers" in feature ? feature.sheetModifiers?.map((modifier) => modifier.kind === "resource-max" ? `+${modifier.amount} máximo de ${modifier.resourceId}` : `+${modifier.amount} em ${modifier.field}`).join(" · ") : undefined;
-    return `<article class="character-identity-feature"><span>${escapeHtml(label)}${origin ? ` · ${escapeHtml(origin)}` : ""}</span><h3>${escapeHtml(feature.name)}</h3><p>${escapeHtml("summary" in feature ? feature.summary : feature.description)}</p>${modifiers ? `<small>${escapeHtml(modifiers)}</small>` : ""}</article>`;
+    const activation = !locked && "summary" in feature ? deps.getFeatureActivation?.(character, feature.id) : undefined;
+    const active = deps.activeFeatureIds?.has(feature.id);
+    return `<article class="character-identity-feature ${locked ? "is-locked" : ""}"><span>${escapeHtml(label)}${locked ? " · Bloqueada" : ""}${origin ? ` · ${escapeHtml(origin)}` : ""}</span><h3>${escapeHtml(feature.name)}</h3><p>${escapeHtml("summary" in feature ? feature.summary : feature.description)}</p>${modifiers ? `<small>${escapeHtml(modifiers)}</small>` : ""}${activation ? `<button class="feature-activation-button" type="button" data-action="activate-feature-effect" data-feature-id="${escapeHtml(feature.id)}" ${active ? "disabled" : ""}>${active ? "Efeito ativo" : escapeHtml(activation.label)}</button>` : ""}</article>`;
   };
   const ancestryOrigin = (feature: FeatureDefinition | undefined) => ancestries.find((entry) => entry.id === feature?.sourceId)?.name ?? primaryAncestry?.name;
   const content = {
@@ -62,7 +70,7 @@ export function renderCharacterIdentityModal(deps: CharacterIdentityModalDepende
       label: "Classe",
       title: identity.className,
       summary: identity.subclassName ? `Subclasse: ${identity.subclassName}` : "Subclasse não definida",
-      body: `${classDefinition?.summary ? `<p>${escapeHtml(classDefinition.summary)}</p>` : ""}<section class="character-identity-detail-section"><h3>Características de classe ativas</h3><div class="character-identity-feature-grid">${classFeatures.map((feature) => featureCard(feature, "Classe")).join("") || "<p>Não há características de classe disponíveis.</p>"}</div></section><section class="character-identity-detail-section"><h3>${escapeHtml(subclass?.name ?? "Subclasse")}</h3><div class="character-identity-feature-grid">${subclassFeatures.map((feature) => featureCard(feature, ({ foundation: "Fundação", specialized: "Especialização", mastery: "Maestria" } as const)[feature.tier ?? "foundation"])).join("") || "<p>Nenhuma característica de subclasse foi desbloqueada.</p>"}</div></section>`
+      body: `${classDefinition?.summary ? `<p>${escapeHtml(classDefinition.summary)}</p>` : ""}<section class="character-identity-detail-section"><h3>Características de classe</h3><div class="character-identity-feature-grid">${classFeatures.map((feature) => featureCard(feature, "Classe")).join("") || "<p>Não há características de classe disponíveis.</p>"}</div></section><section class="character-identity-detail-section"><h3>${escapeHtml(subclass?.name ?? "Subclasse")}</h3><div class="character-identity-feature-grid">${subclassFeatures.map(({ feature, label, locked }) => featureCard(feature, label, undefined, locked)).join("") || "<p>Nenhuma característica de subclasse foi encontrada.</p>"}</div></section>${deps.featureActivationError ? `<p class="form-error">${escapeHtml(deps.featureActivationError)}</p>` : ""}`
     },
     ancestry: {
       label: "Ancestralidade",

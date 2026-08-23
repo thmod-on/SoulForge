@@ -71,6 +71,8 @@ import {
 } from "./features/inventory/bindInventoryDrag";
 import { getEffectiveDefense, synchronizeArmorResource } from "./features/inventory/combatModifiers";
 import { synchronizeCharacterSheetModifiers } from "./features/player/sheetModifiers";
+import { getActiveFeatureEffectDefenseModifiers, getActiveFeatureEffects, getFeatureActivationForCharacter } from "./features/feature-effects/featureEffects";
+import { activateFeatureEffect as activateFeatureEffectAction, endFeatureEffect as endFeatureEffectAction } from "./features/feature-effects/featureEffectActions";
 import { renderCharacterIdentityModal as renderCharacterIdentityModalView } from "./features/character-identity/renderCharacterIdentityModal";
 import { getSubclassStageSkills } from "./features/player/subclassTrack";
 import type { RestKind, RestMoveChoice } from "./features/rest/restRules";
@@ -184,6 +186,7 @@ const state: {
   lastPlayerPage: Page;
   selectedItemId?: string;
   selectedCardId: string;
+  featureActivationError?: string;
   progressionStep: ProgressionFlowStep;
   modalCardId?: string;
   resourceModalId?: string;
@@ -336,7 +339,7 @@ const state: {
   }
 };
 
-const appVersion = "0.22.3";
+const appVersion = "0.23.0";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -480,7 +483,7 @@ function getPlayerShellDependencies(): PlayerShellDependencies {
     getEffectiveDefense: (character) => getEffectiveDefense(character, (definitionId) => {
       const definition = findDefinition(catalog, definitionId);
       return definition?.type === "item" ? definition : undefined;
-    })
+    }, getActiveFeatureEffectDefenseModifiers(character, catalog))
   };
 }
 
@@ -491,6 +494,9 @@ function getPlayerOverviewDependencies(): PlayerOverviewDependencies {
     renderEmptyInline,
     getActiveCards, getInactiveCardCount, getStoredCards,
     getAcquiredSubclassTiers: (character) => getProgression(character).acquiredSubclassTiers,
+    getActiveFeatureEffects: (character) => getActiveFeatureEffects(character, catalog),
+    getFeatureActivation: (character, featureId) => getFeatureActivationForCharacter(character, catalog, featureId),
+    featureActivationError: state.featureActivationError,
     getActiveGameMarkers: (character) => getActiveGameMarkers(character, catalog), getSubclassStageSkills: (character, tier) => getSubclassStageSkills(character, catalog, tier), modalCardId: state.modalCardId
   };
 }
@@ -1287,8 +1293,8 @@ function renderCharacterPortraitPreviewModal(): string {
   return `<div class="modal-backdrop portrait-preview-backdrop" data-modal-backdrop><section class="portrait-preview-modal" role="dialog" aria-modal="true" aria-labelledby="portrait-preview-title"><button class="modal-close" type="button" data-modal-close aria-label="Fechar foto ampliada">x</button><h2 id="portrait-preview-title">${escapeHtml(character.identity.name)}</h2><img src="${escapeHtml(portrait)}" alt="Retrato ampliado de ${escapeHtml(character.identity.name)}" /></section></div>`;
 }
 
-function getGameMarkerDieFaces(die: "d4" | "d6"): number[] {
-  return Array.from({ length: die === "d4" ? 4 : 6 }, (_, index) => index + 1);
+function getGameMarkerDieFaces(die: import("./domain/types").GameMarkerDie): number[] {
+  return Array.from({ length: Number(die.slice(1)) }, (_, index) => index + 1);
 }
 
 function renderGameMarkerDieDialog(): string {
@@ -1622,7 +1628,15 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
     ${renderDeleteCompendiumAncestryModalView(getAncestryFeatureDependencies())}
     ${renderCharacterPortraitModal()}
     ${renderCharacterPortraitPreviewModal()}
-    ${renderCharacterIdentityModalView({ character: state.character, section: state.characterIdentityModalSection, catalog, escapeHtml })}
+    ${renderCharacterIdentityModalView({
+      character: state.character,
+      section: state.characterIdentityModalSection,
+      catalog,
+      escapeHtml,
+      getFeatureActivation: (character, featureId) => getFeatureActivationForCharacter(character, catalog, featureId),
+      activeFeatureIds: new Set(state.character ? getActiveFeatureEffects(state.character, catalog).map((effect) => effect.feature.id) : []),
+      featureActivationError: state.featureActivationError
+    })}
     ${renderCompendiumCommunityPreviewModalView(getCommunityFeatureDependencies())}
     ${renderGameMarkerDieDialog()}
     ${renderRestModalView(character, state.restDialogKind, state.restChoices, state.restError, { escapeHtml })}
@@ -2236,6 +2250,7 @@ function bindEvents(): void {
 
     if (target.closest("[data-modal-close]")) {
       state.modalCardId = undefined;
+      state.featureActivationError = undefined;
       state.selectedItemId = undefined;
       state.resourceModalId = undefined;
       state.addResourceModalOpen = false;
@@ -3287,9 +3302,22 @@ function bindEvents(): void {
       return;
     }
 
+    const activateFeatureEffectButton = target.closest<HTMLElement>('[data-action="activate-feature-effect"]');
+    if (activateFeatureEffectButton) {
+      void activateFeatureEffectAction(activateFeatureEffectButton.dataset.featureId, { state, catalog, saveCharacter, render });
+      return;
+    }
+
+    const endFeatureEffectButton = target.closest<HTMLElement>('[data-action="end-feature-effect"]');
+    if (endFeatureEffectButton) {
+      void endFeatureEffectAction(endFeatureEffectButton.dataset.featureId, { state, catalog, saveCharacter, render });
+      return;
+    }
+
     const cardModalButton = target.closest<HTMLElement>("[data-card-modal-id]");
     if (cardModalButton) {
       state.modalCardId = cardModalButton.dataset.cardModalId;
+      state.featureActivationError = undefined;
       render();
       return;
     }

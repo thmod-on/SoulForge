@@ -21,7 +21,36 @@ export function validatePackBundle(value: unknown): PackBundle {
 
   const definitions = bundle.definitions as Definition[];
   for (const feature of definitions.filter((definition) => definition.type === "feature")) {
+    if (!isGameMarkerListValid(feature.gameMarkers)) throw new Error(`A Feature “${feature.name}” possui marcadores de jogo inválidos.`);
     if (!isSheetModifierListValid(feature.sheetModifiers)) throw new Error(`A Feature “${feature.name}” possui modificadores de ficha inválidos.`);
+    if (!isFeatureActivationValid(feature.activation)) throw new Error(`A Feature “${feature.name}” possui metadados de ativação inválidos.`);
+  }
+
+  function isGameMarkerListValid(value: unknown): boolean {
+    if (value === undefined) return true;
+    if (!Array.isArray(value)) return false;
+    return value.every((marker) => {
+      if (!marker || typeof marker !== "object") return false;
+      const candidate = marker as { id?: unknown; kind?: unknown; label?: unknown; die?: unknown; quantity?: unknown; initialValue?: unknown; max?: unknown; reset?: unknown };
+      if (typeof candidate.id !== "string" || !candidate.id || typeof candidate.label !== "string" || !candidate.label) return false;
+      if (candidate.reset !== undefined && !["session", "short-rest", "long-rest"].includes(String(candidate.reset))) return false;
+      if (candidate.kind === "counter") {
+        if (candidate.initialValue !== undefined && (!Number.isInteger(candidate.initialValue) || Number(candidate.initialValue) < 0)) return false;
+        if (candidate.max !== undefined && (!Number.isInteger(candidate.max) || Number(candidate.max) < 0)) return false;
+        return candidate.quantity === undefined || isGameMarkerQuantityValid(candidate.quantity);
+      }
+      return candidate.kind === "dice"
+        && ["d4", "d6", "d8", "d10", "d12", "d20"].includes(String(candidate.die))
+        && isGameMarkerQuantityValid(candidate.quantity);
+    });
+  }
+
+  function isGameMarkerQuantityValid(value: unknown): boolean {
+    if (!value || typeof value !== "object") return false;
+    const candidate = value as { kind?: unknown; value?: unknown; attributeId?: unknown };
+    if (candidate.kind === "fixed") return Number.isInteger(candidate.value) && Number(candidate.value) >= 0;
+    if (candidate.kind === "attribute") return ["for", "dex", "con", "int", "wil", "cha"].includes(String(candidate.attributeId));
+    return candidate.kind === "spellcast-trait" || candidate.kind === "proficiency" || candidate.kind === "character-level";
   }
   for (const community of definitions.filter((definition) => definition.type === "community")) {
     if (!Array.isArray(community.adjectives) || community.adjectives.length !== 6 || community.adjectives.some((value) => typeof value !== "string" || !value.trim())) {
@@ -51,5 +80,28 @@ export function validatePackBundle(value: unknown): PackBundle {
       if (candidate.kind === "defense") return typeof candidate.field === "string" && ["evasion", "armor", "minor", "major"].includes(candidate.field);
       return candidate.kind === "defense-per-proficiency" && (candidate.field === "minor" || candidate.field === "major");
     });
+  }
+
+  function isFeatureActivationValid(value: unknown): boolean {
+    if (value === undefined) return true;
+    if (!value || typeof value !== "object") return false;
+    const candidate = value as { label?: unknown; costs?: unknown; endsOn?: unknown; modifiers?: unknown; reminders?: unknown };
+    if (typeof candidate.label !== "string" || !candidate.label.trim() || !Array.isArray(candidate.costs) || !Array.isArray(candidate.endsOn) || !Array.isArray(candidate.modifiers)) return false;
+    if (!candidate.costs.every((cost) => {
+      if (!cost || typeof cost !== "object") return false;
+      const entry = cost as { kind?: unknown; resourceId?: unknown; sourceDefinitionId?: unknown; markerId?: unknown; amount?: unknown };
+      if (!Number.isInteger(entry.amount) || Number(entry.amount) < 1) return false;
+      if (entry.kind === "resource") return typeof entry.resourceId === "string" && Boolean(entry.resourceId);
+      return entry.kind === "game-marker" && typeof entry.sourceDefinitionId === "string" && Boolean(entry.sourceDefinitionId) && typeof entry.markerId === "string" && Boolean(entry.markerId);
+    })) return false;
+    if (!candidate.endsOn.every((condition) => ["scene-end", "severe-damage", "short-rest", "long-rest", "next-successful-attack"].includes(String(condition)))) return false;
+    if (!candidate.modifiers.every((modifier) => {
+      if (!modifier || typeof modifier !== "object") return false;
+      const entry = modifier as { kind?: unknown; fields?: unknown; amount?: unknown };
+      if (!Array.isArray(entry.fields) || !entry.fields.length) return false;
+      if (entry.kind === "defense") return Number.isFinite(entry.amount) && entry.fields.every((field) => ["evasion", "armor", "minor", "major"].includes(String(field)));
+      return entry.kind === "defense-per-tier" && entry.fields.every((field) => field === "minor" || field === "major");
+    })) return false;
+    return candidate.reminders === undefined || (Array.isArray(candidate.reminders) && candidate.reminders.every((reminder) => typeof reminder === "string" && Boolean(reminder.trim())));
   }
 }

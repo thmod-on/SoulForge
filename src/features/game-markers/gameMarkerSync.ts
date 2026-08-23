@@ -125,6 +125,7 @@ function getCounterResetValue(definition: Extract<GameMarkerDefinition, { kind: 
 function getMarkerQuantity(quantity: GameMarkerQuantity, character: Character, catalog: Catalog, sourceDefinitionId: string): number {
   if (quantity.kind === "fixed") return Math.max(0, quantity.value);
   if (quantity.kind === "attribute") return Math.max(0, character.attributes.find((attribute) => attribute.id === quantity.attributeId)?.value ?? 0);
+  if (quantity.kind === "proficiency") return Math.max(0, character.proficiency);
   if (quantity.kind === "character-level") return Math.max(0, character.identity.level);
   const feature = catalog.features.find((entry) => entry.id === sourceDefinitionId);
   const subclass = feature?.sourceType === "subclass"
