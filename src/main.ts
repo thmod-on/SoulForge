@@ -336,7 +336,7 @@ const state: {
   }
 };
 
-const appVersion = "0.22.2";
+const appVersion = "0.22.3";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -476,6 +476,7 @@ function getPlayerShellDependencies(): PlayerShellDependencies {
     attributeTitle,
     progressPercent,
     getSpellcastAttributeId: (character) => getSpellcastAttributeId(character.identity.primarySubclassId, catalog.subclasses.find((subclass) => subclass.id === character.identity.primarySubclassId)),
+    getCommunityName: (character) => catalog.communities.find((community) => community.id === character.identity.primaryCommunityId)?.name ?? (character.identity.community || "Não definida"),
     getEffectiveDefense: (character) => getEffectiveDefense(character, (definitionId) => {
       const definition = findDefinition(catalog, definitionId);
       return definition?.type === "item" ? definition : undefined;
@@ -1338,13 +1339,15 @@ function renderCharacterCreationModal(): string {
     const source = selectedAncestries.find((ancestry) => (position === "top" ? ancestry.topFeatureId : ancestry.bottomFeatureId) === feature.id);
     return `${escapeHtml(source?.name ?? "Ancestralidade")} - ${escapeHtml(feature.name)}`;
   };
-  const featureOption = (feature: FeatureDefinition, position: "top" | "bottom", selectedId: string | undefined, oppositeId: string | undefined) => {
+  const featureOption = (feature: FeatureDefinition, position: "top" | "bottom", selectedId: string | undefined, oppositeId?: string) => {
     const selected = feature.id === selectedId;
     const disabled = hasMixedAncestry && ancestryIdForFeature(feature.id, position) === ancestryIdForFeature(oppositeId, position === "top" ? "bottom" : "top");
     return `<option value="${escapeHtml(feature.id)}" ${selected ? "selected" : ""} ${disabled ? "disabled" : ""}>${featureOptionLabel(feature, position)}</option>`;
   };
   const selectedTopFeature = topFeatures.find((feature) => feature.id === topFeatureId);
   const selectedBottomFeature = bottomFeatures.find((feature) => feature.id === bottomFeatureId);
+  const bottomFeatureOrigin = selectedAncestries.find((ancestry) => ancestry.id === ancestryIdForFeature(bottomFeatureId, "bottom"));
+  const automaticBottomOrigin = `<div class="selected-feature-origin"><strong>${escapeHtml(bottomFeatureOrigin?.name ?? "Ancestralidade")}</strong><small>Origem automática da Feature Bottom</small></div>`;
   const eligibleStartingCards = catalog.cards.filter((card) => card.tier === 1 && selectedClass.domainIds.includes(card.domainId));
   const selectedCardDomainId = selectedClass.domainIds.includes(state.characterCreationCardDomainId as never)
     ? state.characterCreationCardDomainId
@@ -1366,13 +1369,13 @@ function renderCharacterCreationModal(): string {
           ${needsAncestrySelection ? '<p class="character-creation-selection-hint" id="character-ancestry-selection-hint">Selecione ao menos uma, no máximo duas, ancestralidades para continuar.</p>' : ""}
           <label class="sf-search-field character-creation-search"><span aria-hidden="true">⌕</span><input type="search" data-character-ancestry-search value="${escapeHtml(state.characterCreationAncestrySearch)}" placeholder="Pesquisar ancestralidade" aria-label="Pesquisar ancestralidade" /></label>
           ${ancestries.length ? `<div class="character-ancestry-choice-grid">${visibleAncestries.map((ancestry) => { const selected = selectedAncestryIds.includes(ancestry.id); const disabled = !selected && selectedAncestryIds.length >= 2; return `<label class="character-ancestry-choice ${selected ? "is-selected" : ""}"><input type="checkbox" data-character-ancestry-id="${escapeHtml(ancestry.id)}" ${selected ? "checked" : ""} ${disabled ? "disabled" : ""}/><span><strong>${escapeHtml(ancestry.name)}</strong><small>${escapeHtml(ancestry.summary)}</small></span></label>`; }).join("") || `<p class="form-error">Nenhuma ancestralidade encontrada.</p>`}</div>` : `<p class="form-error">Importe um Pack de ancestralidades no Compendium antes de criar a ficha.</p>`}
-          ${selectedAncestries.length ? `${hasMixedAncestry ? '<p class="character-creation-selection-hint">Ancestralidade mista: escolha a Feature Top e a Bottom de origens diferentes.</p>' : ""}<div class="character-feature-choice-grid"><label class="form-field"><span>Feature Top</span>${topFeatures.length > 1 ? `<select data-character-top-feature>${topFeatures.map((feature) => featureOption(feature, "top", topFeatureId, bottomFeatureId)).join("")}</select>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(topFeatures[0]?.name ?? "Feature indisponivel")}</strong><small>${escapeHtml(topFeatures[0]?.summary ?? "")}</small></div>`}</label><label class="form-field"><span>Feature Bottom</span>${bottomFeatures.length > 1 ? `<select data-character-bottom-feature>${bottomFeatures.map((feature) => featureOption(feature, "bottom", bottomFeatureId, topFeatureId)).join("")}</select>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(bottomFeatures[0]?.name ?? "Feature indisponivel")}</strong><small>${escapeHtml(bottomFeatures[0]?.summary ?? "")}</small></div>`}</label></div>` : ""}
+          ${selectedAncestries.length ? `${hasMixedAncestry ? '<p class="character-creation-selection-hint">Escolha a origem da Feature Top. A Feature Bottom será definida automaticamente pela outra ancestralidade.</p>' : ""}<div class="character-feature-choice-grid"><label class="form-field"><span>Feature Top</span>${topFeatures.length > 1 ? `<select data-character-top-feature>${topFeatures.map((feature) => featureOption(feature, "top", topFeatureId)).join("")}</select>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(topFeatures[0]?.name ?? "Feature indisponivel")}</strong><small>${escapeHtml(topFeatures[0]?.summary ?? "")}</small></div>`}</label><label class="form-field"><span>Feature Bottom</span>${hasMixedAncestry ? `${automaticBottomOrigin}<div class="selected-feature-readonly"><strong>${escapeHtml(selectedBottomFeature?.name ?? "Feature indisponivel")}</strong><small>${escapeHtml(selectedBottomFeature?.summary ?? "")}</small></div>` : bottomFeatures.length > 1 ? `<select data-character-bottom-feature>${bottomFeatures.map((feature) => featureOption(feature, "bottom", bottomFeatureId)).join("")}</select>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(bottomFeatures[0]?.name ?? "Feature indisponivel")}</strong><small>${escapeHtml(bottomFeatures[0]?.summary ?? "")}</small></div>`}</label></div>` : ""}
         </section>
         <section class="character-ancestry-picker creation-step-panel character-feature-step" data-creation-panel="3">
-          <div><span>Origem</span><p>${selectedAncestries.length === 2 ? "Escolha uma Feature Top e uma Feature Bottom de origens diferentes." : "As duas Features abaixo foram definidas pela sua ancestralidade."}</p></div>
+          <div><span>Origem</span><p>${selectedAncestries.length === 2 ? "Escolha a origem da Feature Top. A Feature Bottom será definida automaticamente pela outra ancestralidade." : "As duas Features abaixo foram definidas pela sua ancestralidade."}</p></div>
           <div class="character-feature-choice-grid">
-            <label class="form-field"><span>Feature Top</span>${topFeatures.length > 1 ? `<select data-character-top-feature>${topFeatures.map((feature) => featureOption(feature, "top", topFeatureId, bottomFeatureId)).join("")}</select><div class="selected-feature-description"><strong>${escapeHtml(selectedTopFeature?.name ?? "Feature indisponível")}</strong><p>${escapeHtml(selectedTopFeature?.summary ?? "")}</p></div>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(topFeatures[0]?.name ?? "Feature indisponível")}</strong><small>${escapeHtml(topFeatures[0]?.summary ?? "")}</small></div>`}</label>
-            <label class="form-field"><span>Feature Bottom</span>${bottomFeatures.length > 1 ? `<select data-character-bottom-feature>${bottomFeatures.map((feature) => featureOption(feature, "bottom", bottomFeatureId, topFeatureId)).join("")}</select><div class="selected-feature-description"><strong>${escapeHtml(selectedBottomFeature?.name ?? "Feature indisponível")}</strong><p>${escapeHtml(selectedBottomFeature?.summary ?? "")}</p></div>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(bottomFeatures[0]?.name ?? "Feature indisponível")}</strong><small>${escapeHtml(bottomFeatures[0]?.summary ?? "")}</small></div>`}</label>
+            <label class="form-field"><span>Feature Top</span>${topFeatures.length > 1 ? `<select data-character-top-feature>${topFeatures.map((feature) => featureOption(feature, "top", topFeatureId)).join("")}</select><div class="selected-feature-description"><strong>${escapeHtml(selectedTopFeature?.name ?? "Feature indisponível")}</strong><p>${escapeHtml(selectedTopFeature?.summary ?? "")}</p></div>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(topFeatures[0]?.name ?? "Feature indisponível")}</strong><small>${escapeHtml(topFeatures[0]?.summary ?? "")}</small></div>`}</label>
+            <label class="form-field"><span>Feature Bottom</span>${hasMixedAncestry ? `${automaticBottomOrigin}<div class="selected-feature-description"><strong>${escapeHtml(selectedBottomFeature?.name ?? "Feature indisponível")}</strong><p>${escapeHtml(selectedBottomFeature?.summary ?? "")}</p></div>` : bottomFeatures.length > 1 ? `<select data-character-bottom-feature>${bottomFeatures.map((feature) => featureOption(feature, "bottom", bottomFeatureId)).join("")}</select><div class="selected-feature-description"><strong>${escapeHtml(selectedBottomFeature?.name ?? "Feature indisponível")}</strong><p>${escapeHtml(selectedBottomFeature?.summary ?? "")}</p></div>` : `<div class="selected-feature-readonly"><strong>${escapeHtml(bottomFeatures[0]?.name ?? "Feature indisponível")}</strong><small>${escapeHtml(bottomFeatures[0]?.summary ?? "")}</small></div>`}</label>
           </div>
         </section>
         ${renderCreationCommunityStep({ communities: catalog.communities, features: catalog.features, selectedId: state.characterCreationCommunityId, search: state.characterCreationCommunitySearch, packId: state.characterCreationCommunityPackId, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs) }, escapeHtml)}
@@ -3566,6 +3569,11 @@ function bindEvents(): void {
     }
     if (target instanceof HTMLSelectElement && target.matches("[data-character-top-feature]")) {
       state.characterCreationTopFeatureId = target.value;
+      const selectedAncestries = state.characterCreationAncestryIds.slice(0, 2).map((id) => catalog.ancestries.find((ancestry) => ancestry.id === id)).filter((ancestry): ancestry is AncestryDefinition => Boolean(ancestry));
+      if (selectedAncestries.length === 2) {
+        const topOrigin = selectedAncestries.find((ancestry) => ancestry.topFeatureId === target.value);
+        state.characterCreationBottomFeatureId = selectedAncestries.find((ancestry) => ancestry.id !== topOrigin?.id)?.bottomFeatureId;
+      }
       state.characterCreationError = undefined;
       render();
       return;

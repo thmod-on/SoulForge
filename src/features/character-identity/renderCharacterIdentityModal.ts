@@ -38,6 +38,7 @@ export function renderCharacterIdentityModal(deps: CharacterIdentityModalDepende
     : ancestries.map((entry) => entry.summary ? `${entry.name}: ${entry.summary}` : "").filter(Boolean).join(" ");
   const community = catalog.communities.find((entry) => entry.id === identity.primaryCommunityId)
     ?? catalog.communities.find((entry) => entry.name.toLocaleLowerCase("pt-BR") === identity.community.toLocaleLowerCase("pt-BR"));
+  const communityName = community?.name ?? (identity.community || "Não definida");
   const communityFeature = community ? catalog.features.find((entry) => entry.id === community.featureId) : undefined;
   const classFeatures = classDefinition
     ? [...new Set([...classDefinition.featureIds, classDefinition.hopeFeatureId])].map((id) => catalog.features.find((entry) => entry.id === id)).filter((entry): entry is FeatureDefinition => Boolean(entry))
@@ -55,7 +56,7 @@ export function renderCharacterIdentityModal(deps: CharacterIdentityModalDepende
       label: "Personagem",
       title: identity.name,
       summary: `Nível ${identity.level} · ${identity.xp} / ${identity.nextLevelXp} XP`,
-      body: `<div class="character-identity-facts"><span><b>Classe</b>${escapeHtml(identity.className)}</span><span><b>Subclasse</b>${escapeHtml(identity.subclassName ?? "Não definida")}</span><span><b>Ancestralidade</b>${escapeHtml(identity.ancestry)}</span><span><b>Comunidade</b>${escapeHtml(identity.community || "Não definida")}</span></div>${identity.quote ? `<p class="character-identity-quote">“${escapeHtml(identity.quote)}”</p>` : ""}`
+      body: `<div class="character-identity-facts"><span><b>Classe</b>${escapeHtml(identity.className)}</span><span><b>Subclasse</b>${escapeHtml(identity.subclassName ?? "Não definida")}</span><span><b>Ancestralidade</b>${escapeHtml(identity.ancestry)}</span><span><b>Comunidade</b>${escapeHtml(communityName)}</span></div>${identity.quote ? `<p class="character-identity-quote">“${escapeHtml(identity.quote)}”</p>` : ""}`
     },
     class: {
       label: "Classe",
@@ -71,8 +72,8 @@ export function renderCharacterIdentityModal(deps: CharacterIdentityModalDepende
     },
     community: {
       label: "Comunidade",
-      title: identity.community || "Não definida",
-      summary: community ? "Feature ativa da comunidade" : "Comunidade não definida",
+      title: communityName,
+      summary: "",
       body: `${community?.summary ? `<p>${escapeHtml(community.summary)}</p>` : ""}<section class="character-identity-detail-section"><h3>Feature ativa</h3><div class="character-identity-feature-grid">${featureCard(communityFeature ?? character.skills.find((skill) => skill.source === "community"), "Comunidade")}</div></section>`
     }
   }[section];

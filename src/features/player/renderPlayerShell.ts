@@ -15,6 +15,7 @@ export type PlayerShellDependencies = {
   progressPercent: (value: number, max: number) => number;
   getEffectiveDefense: (character: Character) => Defense;
   getSpellcastAttributeId: (character: Character) => string | undefined;
+  getCommunityName: (character: Character) => string;
 };
 
 export function renderSidebar(character: Character, dependencies: PlayerShellDependencies): string {
@@ -27,13 +28,13 @@ export function renderSidebar(character: Character, dependencies: PlayerShellDep
 }
 
 export function renderTopbar(character: Character, dependencies: PlayerShellDependencies): string {
-  const { state, topNavigation, editorNavigation, escapeHtml } = dependencies;
+  const { state, topNavigation, editorNavigation, escapeHtml, getCommunityName } = dependencies;
   const identity = character.identity;
   const identityLinks = [
     { kind: "character", label: "Personagem", value: identity.name },
     { kind: "class", label: "Classe", value: identity.className },
     { kind: "ancestry", label: "Ancestralidade", value: identity.ancestry },
-    { kind: "community", label: "Comunidade", value: identity.community || "Não definida" }
+    { kind: "community", label: "Comunidade", value: getCommunityName(character) }
   ];
   return `<header class="topbar"><div class="topbar-identity" aria-label="Identidade do personagem">${identityLinks.map((item, index) => { const opensSheet = item.kind === "character"; return `${index ? '<span class="topbar-identity-separator" aria-hidden="true">✦</span>' : ""}<button class="topbar-identity-link ${opensSheet ? "is-character" : ""} ${opensSheet && state.page === "overview" ? "is-active" : ""}" type="button" data-action="${opensSheet ? "open-character-sheet" : "open-character-identity"}"${opensSheet ? "" : ` data-identity-section="${item.kind}"`} aria-label="${opensSheet ? "Abrir ficha" : `Ver detalhes: ${escapeHtml(item.label)}`}" title="${opensSheet ? "Abrir ficha" : `Ver detalhes: ${escapeHtml(item.label)}`}"><strong>${escapeHtml(item.value)}</strong></button>`; }).join("")}</div><div class="topbar-navigation-row"><nav class="top-nav" aria-label="Menu do personagem">${topNavigation.map((item) => `<button class="top-link ${state.page === item.page ? "is-active" : ""}" data-page="${item.page}">${item.label}</button>`).join("")}</nav><nav class="topbar-utilities" aria-label="Menu global">${editorNavigation.map((item) => `<button class="topbar-utility ${state.page === item.page ? "is-active" : ""}" data-page="${item.page}" aria-label="${item.label}" title="${item.label}"><span aria-hidden="true">${item.icon ?? ""}</span></button>`).join("")}</nav><div class="topbar-brand" aria-label="SoulForge"><div class="brand-mark"><img src="assets/brand/soulforge-symbol.png" alt="" /></div><strong>SOULFORGE</strong></div></div></header>`;
 }

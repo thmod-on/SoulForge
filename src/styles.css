@@ -698,6 +698,25 @@ button {
   padding: 0.55rem 0.65rem;
 }
 
+.selected-feature-origin {
+  display: grid;
+  align-content: center;
+  min-height: 2.7rem;
+  border: 1px solid rgba(244, 234, 219, 0.16);
+  background: rgba(8, 5, 17, 0.5);
+  padding: 0.35rem 0.65rem;
+}
+
+.selected-feature-origin strong {
+  color: var(--color-text);
+  font-size: 0.82rem;
+}
+
+.selected-feature-origin small {
+  color: var(--color-muted);
+  font-size: 0.68rem;
+}
+
 .selected-feature-readonly strong {
   color: var(--color-gold);
   font-size: 0.84rem;
@@ -2812,14 +2831,6 @@ button {
 
 .subclass-track-card.is-locked {
   opacity: 0.68;
-}
-
-.subclass-feature-modal-art {
-  background:
-    radial-gradient(circle at 50% 36%, rgba(217, 154, 61, 0.3), transparent 28%),
-    radial-gradient(circle at 50% 66%, rgba(142, 79, 196, 0.34), transparent 44%),
-    var(--color-deep);
-  font-weight: 700;
 }
 
 .ability-card {
@@ -6322,6 +6333,21 @@ body.has-modal {
   position: relative;
 }
 
+.subclass-feature-modal {
+  width: min(48rem, calc(100vw - 2rem));
+  height: auto;
+  max-height: calc(100vh - 2rem);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.subclass-feature-modal .class-detail-body {
+  padding: 1.35rem 1.5rem 1.5rem;
+}
+
+.subclass-feature-modal .class-detail-feature-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .class-detail-art {
   min-height: 100%;
   display: grid;
@@ -6493,6 +6519,10 @@ body.has-modal {
 
   .class-detail-art {
     min-height: 10rem;
+  }
+
+  .subclass-feature-modal .class-detail-feature-grid {
+    grid-template-columns: 1fr;
   }
 
   .class-detail-body {
