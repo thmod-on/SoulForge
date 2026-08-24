@@ -155,7 +155,7 @@ Salvar uma comunidade local cria/atualiza sua Definition e a Feature vinculada d
 
 - [x] Criar o Pack local `Core - Comunidades`.
 - [x] Adicionar capítulo, lista, detalhe e CRUD de Comunidades.
-- [ ] Reaproveitar o editor declarativo de Feature e game markers, sem duplicar regras.
+- [x] Reaproveitar o editor declarativo de Feature e game markers, sem duplicar regras.
 
 ### Fase 3 — Criação e ficha
 

@@ -1,4 +1,5 @@
 import { baseCatalog } from "./content/installedPacks";
+import { syncScrollAffordances } from "./app/scrollAffordance";
 import { getSpellcastAttributeId } from "./content/spellcastAttributes";
 import { getOfficialCardMarkers } from "./content/officialCardMarkers";
 import { createCatalog, findDefinition, findDomain } from "./domain/catalog";
@@ -105,12 +106,11 @@ import {
   renderCompendiumCardFormModal as renderCompendiumCardFormModalView,
   renderCompendiumCardsManager as renderCompendiumCardsManagerView,
   renderDeleteCompendiumCardModal as renderDeleteCompendiumCardModalView,
-  renderGameMarkerFields,
-  readGameMarker,
   savePackCardMarkerOverride as savePackCardMarkerOverrideAction,
   saveCompendiumCard as saveCompendiumCardAction,
   type CardFeatureDependencies
 } from "./features/compendium/cards";
+import { readGameMarker, renderGameMarkerFields } from "./features/compendium/gameMarkerForm";
 import {
   removeCompendiumItem as removeCompendiumItemAction,
   renderCompendiumItemFormModal as renderCompendiumItemFormModalView,
@@ -339,7 +339,7 @@ const state: {
   }
 };
 
-const appVersion = "0.23.0";
+const appVersion = "0.24.0";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -1645,6 +1645,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
   `;
   injectGameMarkerAuthoringFields();
   enhanceCompendiumClassResults();
+  syncScrollAffordances(appRoot);
   document.body.classList.toggle("has-modal", Boolean(appRoot.querySelector(".modal-backdrop")));
   if (state.addItemToCompartmentId && state.addItemCatalogScrollTop) requestAnimationFrame(() => { const catalog = appRoot.querySelector<HTMLElement>(".add-item-catalog"); if (catalog) catalog.scrollTop = state.addItemCatalogScrollTop ?? 0; });
   if (previousMainScrollTop !== undefined) {
@@ -2245,6 +2246,19 @@ function bindEvents(): void {
           panel.classList.toggle("is-active", index === Number(tabIndex));
         });
       }
+      return;
+    }
+
+    if (target.closest('[data-action="close-add-item-preview"]')) {
+      state.addItemPreviewDefinitionId = undefined;
+      render({ preserveMainScroll: true });
+      return;
+    }
+
+    if (target.matches("[data-modal-backdrop]") && modalBackdropPointerDown && state.addItemPreviewDefinitionId) {
+      modalBackdropPointerDown = false;
+      state.addItemPreviewDefinitionId = undefined;
+      render({ preserveMainScroll: true });
       return;
     }
 
@@ -3156,7 +3170,6 @@ function bindEvents(): void {
     const addItemPreviewButton = target.closest<HTMLElement>("[data-add-item-preview-definition-id]");
     if (addItemPreviewButton) { state.addItemCatalogScrollTop = appRoot.querySelector<HTMLElement>(".add-item-catalog")?.scrollTop ?? 0; state.addItemPreviewDefinitionId = addItemPreviewButton.dataset.addItemPreviewDefinitionId; state.addItemError = undefined; render({ preserveMainScroll: true }); return; }
 
-    if (target.closest('[data-action="close-add-item-preview"]')) { state.addItemPreviewDefinitionId = undefined; render({ preserveMainScroll: true }); return; }
     const selectAddItemFromPreviewButton = target.closest<HTMLElement>('[data-action="select-add-item-from-preview"]');
     if (selectAddItemFromPreviewButton) { state.addingDefinitionItemId = selectAddItemFromPreviewButton.dataset.itemId; state.addItemPreviewDefinitionId = undefined; state.addItemError = undefined; render({ preserveMainScroll: true }); return; }
 

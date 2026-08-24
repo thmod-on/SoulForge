@@ -45,6 +45,8 @@ Classes do Compendium estÃ£o em `src/features/compendium/classes.ts`, incluind
 
 Ancestralidades do Compendium ficam em `src/features/compendium/ancestries.ts`, reunindo busca, Top/Bottom Features, imagem e o CRUD local que persiste as trÃªs Definitions relacionadas.
 
+O editor de uma Feature fica em `src/features/compendium/featureAuthoring.ts`. Classes, subclasses e comunidades devem reutilizá-lo para nome, descrição e metadados declarativos. O formulário de marcador em `src/features/compendium/gameMarkerForm.ts` é a única fonte dos campos de contador e dados: novas fontes não devem duplicar esses controles nem inferir comportamento a partir de texto livre.
+
 # Padrao obrigatorio para novas features
 
 Toda funcionalidade nova deve ser criada em `src/features/<area>/` e agrupada por responsabilidade de produto.

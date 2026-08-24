@@ -1,5 +1,6 @@
 import type { Catalog } from "../../domain/catalog";
 import type { AncestryDefinition, FeatureDefinition } from "../../domain/types";
+import { readFeatureAuthoringFields, renderFeatureAuthoringFields } from "./featureAuthoring";
 
 export type AncestryFeatureState = { compendiumAncestrySearch: string; ancestryModalOpen: boolean; editingCompendiumAncestryId?: string; deletingCompendiumAncestryId?: string; compendiumAncestryPreviewId?: string };
 export type AncestryFeatureDependencies = { state: AncestryFeatureState; catalog: Catalog; escapeHtml: (value: string) => string; renderEmptyInline: (message: string) => string; getPackDisplayName: (packId: string) => string; saveCustomDefinition: (definition: AncestryDefinition | FeatureDefinition) => Promise<void>; deleteCustomDefinition: (definitionId: string) => Promise<void>; refreshCatalog: () => Promise<void>; render: () => void };
@@ -40,19 +41,22 @@ export function renderDeleteCompendiumAncestryModal(deps: AncestryFeatureDepende
 
 export async function saveCompendiumAncestry(deps: AncestryFeatureDependencies): Promise<void> {
   const value = (selector: string) => document.querySelector<HTMLInputElement | HTMLTextAreaElement>(selector)?.value.trim() ?? "";
-  const name = value("[data-ancestry-name]"); const summary = value("[data-ancestry-summary]"); const topName = value("[data-ancestry-top-name]"); const topSummary = value("[data-ancestry-top-summary]"); const bottomName = value("[data-ancestry-bottom-name]"); const bottomSummary = value("[data-ancestry-bottom-summary]");
+  const name = value("[data-ancestry-name]"); const summary = value("[data-ancestry-summary]");
   const error = document.querySelector<HTMLElement>("[data-ancestry-error]");
   const existing = deps.state.editingCompendiumAncestryId ? deps.catalog.ancestries.find((entry) => entry.id === deps.state.editingCompendiumAncestryId) : undefined;
   const duplicate = deps.catalog.ancestries.some((entry) => entry.name.toLocaleLowerCase("pt-BR") === name.toLocaleLowerCase("pt-BR") && entry.id !== existing?.id);
-  if (!name || !summary || !topName || !topSummary || !bottomName || !bottomSummary || duplicate) { if (error) { error.hidden = false; error.textContent = duplicate ? "Ja existe uma ancestralidade com este nome." : "Preencha a ancestralidade e as duas features."; } return; }
+  const top = readFeatureAuthoringFields({ key: "ancestry-top", feature: existing ? feature(existing, "top", deps.catalog) : undefined, sourceType: "ancestry", tier: "top", includeResourceModifier: true });
+  const bottom = readFeatureAuthoringFields({ key: "ancestry-bottom", feature: existing ? feature(existing, "bottom", deps.catalog) : undefined, sourceType: "ancestry", tier: "bottom", includeResourceModifier: true });
+  const featureError = top instanceof Error ? top : bottom instanceof Error ? bottom : undefined;
+  if (!name || !summary || !top || !bottom || featureError || duplicate) { if (error) { error.hidden = false; error.textContent = featureError?.message ?? (duplicate ? "Ja existe uma ancestralidade com este nome." : "Preencha a ancestralidade e as duas features."); } return; }
   if (existing && existing.packId !== "local") return;
   try {
     const image = (await readImage("[data-ancestry-image]")) ?? existing?.image; const id = existing?.id ?? `ancestry.local.${crypto.randomUUID()}`;
     const topId = (existing ? feature(existing, "top", deps.catalog)?.id : undefined) ?? `feature.local.${crypto.randomUUID()}`; const bottomId = (existing ? feature(existing, "bottom", deps.catalog)?.id : undefined) ?? `feature.local.${crypto.randomUUID()}`;
     const ancestry: AncestryDefinition = { id, type: "ancestry", packId: "local", name, summary, image, topFeatureId: topId, bottomFeatureId: bottomId };
-    const top: FeatureDefinition = { id: topId, type: "feature", packId: "local", name: topName, summary: topSummary, sourceType: "ancestry", sourceId: id, tier: "top", ...resourceModifier("top") };
-    const bottom: FeatureDefinition = { id: bottomId, type: "feature", packId: "local", name: bottomName, summary: bottomSummary, sourceType: "ancestry", sourceId: id, tier: "bottom", ...resourceModifier("bottom") };
-    await Promise.all([deps.saveCustomDefinition(ancestry), deps.saveCustomDefinition(top), deps.saveCustomDefinition(bottom)]); await deps.refreshCatalog(); deps.state.ancestryModalOpen = false; deps.state.editingCompendiumAncestryId = undefined; deps.render();
+    const topDefinition: FeatureDefinition = { ...(top as FeatureDefinition), id: topId, sourceId: id };
+    const bottomDefinition: FeatureDefinition = { ...(bottom as FeatureDefinition), id: bottomId, sourceId: id };
+    await Promise.all([deps.saveCustomDefinition(ancestry), deps.saveCustomDefinition(topDefinition), deps.saveCustomDefinition(bottomDefinition)]); await deps.refreshCatalog(); deps.state.ancestryModalOpen = false; deps.state.editingCompendiumAncestryId = undefined; deps.render();
   } catch (caught) { if (error) { error.hidden = false; error.textContent = caught instanceof Error ? caught.message : "Nao foi possivel salvar a ancestralidade."; } }
 }
 
@@ -71,8 +75,6 @@ function renderAncestryFeatureDetail(label: string, definition: FeatureDefinitio
 
 function feature(ancestry: AncestryDefinition, position: "top" | "bottom", catalog: Catalog): FeatureDefinition | undefined { return catalog.features.find((entry) => entry.id === (position === "top" ? ancestry.topFeatureId : ancestry.bottomFeatureId)); }
 function featureFields(label: string, definition: FeatureDefinition | undefined, key: "top" | "bottom", deps: AncestryFeatureDependencies): string {
-  const modifier = definition?.sheetModifiers?.find((entry) => entry.kind === "resource-max");
-  return `<div class="ancestry-feature-form-grid"><fieldset class="class-domain-field"><legend>${label} Feature</legend><label class="form-field"><span>Nome</span><input data-ancestry-${key}-name required value="${deps.escapeHtml(definition?.name ?? "")}"/></label><label class="form-field"><span>Descricao</span><textarea data-ancestry-${key}-summary required>${deps.escapeHtml(definition?.summary ?? "")}</textarea></label><div class="form-grid"><label class="form-field"><span>Bônus de recurso</span><select data-ancestry-${key}-modifier-kind><option value="none" ${modifier ? "" : "selected"}>Nenhum</option><option value="resource-max" ${modifier ? "selected" : ""}>Aumentar máximo</option></select></label><label class="form-field"><span>Recurso</span><select data-ancestry-${key}-resource-id><option value="hp" ${modifier?.resourceId === "hp" ? "selected" : ""}>PV</option><option value="stress" ${modifier?.resourceId === "stress" ? "selected" : ""}>Estresse</option><option value="hope" ${modifier?.resourceId === "hope" ? "selected" : ""}>Esperança</option><option value="armor-slots" ${modifier?.resourceId === "armor-slots" ? "selected" : ""}>Armadura</option></select></label><label class="form-field"><span>Quantidade</span><input data-ancestry-${key}-resource-amount type="number" min="1" step="1" value="${modifier?.amount ?? 1}" /></label></div><small>O bônus é aplicado automaticamente enquanto esta Feature estiver selecionada.</small></fieldset></div>`;
+  return `<div class="ancestry-feature-form-grid">${renderFeatureAuthoringFields({ key: `ancestry-${key}`, title: `${label} Feature`, feature: definition, required: true, escapeHtml: deps.escapeHtml, includeResourceModifier: true })}</div>`;
 }
-function resourceModifier(key: "top" | "bottom"): Pick<FeatureDefinition, "sheetModifiers"> { const kind = document.querySelector<HTMLSelectElement>(`[data-ancestry-${key}-modifier-kind]`)?.value; if (kind !== "resource-max") return {}; const resourceId = document.querySelector<HTMLSelectElement>(`[data-ancestry-${key}-resource-id]`)?.value ?? "stress"; const amount = Number(document.querySelector<HTMLInputElement>(`[data-ancestry-${key}-resource-amount]`)?.value ?? 0); return Number.isFinite(amount) && amount > 0 ? { sheetModifiers: [{ kind: "resource-max", resourceId, amount }] } : {}; }
 function readImage(selector: string): Promise<string | undefined> { const file = document.querySelector<HTMLInputElement>(selector)?.files?.[0]; if (!file) return Promise.resolve(undefined); if (file.size > 1_500_000) return Promise.reject(new Error("A imagem deve ter no maximo 1,5 MB.")); return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : undefined); reader.onerror = () => reject(new Error("Nao foi possivel ler a imagem.")); reader.readAsDataURL(file); }); }

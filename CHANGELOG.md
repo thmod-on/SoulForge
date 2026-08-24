@@ -4,6 +4,23 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.24.0]
+
+### Adicionado
+
+- editor declarativo único de Features, reutilizado por classes, subclasses, ancestralidades e comunidades, com suporte a marcadores de contador ou dados;
+- áreas com rolagem interna passam a receber indicação visual discreta, apropriada para a interface escura e para uso por toque.
+
+### Alterado
+
+- catálogo para adicionar itens reutiliza o visual dos itens do inventário e mantém títulos longos legíveis;
+- formulário de Comunidades passa a usar o mesmo contrato mecânico de Features das demais fontes.
+
+### Corrigido
+
+- detalhes de item abertos a partir do catálogo retornam à seleção de itens ao fechar;
+- modal de identidade da ficha não repete o rótulo de classe nas Features.
+
 ## [0.22.1]
 
 ### Alterado
