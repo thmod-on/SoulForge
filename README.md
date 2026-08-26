@@ -2,7 +2,7 @@
 
 SoulForge é uma PWA *offline-first* para acompanhar personagens de Daggerheart sem depender de servidor durante a mesa.
 
-Versão atual: `0.22.0`.
+Versão atual: `0.24.1`.
 
 ## Acesso e instalação
 

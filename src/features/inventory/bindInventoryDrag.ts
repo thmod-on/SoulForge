@@ -10,6 +10,7 @@ type DragState = {
   dragging: boolean;
   ghost?: HTMLDivElement;
   currentDropTargetId?: string;
+  currentStackTargetId?: string;
   suppressNextClick: boolean;
 };
 
@@ -23,6 +24,7 @@ export type InventoryDragDependencies = {
   canCompartmentAcceptItem: (compartment: InventoryCompartment, item: ItemDefinition) => boolean;
   wouldFitCompartment: (compartment: InventoryCompartment, entries: InventoryItemEntry[], item: ItemDefinition, quantity: number, currentCompartmentId: string) => boolean;
   moveItemToCompartment: (entryId: string | undefined, targetCompartmentId: string | undefined) => Promise<void>;
+  mergeInventoryStacks: (sourceEntryId: string | undefined, targetEntryId: string | undefined) => Promise<void>;
 };
 
 export function consumeInventoryDragClickSuppression(): boolean {
@@ -75,6 +77,7 @@ export function bindInventoryDragEvents(dependencies: InventoryDragDependencies)
 
 function clearDropTargetStyles(): void {
   document.querySelectorAll(".inventory-compartment").forEach((element) => element.classList.remove("is-drop-target", "is-drop-invalid"));
+  document.querySelectorAll("[data-inventory-entry-id]").forEach((element) => element.classList.remove("is-stack-target"));
 }
 
 function endItemDrag(): void {
@@ -83,6 +86,7 @@ function endItemDrag(): void {
   dragState.entryId = undefined;
   dragState.pointerId = undefined;
   dragState.currentDropTargetId = undefined;
+  dragState.currentStackTargetId = undefined;
   dragState.dragging = false;
   clearDropTargetStyles();
 }
@@ -102,11 +106,30 @@ function createDragGhost(tile: HTMLElement, clientX: number, clientY: number): v
 
 function updateDropTarget(clientX: number, clientY: number, dependencies: InventoryDragDependencies): void {
   clearDropTargetStyles();
+  const stackTarget = getStackTarget(clientX, clientY, dependencies);
+  dragState.currentStackTargetId = stackTarget?.dataset.inventoryEntryId;
+  if (stackTarget) {
+    stackTarget.classList.add("is-stack-target");
+    dragState.currentDropTargetId = undefined;
+    return;
+  }
   const target = document.elementsFromPoint(clientX, clientY).find((element): element is HTMLElement => element instanceof HTMLElement && Boolean(element.closest("[data-compartment-id]")))?.closest<HTMLElement>("[data-compartment-id]");
   const targetId = target?.dataset.compartmentId;
   dragState.currentDropTargetId = targetId;
   if (!target || !targetId) return;
   target.classList.add(isValidDropTarget(targetId, dependencies) ? "is-drop-target" : "is-drop-invalid");
+}
+
+function getStackTarget(clientX: number, clientY: number, dependencies: InventoryDragDependencies): HTMLElement | undefined {
+  const character = dependencies.getCharacter();
+  if (!character || !dragState.entryId) return undefined;
+  const target = document.elementsFromPoint(clientX, clientY).find((element): element is HTMLElement => element instanceof HTMLElement && Boolean(element.closest("[data-inventory-entry-id]")))?.closest<HTMLElement>("[data-inventory-entry-id]");
+  const targetEntryId = target?.dataset.inventoryEntryId;
+  if (!target || !targetEntryId || targetEntryId === dragState.entryId) return undefined;
+  const entries = dependencies.getItemEntries(character);
+  const source = entries.find(({ entry }) => (entry.id ?? entry.definitionId) === dragState.entryId);
+  const destination = entries.find(({ entry }) => (entry.id ?? entry.definitionId) === targetEntryId);
+  return source && destination && source.entry.definitionId === destination.entry.definitionId && dependencies.getEntryCompartmentId(source.entry) === dependencies.getEntryCompartmentId(destination.entry) && Boolean(source.entry.equipped) === Boolean(destination.entry.equipped) ? target : undefined;
 }
 
 function isValidDropTarget(targetCompartmentId: string | undefined, dependencies: InventoryDragDependencies): boolean {
@@ -121,8 +144,10 @@ function isValidDropTarget(targetCompartmentId: string | undefined, dependencies
 
 async function finishItemDrag(dependencies: InventoryDragDependencies): Promise<void> {
   const targetCompartmentId = dragState.currentDropTargetId;
+  const stackTargetId = dragState.currentStackTargetId;
   const entryId = dragState.entryId;
   const validDrop = isValidDropTarget(targetCompartmentId, dependencies);
   endItemDrag();
-  if (validDrop) await dependencies.moveItemToCompartment(entryId, targetCompartmentId);
+  if (stackTargetId) await dependencies.mergeInventoryStacks(entryId, stackTargetId);
+  else if (validDrop) await dependencies.moveItemToCompartment(entryId, targetCompartmentId);
 }

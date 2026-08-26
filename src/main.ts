@@ -1,5 +1,6 @@
 import { baseCatalog } from "./content/installedPacks";
 import { syncScrollAffordances } from "./app/scrollAffordance";
+import { readLocalImage } from "./app/media";
 import { getSpellcastAttributeId } from "./content/spellcastAttributes";
 import { getOfficialCardMarkers } from "./content/officialCardMarkers";
 import { createCatalog, findDefinition, findDomain } from "./domain/catalog";
@@ -60,6 +61,7 @@ import {
   createInventoryContainer as createInventoryContainerAction,
   deleteInventoryContainer as deleteInventoryContainerAction,
   deleteInventoryItem as deleteInventoryItemAction,
+  mergeInventoryStacks as mergeInventoryStacksAction,
   moveItemToCompartment as moveItemToCompartmentAction,
   prepareDeleteInventoryItem as prepareDeleteInventoryItemAction,
   splitInventoryItem as splitInventoryItemAction,
@@ -92,6 +94,7 @@ import {
   renderStoredCards as renderStoredCardsView,
   type PlayerOverviewDependencies
 } from "./features/player/renderPlayerOverview";
+import { renderTraits as renderTraitsView } from "./features/player/renderTraits";
 import {
   removeCompendiumDomain as removeCompendiumDomainAction,
   renderCompendiumDomainsManager as renderCompendiumDomainsManagerView,
@@ -339,7 +342,7 @@ const state: {
   }
 };
 
-const appVersion = "0.24.0";
+const appVersion = "0.24.1";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -592,45 +595,6 @@ function getCommunityFeatureDependencies(): CommunityFeatureDependencies {
   };
 }
 
-function renderSkills(character: Character): string {
-  return `
-    <main class="content">
-      <div class="screen-title">
-        <div>
-          <h1>Aptidoes</h1>
-          <p>Experiencias que representam a historia, os conhecimentos e os talentos do personagem.</p>
-        </div>
-      </div>
-      <section class="traits-experience-section">
-        <div class="section-heading">
-          <h2>Experiencias</h2>
-        </div>
-        ${renderExperienceList(character)}
-      </section>
-    </main>
-  `;
-}
-
-function renderExperienceList(character: Character): string {
-  return character.experiences.length
-    ? `<div class="experience-grid">
-              ${character.experiences
-                .map(
-                  (experience) => `
-                    <article class="experience-card">
-                      <div>
-                        <strong>${escapeHtml(experience.name)}</strong>
-                        ${experience.description ? `<p>${escapeHtml(experience.description)}</p>` : ""}
-                      </div>
-                      <span>+${experience.value}</span>
-                    </article>
-                  `
-                )
-                .join("")}
-            </div>`
-    : renderEmptyInline("Nenhuma experiencia registrada.");
-}
-
 function renderSettings(character: Character): string {
   return renderSettingsPage({
     character,
@@ -660,12 +624,12 @@ function renderPackImportModal(): string {
           </div>
           <p class="settings-panel-copy">O conteúdo será salvo somente neste navegador e poderá ser removido depois com confirmação.</p>
           <div class="modal-actions">
-            <button class="secondary-action" type="button" data-action="choose-pack-file">Escolher outro arquivo</button>
-            <button class="primary-action" type="button" data-action="confirm-pack-import">Instalar Pack</button>
+            <button class="sf-action sf-action--secondary secondary-action" type="button" data-action="choose-pack-file">Escolher outro arquivo</button>
+            <button class="sf-action sf-action--primary primary-action" type="button" data-action="confirm-pack-import">Instalar Pack</button>
           </div>
         ` : `
           <p>Selecione um arquivo <strong>.soulforge-pack.json</strong>. O SoulForge exibirá uma prévia antes de instalar.</p>
-          <button class="primary-action" type="button" data-action="choose-pack-file">Selecionar arquivo</button>
+          <button class="sf-action sf-action--primary primary-action" type="button" data-action="choose-pack-file">Selecionar arquivo</button>
         `}
         <input type="file" accept="application/json,.json,.soulforge-pack.json" data-pack-file hidden>
         <p class="form-error" data-pack-import-error ${state.packImportError ? "" : "hidden"}>${escapeHtml(state.packImportError ?? "")}</p>
@@ -677,7 +641,7 @@ function renderPackImportModal(): string {
 function renderRemoveInstalledPackModal(): string {
   const pack = state.installedPacks.find((entry) => entry.id === state.deletingInstalledPackId);
   if (!pack) return "";
-  return `<div class="modal-backdrop" data-modal-backdrop><section class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="remove-pack-title"><h2 id="remove-pack-title">Remover Pack?</h2><p><strong>${escapeHtml(pack.name)}</strong> e todas as suas Definitions serão removidos deste dispositivo. Personagens que usem esse conteúdo poderão ficar com referências indisponíveis.</p><div class="modal-actions"><button class="secondary-action" type="button" data-action="cancel-remove-installed-pack">Cancelar</button><button class="danger-action" type="button" data-action="confirm-remove-installed-pack">Remover Pack</button></div></section></div>`;
+  return `<div class="modal-backdrop" data-modal-backdrop><section class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="remove-pack-title"><h2 id="remove-pack-title">Remover Pack?</h2><p><strong>${escapeHtml(pack.name)}</strong> e todas as suas Definitions serão removidos deste dispositivo. Personagens que usem esse conteúdo poderão ficar com referências indisponíveis.</p><div class="modal-actions"><button class="sf-action sf-action--secondary secondary-action" type="button" data-action="cancel-remove-installed-pack">Cancelar</button><button class="sf-action sf-action--danger danger-action" type="button" data-action="confirm-remove-installed-pack">Remover Pack</button></div></section></div>`;
 }
 
 function getProgression(character: Character) {
@@ -738,7 +702,7 @@ function renderAddContainerModal(): string {
 
   return `
     <div class="modal-backdrop" data-modal-backdrop>
-      <section class="container-modal" role="dialog" aria-modal="true" aria-labelledby="container-modal-title">
+      <section class="container-modal sf-scroll-region" role="dialog" aria-modal="true" aria-labelledby="container-modal-title">
         <div class="container-modal-heading">
           <h2 id="container-modal-title">Novo container</h2>
           <button class="modal-close modal-close-inline" data-modal-close aria-label="Fechar novo container">x</button>
@@ -762,7 +726,7 @@ function renderAddContainerModal(): string {
           <label><input type="checkbox" data-container-accepts value="loot" /> Loot</label>
         </fieldset>
         <p>Se nenhum tipo for marcado, o container aceitara qualquer item.</p>
-        <button class="primary-action" type="button" data-action="create-container">Criar container</button>
+        <button class="sf-action sf-action--primary primary-action" type="button" data-action="create-container">Criar container</button>
       </section>
     </div>
   `;
@@ -784,7 +748,7 @@ function renderDeleteContainerModal(): string {
 
   return `
     <div class="modal-backdrop" data-modal-backdrop>
-      <section class="container-modal danger-modal" role="dialog" aria-modal="true" aria-labelledby="delete-container-title">
+      <section class="container-modal sf-scroll-region danger-modal" role="dialog" aria-modal="true" aria-labelledby="delete-container-title">
         <button class="modal-close" data-modal-close aria-label="Cancelar exclusao">x</button>
         <span class="resource-modal-label">Excluir container</span>
         <h2 id="delete-container-title">${escapeHtml(compartment.name)}</h2>
@@ -794,8 +758,8 @@ function renderDeleteContainerModal(): string {
           <span>${itemCount === 1 ? "item sera perdido" : "itens serao perdidos"}</span>
         </div>
         <div class="confirmation-actions">
-          <button class="secondary-action" type="button" data-action="cancel-delete-container">Cancelar</button>
-          <button class="danger-action" type="button" data-action="confirm-delete-container">Excluir container e itens</button>
+          <button class="sf-action sf-action--secondary secondary-action" type="button" data-action="cancel-delete-container">Cancelar</button>
+          <button class="sf-action sf-action--danger danger-action" type="button" data-action="confirm-delete-container">Excluir container e itens</button>
         </div>
       </section>
     </div>
@@ -903,7 +867,7 @@ async function applyProgression(): Promise<void> {
 }
 
 function renderEmptyInline(message: string): string {
-  return `<p class="empty-inline">${escapeHtml(message)}</p>`;
+  return `<p class="empty-inline sf-state sf-state--empty sf-state--inline">${escapeHtml(message)}</p>`;
 }
 
 function getNotesRenderDependencies(): NotesRenderDependencies {
@@ -1009,7 +973,9 @@ function getInventoryDragDependencies(): InventoryDragDependencies {
     canCompartmentAcceptItem,
     wouldFitCompartment,
     moveItemToCompartment: (entryId, targetCompartmentId) =>
-      moveItemToCompartmentAction(entryId, targetCompartmentId, getInventoryActionDependencies())
+      moveItemToCompartmentAction(entryId, targetCompartmentId, getInventoryActionDependencies()),
+    mergeInventoryStacks: (sourceEntryId, targetEntryId) =>
+      mergeInventoryStacksAction(sourceEntryId, targetEntryId, getInventoryActionDependencies())
   };
 }
 
@@ -1040,10 +1006,10 @@ function renderCompendium(): string {
       </div>
 
       <nav class="compendium-bookmarks" aria-label="Aberturas do Compendium">
-        <button class="${state.compendiumSpread === 1 ? "is-active" : ""}" type="button" data-compendium-spread="1" aria-current="${state.compendiumSpread === 1 ? "page" : "false"}">Abertura 1 <span>Dominios | Cartas</span></button>
-        <button class="${state.compendiumSpread === 2 ? "is-active" : ""}" type="button" data-compendium-spread="2" aria-current="${state.compendiumSpread === 2 ? "page" : "false"}">Abertura 2 <span>Itens | Classes</span></button>
-        <button class="${state.compendiumSpread === 3 ? "is-active" : ""}" type="button" data-compendium-spread="3" aria-current="${state.compendiumSpread === 3 ? "page" : "false"}">Abertura 3 <span>Ancestralidades | Comunidades</span></button>
-        <button class="${state.compendiumSpread === 4 ? "is-active" : ""}" type="button" data-compendium-spread="4" aria-current="${state.compendiumSpread === 4 ? "page" : "false"}">Abertura 4 <span>Condições | Transformações</span></button>
+        <button class="sf-tab ${state.compendiumSpread === 1 ? "is-active" : ""}" type="button" data-compendium-spread="1" aria-current="${state.compendiumSpread === 1 ? "page" : "false"}">Abertura 1 <span>Dominios | Cartas</span></button>
+        <button class="sf-tab ${state.compendiumSpread === 2 ? "is-active" : ""}" type="button" data-compendium-spread="2" aria-current="${state.compendiumSpread === 2 ? "page" : "false"}">Abertura 2 <span>Itens | Classes</span></button>
+        <button class="sf-tab ${state.compendiumSpread === 3 ? "is-active" : ""}" type="button" data-compendium-spread="3" aria-current="${state.compendiumSpread === 3 ? "page" : "false"}">Abertura 3 <span>Ancestralidades | Comunidades</span></button>
+        <button class="sf-tab ${state.compendiumSpread === 4 ? "is-active" : ""}" type="button" data-compendium-spread="4" aria-current="${state.compendiumSpread === 4 ? "page" : "false"}">Abertura 4 <span>Condições | Transformações</span></button>
       </nav>
 
       ${state.compendiumSpread === 1 ? renderCompendiumFirstSpread() : state.compendiumSpread === 2 ? renderCompendiumSecondSpread() : state.compendiumSpread === 3 ? renderCompendiumThirdSpread() : renderCompendiumFourthSpreadView(renderCompendiumChapterCard)}
@@ -1227,7 +1193,7 @@ function renderActivateStoredCardModal(): string {
   const recallCost = definition.recallCost ?? 0;
   const stress = character.resources.find((resource) => resource.id === "stress");
   const loadoutFull = activeCards.length >= 5;
-  return `<div class="modal-backdrop" data-modal-backdrop><section class="confirm-modal card-activation-modal" role="dialog" aria-modal="true" aria-labelledby="activate-card-title"><button class="modal-close" data-modal-close aria-label="Cancelar ativacao">x</button><span class="resource-modal-label">Vault para Loadout</span><h2 id="activate-card-title">Ativar ${escapeHtml(definition.name)}?</h2><p>Esta carta passara a ficar ativa no Loadout.</p>${loadoutFull ? `<label class="form-field"><span>O Loadout ja possui cinco cartas. Escolha uma para guardar *</span><select data-recall-swap-card><option value="">Selecione uma carta ativa</option>${activeCards.map((card) => `<option value="${card.id}">${escapeHtml(card.name)}</option>`).join("")}</select></label>` : ""}<div class="card-activation-rules"><p><strong>Durante um descanso:</strong> a troca e gratuita.</p><p><strong>Agora:</strong> marque ${recallCost} ${recallCost === 1 ? "Stress" : "Stress"}.${stress ? ` Disponivel: ${stress.value}/${stress.max}.` : ""}</p></div><p class="form-error" data-card-activation-error ${state.cardActivationError ? "" : "hidden"}>${escapeHtml(state.cardActivationError ?? "")}</p><div class="modal-actions"><button class="secondary-action" type="button" data-action="activate-stored-card-free">Ativar no descanso</button><button class="primary-action" type="button" data-action="activate-stored-card-stress">Ativar agora</button></div></section></div>`;
+  return `<div class="modal-backdrop" data-modal-backdrop><section class="confirm-modal card-activation-modal" role="dialog" aria-modal="true" aria-labelledby="activate-card-title"><button class="modal-close" data-modal-close aria-label="Cancelar ativação">x</button><span class="resource-modal-label">Vault para Loadout</span><h2 id="activate-card-title">Ativar ${escapeHtml(definition.name)}?</h2><div class="card-activation-frame"><p>Esta carta passará a ficar ativa no Loadout.</p>${loadoutFull ? `<label class="form-field"><span>O Loadout já possui cinco cartas. Escolha uma para guardar *</span><select data-recall-swap-card><option value="">Selecione uma carta ativa</option>${activeCards.map((card) => `<option value="${card.id}">${escapeHtml(card.name)}</option>`).join("")}</select></label>` : ""}<div class="card-activation-options"><button class="card-activation-option" type="button" data-action="activate-stored-card-free"><span><strong>Durante um descanso</strong><small>A troca é gratuita.</small></span><i aria-hidden="true">›</i></button><button class="card-activation-option card-activation-option--immediate" type="button" data-action="activate-stored-card-stress"><span><strong>Agora</strong><small>Marque ${recallCost} Stress.${stress ? ` Disponível: ${stress.value}/${stress.max}.` : ""}</small></span><i aria-hidden="true">›</i></button></div></div>${state.cardActivationError ? `<p class="form-error" data-card-activation-error>${escapeHtml(state.cardActivationError)}</p>` : ""}</section></div>`;
 }
 
 const fallbackCharacterClass: ClassDefinition = {
@@ -1272,18 +1238,18 @@ function renderDeleteCharacterModal(): string {
   const character = state.characters.find((entry) => entry.id === state.deletingCharacterId);
   if (!character) return "";
 
-  return `<div class="modal-backdrop" data-modal-backdrop><section class="confirm-modal danger-modal" role="dialog" aria-modal="true" aria-labelledby="delete-character-title"><h2 id="delete-character-title">Excluir personagem?</h2><p>A ficha de <strong>${escapeHtml(character.identity.name)}</strong>, incluindo inventário, anotações e progresso, será removida deste dispositivo.</p><div class="danger-summary"><strong>!</strong><span>Esta ação não pode ser desfeita.</span></div><div class="confirmation-actions"><button class="secondary-action" type="button" data-action="cancel-delete-character">Cancelar</button><button class="danger-action" type="button" data-action="confirm-delete-character">Excluir personagem</button></div></section></div>`;
+  return `<div class="modal-backdrop" data-modal-backdrop><section class="confirm-modal danger-modal" role="dialog" aria-modal="true" aria-labelledby="delete-character-title"><h2 id="delete-character-title">Excluir personagem?</h2><p>A ficha de <strong>${escapeHtml(character.identity.name)}</strong>, incluindo inventário, anotações e progresso, será removida deste dispositivo.</p><div class="danger-summary"><strong>!</strong><span>Esta ação não pode ser desfeita.</span></div><div class="confirmation-actions"><button class="sf-action sf-action--secondary secondary-action" type="button" data-action="cancel-delete-character">Cancelar</button><button class="sf-action sf-action--danger danger-action" type="button" data-action="confirm-delete-character">Excluir personagem</button></div></section></div>`;
 }
 
 function renderAddResourceModal(): string {
   if (!state.addResourceModalOpen) return "";
-  return `<div class="modal-backdrop" data-modal-backdrop><section class="container-modal resource-create-modal" role="dialog" aria-modal="true" aria-labelledby="add-resource-title"><div class="container-modal-heading"><h2 id="add-resource-title">Novo recurso</h2><button class="modal-close modal-close-inline" type="button" data-modal-close aria-label="Fechar">x</button></div><p>Crie um controle próprio para esta ficha. Ele ficará salvo somente neste personagem.</p><div class="resource-form-grid"><label class="form-field resource-form-wide"><span>Nome *</span><input data-add-resource-label type="text" maxlength="40" placeholder="Ex.: Cargas Arcanas" /></label><label class="form-field"><span>Valor atual *</span><input data-add-resource-value type="number" min="0" value="0" /></label><label class="form-field"><span>Valor máximo *</span><input data-add-resource-max type="number" min="1" value="1" /></label><label class="form-field resource-form-wide"><span>Cor</span><select data-add-resource-tone><option value="focus">Azul</option><option value="hope">Esperança</option><option value="stress">Estresse</option><option value="hp">PV</option><option value="shadow">Essência</option></select></label></div><p class="form-error" data-add-resource-error hidden></p><div class="modal-actions"><button class="secondary-action" type="button" data-modal-close>Cancelar</button><button class="primary-action" type="button" data-action="save-resource">Criar recurso</button></div></section></div>`;
+  return `<div class="modal-backdrop" data-modal-backdrop><section class="container-modal resource-create-modal" role="dialog" aria-modal="true" aria-labelledby="add-resource-title"><div class="container-modal-heading"><h2 id="add-resource-title">Novo recurso</h2><button class="modal-close modal-close-inline" type="button" data-modal-close aria-label="Fechar">x</button></div><p>Crie um controle próprio para esta ficha. Ele ficará salvo somente neste personagem.</p><div class="resource-form-grid"><label class="form-field resource-form-wide"><span>Nome *</span><input data-add-resource-label type="text" maxlength="40" placeholder="Ex.: Cargas Arcanas" /></label><label class="form-field"><span>Valor atual *</span><input data-add-resource-value type="number" min="0" value="0" /></label><label class="form-field"><span>Valor máximo *</span><input data-add-resource-max type="number" min="1" value="1" /></label><label class="form-field resource-form-wide"><span>Cor</span><select data-add-resource-tone><option value="focus">Azul</option><option value="hope">Esperança</option><option value="stress">Estresse</option><option value="hp">PV</option><option value="shadow">Essência</option></select></label></div><p class="form-error" data-add-resource-error hidden></p><div class="modal-actions"><button class="sf-action sf-action--secondary secondary-action" type="button" data-modal-close>Cancelar</button><button class="sf-action sf-action--primary primary-action" type="button" data-action="save-resource">Criar recurso</button></div></section></div>`;
 }
 
 function renderCharacterPortraitModal(): string {
   if (!state.characterPortraitModalOpen || !state.character) return "";
   const portrait = state.character.identity.portraitImage;
-  return `<div class="modal-backdrop" data-modal-backdrop><section class="container-modal portrait-modal" role="dialog" aria-modal="true" aria-labelledby="portrait-modal-title"><div class="container-modal-heading"><h2 id="portrait-modal-title">Foto do personagem</h2><button class="modal-close modal-close-inline" data-modal-close aria-label="Fechar">x</button></div><p>A imagem fica salva somente nesta ficha, neste dispositivo.</p>${portrait ? `<img class="portrait-modal-preview" src="${escapeHtml(portrait)}" alt="Retrato atual de ${escapeHtml(state.character.identity.name)}" />` : ""}<label class="form-field"><span>Escolher nova foto</span><input data-character-portrait-replace type="file" accept="image/png,image/jpeg,image/webp" /><small>PNG, JPG ou WebP; até 1,5 MB.</small></label>${portrait ? '<button class="danger-action" type="button" data-action="remove-character-portrait">Remover foto</button>' : ""}</section></div>`;
+  return `<div class="modal-backdrop" data-modal-backdrop><section class="container-modal portrait-modal" role="dialog" aria-modal="true" aria-labelledby="portrait-modal-title"><div class="container-modal-heading"><h2 id="portrait-modal-title">Foto do personagem</h2><button class="modal-close modal-close-inline" data-modal-close aria-label="Fechar">x</button></div><p>A imagem fica salva somente nesta ficha, neste dispositivo.</p>${portrait ? `<img class="portrait-modal-preview" src="${escapeHtml(portrait)}" alt="Retrato atual de ${escapeHtml(state.character.identity.name)}" />` : ""}<label class="form-field"><span>Escolher nova foto</span><input data-character-portrait-replace type="file" accept="image/png,image/jpeg,image/webp" /><small>PNG, JPG ou WebP; até 1,5 MB.</small></label>${portrait ? '<button class="sf-action sf-action--danger danger-action" type="button" data-action="remove-character-portrait">Remover foto</button>' : ""}</section></div>`;
 }
 
 function renderCharacterPortraitPreviewModal(): string {
@@ -1311,7 +1277,7 @@ function renderGameMarkerDieDialog(): string {
     return `<div class="modal-backdrop" data-modal-backdrop><section class="confirm-modal game-marker-die-dialog" role="dialog" aria-modal="true" aria-labelledby="game-marker-result-title"><button class="modal-close" type="button" data-modal-close aria-label="Cancelar">x</button><span class="resource-modal-label">${diceState.die}</span><h2 id="game-marker-result-title">Definir resultado</h2><p>Escolha o resultado deste dado de ${escapeHtml(marker.definition.label)}.</p><div class="game-marker-result-picker">${getGameMarkerDieFaces(diceState.die).map((value) => `<button type="button" class="die-${diceState.die}" data-action="set-game-marker-die-result" data-game-marker-die-value="${value}">${value}</button>`).join("")}</div></section></div>`;
   }
 
-  return `<div class="modal-backdrop" data-modal-backdrop><section class="confirm-modal game-marker-die-dialog" role="dialog" aria-modal="true" aria-labelledby="game-marker-consume-title"><button class="modal-close" type="button" data-modal-close aria-label="Cancelar">x</button><span class="resource-modal-label">${marker.state.die}</span><h2 id="game-marker-consume-title">Consumir dado?</h2><p>Você consumirá um dado de <strong>${escapeHtml(marker.definition.label)}</strong> com resultado <strong>${die.value}</strong>.</p><div class="modal-actions"><button class="secondary-action" type="button" data-modal-close>Cancelar</button><button class="primary-action" type="button" data-action="confirm-game-marker-die-use">Consumir dado</button></div></section></div>`;
+  return `<div class="modal-backdrop" data-modal-backdrop><section class="confirm-modal game-marker-die-dialog" role="dialog" aria-modal="true" aria-labelledby="game-marker-consume-title"><button class="modal-close" type="button" data-modal-close aria-label="Cancelar">x</button><span class="resource-modal-label">${marker.state.die}</span><h2 id="game-marker-consume-title">Consumir dado?</h2><p>Você consumirá um dado de <strong>${escapeHtml(marker.definition.label)}</strong> com resultado <strong>${die.value}</strong>.</p><div class="modal-actions"><button class="sf-action sf-action--secondary secondary-action" type="button" data-modal-close>Cancelar</button><button class="sf-action sf-action--primary primary-action" type="button" data-action="confirm-game-marker-die-use">Consumir dado</button></div></section></div>`;
 }
 
 function renderCharacterCreationModal(): string {
@@ -1368,7 +1334,7 @@ function renderCharacterCreationModal(): string {
         <button class="modal-close" type="button" data-action="cancel-new-character" aria-label="Fechar">×</button>
         <div class="character-creation-header">
         ${renderCreationProgress({ step: state.characterCreationStep })}
-        ${renderCreationTitle({ step: state.characterCreationStep })}</div><div class="character-creation-scroll">
+        ${renderCreationTitle({ step: state.characterCreationStep })}</div><div class="character-creation-scroll sf-scroll-region">
         ${renderCreationIdentityStep({ name: state.characterCreationName, community: state.characterCreationCommunity, portraitImage: state.characterCreationPortraitImage }, escapeHtml)}
         <section class="character-ancestry-picker creation-step-panel" data-creation-panel="2">
           <div><span>Origem</span></div>
@@ -1549,7 +1515,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
   }
 
   if (!currentCharacter) {
-    appRoot.innerHTML = `<div class="boot-screen">Carregando SoulForge...</div>`;
+    appRoot.innerHTML = `<div class="boot-screen sf-state sf-state--loading" role="status"><i aria-hidden="true"></i><span>Carregando SoulForge...</span></div>`;
     return;
   }
   const characterWithSynchronizedArmor = synchronizeArmorResource(currentCharacter, getItemDefinition);
@@ -1564,7 +1530,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
   const screen = state.page === "overview"
     ? renderOverviewView(character, getPlayerOverviewDependencies())
     : state.page === "skills"
-      ? renderSkills(character)
+      ? renderTraitsView(character, { escapeHtml, renderEmptyInline })
       : state.page === "storedCards"
           ? renderStoredCardsView(character, getPlayerOverviewDependencies())
           : state.page === "progression"
@@ -1811,13 +1777,9 @@ async function confirmDeleteCharacter(): Promise<void> {
 }
 
 async function readCharacterPortrait(file: File): Promise<string> {
-  if (file.size > 1_500_000) throw new Error("A imagem deve ter no máximo 1,5 MB.");
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Não foi possível ler a imagem."));
-    reader.onerror = () => reject(new Error("Não foi possível ler a imagem."));
-    reader.readAsDataURL(file);
-  });
+  const image = await readLocalImage(file);
+  if (!image) throw new Error("Não foi possível ler a imagem.");
+  return image;
 }
 
 async function replaceCharacterPortrait(file: File): Promise<void> {
@@ -2648,7 +2610,9 @@ function bindEvents(): void {
 
     const compendiumSpreadButton = target.closest<HTMLElement>("[data-compendium-spread]");
     if (compendiumSpreadButton) {
-      state.compendiumSpread = Number(compendiumSpreadButton.dataset.compendiumSpread) as CompendiumSpread;
+      const nextSpread = Number(compendiumSpreadButton.dataset.compendiumSpread) as CompendiumSpread;
+      if (nextSpread === state.compendiumSpread) return;
+      state.compendiumSpread = nextSpread;
       render();
       return;
     }

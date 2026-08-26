@@ -4,6 +4,25 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.24.1]
+
+### Adicionado
+
+- identidade visual documentada, com tokens, superfícies, estados e componentes-base reutilizáveis;
+- suporte unificado a imagens locais em retratos e conteúdo do Compendium, com limites e comportamento de exibição definidos;
+- texturas leves e fallbacks visuais para áreas sem imagem, preservando contraste e desempenho em iPad.
+
+### Alterado
+
+- ficha, Compendium, seleção de personagem e fluxos guiados passam a compartilhar superfícies, filtros, controles e pistas de rolagem consistentes;
+- identidade do personagem recebe maior destaque na topbar, enquanto a navegação permanece secundária;
+- ativação de cartas do Vault passa a apresentar alternativas contextualizadas e clicáveis por inteiro.
+
+### Corrigido
+
+- modais de ativação de carta e de definição de dados de marcadores recebem molduras, foco visual e botão de fechar alinhado;
+- áreas roláveis, cartões de inventário, estados de interface e layouts compactos foram ajustados para melhor uso por toque e telas baixas.
+
 ## [0.24.0]
 
 ### Adicionado

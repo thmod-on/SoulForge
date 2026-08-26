@@ -84,7 +84,26 @@ export async function splitInventoryItem(entryId: string | undefined, dependenci
   if (!sourceEntry) return;
   const updatedCharacter: Character = { ...character, inventory: { ...character.inventory, entries: normalizedEntries.flatMap((entry, index) => index !== sourceIndex ? [entry] : [{ ...entry, quantity: entry.quantity - quantity }, { ...entry, id: crypto.randomUUID(), quantity, compartmentId: getEntryCompartmentId(entry), equipped: entry.equipped }]) } };
   state.character = updatedCharacter;
-  state.selectedItemId = getEntryId(sourceEntry);
+  state.selectedItemId = undefined;
+  await saveCharacter(updatedCharacter);
+  render({ preserveMainScroll: true });
+}
+
+export async function mergeInventoryStacks(sourceEntryId: string | undefined, targetEntryId: string | undefined, dependencies: InventoryActionDependencies): Promise<void> {
+  const { state, getEntryCompartmentId, saveCharacter, render } = dependencies;
+  const character = state.character;
+  if (!character || !sourceEntryId || !targetEntryId || sourceEntryId === targetEntryId) return;
+  const normalizedEntries = withEntryIds(character.inventory.entries);
+  const sourceIndex = normalizedEntries.findIndex((entry) => getEntryId(entry) === sourceEntryId);
+  const targetIndex = normalizedEntries.findIndex((entry) => getEntryId(entry) === targetEntryId);
+  const source = normalizedEntries[sourceIndex];
+  const target = normalizedEntries[targetIndex];
+  if (!source || !target || source.definitionId !== target.definitionId || getEntryCompartmentId(source) !== getEntryCompartmentId(target) || Boolean(source.equipped) !== Boolean(target.equipped)) return;
+  const updatedEntries = normalizedEntries.flatMap((entry, index) => index === sourceIndex ? [] : index === targetIndex ? [{ ...entry, quantity: entry.quantity + source.quantity }] : [entry]);
+  const updatedCharacter: Character = { ...character, inventory: { ...character.inventory, entries: updatedEntries } };
+  state.character = updatedCharacter;
+  // Combinar uma pilha é uma ação de arrastar, não uma seleção do card.
+  state.selectedItemId = undefined;
   await saveCharacter(updatedCharacter);
   render({ preserveMainScroll: true });
 }

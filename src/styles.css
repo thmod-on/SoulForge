@@ -1,14 +1,29 @@
 :root {
+  /* Fundação visual v1 — consulte docs/VISUAL_IDENTITY.md. */
   --color-bg: #080511;
   --color-panel: rgba(12, 8, 20, 0.78);
   --color-panel-soft: rgba(18, 11, 28, 0.68);
   --color-text: #f4eadb;
   --color-muted: #c8b8a6;
   --color-hope: #f3eadc;
-  --color-gold: #d99a3d;
+  --color-action: #c39bff;
+  --color-action-hover: #dec8ff;
+  --color-action-soft: rgba(195, 155, 255, 0.12);
+  --color-focus: #dec8ff;
+  /* Alias temporário até a migração dos seletores históricos. */
+  --color-gold: var(--color-action);
   --color-fear: #c92e42;
   --color-essence: #8e4fc4;
   --color-border: rgba(244, 234, 219, 0.11);
+  --radius-control: 0.35rem;
+  --radius-surface: 0.5rem;
+  --shadow-focus: 0 0 0 2px rgba(222, 200, 255, 0.3), 0 0 1.1rem rgba(195, 155, 255, 0.18);
+  --texture-sheet: url("/assets/textures/sheet-slate.webp");
+  --texture-compendium: url("/assets/textures/compendium-parchment.webp");
+  --motion-fast: 140ms;
+  --motion-standard: 200ms;
+  --motion-emphasis: 280ms;
+  --easing-standard: cubic-bezier(0.2, 0.75, 0.25, 1);
   color-scheme: dark;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
@@ -23,7 +38,7 @@
 /* Indicador comum de regiões com rolagem interna. */
 .sf-scroll-region {
   scrollbar-width: thin;
-  scrollbar-color: rgba(232, 173, 77, 0.96) rgba(244, 234, 219, 0.16);
+  scrollbar-color: rgba(195, 155, 255, 0.96) rgba(244, 234, 219, 0.16);
 }
 
 .sf-scroll-region::-webkit-scrollbar {
@@ -37,9 +52,9 @@
 }
 
 .sf-scroll-region::-webkit-scrollbar-thumb {
-  border: 1px solid rgba(255, 238, 204, 0.64);
+  border: 1px solid rgba(231, 218, 255, 0.64);
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255, 220, 157, 0.98), rgba(217, 154, 61, 0.9));
+  background: linear-gradient(180deg, rgba(222, 200, 255, 0.98), rgba(195, 155, 255, 0.9));
 }
 
 .sf-scroll-region.has-scroll-overflow {
@@ -48,7 +63,7 @@
 }
 
 .sf-scroll-region.has-scroll-overflow.can-scroll-down {
-  border-inline-end-color: rgba(232, 173, 77, 0.72);
+  border-inline-end-color: rgba(195, 155, 255, 0.72);
 }
 
 .sf-scroll-region.has-scroll-overflow.can-scroll-up:not(.can-scroll-down) {
@@ -62,6 +77,9 @@
   height: min(46rem, calc(100svh - 3rem));
   max-height: min(46rem, calc(100svh - 3rem));
   overflow: hidden;
+  /* A busca refaz a lista, mas a aplicação recria a superfície. Sem a entrada
+     animada, o modal permanece estável durante a digitação. */
+  animation: none;
 }
 
 .container-modal.add-item-modal .add-item-catalog {
@@ -94,11 +112,139 @@ button {
   cursor: pointer;
 }
 
+button,
+input,
+select,
+textarea {
+  transition: border-color var(--motion-fast) var(--easing-standard), background-color var(--motion-fast) var(--easing-standard), color var(--motion-fast) var(--easing-standard), box-shadow var(--motion-fast) var(--easing-standard), transform var(--motion-fast) var(--easing-standard);
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
 .boot-screen {
   display: grid;
   min-height: 100vh;
+  place-content: center;
+  gap: 0.8rem;
+  color: var(--color-action-hover);
+  text-align: center;
+}
+
+/* Estados compartilhados: a mensagem é tão importante quanto o conteúdo que
+   ela substitui. Estes estilos evitam "vazios" sem contexto no tema escuro. */
+.sf-state {
+  color: var(--color-muted);
+}
+
+.sf-state--empty,
+.empty-state {
+  position: relative;
+  overflow: hidden;
+  border: 1px dashed rgba(195, 155, 255, 0.3);
+  border-radius: var(--radius-surface);
+  background: linear-gradient(135deg, rgba(195, 155, 255, 0.06), rgba(8, 5, 17, 0.18));
+}
+
+.sf-state--empty::before,
+.empty-state::before {
+  content: "✦";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 0;
+  color: rgba(195, 155, 255, 0.13);
+  font-size: clamp(3.5rem, 8vw, 6.5rem);
+  line-height: 1;
+  pointer-events: none;
+  transform: translate(-50%, -50%) rotate(-12deg);
+}
+
+.sf-state--empty > *,
+.empty-state > * {
+  position: relative;
+  z-index: 1;
+}
+
+.sf-state--inline {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 3.25rem;
+}
+
+.sf-state--inline::before {
+  content: "—";
+  color: var(--color-action);
+  font-size: 1.15rem;
+}
+
+.sf-state--loading > i {
+  display: inline-block;
+  width: 1.8rem;
+  height: 1.8rem;
+  margin-inline: auto;
+  border: 2px solid rgba(195, 155, 255, 0.22);
+  border-top-color: var(--color-action-hover);
+  border-radius: 50%;
+  animation: sf-loading-spin 760ms linear infinite;
+}
+
+@keyframes sf-loading-spin {
+  to { transform: rotate(1turn); }
+}
+
+.form-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  border-radius: var(--radius-control);
+}
+
+.form-error::before {
+  content: "!";
+  display: grid;
+  width: 1.1rem;
+  height: 1.1rem;
+  flex: 0 0 auto;
   place-items: center;
-  color: #f2a516;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.sf-action:disabled,
+.sf-tab:disabled,
+.sf-stepper-button:disabled,
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+  filter: saturate(0.55);
+}
+
+.is-locked,
+.is-disabled,
+[aria-disabled="true"] {
+  position: relative;
 }
 
 .character-gate {
@@ -109,20 +255,41 @@ button {
   place-items: center;
   padding: 1.5rem;
   overflow: hidden;
+  background:
+    linear-gradient(145deg, rgba(8, 5, 17, 0.78), rgba(8, 5, 17, 0.48)),
+    var(--texture-sheet);
+  background-position: center, center;
+  background-repeat: no-repeat;
+  background-size: auto, cover;
+  background-blend-mode: normal, soft-light;
+}
+
+.character-gate-watermark-halo {
+  position: absolute;
+  z-index: 0;
+  width: min(46rem, 76vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(5, 3, 10, 0.88) 0%, rgba(5, 3, 10, 0.64) 42%, rgba(5, 3, 10, 0) 74%);
+  filter: blur(0.35rem);
+  pointer-events: none;
 }
 
 .character-gate-watermark {
   position: absolute;
-  z-index: -1;
-  width: min(48rem, 82vw);
-  max-height: 82dvh;
+  z-index: 1;
+  width: min(43rem, 72vw);
+  max-height: 72dvh;
   object-fit: contain;
-  opacity: 0.28;
-  filter: saturate(1.08) drop-shadow(0 0 3rem rgba(142, 79, 196, 0.22));
+  opacity: 0.38;
+  mix-blend-mode: screen;
+  filter: saturate(0.94) contrast(1.04) brightness(0.92) drop-shadow(0 0 2.25rem rgba(6, 3, 12, 0.9));
   pointer-events: none;
 }
 
 .character-gate-panel {
+  position: relative;
+  z-index: 2;
   display: grid;
   gap: 1.35rem;
   width: min(58rem, 100%);
@@ -130,7 +297,13 @@ button {
   padding: clamp(1.25rem, 4vw, 2.5rem);
   background:
     linear-gradient(135deg, rgba(142, 79, 196, 0.1), transparent 42%),
+    linear-gradient(145deg, rgba(9, 6, 18, 0.62), rgba(9, 6, 18, 0.34)),
+    var(--texture-sheet),
     rgba(9, 6, 18, 0.78);
+  background-position: center, center, center;
+  background-repeat: no-repeat;
+  background-size: auto, auto, cover;
+  background-blend-mode: normal, normal, soft-light;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
 }
 
@@ -143,6 +316,15 @@ button {
 
 .character-gate-brand {
   gap: 0.8rem;
+}
+
+.character-gate-brand-mark {
+  width: 2.7rem;
+  height: 2.7rem;
+  flex: 0 0 auto;
+  object-fit: contain;
+  mix-blend-mode: screen;
+  filter: saturate(0.98) brightness(1.08) drop-shadow(0 0.2rem 0.75rem rgba(0, 0, 0, 0.64));
 }
 
 .character-gate-brand strong {
@@ -208,8 +390,8 @@ button {
 }
 
 .character-select-card:hover {
-  border-color: rgba(217, 154, 61, 0.62);
-  background: rgba(217, 154, 61, 0.08);
+  border-color: rgba(195, 155, 255, 0.62);
+  background: rgba(195, 155, 255, 0.08);
 }
 
 .character-select-card > span:nth-child(2) {
@@ -238,7 +420,7 @@ button {
   width: 2.5rem;
   height: 2.5rem;
   place-items: center;
-  border: 1px solid rgba(217, 154, 61, 0.55);
+  border: 1px solid rgba(195, 155, 255, 0.55);
   color: var(--color-gold);
   background: rgba(142, 79, 196, 0.15);
   font-weight: 700;
@@ -281,8 +463,8 @@ button {
   width: min(48rem, calc(100vw - 2rem));
   /* Reserva o padding do backdrop nos dois lados e a área de gesto do iPad. */
   height: min(46rem, calc(100dvh - 4rem - env(safe-area-inset-bottom, 0px)));
-  border: 1px solid rgba(217, 154, 61, 0.56);
-  border-radius: 8px;
+  border: 1px solid rgba(195, 155, 255, 0.56);
+  border-radius: var(--radius-surface);
   background: #0d0715;
   box-shadow: 0 28px 90px rgba(0, 0, 0, 0.56);
   overflow: hidden;
@@ -452,8 +634,8 @@ button {
 
 .character-community-choice:hover,
 .character-community-choice.is-selected {
-  border-color: rgba(217, 154, 61, 0.58);
-  background: rgba(217, 154, 61, 0.08);
+  border-color: rgba(195, 155, 255, 0.58);
+  background: rgba(195, 155, 255, 0.08);
 }
 
 .character-community-choice.is-focused {
@@ -464,7 +646,7 @@ button {
   display: grid;
   gap: 0.25rem;
   margin-top: 0.45rem;
-  border-top: 1px solid rgba(217, 154, 61, 0.32);
+  border-top: 1px solid rgba(195, 155, 255, 0.32);
   padding-top: 0.55rem;
 }
 
@@ -528,9 +710,9 @@ button {
   width: 2.8rem;
   min-height: 2.65rem;
   place-items: center;
-  border: 1px solid rgba(217, 154, 61, 0.55);
+  border: 1px solid rgba(195, 155, 255, 0.55);
   color: var(--color-gold);
-  background: rgba(217, 154, 61, 0.07);
+  background: rgba(195, 155, 255, 0.07);
   font-size: 1.3rem;
   line-height: 1;
   touch-action: manipulation;
@@ -538,7 +720,7 @@ button {
 
 .character-creation-arrow:hover:not(:disabled) {
   border-color: var(--color-gold);
-  background: rgba(217, 154, 61, 0.16);
+  background: rgba(195, 155, 255, 0.16);
 }
 
 .character-creation-arrow:disabled {
@@ -557,7 +739,7 @@ button {
   width: 5.5rem;
   height: 5.5rem;
   margin-top: 0.35rem;
-  border: 1px solid rgba(217, 154, 61, 0.5);
+  border: 1px solid rgba(195, 155, 255, 0.5);
   object-fit: cover;
 }
 
@@ -568,7 +750,7 @@ button {
 .portrait-modal-preview {
   width: min(100%, 15rem);
   max-height: 16rem;
-  border: 1px solid rgba(217, 154, 61, 0.42);
+  border: 1px solid rgba(195, 155, 255, 0.42);
   object-fit: cover;
 }
 
@@ -580,7 +762,7 @@ button {
   max-height: calc(100vh - 2rem);
   padding: 1rem;
   overflow: auto;
-  border: 1px solid rgba(217, 154, 61, 0.6);
+  border: 1px solid rgba(195, 155, 255, 0.6);
   background: var(--color-panel);
   box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.5);
 }
@@ -687,8 +869,8 @@ button {
 
 .character-ancestry-choice:hover,
 .character-ancestry-choice.is-selected {
-  border-color: rgba(217, 154, 61, 0.58);
-  background: rgba(217, 154, 61, 0.08);
+  border-color: rgba(195, 155, 255, 0.58);
+  background: rgba(195, 155, 255, 0.08);
 }
 
 .character-ancestry-choice input {
@@ -763,7 +945,7 @@ button {
   gap: 0.35rem;
   min-height: 5.8rem;
   border: 1px solid rgba(244, 234, 219, 0.12);
-  border-left: 3px solid rgba(217, 154, 61, 0.65);
+  border-left: 3px solid rgba(195, 155, 255, 0.65);
   background: rgba(8, 5, 17, 0.34);
   padding: 0.7rem;
 }
@@ -863,8 +1045,8 @@ button {
 .character-attribute-token:hover::before,
 .character-attribute-token.is-selected::before {
   border-color: var(--color-gold);
-  background: radial-gradient(circle at 50% 18%, rgba(217, 154, 61, 0.28), transparent 2.7rem), linear-gradient(180deg, rgba(244, 234, 219, 0.15), rgba(217, 154, 61, 0.06));
-  box-shadow: inset 0 0 0 1px rgba(8, 5, 17, 0.84), 0 0 0.8rem rgba(217, 154, 61, 0.2);
+  background: radial-gradient(circle at 50% 18%, rgba(195, 155, 255, 0.28), transparent 2.7rem), linear-gradient(180deg, rgba(244, 234, 219, 0.15), rgba(195, 155, 255, 0.06));
+  box-shadow: inset 0 0 0 1px rgba(8, 5, 17, 0.84), 0 0 0.8rem rgba(195, 155, 255, 0.2);
 }
 
 .character-attribute-complete { align-self: center; color: var(--color-muted); }
@@ -881,7 +1063,7 @@ button {
 }
 
 .character-attribute-reset:hover {
-  border-color: rgba(217, 154, 61, 0.7);
+  border-color: rgba(195, 155, 255, 0.7);
   color: var(--color-gold);
 }
 
@@ -928,9 +1110,9 @@ button {
 
 .character-attribute-card:hover .character-attribute-slot::before,
 .character-attribute-card:focus-visible .character-attribute-slot::before,
-.character-attribute-card.is-targetable .character-attribute-slot::before { border-color: rgba(217, 154, 61, 0.72); }
+.character-attribute-card.is-targetable .character-attribute-slot::before { border-color: rgba(195, 155, 255, 0.72); }
 
-.character-attribute-card.is-assigned .character-attribute-slot::before { border-color: var(--color-gold); background: radial-gradient(circle at 50% 18%, rgba(217, 154, 61, 0.22), transparent 2.7rem), linear-gradient(180deg, rgba(244, 234, 219, 0.14), rgba(217, 154, 61, 0.045)); box-shadow: inset 0 0 0 1px rgba(8, 5, 17, 0.84), 0 0 0.6rem rgba(217, 154, 61, 0.16); }
+.character-attribute-card.is-assigned .character-attribute-slot::before { border-color: var(--color-gold); background: radial-gradient(circle at 50% 18%, rgba(195, 155, 255, 0.22), transparent 2.7rem), linear-gradient(180deg, rgba(244, 234, 219, 0.14), rgba(195, 155, 255, 0.045)); box-shadow: inset 0 0 0 1px rgba(8, 5, 17, 0.84), 0 0 0.6rem rgba(195, 155, 255, 0.16); }
 
 .character-attribute-card.is-assigned strong { color: var(--color-gold); }
 
@@ -974,7 +1156,7 @@ button {
 
 .character-subclass-choice.is-selected > span {
   border-color: var(--color-gold);
-  box-shadow: inset 0 0 0 1px rgba(217, 154, 61, 0.2);
+  box-shadow: inset 0 0 0 1px rgba(195, 155, 255, 0.2);
 }
 
 .character-subclass-choice > span > strong { color: var(--color-gold); }
@@ -1060,8 +1242,8 @@ button {
 
 .character-domain-card:hover,
 .character-domain-card.is-selected {
-  border-color: rgba(217, 154, 61, 0.7);
-  background: rgba(217, 154, 61, 0.1);
+  border-color: rgba(195, 155, 255, 0.7);
+  background: rgba(195, 155, 255, 0.1);
 }
 
 .character-domain-card-art {
@@ -1286,7 +1468,7 @@ button {
   height: 3.4rem;
   place-items: center;
   overflow: hidden;
-  border: 1px solid rgba(217, 154, 61, 0.7);
+  border: 1px solid rgba(195, 155, 255, 0.7);
   background: #090511;
   color: var(--color-gold);
   font-weight: 800;
@@ -1402,7 +1584,7 @@ button {
 }
 
 .portrait-progress strong {
-  color: #f2a516;
+  color: #c39bff;
   font-size: 0.78rem;
   letter-spacing: 0;
 }
@@ -1451,10 +1633,25 @@ button {
   z-index: -1;
   border: 2px solid rgba(244, 234, 219, 0.52);
   background:
+    radial-gradient(circle at 50% 42%, rgba(244, 234, 219, 0.1), transparent 1.6rem),
     linear-gradient(180deg, rgba(244, 234, 219, 0.11), rgba(244, 234, 219, 0.035)),
     rgba(255, 255, 255, 0.025);
   clip-path: polygon(14% 12%, 86% 12%, 86% 76%, 50% 98%, 14% 76%);
-  box-shadow: inset 0 0 0 1px rgba(8, 5, 17, 0.84);
+  box-shadow:
+    inset 0 0 0 1px rgba(8, 5, 17, 0.84),
+    inset 0 -0.28rem 0.35rem rgba(0, 0, 0, 0.18),
+    0 0.18rem 0.4rem rgba(0, 0, 0, 0.26);
+}
+
+.attribute-badge::after {
+  content: "";
+  position: absolute;
+  inset: 0.55rem 0.43rem 0.04rem;
+  z-index: -2;
+  background: rgba(0, 0, 0, 0.44);
+  clip-path: polygon(14% 12%, 86% 12%, 86% 76%, 50% 98%, 14% 76%);
+  filter: blur(0.14rem);
+  transform: translateY(0.16rem);
 }
 
 .attribute-badge span {
@@ -1476,14 +1673,14 @@ button {
 }
 
 .attribute-badge.is-upgraded::before {
-  border-color: rgba(217, 154, 61, 0.76);
+  border-color: rgba(195, 155, 255, 0.76);
   background:
-    radial-gradient(circle at 50% 18%, rgba(217, 154, 61, 0.2), transparent 2.7rem),
-    linear-gradient(180deg, rgba(244, 234, 219, 0.13), rgba(217, 154, 61, 0.045)),
+    radial-gradient(circle at 50% 18%, rgba(195, 155, 255, 0.2), transparent 2.7rem),
+    linear-gradient(180deg, rgba(244, 234, 219, 0.13), rgba(195, 155, 255, 0.045)),
     rgba(255, 255, 255, 0.025);
   box-shadow:
     inset 0 0 0 1px rgba(8, 5, 17, 0.84),
-    0 0 16px rgba(217, 154, 61, 0.16);
+    0 0 16px rgba(195, 155, 255, 0.16);
 }
 
 .attribute-badge.is-upgraded span {
@@ -1506,15 +1703,15 @@ button {
 
 /* Quando Conjuração também foi aprimorada, o avanço permanente tem prioridade visual. */
 .attribute-badge.is-upgraded.is-spellcast::before {
-  border-color: rgba(217, 154, 61, 0.76);
+  border-color: rgba(195, 155, 255, 0.76);
   background:
     radial-gradient(circle at 82% 24%, rgba(182, 112, 235, 0.2), transparent 1.8rem),
-    radial-gradient(circle at 50% 18%, rgba(217, 154, 61, 0.2), transparent 2.7rem),
-    linear-gradient(180deg, rgba(244, 234, 219, 0.13), rgba(217, 154, 61, 0.045)),
+    radial-gradient(circle at 50% 18%, rgba(195, 155, 255, 0.2), transparent 2.7rem),
+    linear-gradient(180deg, rgba(244, 234, 219, 0.13), rgba(195, 155, 255, 0.045)),
     rgba(255, 255, 255, 0.025);
   box-shadow:
     inset 0 0 0 1px rgba(8, 5, 17, 0.84),
-    0 0 16px rgba(217, 154, 61, 0.16);
+    0 0 16px rgba(195, 155, 255, 0.16);
 }
 
 .attribute-spellcast-icon {
@@ -1653,10 +1850,10 @@ button {
 .active-effects-band {
   display: grid;
   gap: 0.55rem;
-  border: 1px solid rgba(217, 154, 61, 0.42);
+  border: 1px solid rgba(195, 155, 255, 0.42);
   border-left: 3px solid var(--color-gold);
   padding: 0.65rem 0.8rem;
-  background: linear-gradient(90deg, rgba(217, 154, 61, 0.11), rgba(142, 79, 196, 0.06), transparent 72%);
+  background: linear-gradient(90deg, rgba(195, 155, 255, 0.11), rgba(142, 79, 196, 0.06), transparent 72%);
 }
 
 .active-effects-heading,
@@ -1702,7 +1899,7 @@ button {
   place-items: center;
   min-width: 1.55rem;
   min-height: 1.55rem;
-  border: 1px solid rgba(217, 154, 61, 0.55);
+  border: 1px solid rgba(195, 155, 255, 0.55);
   border-radius: 999px;
   color: var(--color-gold);
   font-size: 0.78rem;
@@ -1766,7 +1963,7 @@ button {
 }
 
 .active-effect-end:hover {
-  border-color: rgba(217, 154, 61, 0.56);
+  border-color: rgba(195, 155, 255, 0.56);
   color: var(--color-text);
 }
 
@@ -1828,7 +2025,7 @@ button {
 }
 
 .combat-primary-proficiency {
-  border-color: rgba(217, 154, 61, 0.52);
+  border-color: rgba(195, 155, 255, 0.52);
 }
 
 .damage-threshold-band {
@@ -2027,7 +2224,7 @@ button {
 .top-link:hover,
 .chip:hover,
 .domain-chip:hover {
-  border-color: rgba(242, 165, 22, 0.38);
+  border-color: rgba(195, 155, 255, 0.38);
 }
 
 .nav-button.is-active,
@@ -2036,7 +2233,7 @@ button {
 .domain-chip.is-active {
   border-color: var(--color-gold);
   color: var(--color-gold);
-  background: rgba(217, 154, 61, 0.13);
+  background: rgba(195, 155, 255, 0.13);
 }
 
 .main-shell {
@@ -2113,7 +2310,7 @@ button {
 
 .topbar-identity-separator {
   flex: 0 0 auto;
-  color: rgba(217, 154, 61, 0.72);
+  color: rgba(195, 155, 255, 0.72);
   font-size: 0.53rem;
 }
 
@@ -2121,7 +2318,7 @@ button {
   max-width: 12rem;
   overflow: hidden;
   color: var(--color-text);
-  font-size: 0.82rem;
+  font-size: 0.88rem;
   font-weight: 650;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2129,9 +2326,9 @@ button {
 
 .topbar-identity-link:hover,
 .topbar-identity-link:focus-visible {
-  border-color: rgba(217, 154, 61, 0.45);
+  border-color: rgba(195, 155, 255, 0.45);
   color: var(--color-gold);
-  background: rgba(217, 154, 61, 0.08);
+  background: rgba(195, 155, 255, 0.08);
 }
 
 .topbar-identity-link:hover > strong,
@@ -2140,7 +2337,7 @@ button {
 }
 
 .topbar-identity-link.is-character > strong {
-  font-size: 0.98rem;
+  font-size: 1.08rem;
   font-weight: 700;
 }
 
@@ -2292,6 +2489,7 @@ button {
   color: var(--color-muted);
   background: transparent;
   padding: 0.7rem 0.85rem;
+  font-size: 0.9rem;
   isolation: isolate;
   overflow: hidden;
 }
@@ -2412,9 +2610,9 @@ button {
 
 .topbar-utility:hover,
 .topbar-utility.is-active {
-  border-color: rgba(217, 154, 61, 0.5);
+  border-color: rgba(195, 155, 255, 0.5);
   color: var(--color-gold);
-  background: rgba(217, 154, 61, 0.1);
+  background: rgba(195, 155, 255, 0.1);
 }
 
 .offline-pill {
@@ -2451,7 +2649,7 @@ button {
   max-width: 44rem;
   max-height: min(42rem, calc(100dvh - 2rem));
   overflow: hidden;
-  border: 1px solid rgba(217, 154, 61, 0.58);
+  border: 1px solid rgba(195, 155, 255, 0.58);
   border-radius: 8px;
   background: #0d0715;
   box-shadow: 0 28px 90px rgba(0, 0, 0, 0.6);
@@ -2586,6 +2784,17 @@ button {
   overflow: auto;
 }
 
+/* Atmosfera local, deliberadamente fraca: a ficha continua sendo uma área de leitura. */
+.app-shell > .content {
+  background-image:
+    linear-gradient(145deg, rgba(8, 5, 17, 0.72), rgba(8, 5, 17, 0.35)),
+    var(--texture-sheet);
+  background-position: center, center top;
+  background-repeat: no-repeat, repeat;
+  background-size: auto, min(68rem, 100%) auto;
+  background-blend-mode: normal, soft-light;
+}
+
 .content-with-panel {
   grid-template-columns: minmax(0, 1fr) 24rem;
   align-items: start;
@@ -2717,14 +2926,14 @@ button {
 }
 
 .resource-add-card span {
-  color: #f2a516;
+  color: #c39bff;
   font-size: 1.7rem;
   line-height: 1;
 }
 
 .resource-add-card:hover {
-  border-color: rgba(242, 165, 22, 0.5);
-  color: #f2a516;
+  border-color: rgba(195, 155, 255, 0.5);
+  color: #c39bff;
 }
 
 .resource-add-button {
@@ -2733,7 +2942,7 @@ button {
   gap: 0.3rem;
   min-height: 2rem;
   padding: 0.35rem 0.55rem;
-  border: 1px dashed rgba(242, 165, 22, 0.56);
+  border: 1px dashed rgba(195, 155, 255, 0.56);
   color: var(--color-gold);
   background: transparent;
   font-size: 0.72rem;
@@ -2746,7 +2955,7 @@ button {
 
 .resource-add-button:hover {
   border-style: solid;
-  background: rgba(242, 165, 22, 0.08);
+  background: rgba(195, 155, 255, 0.08);
 }
 
 .resource-card-header {
@@ -2819,8 +3028,8 @@ button {
   gap: 0.8rem;
   margin: 0;
   padding: 0.9rem;
-  border: 1px solid rgba(217, 154, 61, 0.35);
-  background: rgba(217, 154, 61, 0.04);
+  border: 1px solid rgba(195, 155, 255, 0.35);
+  background: rgba(195, 155, 255, 0.04);
 }
 
 .game-marker-form legend {
@@ -3041,7 +3250,7 @@ button {
 }
 
 .subclass-track-card:hover {
-  border-color: rgba(217, 154, 61, 0.72);
+  border-color: rgba(195, 155, 255, 0.72);
   transform: translateY(-1px);
 }
 
@@ -3068,8 +3277,8 @@ button {
 }
 
 .subclass-track-card.is-active {
-  border-color: rgba(217, 154, 61, 0.7);
-  background: linear-gradient(145deg, rgba(217, 154, 61, 0.14), rgba(14, 9, 20, 0.74));
+  border-color: rgba(195, 155, 255, 0.7);
+  background: linear-gradient(145deg, rgba(195, 155, 255, 0.14), rgba(14, 9, 20, 0.74));
 }
 
 .subclass-track-card.is-active small {
@@ -3086,14 +3295,14 @@ button {
   padding: 6.8rem 0.75rem 0.75rem;
   overflow: hidden;
   border-radius: 8px;
-  border: 1px solid rgba(217, 154, 61, 0.42);
+  border: 1px solid rgba(195, 155, 255, 0.42);
   color: var(--color-text);
   text-align: left;
   background: rgba(14, 9, 20, 0.84);
 }
 
 .ability-card:hover {
-  border-color: rgba(217, 154, 61, 0.78);
+  border-color: rgba(195, 155, 255, 0.78);
   transform: translateY(-1px);
 }
 
@@ -3102,10 +3311,37 @@ button {
   inset: 0 0 auto;
   height: 6.5rem;
   border-radius: 7px 7px 0 0;
+  overflow: hidden;
+  background: linear-gradient(135deg, #21152b, #100b19);
+}
+
+.card-art:not(.has-image) {
+  display: grid;
+  place-items: center;
+  isolation: isolate;
   background:
-    radial-gradient(circle at 70% 30%, rgba(217, 154, 61, 0.42), transparent 5rem),
-    radial-gradient(circle at 24% 42%, rgba(142, 79, 196, 0.35), transparent 4rem),
-    linear-gradient(135deg, #251729, #110915);
+    linear-gradient(135deg, rgba(195, 155, 255, 0.12), transparent 46%),
+    repeating-linear-gradient(135deg, transparent 0 0.6rem, rgba(195, 155, 255, 0.055) 0.6rem 0.68rem),
+    linear-gradient(135deg, #21152b, #100b19);
+}
+
+.card-art:not(.has-image)::before {
+  content: "";
+  position: absolute;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid rgba(195, 155, 255, 0.62);
+  transform: rotate(45deg);
+  box-shadow: inset 0 0 0 0.28rem rgba(8, 5, 17, 0.72), 0 0 0 0.32rem rgba(195, 155, 255, 0.08);
+}
+
+.card-art:not(.has-image)::after {
+  content: "✦";
+  position: relative;
+  z-index: 1;
+  color: rgba(225, 207, 255, 0.84);
+  font-size: 1.45rem;
+  text-shadow: 0 0 0.9rem rgba(195, 155, 255, 0.4);
 }
 
 .card-art.has-image {
@@ -3113,6 +3349,36 @@ button {
   background-repeat: no-repeat;
   background-size: cover;
   background-color: #090511;
+}
+
+/* Contrato de mídia: cards podem recortar a atmosfera; itens preservam o objeto. */
+.sf-media-image {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  background: #090511;
+}
+
+.sf-media-image--item {
+  object-fit: contain !important;
+  padding: 0.45rem;
+}
+
+.item-modal-art .sf-media-image--item,
+.add-item-preview-art .sf-media-image--item {
+  padding: 1rem;
+}
+
+.portrait-art img,
+.portrait-modal-preview,
+.portrait-preview-modal img,
+.card-art.has-image,
+.compendium-card-result-image.has-image,
+.compendium-class-image:not(.class-image-placeholder),
+.compendium-entry-detail-art.has-image,
+.class-detail-art.has-image {
+  background-color: #090511;
+  object-position: center;
 }
 
 .card-tier {
@@ -3156,7 +3422,7 @@ button {
   min-width: 2.35rem;
   height: 2.35rem;
   padding: 0 0.35rem;
-  border: 1px solid rgba(217, 154, 61, 0.76);
+  border: 1px solid rgba(195, 155, 255, 0.76);
   border-radius: 999px;
   background: #090511;
   color: var(--color-gold);
@@ -3182,13 +3448,13 @@ button {
   width: 100%;
   min-height: 2.35rem;
   margin-top: 0.65rem;
-  border: 1px solid rgba(217, 154, 61, 0.62);
+  border: 1px solid rgba(195, 155, 255, 0.62);
   color: var(--color-gold);
-  background: rgba(217, 154, 61, 0.08);
+  background: rgba(195, 155, 255, 0.08);
 }
 
 .deck-drawer-button:hover {
-  background: rgba(217, 154, 61, 0.14);
+  background: rgba(195, 155, 255, 0.14);
 }
 
 .stored-card-row {
@@ -3208,14 +3474,14 @@ button {
 .stored-card-action {
   justify-self: end;
   min-height: 2.4rem;
-  border: 1px solid rgba(217, 154, 61, 0.48);
+  border: 1px solid rgba(195, 155, 255, 0.48);
   color: var(--color-gold);
-  background: rgba(217, 154, 61, 0.08);
+  background: rgba(195, 155, 255, 0.08);
 }
 
 .stored-card-action:hover {
-  border-color: rgba(217, 154, 61, 0.78);
-  background: rgba(217, 154, 61, 0.14);
+  border-color: rgba(195, 155, 255, 0.78);
+  background: rgba(195, 155, 255, 0.14);
 }
 
 .secondary-inline-action {
@@ -3227,7 +3493,7 @@ button {
 }
 
 .secondary-inline-action:hover {
-  border-color: rgba(217, 154, 61, 0.46);
+  border-color: rgba(195, 155, 255, 0.46);
   color: var(--color-gold);
 }
 
@@ -3259,8 +3525,8 @@ button {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.65rem;
-  border: 1px solid rgba(217, 154, 61, 0.24);
-  background: linear-gradient(90deg, rgba(217, 154, 61, 0.08), rgba(142, 79, 196, 0.06));
+  border: 1px solid rgba(195, 155, 255, 0.24);
+  background: linear-gradient(90deg, rgba(195, 155, 255, 0.08), rgba(142, 79, 196, 0.06));
   padding: 0.7rem 0.85rem;
 }
 
@@ -3345,8 +3611,8 @@ button {
   display: grid;
   gap: 0.42rem;
   border: 1px solid rgba(244, 234, 219, 0.14);
-  border-left: 3px solid rgba(217, 154, 61, 0.72);
-  background: radial-gradient(circle at 100% 0%, rgba(217, 154, 61, 0.08), transparent 8rem), rgba(8, 5, 17, 0.34);
+  border-left: 3px solid rgba(195, 155, 255, 0.72);
+  background: radial-gradient(circle at 100% 0%, rgba(195, 155, 255, 0.08), transparent 8rem), rgba(8, 5, 17, 0.34);
   padding: 0.75rem;
 }
 
@@ -3407,7 +3673,7 @@ button {
 .empty-inline {
   border: 1px solid rgba(244, 234, 219, 0.1);
   background:
-    radial-gradient(circle at 100% 0%, rgba(217, 154, 61, 0.08), transparent 8rem),
+    radial-gradient(circle at 100% 0%, rgba(195, 155, 255, 0.08), transparent 8rem),
     rgba(8, 5, 17, 0.34);
 }
 
@@ -3473,9 +3739,9 @@ button {
   width: 3rem;
   height: 3rem;
   place-items: center;
-  border: 1px solid rgba(217, 154, 61, 0.5);
+  border: 1px solid rgba(195, 155, 255, 0.5);
   color: var(--color-gold);
-  background: rgba(217, 154, 61, 0.08);
+  background: rgba(195, 155, 255, 0.08);
   font-size: 1.2rem;
   font-weight: 700;
 }
@@ -3511,9 +3777,9 @@ button {
 }
 
 .note-card-heading span {
-  border: 1px solid rgba(217, 154, 61, 0.32);
+  border: 1px solid rgba(195, 155, 255, 0.32);
   color: var(--color-gold);
-  background: rgba(217, 154, 61, 0.07);
+  background: rgba(195, 155, 255, 0.07);
   padding: 0.25rem 0.45rem;
   font-size: 0.72rem;
   text-transform: uppercase;
@@ -3551,7 +3817,7 @@ button {
 }
 
 .note-actions button:hover {
-  border-color: rgba(217, 154, 61, 0.42);
+  border-color: rgba(195, 155, 255, 0.42);
   color: var(--color-gold);
 }
 
@@ -3580,13 +3846,13 @@ button {
   gap: 0.75rem;
   border: 1px solid rgba(244, 234, 219, 0.1);
   background:
-    radial-gradient(circle at 100% 0%, rgba(217, 154, 61, 0.08), transparent 9rem),
+    radial-gradient(circle at 100% 0%, rgba(195, 155, 255, 0.08), transparent 9rem),
     rgba(255, 255, 255, 0.025);
   padding: 0.4rem;
 }
 
 .settings-panel.is-open {
-  border-color: rgba(217, 154, 61, 0.2);
+  border-color: rgba(195, 155, 255, 0.2);
 }
 
 .settings-panel-wide {
@@ -3628,9 +3894,9 @@ button {
   width: 1.65rem;
   height: 1.65rem;
   place-items: center;
-  border: 1px solid rgba(217, 154, 61, 0.32);
+  border: 1px solid rgba(195, 155, 255, 0.32);
   color: var(--color-gold);
-  background: rgba(217, 154, 61, 0.08);
+  background: rgba(195, 155, 255, 0.08);
   font-style: normal;
   font-size: 1.15rem;
   line-height: 1;
@@ -3737,13 +4003,30 @@ button {
 }
 
 .settings-action-primary {
-  border-color: rgba(217, 154, 61, 0.55);
+  border-color: rgba(195, 155, 255, 0.55);
   color: var(--color-gold);
-  background: rgba(217, 154, 61, 0.12);
+  background: rgba(195, 155, 255, 0.12);
 }
 
 .settings-action-danger {
   color: #ff697a;
+}
+
+.settings-actions .sf-action {
+  min-height: 3rem;
+  padding: 0.65rem 0.75rem;
+}
+
+.settings-actions .sf-action--danger:not(:disabled) {
+  border-color: rgba(201, 46, 66, 0.52);
+  background: rgba(201, 46, 66, 0.08);
+}
+
+.installed-pack .sf-action--icon {
+  width: 2.55rem;
+  min-width: 2.55rem;
+  min-height: 2.55rem;
+  height: 2.55rem;
 }
 
 .settings-action:disabled,
@@ -3812,8 +4095,8 @@ button {
 }
 
 .setting-option.is-active {
-  border-color: rgba(217, 154, 61, 0.42);
-  background: rgba(217, 154, 61, 0.08);
+  border-color: rgba(195, 155, 255, 0.42);
+  background: rgba(195, 155, 255, 0.08);
 }
 
 .progression-content {
@@ -3841,9 +4124,9 @@ button {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  border: 1px solid rgba(217, 154, 61, 0.26);
+  border: 1px solid rgba(195, 155, 255, 0.26);
   background:
-    linear-gradient(90deg, rgba(217, 154, 61, 0.1), rgba(142, 79, 196, 0.06)),
+    linear-gradient(90deg, rgba(195, 155, 255, 0.1), rgba(142, 79, 196, 0.06)),
     rgba(255, 255, 255, 0.025);
   padding: 0.55rem;
 }
@@ -3930,15 +4213,15 @@ button {
 
 .progression-tabs button:hover,
 .progression-history-button:hover {
-  border-color: rgba(217, 154, 61, 0.42);
+  border-color: rgba(195, 155, 255, 0.42);
   color: var(--color-text);
 }
 
 .progression-tabs button.is-active {
-  border-color: rgba(217, 154, 61, 0.68);
+  border-color: rgba(195, 155, 255, 0.68);
   color: var(--color-gold);
   background:
-    linear-gradient(180deg, rgba(217, 154, 61, 0.2), rgba(217, 154, 61, 0.08)),
+    linear-gradient(180deg, rgba(195, 155, 255, 0.2), rgba(195, 155, 255, 0.08)),
     rgba(8, 5, 17, 0.72);
 }
 
@@ -3961,7 +4244,7 @@ button {
 
 .progression-wizard {
   display: grid;
-  gap: 0.8rem;
+  gap: 1rem;
   max-width: 72rem;
 }
 
@@ -3986,6 +4269,7 @@ button {
   border: 1px solid rgba(244, 234, 219, 0.12);
   color: var(--color-muted);
   background: rgba(8, 5, 17, 0.34);
+  border-radius: var(--radius-control);
   padding: 0.42rem 0.5rem;
 }
 
@@ -4009,9 +4293,9 @@ button {
 }
 
 .progression-stepper li.is-current {
-  border-color: rgba(217, 154, 61, 0.72);
+  border-color: rgba(195, 155, 255, 0.72);
   color: var(--color-gold);
-  background: rgba(217, 154, 61, 0.12);
+  background: rgba(195, 155, 255, 0.12);
 }
 
 .progression-stepper li.is-complete {
@@ -4021,8 +4305,12 @@ button {
 
 .progression-wizard-stage {
   display: grid;
-  gap: 0.8rem;
+  gap: 0.9rem;
   min-width: 0;
+  border: 1px solid rgba(244, 234, 219, 0.1);
+  border-radius: var(--radius-surface);
+  background: linear-gradient(135deg, rgba(195, 155, 255, 0.045), transparent 38%), rgba(8, 5, 17, 0.28);
+  padding: clamp(0.8rem, 1.5vw, 1.1rem);
 }
 
 .progression-wizard-stage > header {
@@ -4144,9 +4432,9 @@ button {
 }
 
 .progression-tier.is-current {
-  border-color: rgba(217, 154, 61, 0.62);
+  border-color: rgba(195, 155, 255, 0.62);
   background:
-    radial-gradient(circle at 50% 0%, rgba(217, 154, 61, 0.13), transparent 12rem),
+    radial-gradient(circle at 50% 0%, rgba(195, 155, 255, 0.13), transparent 12rem),
     var(--color-panel);
 }
 
@@ -4273,7 +4561,7 @@ button {
 }
 
 .progression-option:hover {
-  border-color: rgba(217, 154, 61, 0.42);
+  border-color: rgba(195, 155, 255, 0.42);
   color: var(--color-text);
 }
 
@@ -4286,16 +4574,16 @@ button {
 }
 
 .progression-option.is-selected {
-  border-color: rgba(217, 154, 61, 0.5);
+  border-color: rgba(195, 155, 255, 0.5);
   color: var(--color-text);
-  background: rgba(217, 154, 61, 0.08);
+  background: rgba(195, 155, 255, 0.08);
 }
 
 .progression-option.is-selected i {
   border-color: var(--color-gold);
   background:
     linear-gradient(135deg, transparent 0 44%, var(--color-gold) 44% 58%, transparent 58%),
-    rgba(217, 154, 61, 0.18);
+    rgba(195, 155, 255, 0.18);
 }
 
 .progression-tier-footer {
@@ -4308,10 +4596,10 @@ button {
 .progression-draft {
   display: grid;
   gap: 0.65rem;
-  border: 1px solid rgba(217, 154, 61, 0.38);
+  border: 1px solid rgba(195, 155, 255, 0.38);
   border-radius: 8px;
   padding: 0.75rem;
-  background: rgba(217, 154, 61, 0.06);
+  background: rgba(195, 155, 255, 0.06);
 }
 
 .progression-draft > div,
@@ -4398,11 +4686,11 @@ button {
   align-content: stretch;
   gap: 0.55rem;
   min-height: 100%;
-  border: 1px solid rgba(217, 154, 61, 0.42);
+  border: 1px solid rgba(195, 155, 255, 0.42);
   padding: 0.8rem;
   background:
-    radial-gradient(circle at 100% 0%, rgba(217, 154, 61, 0.14), transparent 9rem),
-    rgba(217, 154, 61, 0.055);
+    radial-gradient(circle at 100% 0%, rgba(195, 155, 255, 0.14), transparent 9rem),
+    rgba(195, 155, 255, 0.055);
 }
 
 .progression-domain-card-step.is-complete {
@@ -4446,7 +4734,7 @@ button {
   display: grid;
   place-items: center;
   overflow: hidden;
-  border-bottom: 1px solid rgba(217, 154, 61, 0.3);
+  border-bottom: 1px solid rgba(195, 155, 255, 0.3);
   color: var(--color-gold);
   background: radial-gradient(circle at 50% 35%, rgba(142, 79, 196, 0.42), rgba(8, 5, 17, 0.74));
   font-size: 0.68rem;
@@ -4498,9 +4786,9 @@ button {
 }
 
 .progression-card-destination button.is-selected {
-  border-color: rgba(217, 154, 61, 0.62);
+  border-color: rgba(195, 155, 255, 0.62);
   color: var(--color-gold);
-  background: rgba(217, 154, 61, 0.1);
+  background: rgba(195, 155, 255, 0.1);
 }
 
 .progression-draft-footer {
@@ -4574,8 +4862,8 @@ button {
   width: min(31rem, calc(100vw - 2rem));
   max-height: calc(100dvh - 2rem);
   overflow: auto;
-  border: 1px solid rgba(217, 154, 61, 0.62);
-  border-radius: 10px;
+  border: 1px solid rgba(195, 155, 255, 0.62);
+  border-radius: var(--radius-surface);
   padding: 1.1rem;
   background: var(--color-panel);
   box-shadow: 0 28px 90px rgba(0, 0, 0, 0.56);
@@ -4611,7 +4899,7 @@ button {
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding-right: 0.25rem;
+  padding: 0.1rem 0.45rem 0.1rem 0.1rem;
 }
 
 .progression-card-filter-row {
@@ -4654,8 +4942,8 @@ button {
 }
 
 .progression-card-choice-list button.is-selected {
-  border-color: rgba(217, 154, 61, 0.68);
-  background: rgba(217, 154, 61, 0.1);
+  border-color: rgba(195, 155, 255, 0.68);
+  background: rgba(195, 155, 255, 0.1);
 }
 
 .progression-card-choice-list button.is-focused {
@@ -4672,8 +4960,8 @@ button {
   display: grid;
   place-items: center;
   min-height: 5rem;
-  border: 1px solid rgba(217, 154, 61, 0.25);
-  background: radial-gradient(circle, rgba(217, 154, 61, 0.18), transparent 70%);
+  border: 1px solid rgba(195, 155, 255, 0.25);
+  background: radial-gradient(circle, rgba(195, 155, 255, 0.18), transparent 70%);
 }
 
 .progression-card-choice-art img {
@@ -4730,8 +5018,8 @@ button {
 }
 
 .progression-picker-list button.is-selected {
-  border-color: rgba(217, 154, 61, 0.68);
-  background: rgba(217, 154, 61, 0.1);
+  border-color: rgba(195, 155, 255, 0.68);
+  background: rgba(195, 155, 255, 0.1);
 }
 
 .progression-confirmation-list li {
@@ -4748,7 +5036,7 @@ button {
   max-height: min(38rem, 88vh);
   overflow: auto;
   padding: 1.35rem;
-  border: 1px solid rgba(217, 154, 61, 0.56);
+  border: 1px solid rgba(195, 155, 255, 0.56);
   border-radius: 8px;
   background: #0d0715;
   box-shadow: 0 28px 90px rgba(0, 0, 0, 0.56);
@@ -4828,7 +5116,7 @@ button {
   gap: 0.75rem;
   border: 1px solid rgba(244, 234, 219, 0.1);
   background:
-    radial-gradient(circle at 100% 0%, rgba(217, 154, 61, 0.07), transparent 10rem),
+    radial-gradient(circle at 100% 0%, rgba(195, 155, 255, 0.07), transparent 10rem),
     rgba(255, 255, 255, 0.022);
   padding: 0.85rem;
 }
@@ -4845,6 +5133,12 @@ button {
   background:
     radial-gradient(circle at 100% 0%, rgba(201, 46, 66, 0.12), transparent 10rem),
     rgba(201, 46, 66, 0.04);
+}
+
+.item-tile.is-stack-target {
+  border-color: rgba(195, 155, 255, 0.9);
+  background: linear-gradient(135deg, rgba(195, 155, 255, 0.18), rgba(195, 155, 255, 0.05));
+  box-shadow: 0 0 0 2px rgba(195, 155, 255, 0.18), 0 0 1.2rem rgba(195, 155, 255, 0.2);
 }
 
 .compartment-heading {
@@ -4869,9 +5163,9 @@ button {
 
 .compartment-heading strong {
   flex: 0 0 auto;
-  border: 1px solid rgba(217, 154, 61, 0.3);
+  border: 1px solid rgba(195, 155, 255, 0.3);
   color: var(--color-gold);
-  background: rgba(217, 154, 61, 0.07);
+  background: rgba(195, 155, 255, 0.07);
   padding: 0.35rem 0.55rem;
   font-size: 0.82rem;
 }
@@ -4903,9 +5197,9 @@ button {
 }
 
 .compartment-actions .add-item-to-container {
-  border-color: rgba(217, 154, 61, 0.4);
+  border-color: rgba(195, 155, 255, 0.4);
   color: var(--color-gold);
-  background: rgba(217, 154, 61, 0.08);
+  background: rgba(195, 155, 255, 0.08);
 }
 
 .compartment-capacity {
@@ -4992,9 +5286,9 @@ body.has-modal {
   overflow: hidden;
   border-right: 1px solid rgba(244, 234, 219, 0.08);
   background:
-    radial-gradient(circle at 54% 42%, rgba(242, 165, 22, 0.28), transparent 9rem),
+    radial-gradient(circle at 54% 42%, rgba(195, 155, 255, 0.28), transparent 9rem),
     linear-gradient(145deg, #111a22, #080511);
-  color: #f2a516;
+  color: #c39bff;
   font-size: 5rem;
 }
 
@@ -5045,15 +5339,15 @@ body.has-modal {
 
 .add-item-choice:hover,
 .add-item-choice.is-active {
-  border-color: rgba(217, 154, 61, 0.62);
-  background: rgba(217, 154, 61, 0.09);
+  border-color: rgba(195, 155, 255, 0.62);
+  background: rgba(195, 155, 255, 0.09);
 }
 
 .item-selection-state {
   display: inline-flex;
   align-items: center;
   min-height: 1.4rem;
-  border: 1px solid rgba(217, 154, 61, 0.52);
+  border: 1px solid rgba(195, 155, 255, 0.52);
   padding: 0.16rem 0.32rem;
   color: var(--color-gold);
   background: rgba(13, 7, 21, 0.86);
@@ -5152,9 +5446,9 @@ body.has-modal {
 
 .inventory-container-action {
   margin-left: auto;
-  border-color: rgba(217, 154, 61, 0.36);
+  border-color: rgba(195, 155, 255, 0.36);
   color: var(--color-gold);
-  background: rgba(217, 154, 61, 0.08);
+  background: rgba(195, 155, 255, 0.08);
 }
 
 .domain-chip {
@@ -5193,11 +5487,11 @@ body.has-modal {
 .item-tile.is-active,
 .compendium-card.is-active {
   border-color: var(--color-gold);
-  background: rgba(217, 154, 61, 0.1);
+  background: rgba(195, 155, 255, 0.1);
 }
 
 .item-tile:hover {
-  border-color: rgba(217, 154, 61, 0.48);
+  border-color: rgba(195, 155, 255, 0.48);
 }
 
 .item-media {
@@ -5208,7 +5502,7 @@ body.has-modal {
   overflow: hidden;
   border: 1px solid rgba(244, 234, 219, 0.08);
   background:
-    radial-gradient(circle at 60% 36%, rgba(217, 154, 61, 0.16), transparent 3.4rem),
+    radial-gradient(circle at 60% 36%, rgba(195, 155, 255, 0.16), transparent 3.4rem),
     linear-gradient(145deg, rgba(37, 23, 41, 0.92), rgba(9, 5, 17, 0.92));
 }
 
@@ -5230,7 +5524,7 @@ body.has-modal {
   min-width: 2.35rem;
   height: 2.35rem;
   place-items: center;
-  border: 1px solid rgba(217, 154, 61, 0.28);
+  border: 1px solid rgba(195, 155, 255, 0.28);
   color: var(--color-gold);
   font-size: 0.72rem;
   letter-spacing: 0.06em;
@@ -5255,7 +5549,7 @@ body.has-modal {
 
 .item-tile em {
   width: fit-content;
-  border: 1px solid rgba(217, 154, 61, 0.42);
+  border: 1px solid rgba(195, 155, 255, 0.42);
   padding: 0.25rem 0.45rem;
   color: var(--color-gold);
   font-style: normal;
@@ -5293,7 +5587,7 @@ body.has-modal {
   display: grid;
   gap: 1rem;
   padding: 1rem;
-  border-color: rgba(217, 154, 61, 0.55);
+  border-color: rgba(195, 155, 255, 0.55);
 }
 
 .panel-heading {
@@ -5321,9 +5615,9 @@ body.has-modal {
   place-items: center;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background:
-    radial-gradient(circle at 55% 42%, rgba(242, 165, 22, 0.26), transparent 7rem),
+    radial-gradient(circle at 55% 42%, rgba(195, 155, 255, 0.26), transparent 7rem),
     linear-gradient(145deg, #101820, #090d12);
-  color: #f2a516;
+  color: #c39bff;
   font-size: 4rem;
 }
 
@@ -5336,9 +5630,13 @@ body.has-modal {
   display: grid;
   grid-template-columns: minmax(14rem, 0.78fr) minmax(20rem, 1.22fr);
   width: min(54rem, 92vw);
-  max-height: min(40rem, 90vh);
+  /* Altura definida: o painel direito pode rolar sem o conteúdo expandir o
+     modal além do viewport, inclusive quando há controles de quantidade. */
+  /* Mantém um respiro externo perceptível acima e abaixo do modal. */
+  height: min(40rem, calc(100dvh - 4rem - env(safe-area-inset-bottom, 0px)));
+  max-height: calc(100dvh - 4rem - env(safe-area-inset-bottom, 0px));
   overflow: hidden;
-  border: 1px solid rgba(217, 154, 61, 0.6);
+  border: 1px solid rgba(195, 155, 255, 0.6);
   border-radius: 8px;
   background: #0d0715;
   box-shadow: 0 28px 100px rgba(0, 0, 0, 0.6);
@@ -5351,9 +5649,14 @@ body.has-modal {
   overflow: hidden;
   border-right: 1px solid rgba(244, 234, 219, 0.08);
   background:
-    radial-gradient(circle at 54% 42%, rgba(242, 165, 22, 0.28), transparent 9rem),
+    radial-gradient(circle at 54% 42%, rgba(195, 155, 255, 0.28), transparent 9rem),
+    var(--texture-sheet),
     linear-gradient(145deg, #111a22, #080511);
-  color: #f2a516;
+  background-position: center, center, center;
+  background-repeat: no-repeat;
+  background-size: auto, cover, auto;
+  background-blend-mode: normal, soft-light, normal;
+  color: #c39bff;
   font-size: 5rem;
 }
 
@@ -5367,8 +5670,11 @@ body.has-modal {
   display: grid;
   align-content: start;
   gap: 0.95rem;
-  overflow: auto;
-  padding: 1.35rem;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1.35rem 1.35rem 2.25rem;
 }
 
 .item-modal-heading {
@@ -5499,9 +5805,9 @@ body.has-modal {
 }
 
 .move-target:not(:disabled):hover {
-  border-color: rgba(217, 154, 61, 0.52);
+  border-color: rgba(195, 155, 255, 0.52);
   color: var(--color-gold);
-  background: rgba(217, 154, 61, 0.08);
+  background: rgba(195, 155, 255, 0.08);
 }
 
 .move-target small {
@@ -5518,13 +5824,9 @@ body.has-modal {
 }
 
 .item-modal-actions {
-  position: sticky;
-  bottom: -1.35rem;
-  z-index: 1;
-  margin: 0 -1.35rem -1.35rem;
+  margin: 0;
   border-top: 1px solid rgba(244, 234, 219, 0.12);
-  padding: 0.7rem 1.35rem;
-  background: rgba(13, 7, 21, 0.97);
+  padding-top: 0.7rem;
 }
 
 .item-modal-actions .danger-action {
@@ -5535,17 +5837,39 @@ body.has-modal {
 .primary-action,
 .secondary-action,
 .danger-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
   min-height: 3rem;
   border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--radius-control);
   color: #f6efe2;
   background: rgba(255, 255, 255, 0.04);
+  font: inherit;
+  font-weight: 650;
+  line-height: 1.1;
+  transition:
+    border-color var(--motion-fast) var(--easing-standard),
+    color var(--motion-fast) var(--easing-standard),
+    background var(--motion-fast) var(--easing-standard),
+    transform var(--motion-fast) var(--easing-standard),
+    box-shadow var(--motion-fast) var(--easing-standard);
 }
 
 .sf-action--primary,
 .primary-action {
-  border-color: rgba(242, 165, 22, 0.7);
-  color: #f2a516;
-  background: rgba(242, 165, 22, 0.13);
+  border-color: rgba(195, 155, 255, 0.7);
+  color: var(--color-action-hover);
+  background: rgba(195, 155, 255, 0.18);
+}
+
+.sf-action--primary:hover:not(:disabled),
+.primary-action:hover:not(:disabled) {
+  border-color: var(--color-action-hover);
+  color: #100a18;
+  background: var(--color-action-hover);
+  transform: translateY(-1px);
 }
 
 .sf-action--danger,
@@ -5572,6 +5896,22 @@ body.has-modal {
   background: rgba(255, 255, 255, 0.04);
 }
 
+.sf-action--secondary:hover:not(:disabled),
+.secondary-action:hover:not(:disabled) {
+  border-color: rgba(195, 155, 255, 0.56);
+  color: var(--color-action-hover);
+  background: var(--color-action-soft);
+}
+
+.sf-action:disabled,
+.primary-action:disabled,
+.secondary-action:disabled,
+.danger-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+  transform: none;
+}
+
 .sf-action--icon {
   display: grid;
   width: 2.8rem;
@@ -5586,8 +5926,132 @@ body.has-modal {
   font-size: 0.8rem;
 }
 
+/* Primitives v1: navegação, campos, controles incrementais e superfícies.
+   Aliases legados permanecem para uma migração incremental sem quebrar telas existentes. */
+.sf-tab {
+  border-radius: var(--radius-control);
+  transition:
+    color var(--motion-fast) var(--easing-standard),
+    background var(--motion-fast) var(--easing-standard),
+    transform var(--motion-fast) var(--easing-standard);
+}
+
+.sf-tab:active:not(:disabled),
+.sf-action:active:not(:disabled),
+.primary-action:active:not(:disabled),
+.secondary-action:active:not(:disabled),
+.danger-action:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.sf-stepper-button {
+  flex: 0 0 auto;
+  cursor: pointer;
+  transition:
+    border-color var(--motion-fast) var(--easing-standard),
+    color var(--motion-fast) var(--easing-standard),
+    background var(--motion-fast) var(--easing-standard),
+    transform var(--motion-fast) var(--easing-standard);
+}
+
+.sf-stepper-button:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.sf-search-field,
+.search-box {
+  border-radius: var(--radius-control);
+  transition:
+    border-color var(--motion-fast) var(--easing-standard),
+    box-shadow var(--motion-fast) var(--easing-standard),
+    background var(--motion-fast) var(--easing-standard);
+}
+
+.sf-search-field:focus-within,
+.search-box:focus-within {
+  border-color: rgba(195, 155, 255, 0.7);
+  background: rgba(7, 5, 13, 0.84);
+  box-shadow: var(--shadow-focus);
+}
+
+.topbar-utility.sf-action--icon {
+  width: 2.35rem;
+  min-width: 2.35rem;
+  min-height: 2.35rem;
+  height: 2.35rem;
+}
+
+.modal-backdrop {
+  background: rgba(5, 3, 10, 0.78);
+  backdrop-filter: blur(0.45rem) saturate(1.04);
+}
+
+.modal-backdrop > :is(.modal, .form-modal, .confirm-modal, .container-modal, .item-modal, .card-modal, .class-detail-modal, .character-identity-modal, .compendium-entry-detail-modal, .note-modal, .note-view-modal, .progression-picker-modal, .rest-modal, .character-creation-modal, .pack-import-modal):not(.add-item-modal) {
+  border-radius: var(--radius-surface);
+  box-shadow: 0 28px 100px rgba(0, 0, 0, 0.62), 0 0 0 1px rgba(195, 155, 255, 0.08);
+  animation: sf-modal-enter var(--motion-emphasis) var(--easing-standard) both;
+}
+
+@keyframes sf-modal-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem) scale(0.988);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .compendium-content {
   gap: 1rem;
+}
+
+/* Migração por área: seleção, Traços, Inventário e Anotações. */
+.character-gate-panel,
+.traits-experience-section,
+.note-card,
+.inventory-compartment {
+  border-radius: var(--radius-surface);
+}
+
+.character-select-card,
+.experience-card,
+.note-card {
+  transition:
+    border-color var(--motion-fast) var(--easing-standard),
+    background var(--motion-fast) var(--easing-standard),
+    transform var(--motion-fast) var(--easing-standard),
+    box-shadow var(--motion-fast) var(--easing-standard);
+}
+
+.character-select-card:hover,
+.note-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0.6rem 1.4rem rgba(0, 0, 0, 0.2);
+}
+
+.traits-content {
+  gap: 1rem;
+}
+
+.traits-experience-section {
+  padding: clamp(0.85rem, 1.5vw, 1.15rem);
+  background: linear-gradient(135deg, rgba(195, 155, 255, 0.045), transparent 38%), rgba(8, 5, 17, 0.22);
+}
+
+.note-actions .sf-action {
+  min-width: 0;
+}
+
+.note-category-options .sf-tab {
+  border-radius: var(--radius-control);
+}
+
+.inventory-main > .filter-row {
+  align-items: center;
+  gap: 0.45rem;
 }
 
 .compendium-page-heading,
@@ -5620,9 +6084,9 @@ body.has-modal {
 }
 
 .compendium-bookmarks button.is-active {
-  border-color: rgba(217, 154, 61, 0.5);
+  border-color: rgba(195, 155, 255, 0.5);
   color: var(--color-gold);
-  background: rgba(217, 154, 61, 0.1);
+  background: rgba(195, 155, 255, 0.1);
 }
 
 .compendium-bookmarks span {
@@ -5643,7 +6107,7 @@ body.has-modal {
   border-radius: 10px;
   background:
     linear-gradient(90deg, transparent calc(50% - 1px), rgba(31, 18, 8, 0.95) 50%, transparent calc(50% + 1px)),
-    radial-gradient(circle at 50% 0%, rgba(217, 154, 61, 0.08), transparent 18rem),
+    radial-gradient(circle at 50% 0%, rgba(195, 155, 255, 0.08), transparent 18rem),
     linear-gradient(135deg, rgba(47, 26, 13, 0.72), rgba(9, 5, 17, 0.92));
   box-shadow:
     inset 0 0 0 1px rgba(244, 234, 219, 0.045),
@@ -5677,8 +6141,23 @@ body.has-modal {
   padding: 1.05rem;
   background:
     linear-gradient(180deg, rgba(78, 46, 23, 0.34), rgba(11, 7, 14, 0.42)),
+    linear-gradient(135deg, rgba(195, 155, 255, 0.035), transparent 42%),
+    var(--texture-compendium),
     rgba(255, 255, 255, 0.012);
+  background-position: center, center, center;
+  background-repeat: no-repeat;
+  background-size: auto, auto, cover;
+  background-blend-mode: normal, normal, soft-light;
   isolation: isolate;
+}
+
+/* Cada lado da abertura recebe um recorte complementar, nunca um mosaico. */
+.compendium-page:first-child {
+  background-position: center, center, left center;
+}
+
+.compendium-page:last-child {
+  background-position: center, center, right center;
 }
 
 .compendium-index-content .compendium-page {
@@ -5769,8 +6248,8 @@ body.has-modal {
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  border: 1px solid rgba(217, 154, 61, 0.22);
-  background: rgba(217, 154, 61, 0.06);
+  border: 1px solid rgba(195, 155, 255, 0.22);
+  background: rgba(195, 155, 255, 0.06);
   padding: 0.65rem;
 }
 
@@ -5779,7 +6258,7 @@ body.has-modal {
   width: 3.2rem;
   height: 3.2rem;
   place-items: center;
-  border: 1px solid rgba(217, 154, 61, 0.45);
+  border: 1px solid rgba(195, 155, 255, 0.45);
   color: var(--color-gold);
   background: rgba(8, 5, 17, 0.42);
   font-size: 1.35rem;
@@ -5812,8 +6291,8 @@ body.has-modal {
 }
 
 .ancestry-feature-pair > span:last-child {
-  border-color: rgba(217, 154, 61, 0.55);
-  background: rgba(217, 154, 61, 0.07);
+  border-color: rgba(195, 155, 255, 0.55);
+  background: rgba(195, 155, 255, 0.07);
 }
 
 .ancestry-feature-pair span,
@@ -5869,9 +6348,12 @@ body.has-modal {
   color: var(--color-gold);
   background:
     radial-gradient(circle at center, rgba(142, 79, 196, 0.3), transparent 66%),
+    var(--texture-sheet),
     var(--color-deep);
   background-position: center;
-  background-size: cover;
+  background-repeat: no-repeat;
+  background-size: auto, cover, auto;
+  background-blend-mode: normal, soft-light, normal;
   font-size: 2rem;
 }
 
@@ -5987,9 +6469,9 @@ body.has-modal {
 
 .compendium-actions button:not(:disabled):hover,
 .compendium-card-result-actions button:not(:disabled):hover {
-  border-color: rgba(217, 154, 61, 0.5);
+  border-color: rgba(195, 155, 255, 0.5);
   color: var(--color-gold);
-  background: rgba(217, 154, 61, 0.08);
+  background: rgba(195, 155, 255, 0.08);
 }
 
 .compendium-actions button:disabled,
@@ -6003,7 +6485,7 @@ body.has-modal {
 .compendium-management-panel {
   display: grid;
   gap: 0.85rem;
-  border: 1px solid rgba(217, 154, 61, 0.22);
+  border: 1px solid rgba(195, 155, 255, 0.22);
   background:
     radial-gradient(circle at 100% 0%, rgba(142, 79, 196, 0.08), transparent 14rem),
     rgba(255, 255, 255, 0.022);
@@ -6145,10 +6627,10 @@ body.has-modal {
 }
 
 .compendium-card-result-open:hover {
-  border-color: rgba(217, 154, 61, 0.48);
+  border-color: rgba(195, 155, 255, 0.48);
   background:
     radial-gradient(circle at 100% 0%, rgba(142, 79, 196, 0.14), transparent 10rem),
-    rgba(217, 154, 61, 0.06);
+    rgba(195, 155, 255, 0.06);
 }
 
 .compendium-card-result h2 {
@@ -6182,9 +6664,9 @@ body.has-modal {
 }
 
 .compendium-card-result-meta span {
-  border: 1px solid rgba(217, 154, 61, 0.24);
+  border: 1px solid rgba(195, 155, 255, 0.24);
   color: var(--color-gold);
-  background: rgba(217, 154, 61, 0.07);
+  background: rgba(195, 155, 255, 0.07);
   padding: 0.28rem 0.5rem;
   font-size: 0.72rem;
 }
@@ -6208,6 +6690,31 @@ body.has-modal {
 .compendium-card-result-actions button:disabled {
   cursor: not-allowed;
   opacity: 0.58;
+}
+
+/* O Compendium usa as mesmas ações sem perder a densidade própria das listas. */
+.compendium-actions .sf-action,
+.compendium-card-result-actions .sf-action {
+  min-height: 2.45rem;
+  padding: 0.4rem 0.5rem;
+}
+
+.compendium-card-result-actions .sf-action--secondary {
+  border-color: rgba(244, 234, 219, 0.18);
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.compendium-card-result-actions .sf-action--danger {
+  border-color: rgba(201, 46, 66, 0.48);
+  color: #ff8794;
+  background: rgba(201, 46, 66, 0.07);
+}
+
+.compendium-card-result-actions .sf-action--danger:hover:not(:disabled) {
+  border-color: rgba(255, 105, 122, 0.82);
+  color: #fff1f3;
+  background: rgba(201, 46, 66, 0.18);
 }
 
 .compendium-domain-results {
@@ -6295,7 +6802,7 @@ body.has-modal {
   max-height: min(44rem, calc(100vh - 2rem));
   overflow: auto;
   position: relative;
-  border: 1px solid rgba(217, 154, 61, 0.42);
+  border: 1px solid rgba(195, 155, 255, 0.42);
   background: var(--color-panel);
   padding: 1.25rem;
 }
@@ -6663,8 +7170,13 @@ body.has-modal {
   min-height: 100%;
   display: grid;
   place-items: center;
-  background: radial-gradient(circle at center, rgba(123, 69, 155, 0.32), transparent 68%), var(--color-deep);
-  background-size: cover;
+  background:
+    radial-gradient(circle at center, rgba(123, 69, 155, 0.32), transparent 68%),
+    var(--texture-sheet),
+    var(--color-deep);
+  background-repeat: no-repeat;
+  background-size: auto, cover, auto;
+  background-blend-mode: normal, soft-light, normal;
   background-position: center;
   color: var(--color-gold);
   letter-spacing: 0.12em;
@@ -6780,27 +7292,104 @@ body.has-modal {
 }
 
 .card-activation-modal {
+  position: relative;
   width: min(34rem, calc(100vw - 2rem));
   display: grid;
   gap: 0.9rem;
+  border: 1px solid rgba(195, 155, 255, 0.62);
+  padding: 1.25rem;
+  background: var(--color-panel);
+  box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.5);
+}
+
+.card-activation-modal::before {
+  content: "";
+  position: absolute;
+  inset: 0.5rem;
+  border: 1px solid rgba(244, 234, 219, 0.1);
+  pointer-events: none;
+}
+
+.card-activation-modal > * {
+  position: relative;
+  z-index: 1;
 }
 
 .card-activation-modal > p,
-.card-activation-rules p {
+.card-activation-option small {
   margin: 0;
 }
 
-.card-activation-rules {
+.card-activation-frame {
   display: grid;
-  gap: 0.55rem;
-  border: 1px solid var(--color-border);
-  padding: 0.8rem;
-  color: var(--color-muted);
-  line-height: 1.45;
+  gap: 0.85rem;
+  border: 1px solid rgba(195, 155, 255, 0.26);
+  padding: 0.9rem;
+  background: linear-gradient(135deg, rgba(195, 155, 255, 0.075), rgba(8, 5, 17, 0.38));
 }
 
-.card-activation-rules strong {
+.card-activation-frame > p {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.card-activation-options {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.card-activation-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 0.75rem;
+  border: 1px solid var(--color-border);
+  padding: 0.85rem 0.9rem;
+  color: var(--color-muted);
+  text-align: left;
+  line-height: 1.4;
+  cursor: pointer;
+  background: rgba(8, 5, 17, 0.32);
+  transition: border-color var(--motion-standard), background-color var(--motion-standard), transform var(--motion-standard);
+}
+
+.card-activation-option strong {
+  display: block;
   color: var(--color-text);
+}
+
+.card-activation-option small {
+  display: block;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+}
+
+.card-activation-option i {
+  flex: 0 0 auto;
+  color: var(--color-action);
+  font-size: 1.5rem;
+  font-style: normal;
+  line-height: 1;
+}
+
+.card-activation-option:hover,
+.card-activation-option:focus-visible {
+  border-color: rgba(195, 155, 255, 0.78);
+  background: rgba(195, 155, 255, 0.1);
+}
+
+.card-activation-option:hover {
+  transform: translateY(-1px);
+}
+
+.card-activation-option:focus-visible {
+  outline: 2px solid var(--color-action);
+  outline-offset: 2px;
+}
+
+.card-activation-option--immediate {
+  border-color: rgba(195, 155, 255, 0.5);
 }
 
 .class-detail-feature > span,
@@ -6827,9 +7416,9 @@ body.has-modal {
 .feature-activation-button {
   width: 100%;
   margin-top: 0.7rem;
-  border: 1px solid rgba(217, 154, 61, 0.64);
+  border: 1px solid rgba(195, 155, 255, 0.64);
   padding: 0.48rem 0.6rem;
-  background: rgba(217, 154, 61, 0.1);
+  background: rgba(195, 155, 255, 0.1);
   color: var(--color-gold);
   font: inherit;
   font-size: 0.76rem;
@@ -6838,7 +7427,7 @@ body.has-modal {
 }
 
 .feature-activation-button:hover:not(:disabled) {
-  background: rgba(217, 154, 61, 0.19);
+  background: rgba(195, 155, 255, 0.19);
 }
 
 .feature-activation-button:disabled {
@@ -6950,8 +7539,8 @@ body.has-modal {
 }
 
 .compendium-class-body > .ancestry-feature-pair > span:last-child {
-  border-color: rgba(217, 154, 61, 0.55);
-  background: rgba(217, 154, 61, 0.07);
+  border-color: rgba(195, 155, 255, 0.55);
+  background: rgba(195, 155, 255, 0.07);
 }
 
 .icon-modal-actions {
@@ -6979,7 +7568,7 @@ body.has-modal {
   border: 1px solid rgba(244, 234, 219, 0.11);
   background:
     radial-gradient(circle at 50% 30%, rgba(142, 79, 196, 0.2), transparent 48%),
-    linear-gradient(135deg, rgba(217, 154, 61, 0.08), rgba(8, 15, 22, 0.44));
+    linear-gradient(135deg, rgba(195, 155, 255, 0.08), rgba(8, 15, 22, 0.44));
   background-position: center;
   background-size: cover;
 }
@@ -6999,7 +7588,7 @@ body.has-modal {
 }
 
 .compendium-item-tile:hover {
-  border-color: rgba(217, 154, 61, 0.48);
+  border-color: rgba(195, 155, 255, 0.48);
 }
 
 .form-field textarea {
@@ -7094,7 +7683,7 @@ body.has-modal {
 }
 
 .compendium-card span {
-  color: #f2a516;
+  color: #c39bff;
 }
 
 .empty-state {
@@ -7130,7 +7719,7 @@ body.has-modal {
   max-height: min(42rem, 90vh);
   overflow: hidden;
   border-radius: 8px;
-  border: 1px solid rgba(217, 154, 61, 0.65);
+  border: 1px solid rgba(195, 155, 255, 0.65);
   background: #0d0715;
   box-shadow: 0 28px 110px rgba(0, 0, 0, 0.65);
 }
@@ -7141,7 +7730,7 @@ body.has-modal {
   gap: 1rem;
   width: min(24rem, 92vw);
   padding: 1.35rem;
-  border: 1px solid rgba(217, 154, 61, 0.56);
+  border: 1px solid rgba(195, 155, 255, 0.56);
   border-radius: 8px;
   background: #0d0715;
   box-shadow: 0 28px 90px rgba(0, 0, 0, 0.56);
@@ -7157,7 +7746,7 @@ body.has-modal {
   max-height: min(40rem, 88vh);
   overflow: auto;
   padding: 1.35rem;
-  border: 1px solid rgba(217, 154, 61, 0.56);
+  border: 1px solid rgba(195, 155, 255, 0.56);
   border-radius: 8px;
   background: #0d0715;
   box-shadow: 0 28px 90px rgba(0, 0, 0, 0.56);
@@ -7169,7 +7758,7 @@ body.has-modal {
   gap: 1rem;
   width: min(34rem, 92vw);
   padding: 1.45rem;
-  border: 1px solid rgba(217, 154, 61, 0.56);
+  border: 1px solid rgba(195, 155, 255, 0.56);
   border-radius: 8px;
   background: #0d0715;
   box-shadow: 0 28px 90px rgba(0, 0, 0, 0.56);
@@ -7184,8 +7773,8 @@ body.has-modal {
   display: grid;
   gap: 0.45rem;
   padding: 1rem;
-  border: 1px solid rgba(217, 154, 61, 0.35);
-  background: rgba(217, 154, 61, 0.07);
+  border: 1px solid rgba(195, 155, 255, 0.35);
+  background: rgba(195, 155, 255, 0.07);
 }
 
 .pack-import-preview > span,
@@ -7279,14 +7868,14 @@ body.has-modal {
 }
 
 .note-category-options button:hover {
-  border-color: rgba(217, 154, 61, 0.42);
+  border-color: rgba(195, 155, 255, 0.42);
   color: var(--color-text);
 }
 
 .note-category-options button.is-active {
-  border-color: rgba(217, 154, 61, 0.62);
+  border-color: rgba(195, 155, 255, 0.62);
   color: var(--color-gold);
-  background: rgba(217, 154, 61, 0.1);
+  background: rgba(195, 155, 255, 0.1);
 }
 
 .container-modal input[type="text"],
@@ -7389,7 +7978,7 @@ body.has-modal {
   left: 0;
   z-index: 40;
   pointer-events: none;
-  border: 1px solid rgba(217, 154, 61, 0.7);
+  border: 1px solid rgba(195, 155, 255, 0.7);
   color: var(--color-gold);
   background: rgba(13, 7, 21, 0.92);
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
@@ -7417,9 +8006,9 @@ body.has-modal {
 
 .resource-stepper button {
   min-height: 3rem;
-  border: 1px solid rgba(217, 154, 61, 0.45);
+  border: 1px solid rgba(195, 155, 255, 0.45);
   color: var(--color-gold);
-  background: rgba(217, 154, 61, 0.08);
+  background: rgba(195, 155, 255, 0.08);
   font-size: 1.25rem;
 }
 
@@ -7443,9 +8032,23 @@ body.has-modal {
 .modal-card-art {
   min-height: 26rem;
   background:
-    radial-gradient(circle at 50% 24%, rgba(217, 154, 61, 0.38), transparent 8rem),
-    radial-gradient(circle at 45% 54%, rgba(142, 79, 196, 0.48), transparent 10rem),
+    radial-gradient(circle at 50% 24%, rgba(111, 170, 193, 0.18), transparent 8rem),
+    radial-gradient(circle at 45% 54%, rgba(92, 112, 151, 0.2), transparent 10rem),
+    var(--texture-sheet),
     linear-gradient(145deg, #241027, #090511);
+  background-repeat: no-repeat;
+  background-size: auto, auto, cover, auto;
+  background-blend-mode: normal, normal, soft-light, normal;
+}
+
+.vault-content > .band {
+  background:
+    linear-gradient(135deg, rgba(8, 5, 17, 0.66), rgba(8, 5, 17, 0.32)),
+    var(--texture-sheet);
+  background-position: center, right center;
+  background-repeat: no-repeat;
+  background-size: auto, cover;
+  background-blend-mode: normal, soft-light;
 }
 
 .modal-card-art.has-image {
@@ -8090,7 +8693,46 @@ body.has-modal {
 
 .game-marker-die-slot:disabled { pointer-events: none; }
 
-.game-marker-die-dialog { width: min(24rem, calc(100vw - 2rem)); }
+.game-marker-die-dialog {
+  position: relative;
+  display: grid;
+  gap: 0.9rem;
+  width: min(24rem, calc(100vw - 2rem));
+  border: 1px solid rgba(195, 155, 255, 0.62);
+  padding: 1.25rem;
+  background: var(--color-panel);
+  box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.5);
+}
+
+.game-marker-die-dialog::before {
+  content: "";
+  position: absolute;
+  inset: 0.5rem;
+  border: 1px solid rgba(244, 234, 219, 0.1);
+  pointer-events: none;
+}
+
+.game-marker-die-dialog > .modal-close {
+  position: absolute;
+  z-index: 3;
+  top: 0.8rem;
+  right: 0.8rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  margin: 0;
+}
+
+.game-marker-die-dialog > :not(.modal-close) {
+  position: relative;
+  z-index: 1;
+}
+
+.game-marker-die-dialog h2,
+.game-marker-die-dialog p {
+  margin: 0;
+}
 
 .game-marker-result-picker {
   display: flex;
@@ -8123,8 +8765,8 @@ body.has-modal {
   max-height: min(46rem, calc(100dvh - 2rem));
   overflow: auto;
   padding: 1.2rem;
-  border: 1px solid rgba(217, 154, 61, 0.62);
-  border-radius: 10px;
+  border: 1px solid rgba(195, 155, 255, 0.62);
+  border-radius: var(--radius-surface);
   background:
     linear-gradient(135deg, rgba(142, 79, 196, 0.07), transparent 42%),
     #0d0715;
@@ -8156,7 +8798,11 @@ body.has-modal {
   color: var(--color-text);
   padding: 0.5rem 0.8rem;
 }
-.rest-kind-switch button.is-active { border-color: var(--color-gold); color: var(--color-gold); background: rgba(217, 154, 61, 0.1); }
+.rest-kind-switch .sf-tab {
+  min-height: 2.3rem;
+  border-radius: var(--radius-control);
+}
+.rest-kind-switch button.is-active { border-color: var(--color-gold); color: var(--color-gold); background: rgba(195, 155, 255, 0.1); }
 
 .rest-move-options {
   display: grid;
@@ -8181,7 +8827,7 @@ body.has-modal {
 .rest-move-option span { color: var(--color-muted); font-size: 0.88rem; }
 .rest-move-option small { color: var(--color-gold); font-weight: 800; }
 .rest-move-option:hover:not(:disabled),
-.rest-move-option.is-selected { border-color: var(--color-gold); background: rgba(217, 154, 61, 0.1); }
+.rest-move-option.is-selected { border-color: var(--color-gold); background: rgba(195, 155, 255, 0.1); }
 .rest-move-option:disabled { cursor: not-allowed; opacity: 0.48; }
 
 .rest-selections { margin-top: 0.25rem; padding: 0.85rem; border: 1px solid rgba(244, 234, 219, 0.12); background: rgba(18, 11, 28, 0.48); }
@@ -8205,4 +8851,57 @@ body.has-modal {
   .rest-choice { grid-template-columns: 1fr auto; align-items: end; }
   .rest-roll-controls { grid-column: 1 / 2; justify-self: start; }
   .rest-choice > .icon-action { grid-column: 2; grid-row: 1 / 3; }
+}
+
+/* Contrato de modal para iPad e desktop: preserva áreas seguras, não deixa
+   superfícies encostarem no viewport e concentra a rolagem no corpo correto. */
+.modal-backdrop {
+  --sf-modal-available-height: calc(100dvh - 4rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  padding:
+    max(1rem, env(safe-area-inset-top, 0px))
+    max(1rem, env(safe-area-inset-right, 0px))
+    max(1rem, env(safe-area-inset-bottom, 0px))
+    max(1rem, env(safe-area-inset-left, 0px));
+}
+
+.form-modal,
+.container-modal,
+.note-modal,
+.note-view-modal,
+.pack-import-modal,
+.progression-picker-modal,
+.rest-modal,
+.portrait-preview-modal,
+.character-identity-modal,
+.subclass-feature-modal {
+  max-height: var(--sf-modal-available-height);
+  scrollbar-gutter: stable;
+}
+
+.item-modal { height: min(40rem, var(--sf-modal-available-height)); max-height: var(--sf-modal-available-height); }
+.card-modal { height: min(42rem, var(--sf-modal-available-height)); max-height: var(--sf-modal-available-height); }
+.class-detail-modal { height: min(44rem, var(--sf-modal-available-height)); max-height: var(--sf-modal-available-height); }
+.compendium-entry-detail-modal { height: min(38rem, var(--sf-modal-available-height)); max-height: var(--sf-modal-available-height); }
+
+.item-modal-body,
+.modal-card-body,
+.class-detail-body,
+.compendium-entry-detail-body,
+.character-identity-modal-content {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(195, 155, 255, 0.88) rgba(244, 234, 219, 0.12);
+}
+
+.modal-close {
+  width: 2.75rem;
+  height: 2.75rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+}
+
+.modal-actions,
+.confirmation-actions,
+.item-modal-actions {
+  min-height: 3rem;
 }
