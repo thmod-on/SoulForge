@@ -4,6 +4,23 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.25.0]
+
+### Adicionado
+
+- exportação de fichas para arquivos `.soulforge-character.json`, com os dados completos do personagem;
+- importação de fichas com prévia, validação e criação segura de uma nova identidade quando já houver uma ficha com o mesmo identificador;
+- acesso à importação diretamente pelo seletor de personagens.
+
+### Alterado
+
+- Configurações passa a oferecer a importação de personagem; a exportação só fica disponível com uma ficha ativa;
+- documentação de dados locais e arquitetura passa a registrar o fluxo de transferência de fichas.
+
+### Corrigido
+
+- a área de erro da importação de Packs não é mais exibida vazia ao abrir o modal.
+
 ## [0.24.2]
 
 ### Alterado

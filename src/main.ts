@@ -23,6 +23,7 @@ import { characterCreationAttributes, createEmptyCreationAttributeValues, handle
 import { handleCommunityAction, renderCompendiumCommunitiesManager as renderCompendiumCommunitiesManagerView, renderCompendiumCommunityPreviewModal as renderCompendiumCommunityPreviewModalView, renderCompendiumFourthSpread as renderCompendiumFourthSpreadView, type CommunityFeatureDependencies } from "./features/compendium/communities";
 import { validatePackBundle } from "./features/packs/packValidation";
 import { renderCharacterSelection as renderCharacterSelectionView } from "./features/character-selection/renderCharacterSelection";
+import { confirmStagedCharacterImport, downloadCharacterExport, renderCharacterImportModal, stageCharacterImport } from "./features/character-transfer/characterTransfer";
 import { renderProgression as renderProgressionView, type ProgressionRenderDependencies } from "./features/progression/renderProgression";
 import { renderProgressionCardPickerModal as renderProgressionCardPickerModalView,
   renderProgressionHistoryModal as renderProgressionHistoryModalView,
@@ -276,6 +277,9 @@ const state: {
   packImportOpen: boolean;
   pendingPackBundle?: PackBundle;
   packImportError?: string;
+  characterImportOpen: boolean;
+  pendingCharacterImport?: Character;
+  characterImportError?: string;
   deletingInstalledPackId?: string;
   openSettingsSections: Record<SettingsSection, boolean>;
   character?: Character;
@@ -332,6 +336,7 @@ const state: {
   characters: [],
   installedPacks: [],
   packImportOpen: false,
+  characterImportOpen: false,
   openSettingsSections: {
     general: true,
     localData: false,
@@ -341,7 +346,7 @@ const state: {
   }
 };
 
-const appVersion = "0.24.2";
+const appVersion = "0.25.0";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -599,6 +604,7 @@ function renderSettings(character: Character): string {
     character,
     appVersion,
     state,
+    hasActiveCharacter: Boolean(state.character),
     escapeHtml,
     getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs),
     getPackDisplayDescription
@@ -631,7 +637,7 @@ function renderPackImportModal(): string {
           <button class="sf-action sf-action--primary primary-action" type="button" data-action="choose-pack-file">Selecionar arquivo</button>
         `}
         <input type="file" accept="application/json,.json,.soulforge-pack.json" data-pack-file hidden>
-        <p class="form-error" data-pack-import-error ${state.packImportError ? "" : "hidden"}>${escapeHtml(state.packImportError ?? "")}</p>
+        ${state.packImportError ? `<p class="form-error" data-pack-import-error>${escapeHtml(state.packImportError)}</p>` : ""}
       </section>
     </div>
   `;
@@ -1496,14 +1502,14 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
   if (state.characterSelectionOpen && isEditorPage(state.page)) {
     const editorContextCharacter = currentCharacter ?? state.characters[0] ?? demoCharacter;
     const editorScreen = state.page === "compendium" ? renderCompendium() : renderSettings(editorContextCharacter);
-    appRoot.innerHTML = `<div class="editor-shell">${renderEditorHeaderView(getPlayerShellDependencies())}${editorScreen}</div>${renderPackImportModal()}${renderRemoveInstalledPackModal()}${renderDomainModalView(getDomainFeatureDependencies())}${renderDeleteDomainModalView(getDomainFeatureDependencies())}${renderCompendiumCardFormModalView(getCardFeatureDependencies())}${renderDeleteCompendiumCardModalView(getCardFeatureDependencies())}${renderCompendiumItemFormModalView(getItemFeatureDependencies())}${renderDeleteCompendiumItemModalView(getItemFeatureDependencies())}${renderCompendiumItemPreviewModalView(getItemFeatureDependencies())}${renderCompendiumClassPreviewModalView(getClassFeatureDependencies())}${renderCompendiumClassFormModalView(getClassFeatureDependencies())}${renderDeleteCompendiumClassModalView(getClassFeatureDependencies())}${renderCompendiumAncestryFormModalView(getAncestryFeatureDependencies())}${renderDeleteCompendiumAncestryModalView(getAncestryFeatureDependencies())}`;
-    document.body.classList.toggle("has-modal", state.packImportOpen || Boolean(state.deletingInstalledPackId) || state.domainModalOpen || Boolean(state.deletingDomainId) || state.cardModalOpen || Boolean(state.deletingCompendiumCardId) || state.itemDefinitionModalOpen || Boolean(state.deletingCompendiumItemId) || Boolean(state.compendiumItemPreviewId) || state.classModalOpen || Boolean(state.deletingCompendiumClassId) || Boolean(state.compendiumClassPreviewId) || state.ancestryModalOpen || Boolean(state.deletingCompendiumAncestryId) || Boolean(state.compendiumAncestryPreviewId) || Boolean(state.compendiumCommunityPreviewId));
+    appRoot.innerHTML = `<div class="editor-shell">${renderEditorHeaderView(getPlayerShellDependencies())}${editorScreen}</div>${renderPackImportModal()}${renderCharacterImportModal({ isOpen: state.characterImportOpen, character: state.pendingCharacterImport, error: state.characterImportError, escapeHtml })}${renderRemoveInstalledPackModal()}${renderDomainModalView(getDomainFeatureDependencies())}${renderDeleteDomainModalView(getDomainFeatureDependencies())}${renderCompendiumCardFormModalView(getCardFeatureDependencies())}${renderDeleteCompendiumCardModalView(getCardFeatureDependencies())}${renderCompendiumItemFormModalView(getItemFeatureDependencies())}${renderDeleteCompendiumItemModalView(getItemFeatureDependencies())}${renderCompendiumClassPreviewModalView(getClassFeatureDependencies())}${renderCompendiumClassFormModalView(getClassFeatureDependencies())}${renderDeleteCompendiumClassModalView(getClassFeatureDependencies())}${renderCompendiumAncestryFormModalView(getAncestryFeatureDependencies())}${renderDeleteCompendiumAncestryModalView(getAncestryFeatureDependencies())}`;
+    document.body.classList.toggle("has-modal", state.packImportOpen || state.characterImportOpen || Boolean(state.deletingInstalledPackId) || state.domainModalOpen || Boolean(state.deletingDomainId) || state.cardModalOpen || Boolean(state.deletingCompendiumCardId) || state.itemDefinitionModalOpen || Boolean(state.deletingCompendiumItemId) || Boolean(state.compendiumItemPreviewId) || state.classModalOpen || Boolean(state.deletingCompendiumClassId) || Boolean(state.compendiumClassPreviewId) || state.ancestryModalOpen || Boolean(state.deletingCompendiumAncestryId) || Boolean(state.compendiumAncestryPreviewId) || Boolean(state.compendiumCommunityPreviewId));
     return;
   }
 
   if (state.characterSelectionOpen) {
-    appRoot.innerHTML = `${renderCharacterSelectionView(state.characters, demoCharacter.id, escapeHtml)}${renderCharacterCreationModal()}${renderDeleteCharacterModal()}`;
-    document.body.classList.toggle("has-modal", state.characterCreationOpen || Boolean(state.deletingCharacterId));
+    appRoot.innerHTML = `${renderCharacterSelectionView(state.characters, demoCharacter.id, escapeHtml)}${renderCharacterCreationModal()}${renderDeleteCharacterModal()}${renderCharacterImportModal({ isOpen: state.characterImportOpen, character: state.pendingCharacterImport, error: state.characterImportError, escapeHtml })}`;
+    document.body.classList.toggle("has-modal", state.characterCreationOpen || state.characterImportOpen || Boolean(state.deletingCharacterId));
     if (previousCharacterCreationScrollTop !== undefined) {
       requestAnimationFrame(() => {
         const creationScroll = appRoot.querySelector<HTMLElement>(".character-creation-scroll");
@@ -1606,6 +1612,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
     ${renderGameMarkerDieDialog()}
     ${renderRestModalView(character, state.restDialogKind, state.restChoices, state.restError, { escapeHtml })}
     ${renderPackImportModal()}
+    ${renderCharacterImportModal({ isOpen: state.characterImportOpen, character: state.pendingCharacterImport, error: state.characterImportError, escapeHtml })}
     ${renderRemoveInstalledPackModal()}
   `;
   injectGameMarkerAuthoringFields();
@@ -1632,26 +1639,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
 
 function exportCharacter(): void {
   const character = state.character;
-
-  if (!character) {
-    return;
-  }
-
-  const serializedCharacter = JSON.stringify(character, null, 2);
-  const blob = new Blob([serializedCharacter], { type: "application/json" });
-  const downloadUrl = URL.createObjectURL(blob);
-  const safeName = character.identity.name
-    .toLowerCase()
-    .replaceAll(/[^a-z0-9]+/g, "-")
-    .replaceAll(/(^-|-$)/g, "");
-  const link = document.createElement("a");
-
-  link.href = downloadUrl;
-  link.download = `soulforge-${safeName || "personagem"}.json`;
-  document.body.append(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
+  if (character) downloadCharacterExport(character);
 }
 
 function focusInventorySearch(): void {
@@ -2271,6 +2259,9 @@ function bindEvents(): void {
       state.packImportOpen = false;
       state.pendingPackBundle = undefined;
       state.packImportError = undefined;
+      state.characterImportOpen = false;
+      state.pendingCharacterImport = undefined;
+      state.characterImportError = undefined;
       state.deletingInstalledPackId = undefined;
       state.deletingCharacterId = undefined;
       state.characterPortraitModalOpen = false;
@@ -2336,6 +2327,9 @@ function bindEvents(): void {
       state.packImportOpen = false;
       state.pendingPackBundle = undefined;
       state.packImportError = undefined;
+      state.characterImportOpen = false;
+      state.pendingCharacterImport = undefined;
+      state.characterImportError = undefined;
       state.deletingInstalledPackId = undefined;
       state.deletingCharacterId = undefined;
       state.characterPortraitModalOpen = false;
@@ -2403,6 +2397,27 @@ function bindEvents(): void {
 
     if (target.closest('[data-action="export-character"]')) {
       exportCharacter();
+      return;
+    }
+
+    if (target.closest('[data-action="open-character-import"]')) {
+      state.characterImportOpen = true;
+      state.pendingCharacterImport = undefined;
+      state.characterImportError = undefined;
+      render({ preserveMainScroll: true });
+      return;
+    }
+
+    if (target.closest('[data-action="choose-character-file"]')) {
+      document.querySelector<HTMLInputElement>("[data-character-file]")?.click();
+      return;
+    }
+
+    if (target.closest('[data-action="confirm-character-import"]')) {
+      void confirmStagedCharacterImport(state, saveCharacter, listCharacters).then((imported) => {
+        if (imported) state.characterImportOpen = false;
+        render({ preserveMainScroll: true });
+      });
       return;
     }
 
@@ -3435,6 +3450,13 @@ function bindEvents(): void {
       state.cardActivationError = undefined;
       render({ preserveMainScroll: true });
     }
+
+    if (event.key === "Escape" && state.characterImportOpen) {
+      state.characterImportOpen = false;
+      state.pendingCharacterImport = undefined;
+      state.characterImportError = undefined;
+      render({ preserveMainScroll: true });
+    }
   });
 
   document.addEventListener("input", (event) => {
@@ -3538,6 +3560,11 @@ function bindEvents(): void {
     if (target instanceof HTMLInputElement && target.matches("[data-pack-file]")) {
       const file = target.files?.[0];
       if (file) void readPackImportFile(file);
+      return;
+    }
+    if (target instanceof HTMLInputElement && target.matches("[data-character-file]")) {
+      const file = target.files?.[0];
+      if (file) void stageCharacterImport(state, file).then(() => render({ preserveMainScroll: true }));
       return;
     }
     if (target instanceof HTMLInputElement && target.matches("[data-character-portrait]")) {

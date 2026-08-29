@@ -11,6 +11,7 @@ A interface é modular por responsabilidade, mesmo sendo uma PWA sem framework:
 - `src/app/`: tipos compartilhados, navegação e composição geral da aplicação;
 - `src/features/`: telas e fluxos por área de produto, como Configurações, Compendium, Inventário e Progressão;
 - `src/features/settings/`: renderização de Configurações e administração visual de dados locais;
+- `src/features/character-transfer/`: formato, validação, importação e exportação local de fichas;
 - `src/features/compendium/`: regras de apresentação e futuras telas do catálogo;
 - `src/domain/`: tipos e regras do domínio de jogo;
 - `src/storage/`: acesso ao IndexedDB e persistência local.

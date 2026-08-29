@@ -37,11 +37,13 @@ Regras para migrações:
 
 ## Backup e portabilidade
 
-Exportar e importar personagens ainda não está implementado, mas é um requisito planejado.
+O SoulForge exporta uma ficha por vez em um arquivo `.soulforge-character.json`. O arquivo contém um envelope com a versão de formato, a data da exportação e todo o estado da ficha.
 
-O fluxo futuro deve exportar um arquivo JSON legível contendo o estado de um personagem, sua versão de formato e as referências às Definitions usadas. A importação deve validar o arquivo antes de salvar e informar incompatibilidades de Pack ou versão.
+Ao importar, o SoulForge valida a estrutura antes de salvar. Se já existir uma ficha com o mesmo identificador neste dispositivo, cria uma cópia com novo identificador em vez de sobrescrever a ficha local. Exportações em JSON simples de versões anteriores também são aceitas quando a estrutura da ficha for válida.
 
-Até a implementação desse fluxo, não há garantia de recuperação após limpeza dos dados do navegador ou perda do dispositivo.
+O arquivo carrega referências a Definitions de Packs, mas não instala Packs automaticamente. Para que cartas, classes, itens ou ancestralidades apareçam corretamente, os Packs correspondentes também devem estar instalados no dispositivo de destino.
+
+Ainda é recomendável guardar a exportação fora do dispositivo: limpar os dados do navegador ou perder o aparelho apaga o IndexedDB local.
 
 ## Privacidade
 
