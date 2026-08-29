@@ -4,6 +4,13 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.24.2]
+
+### Alterado
+
+- a aplicação passa a abrir sempre no seletor de personagens, em vez de retomar automaticamente a última ficha;
+- a abertura e o fechamento de detalhes da ficha preservam a posição de leitura, incluindo cartas, itens, anotações, recursos e retrato.
+
 ## [0.24.1]
 
 ### Adicionado

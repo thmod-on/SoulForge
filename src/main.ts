@@ -156,7 +156,6 @@ function getAppRoot(): HTMLDivElement {
 }
 
 const appRoot = getAppRoot();
-const activeCharacterStorageKey = "soulforge.active-character-id";
 let catalog = baseCatalog;
 let cardMarkerOverrides: CardMarkerOverride[] = [];
 let modalBackdropPointerDown = false;
@@ -342,7 +341,7 @@ const state: {
   }
 };
 
-const appVersion = "0.24.1";
+const appVersion = "0.24.2";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -1753,7 +1752,6 @@ async function openCharacter(characterId: string | undefined): Promise<void> {
   state.character = character;
   state.characterSelectionOpen = false;
   state.characterCreationOpen = false;
-  localStorage.setItem(activeCharacterStorageKey, character.id);
   render();
 }
 
@@ -1769,7 +1767,6 @@ async function confirmDeleteCharacter(): Promise<void> {
   state.characters = state.characters.filter((character) => character.id !== characterId);
   if (state.character?.id === characterId) {
     state.character = undefined;
-    localStorage.removeItem(activeCharacterStorageKey);
     state.characterSelectionOpen = true;
   }
   state.deletingCharacterId = undefined;
@@ -2348,7 +2345,7 @@ function bindEvents(): void {
       state.restDialogKind = undefined;
       state.restChoices = [];
       state.restError = undefined;
-      render();
+      render({ preserveMainScroll: true });
       return;
     }
 
@@ -2413,7 +2410,7 @@ function bindEvents(): void {
       state.packImportOpen = true;
       state.pendingPackBundle = undefined;
       state.packImportError = undefined;
-      render();
+      render({ preserveMainScroll: true });
       return;
     }
 
@@ -2472,13 +2469,13 @@ function bindEvents(): void {
 
     if (target.closest('[data-action="open-character-portrait"]')) {
       state.characterPortraitModalOpen = true;
-      render();
+      render({ preserveMainScroll: true });
       return;
     }
 
     if (target.closest('[data-action="open-character-portrait-preview"]')) {
       state.characterPortraitPreviewOpen = true;
-      render();
+      render({ preserveMainScroll: true });
       return;
     }
 
@@ -3187,7 +3184,7 @@ function bindEvents(): void {
     if (target.closest('[data-action="open-note-modal"]')) {
       state.noteModalOpen = true;
       state.editingNoteId = undefined;
-      render();
+      render({ preserveMainScroll: true });
       return;
     }
 
@@ -3196,7 +3193,7 @@ function bindEvents(): void {
       state.noteModalOpen = true;
       state.editingNoteId = editNoteButton.dataset.noteId;
       state.viewingNoteId = undefined;
-      render();
+      render({ preserveMainScroll: true });
       return;
     }
 
@@ -3238,7 +3235,7 @@ function bindEvents(): void {
     const viewNoteCard = target.closest<HTMLElement>('[data-action="view-note"]');
     if (viewNoteCard) {
       state.viewingNoteId = viewNoteCard.dataset.noteId;
-      render();
+      render({ preserveMainScroll: true });
       return;
     }
 
@@ -3264,13 +3261,13 @@ function bindEvents(): void {
     const itemButton = target.closest<HTMLElement>("[data-item-id]");
     if (itemButton) {
       state.selectedItemId = itemButton.dataset.inventoryEntryId;
-      render();
+      render({ preserveMainScroll: true });
       return;
     }
 
     if (target.closest('[data-action="add-resource"]')) {
       state.addResourceModalOpen = true;
-      render();
+      render({ preserveMainScroll: true });
       return;
     }
 
@@ -3295,7 +3292,7 @@ function bindEvents(): void {
     if (cardModalButton) {
       state.modalCardId = cardModalButton.dataset.cardModalId;
       state.featureActivationError = undefined;
-      render();
+      render({ preserveMainScroll: true });
       return;
     }
 
@@ -3303,7 +3300,7 @@ function bindEvents(): void {
     if (activateStoredCardButton) {
       state.activatingStoredCardId = activateStoredCardButton.dataset.cardId;
       state.cardActivationError = undefined;
-      render();
+      render({ preserveMainScroll: true });
       return;
     }
 
@@ -3332,29 +3329,29 @@ function bindEvents(): void {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && state.modalCardId) {
       state.modalCardId = undefined;
-      render();
+      render({ preserveMainScroll: true });
     }
 
     if (event.key === "Escape" && state.selectedItemId) {
       state.selectedItemId = undefined;
-      render();
+      render({ preserveMainScroll: true });
     }
 
     if (event.key === "Escape" && state.addItemToCompartmentId) {
       state.addItemToCompartmentId = undefined; state.addItemPreviewDefinitionId = undefined;
       state.addingDefinitionItemId = undefined;
       state.addItemError = undefined;
-      render();
+      render({ preserveMainScroll: true });
     }
 
     if (event.key === "Escape" && state.deletingItemId) {
       state.deletingItemId = undefined;
-      render();
+      render({ preserveMainScroll: true });
     }
 
     if (event.key === "Escape" && state.resourceModalId) {
       state.resourceModalId = undefined;
-      render();
+      render({ preserveMainScroll: true });
     }
 
     if (event.key === "Escape" && state.progressionHistoryOpen) {
@@ -3390,17 +3387,17 @@ function bindEvents(): void {
     if (event.key === "Escape" && state.noteModalOpen) {
       state.noteModalOpen = false;
       state.editingNoteId = undefined;
-      render();
+      render({ preserveMainScroll: true });
     }
 
     if (event.key === "Escape" && state.viewingNoteId) {
       state.viewingNoteId = undefined;
-      render();
+      render({ preserveMainScroll: true });
     }
 
     if (event.key === "Escape" && state.deletingNoteId) {
       state.deletingNoteId = undefined;
-      render();
+      render({ preserveMainScroll: true });
     }
 
     if (event.key === "Escape" && (state.domainModalOpen || state.deletingDomainId)) {
@@ -3436,7 +3433,7 @@ function bindEvents(): void {
     if (event.key === "Escape" && state.activatingStoredCardId) {
       state.activatingStoredCardId = undefined;
       state.cardActivationError = undefined;
-      render();
+      render({ preserveMainScroll: true });
     }
   });
 
@@ -3615,11 +3612,9 @@ async function boot(): Promise<void> {
   await ensureDemoCharacter();
   await ensureDemoKaelII();
   state.characters = await listCharacters();
-  const activeCharacterId = localStorage.getItem(activeCharacterStorageKey);
-  if (activeCharacterId) {
-    state.character = await loadCharacter(activeCharacterId);
-    state.characterSelectionOpen = !state.character;
-  }
+  // A sessão sempre começa no seletor: abrir uma ficha é uma ação consciente do jogador.
+  state.character = undefined;
+  state.characterSelectionOpen = true;
   render();
 }
 
