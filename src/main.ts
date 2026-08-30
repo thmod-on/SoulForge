@@ -19,19 +19,15 @@ import { nextCharacterCreationStep, previousCharacterCreationStep, type Characte
 import { buildCharacterFromDraft, getCreationAncestries, getCreationClasses, getCreationSubclasses, hasValidCreationAttributes, validateCreationStep, type CharacterCreationDraft } from "./features/character-creation/characterCreationRules";
 import { renderCreationActions, renderCreationProgress, renderCreationTitle } from "./features/character-creation/renderCreationChrome";
 import { renderCreationAttributesStep, renderCreationClassStep, renderCreationCommunityStep, renderCreationExperiencesStep, renderCreationIdentityStep, renderCreationReviewStep } from "./features/character-creation/renderCreationSteps";
+import { renderCharacterCreationInPlace as renderCharacterCreationSurface } from "./features/character-creation/renderInPlace";
 import { characterCreationAttributes, createEmptyCreationAttributeValues, handleCreationAttributeAllocation } from "./features/character-creation/attributeAllocation";
 import { handleCommunityAction, renderCompendiumCommunitiesManager as renderCompendiumCommunitiesManagerView, renderCompendiumCommunityPreviewModal as renderCompendiumCommunityPreviewModalView, renderCompendiumFourthSpread as renderCompendiumFourthSpreadView, type CommunityFeatureDependencies } from "./features/compendium/communities";
 import { validatePackBundle } from "./features/packs/packValidation";
 import { renderCharacterSelection as renderCharacterSelectionView } from "./features/character-selection/renderCharacterSelection";
 import { confirmStagedCharacterImport, downloadCharacterExport, renderCharacterImportModal, stageCharacterImport } from "./features/character-transfer/characterTransfer";
 import { renderProgression as renderProgressionView, type ProgressionRenderDependencies } from "./features/progression/renderProgression";
-import { renderProgressionCardPickerModal as renderProgressionCardPickerModalView,
-  renderProgressionHistoryModal as renderProgressionHistoryModalView,
-  renderProgressionPickerModal as renderProgressionPickerModalView,
-  renderProgressionMulticlassModal as renderProgressionMulticlassModalView,
-  renderTierExperienceModal as renderTierExperienceModalView,
-  type ProgressionDialogDependencies
-} from "./features/progression/renderProgressionDialogs";
+import { renderProgressionDialogInPlace, renderProgressionInPlace as renderProgressionSurface } from "./features/progression/renderInPlace";
+import { renderProgressionCardPickerModal as renderProgressionCardPickerModalView, renderProgressionHistoryModal as renderProgressionHistoryModalView, renderProgressionPickerModal as renderProgressionPickerModalView, renderProgressionMulticlassModal as renderProgressionMulticlassModalView, renderTierExperienceModal as renderTierExperienceModalView, type ProgressionDialogDependencies } from "./features/progression/renderProgressionDialogs";
 import {
   renderProgressionAdvanceSummary as renderProgressionAdvanceSummaryView,
   renderProgressionDomainStep as renderProgressionDomainStepView,
@@ -160,6 +156,7 @@ const appRoot = getAppRoot();
 let catalog = baseCatalog;
 let cardMarkerOverrides: CardMarkerOverride[] = [];
 let modalBackdropPointerDown = false;
+let shouldAnimateCharacterCreationModal = false;
 
 /** Centraliza a persistencia para que todo personagem salvo mantenha os marcadores sincronizados. */
 async function saveCharacter(character: Character): Promise<void> {
@@ -200,10 +197,11 @@ const state: {
   progressionPickerIds: string[];
   progressionDraft: ProgressionDraftChoice[];
   progressionError?: string;
+  progressionCompletionLevel?: number;
   progressionCardPickerMode?: "mandatory" | "advance";
   progressionCardTierFilter: "todos" | number; progressionCardDomainFilter?: string;
   progressionCardPickerTier?: ProgressionTierNumber;
-  progressionCardId?: string; progressionCardPickerSelectionId?: string;
+  progressionCardId?: string; progressionCardPickerSelectionId?: string; progressionCardPickerScrollTop?: number;
   progressionTierExperienceOpen: boolean;
   progressionTierExperience?: { name: string; description: string };
   progressionTierExperienceError?: string;
@@ -346,7 +344,7 @@ const state: {
   }
 };
 
-const appVersion = "0.25.0";
+const appVersion = "0.25.1";
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
@@ -868,12 +866,11 @@ async function applyProgression(): Promise<void> {
   state.progressionTierExperience = undefined;
   state.progressionTierExperienceError = undefined;
   state.progressionStep = "advances";
+  state.progressionCompletionLevel = nextLevel;
   render();
 }
 
-function renderEmptyInline(message: string): string {
-  return `<p class="empty-inline sf-state sf-state--empty sf-state--inline">${escapeHtml(message)}</p>`;
-}
+function renderEmptyInline(message: string): string { return `<p class="empty-inline sf-state sf-state--empty sf-state--inline">${escapeHtml(message)}</p>`; }
 
 function getNotesRenderDependencies(): NotesRenderDependencies {
   return { state, noteCategoryLabels, escapeHtml, renderEmptyInline };
@@ -1335,7 +1332,7 @@ function renderCharacterCreationModal(): string {
 
   return `
     <div class="modal-backdrop" data-modal-backdrop>
-      <form class="modal character-creation-modal" data-creation-step="${state.characterCreationStep}" onsubmit="return false;" aria-labelledby="character-creation-title">
+      <form class="modal character-creation-modal ${shouldAnimateCharacterCreationModal ? "is-opening" : ""}" data-creation-step="${state.characterCreationStep}" onsubmit="return false;" aria-labelledby="character-creation-title">
         <button class="modal-close" type="button" data-action="cancel-new-character" aria-label="Fechar">×</button>
         <div class="character-creation-header">
         ${renderCreationProgress({ step: state.characterCreationStep })}
@@ -1516,6 +1513,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
         if (creationScroll) creationScroll.scrollTop = previousCharacterCreationScrollTop;
       });
     }
+    shouldAnimateCharacterCreationModal = false;
     return;
   }
 
@@ -1620,6 +1618,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
   syncScrollAffordances(appRoot);
   document.body.classList.toggle("has-modal", Boolean(appRoot.querySelector(".modal-backdrop")));
   if (state.addItemToCompartmentId && state.addItemCatalogScrollTop) requestAnimationFrame(() => { const catalog = appRoot.querySelector<HTMLElement>(".add-item-catalog"); if (catalog) catalog.scrollTop = state.addItemCatalogScrollTop ?? 0; });
+  if (state.progressionCardPickerMode && state.progressionCardPickerScrollTop !== undefined) requestAnimationFrame(() => { const list = appRoot.querySelector<HTMLElement>(".progression-card-choice-list"); if (list) list.scrollTop = state.progressionCardPickerScrollTop ?? 0; });
   if (previousMainScrollTop !== undefined) {
     requestAnimationFrame(() => {
       const mainShell = appRoot.querySelector<HTMLElement>(".main-shell");
@@ -1636,6 +1635,12 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
     });
   }
 }
+
+const renderCharacterCreationInPlace = (options: { resetScroll?: boolean } = {}): void => {
+  if (!state.characterSelectionOpen || !state.characterCreationOpen || !renderCharacterCreationSurface(appRoot, renderCharacterCreationModal(), options)) {
+    render({ resetCreationScroll: options.resetScroll });
+  }
+};
 
 function exportCharacter(): void {
   const character = state.character;
@@ -1888,11 +1893,7 @@ function syncCharacterCreationDraft(): void {
   });
 }
 
-function hasValidCharacterCreationAttributes(values: Record<Attribute["id"], number>): boolean {
-  return hasValidCreationAttributes(values);
-}
-
-
+function hasValidCharacterCreationAttributes(values: Record<Attribute["id"], number>): boolean { return hasValidCreationAttributes(values); }
 function validateCharacterCreationStep(): boolean {
   syncCharacterCreationDraft();
   if (state.characterCreationStep === 2) {
@@ -1922,10 +1923,7 @@ function getCharacterCreationDraft(): CharacterCreationDraft {
   };
 }
 
-function getCharacterCreationFallback() {
-  return { classDefinition: fallbackCharacterClass, subclassDefinition: fallbackCharacterSubclass, skills: demoCharacter.skills };
-}
-
+function getCharacterCreationFallback() { return { classDefinition: fallbackCharacterClass, subclassDefinition: fallbackCharacterSubclass, skills: demoCharacter.skills }; }
 function getCardFormValue(selector: string): string {
   const element = document.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(selector);
   return element?.value.trim() ?? "";
@@ -2156,11 +2154,11 @@ function bindEvents(): void {
       state.characterCreationAttributeValues = result.values;
       state.characterCreationSelectedAttributeValue = result.selectedValue;
       state.characterCreationError = result.error;
-      render({ preserveMainScroll: true });
+      renderCharacterCreationInPlace();
       return;
     }
 
-    const communityChoice = target.closest<HTMLElement>("[data-character-community-id]"); if (communityChoice) { state.characterCreationCommunityId = communityChoice.dataset.characterCommunityId; state.characterCreationError = undefined; render({ preserveMainScroll: true }); return; }
+    const communityChoice = target.closest<HTMLElement>("[data-character-community-id]"); if (communityChoice) { state.characterCreationCommunityId = communityChoice.dataset.characterCommunityId; state.characterCreationError = undefined; renderCharacterCreationInPlace(); return; }
 
     const subclassTabButton = target.closest<HTMLButtonElement>('[data-action="select-class-subclass-tab"]');
     if (subclassTabButton) {
@@ -2271,7 +2269,7 @@ function bindEvents(): void {
       state.restDialogKind = undefined;
       state.restChoices = [];
       state.restError = undefined;
-      render({ preserveMainScroll: true });
+      render();
       return;
     }
 
@@ -2339,7 +2337,7 @@ function bindEvents(): void {
       state.restDialogKind = undefined;
       state.restChoices = [];
       state.restError = undefined;
-      render({ preserveMainScroll: true });
+      render();
       return;
     }
 
@@ -2466,6 +2464,7 @@ function bindEvents(): void {
     }
 
     if (target.closest('[data-action="open-character-sheet"]')) {
+      state.progressionCompletionLevel = undefined;
       state.page = "overview";
       state.characterIdentityModalSection = undefined;
       render({ preserveMainScroll: true });
@@ -2527,6 +2526,7 @@ function bindEvents(): void {
     }
 
     if (target.closest('[data-action="new-character"]')) {
+      shouldAnimateCharacterCreationModal = true;
       state.characterCreationOpen = true;
       state.characterCreationClassId = getCharacterCreationClasses()[0]?.id;
       state.characterCreationSubclassId = getCharacterCreationSubclasses(state.characterCreationClassId ?? "")[0]?.id;
@@ -2570,27 +2570,27 @@ function bindEvents(): void {
       syncCharacterCreationDraft();
       state.characterCreationStep = previousCharacterCreationStep(state.characterCreationStep);
       state.characterCreationError = undefined;
-      render({ resetCreationScroll: true });
+      renderCharacterCreationInPlace({ resetScroll: true });
       return;
     }
 
     if (target.closest('[data-action="character-creation-next"]')) {
       if (!validateCharacterCreationStep()) {
-        render();
+        renderCharacterCreationInPlace();
         return;
       }
       if (state.characterCreationStep === 5) {
         state.characterCreationCardDomainId = getCharacterCreationClasses().find((entry) => entry.id === state.characterCreationClassId)?.domainIds[0];
       }
       state.characterCreationStep = nextCharacterCreationStep(state.characterCreationStep);
-      render({ resetCreationScroll: true });
+      renderCharacterCreationInPlace({ resetScroll: true });
       return;
     }
 
     const characterCardDomainButton = target.closest<HTMLElement>("[data-character-card-domain-id]");
     if (characterCardDomainButton) {
       state.characterCreationCardDomainId = characterCardDomainButton.dataset.characterCardDomainId;
-      render();
+      renderCharacterCreationInPlace();
       return;
     }
 
@@ -2603,7 +2603,7 @@ function bindEvents(): void {
         : state.characterCreationCardIds.length < 2 ? [...state.characterCreationCardIds, cardId] : state.characterCreationCardIds;
       state.characterCreationFocusedCardId = state.characterCreationCardIds.includes(cardId) ? cardId : state.characterCreationCardIds[0];
       state.characterCreationError = undefined;
-      render();
+      renderCharacterCreationInPlace();
       return;
     }
 
@@ -2912,6 +2912,7 @@ function bindEvents(): void {
     const pageButton = target.closest<HTMLElement>("[data-page]");
     if (pageButton) {
       const nextPage = pageButton.dataset.page as Page;
+      if (state.page === "progression" && nextPage !== "progression") state.progressionCompletionLevel = undefined;
       if (!isEditorPage(state.page) && !isEditorPage(nextPage)) {
         state.lastPlayerPage = state.page;
       }
@@ -2927,6 +2928,7 @@ function bindEvents(): void {
 
     const storedCardsButton = target.closest<HTMLElement>('[data-action="open-stored-cards"]');
     if (storedCardsButton) {
+      if (state.page === "progression") state.progressionCompletionLevel = undefined;
       state.page = "storedCards";
       render();
       return;
@@ -2945,7 +2947,7 @@ function bindEvents(): void {
         state.progressionStep = transition.step;
         state.progressionError = transition.error;
       }
-      render({ preserveMainScroll: true });
+      renderProgressionSurface(appRoot, renderProgressionView(state.character!, getProgressionRenderDependencies()));
       return;
     }
 
@@ -2961,7 +2963,7 @@ function bindEvents(): void {
         state.progressionStep = transition.step;
         state.progressionError = transition.error;
       }
-      render({ preserveMainScroll: true });
+      renderProgressionSurface(appRoot, renderProgressionView(state.character!, getProgressionRenderDependencies()));
       return;
     }
 
@@ -2977,6 +2979,7 @@ function bindEvents(): void {
         state.progressionCardPickerTier = Number(progressionAdvanceButton.dataset.progressionTier) as ProgressionTierNumber;
         state.progressionCardTierFilter = "todos"; state.progressionCardDomainFilter = undefined;
         state.progressionCardPickerSelectionId = undefined;
+        state.progressionCardPickerScrollTop = 0;
       } else if (kind === "subclass") {
         const character = state.character;
         if (character) {
@@ -3007,7 +3010,7 @@ function bindEvents(): void {
       } else {
         addProgressionChoice({ kind, tier: Number(progressionAdvanceButton.dataset.progressionTier) as ProgressionTierNumber, label: progressionAdvanceLabels[kind] });
       }
-      render({ preserveMainScroll: true });
+      if (["attributes", "experiences", "domain", "multiclass"].includes(kind)) render({ preserveMainScroll: true }); else renderProgressionSurface(appRoot, renderProgressionView(state.character!, getProgressionRenderDependencies()));
       return;
     }
 
@@ -3040,7 +3043,7 @@ function bindEvents(): void {
         state.progressionPickerIds = state.progressionPickerIds.includes(id)
           ? state.progressionPickerIds.filter((selectedId) => selectedId !== id)
           : state.progressionPickerIds.length < 2 ? [...state.progressionPickerIds, id] : state.progressionPickerIds;
-        render({ preserveMainScroll: true });
+        renderProgressionDialogInPlace(appRoot, ".progression-picker-modal", renderProgressionPickerModalView(getProgressionDialogDependencies()));
       }
       return;
     }
@@ -3071,7 +3074,7 @@ function bindEvents(): void {
       const index = Number(removeProgressionChoiceButton.dataset.progressionChoiceIndex);
       state.progressionDraft = state.progressionDraft.filter((_, choiceIndex) => choiceIndex !== index);
       state.progressionError = undefined;
-      render({ preserveMainScroll: true });
+      renderProgressionSurface(appRoot, renderProgressionView(state.character!, getProgressionRenderDependencies()));
       return;
     }
 
@@ -3080,6 +3083,7 @@ function bindEvents(): void {
       state.progressionCardPickerTier = undefined;
       state.progressionCardTierFilter = "todos"; state.progressionCardDomainFilter = undefined;
       state.progressionCardPickerSelectionId = state.progressionCardId;
+      state.progressionCardPickerScrollTop = 0;
       render({ preserveMainScroll: true });
       return;
     }
@@ -3088,7 +3092,8 @@ function bindEvents(): void {
     if (progressionCardTierFilter) {
       const value = progressionCardTierFilter.dataset.progressionCardTier;
       state.progressionCardTierFilter = value === "todos" || !value ? "todos" : Number(value);
-      render({ preserveMainScroll: true });
+      state.progressionCardPickerScrollTop = 0;
+      renderProgressionDialogInPlace(appRoot, ".progression-card-picker-modal", renderProgressionCardPickerModalView(getProgressionDialogDependencies()));
       return;
     }
 
@@ -3114,8 +3119,18 @@ function bindEvents(): void {
       return;
     }
 
+    if (target.closest('[data-action="select-progression-card"]')) {
+      state.progressionCardPickerScrollTop = appRoot.querySelector<HTMLElement>(".progression-card-choice-list")?.scrollTop ?? 0;
+    }
+    if (target.closest('[data-action="filter-progression-card-domain"]')) {
+      state.progressionCardPickerScrollTop = 0;
+    }
     if (handleProgressionCardPickerAction(target, { state, addChoice: addProgressionChoice, findCard: (id) => findDefinition(catalog, id) as CardDefinition | undefined })) {
-      render({ preserveMainScroll: true });
+      if (state.progressionCardPickerMode) {
+        renderProgressionDialogInPlace(appRoot, ".progression-card-picker-modal", renderProgressionCardPickerModalView(getProgressionDialogDependencies()));
+      } else {
+        render({ preserveMainScroll: true });
+      }
       return;
     }
 
@@ -3499,7 +3514,7 @@ function bindEvents(): void {
 
     if (target.matches("[data-character-ancestry-search]")) {
       state.characterCreationAncestrySearch = target.value;
-      render();
+      renderCharacterCreationInPlace();
       requestAnimationFrame(() => {
         const search = document.querySelector<HTMLInputElement>("[data-character-ancestry-search]");
         search?.focus({ preventScroll: true });
@@ -3507,7 +3522,7 @@ function bindEvents(): void {
       });
     }
 
-    if (target.matches("[data-character-community-search]")) { state.characterCreationCommunitySearch = target.value; render({ preserveMainScroll: true }); requestAnimationFrame(() => { const search = document.querySelector<HTMLInputElement>("[data-character-community-search]"); search?.focus({ preventScroll: true }); search?.setSelectionRange(search.value.length, search.value.length); }); }
+    if (target.matches("[data-character-community-search]")) { state.characterCreationCommunitySearch = target.value; renderCharacterCreationInPlace(); requestAnimationFrame(() => { const search = document.querySelector<HTMLInputElement>("[data-character-community-search]"); search?.focus({ preventScroll: true }); search?.setSelectionRange(search.value.length, search.value.length); }); }
   });
 
   document.addEventListener("change", (event) => {
@@ -3523,7 +3538,7 @@ function bindEvents(): void {
     }
     if (target instanceof HTMLSelectElement && target.matches("[data-character-community-pack-filter]")) {
       state.characterCreationCommunityPackId = target.value;
-      render({ preserveMainScroll: true });
+      renderCharacterCreationInPlace();
       return;
     }
     if (target instanceof HTMLSelectElement && target.matches("[data-progression-multiclass-class]")) {
@@ -3593,7 +3608,7 @@ function bindEvents(): void {
       state.characterCreationTopFeatureId = undefined;
       state.characterCreationBottomFeatureId = undefined;
       state.characterCreationError = undefined;
-      render();
+      renderCharacterCreationInPlace();
       return;
     }
     if (target instanceof HTMLSelectElement && target.matches("[data-character-top-feature]")) {
@@ -3604,13 +3619,13 @@ function bindEvents(): void {
         state.characterCreationBottomFeatureId = selectedAncestries.find((ancestry) => ancestry.id !== topOrigin?.id)?.bottomFeatureId;
       }
       state.characterCreationError = undefined;
-      render();
+      renderCharacterCreationInPlace();
       return;
     }
     if (target instanceof HTMLSelectElement && target.matches("[data-character-bottom-feature]")) {
       state.characterCreationBottomFeatureId = target.value;
       state.characterCreationError = undefined;
-      render();
+      renderCharacterCreationInPlace();
       return;
     }
     if (target instanceof HTMLSelectElement && target.matches("[data-character-class]")) {
@@ -3619,13 +3634,13 @@ function bindEvents(): void {
       state.characterCreationCardIds = []; state.characterCreationFocusedCardId = undefined;
       state.characterCreationCardDomainId = undefined;
       state.characterCreationError = undefined;
-      render();
+      renderCharacterCreationInPlace();
       return;
     }
     if (target instanceof HTMLInputElement && target.matches("[data-character-subclass-id]")) {
       state.characterCreationSubclassId = target.dataset.characterSubclassId;
       state.characterCreationError = undefined;
-      render();
+      renderCharacterCreationInPlace();
       return;
     }
   });

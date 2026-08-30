@@ -6,6 +6,7 @@ import { getPreviousProgressionFlowStep, getProgressionFlowSteps } from "./progr
 export type ProgressionViewState = {
   progressionStep: ProgressionFlowStep;
   progressionError?: string;
+  progressionCompletionLevel?: number;
 };
 
 export type ProgressionRenderDependencies = {
@@ -21,6 +22,10 @@ export type ProgressionRenderDependencies = {
 
 export function renderProgression(character: Character, dependencies: ProgressionRenderDependencies): string {
   const { state, requiresTierExperience } = dependencies;
+  if (state.progressionCompletionLevel) {
+    const tier = getTierForLevel(character.identity.level);
+    return `<main class="content progression-content"><div class="screen-title progression-title"><div><h1>Progressão</h1><p>Nível ${character.identity.level} · Tier ${tier}</p></div><button class="sf-action sf-action--secondary sf-action--compact progression-history-button" type="button" data-action="open-progression-history"><span aria-hidden="true">↶</span> Histórico</button></div><section class="progression-completion" role="status" aria-live="polite"><img src="assets/brand/soulforge-symbol.png" alt="" aria-hidden="true" /><div><span>Progressão concluída</span><h2>Nível ${state.progressionCompletionLevel} alcançado</h2><p>Sua ficha foi atualizada.</p></div></section></main>`;
+  }
   const nextLevel = Math.min(character.identity.level + 1, 10);
   const tier = getTierForLevel(nextLevel);
   const needsExperience = requiresTierExperience(character);

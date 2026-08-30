@@ -4,6 +4,18 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.25.1]
+
+### Alterado
+
+- seleção de personagens e distribuição de atributos recebem ajustes de composição para telas compactas;
+- conclusão de uma evolução passa a apresentar um estado final discreto, confirmando o novo nível alcançado.
+
+### Corrigido
+
+- escolhas no fluxo de criação e nos diálogos de progressão passam a atualizar somente a área necessária, reduzindo piscadas e preservando a leitura em iPad;
+- filtros e seleção de cartas na progressão mantêm o painel de escolha estável.
+
 ## [0.25.0]
 
 ### Adicionado

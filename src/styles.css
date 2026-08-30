@@ -341,17 +341,31 @@ textarea:disabled {
 
 .character-gate-heading {
   justify-content: space-between;
+  align-items: center;
   gap: 1rem;
   border-top: 1px solid rgba(244, 234, 219, 0.1);
   padding-top: 1.25rem;
 }
 
-.character-gate-actions {
+.character-gate-intro {
+  display: grid;
+  justify-items: start;
+}
+
+.character-gate-new-action {
+  margin-top: 0.75rem;
+}
+
+.character-gate-utilities {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.55rem;
+}
+
+.character-gate-utilities .sf-action {
+  white-space: nowrap;
 }
 
 .character-gate-heading h1,
@@ -1102,6 +1116,42 @@ textarea:disabled {
   min-height: 1.95em;
   color: var(--color-muted);
   font-size: 0.7rem;
+}
+
+/* A distribuição inicial usa sempre seis pedras e seis atributos. Em telas
+   médias, a composição compacta evita uma rolagem sem esconder qualquer escolha. */
+@media (min-height: 42rem) {
+  .character-creation-modal[data-creation-step="6"] .character-creation-scroll {
+    overflow-y: hidden;
+  }
+
+  .character-creation-modal[data-creation-step="6"] .character-attributes-picker {
+    gap: 0.5rem;
+    padding: 0.65rem 0;
+  }
+
+  .character-creation-modal[data-creation-step="6"] .character-attribute-available {
+    margin: 0.4rem 0 0.55rem;
+  }
+
+  .character-creation-modal[data-creation-step="6"] .character-attribute-token {
+    min-height: 3.85rem;
+    padding-top: 0.45rem;
+  }
+
+  .character-creation-modal[data-creation-step="6"] .character-attribute-card {
+    min-height: 5.95rem;
+  }
+
+  .character-creation-modal[data-creation-step="6"] .character-attribute-slot {
+    width: 4.2rem;
+    height: 3.75rem;
+  }
+
+  .character-creation-modal[data-creation-step="6"] .character-attribute-card small {
+    min-height: 1.75em;
+    font-size: 0.66rem;
+  }
 }
 
 .character-attribute-card:hover,
@@ -4415,6 +4465,44 @@ textarea:disabled {
   gap: 0.75rem;
   border-top: 1px solid rgba(244, 234, 219, 0.1);
   padding-top: 0.75rem;
+}
+
+.progression-completion {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  min-height: min(18rem, 42vh);
+  margin-top: 1rem;
+  border: 1px solid rgba(223, 166, 65, 0.42);
+  border-radius: var(--radius-surface);
+  background: radial-gradient(circle at 50% 45%, rgba(223, 166, 65, 0.1), transparent 44%), rgba(8, 5, 17, 0.32);
+  padding: clamp(1.5rem, 4vw, 3rem);
+  text-align: left;
+}
+
+.progression-completion img {
+  width: clamp(3.8rem, 9vw, 5.4rem);
+  height: auto;
+  filter: drop-shadow(0 0 1.1rem rgba(223, 166, 65, 0.38));
+  animation: progression-symbol-arrival 760ms var(--easing-standard) both;
+}
+
+.progression-completion > div { display: grid; gap: 0.3rem; }
+.progression-completion span { color: var(--color-gold); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.progression-completion h2, .progression-completion p { margin: 0; }
+.progression-completion h2 { color: var(--color-text); font-size: clamp(1.45rem, 3vw, 2.1rem); }
+.progression-completion p { color: var(--color-muted); }
+
+@keyframes progression-symbol-arrival {
+  from { opacity: 0; transform: scale(0.78); }
+  65% { opacity: 1; transform: scale(1.05); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progression-completion img { animation: none; }
 }
 
 .progression-tier {
@@ -8904,4 +8992,14 @@ body.has-modal {
 .confirmation-actions,
 .item-modal-actions {
   min-height: 3rem;
+}
+
+/* A criação reconstroi apenas as escolhas necessárias em cada interação.
+   Não reaplicar a animação de entrada evita que o modal pareça piscar. */
+.modal-backdrop > .character-creation-modal {
+  animation: none;
+}
+
+.modal-backdrop > .character-creation-modal.is-opening {
+  animation: sf-modal-enter var(--motion-emphasis) var(--easing-standard) both;
 }
