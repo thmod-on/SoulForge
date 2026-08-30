@@ -10,6 +10,26 @@ Ao usar conteúdo de Daggerheart, distinguir sempre:
 - Public Game Content disponibilizado no Daggerheart SRD sob a Darrington Press Community Gaming License (DPCGL);
 - conteúdo proibido ou não identificado como Public Game Content.
 
+## Fonte oficial de dados
+
+Enquanto o grupo não dispuser do material físico atualizado, a referência
+primária para pesquisa, cadastro e revisão de dados é o site oficial
+[Daggerheart](https://www.daggerheart.com/). Não usar anúncios de pré-lançamento,
+resumos de terceiros, versões de playtest ou memória de mesa como fonte de
+verdade.
+
+Em caso de divergência, aplicar esta ordem de precedência:
+
+1. errata oficial mais recente, publicada em `daggerheart.com/downloads`;
+2. SRD oficial vigente, para mecânicas disponibilizadas sob a DPCGL;
+3. material oficial final publicado no site, incluindo PDFs, fichas e cartas
+   para impressão;
+4. livro físico ou PDF adquirido, quando não houver correção oficial posterior.
+
+Todo Pack local criado ou revisado deve registrar a data de consulta e a versão
+da fonte oficial. A origem oficial melhora a precisão dos dados, mas não altera
+as limitações de licença, redistribuição e uso privado desta política.
+
 ## Conteúdo permitido e conteúdo proibido
 
 Regras, mecânicas e texto identificado como Public Game Content no SRD podem ser usados somente dentro dos termos vigentes da DPCGL. O livro Core completo não é a fonte de importação do projeto.
@@ -41,7 +61,8 @@ O nome SoulForge continua independente. O termo “Daggerheart” pode ser usado
 
 Antes de adicionar ou publicar conteúdo derivado de Daggerheart:
 
-1. confirmar que a fonte é o SRD vigente ou outro material explicitamente autorizado;
+1. consultar primeiro o site oficial e confirmar que a fonte é o SRD vigente,
+   uma errata oficial ou outro material explicitamente autorizado;
 2. registrar a fonte, versão e data de consulta no manifesto do Pack;
 3. confirmar que não há arte ou marca oficial incluída;
 4. decidir se o Pack é local/privado ou público/autorizado;

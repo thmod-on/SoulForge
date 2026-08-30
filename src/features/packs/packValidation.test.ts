@@ -31,4 +31,14 @@ describe("validação de Packs", () => {
     };
     expect(validatePackBundle({ format: "soulforge-pack-v1", manifest, definitions: [diceFeature] }).definitions).toHaveLength(1);
   });
+
+  it("aceita uma transformação com fonte e metadados de marcador", () => {
+    const transformation = {
+      id: "transformation.test.vampiro", type: "transformation" as const, packId: manifest.id, name: "Vampiro de teste", summary: "Identidade sobrenatural.",
+      benefit: "Pode se alimentar.", drawback: "Sofre sem alimento.", narrativeQuestions: ["Quem o transformou?"],
+      gameMarkers: [{ id: "sangue", kind: "counter", label: "Sangue", initialValue: 0, max: 6 }]
+    };
+    const pack = validatePackBundle({ format: "soulforge-pack-v1", manifest: { ...manifest, source: { name: "Fonte oficial", url: "https://www.daggerheart.com/srd/", version: "2.0", reviewedAt: "2026-08-30" } }, definitions: [transformation] });
+    expect(pack.definitions[0]?.type).toBe("transformation");
+  });
 });

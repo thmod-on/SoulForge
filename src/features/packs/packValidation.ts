@@ -9,9 +9,10 @@ export function validatePackBundle(value: unknown): PackBundle {
     throw new Error("Use um arquivo no formato .soulforge-pack.json.");
   }
   if (!manifest.id || !manifest.name || !manifest.version || !manifest.description) throw new Error("O manifesto do Pack está incompleto.");
+  if (manifest.source !== undefined && (!manifest.source || typeof manifest.source !== "object" || !hasSourceMetadata(manifest.source))) throw new Error("A fonte declarada no manifesto do Pack é inválida.");
   if (!bundle.definitions.length) throw new Error("O Pack não possui Definitions para importar.");
 
-  const knownTypes = new Set(["domain", "card", "item", "class", "subclass", "feature", "ancestry", "community"]);
+  const knownTypes = new Set(["domain", "card", "item", "class", "subclass", "feature", "ancestry", "community", "transformation"]);
   const ids = new Set<string>();
   for (const definition of bundle.definitions) {
     if (!isDefinitionShapeValid(definition, manifest)) throw new Error("Uma Definition é inválida ou não pertence ao Pack informado.");
@@ -61,12 +62,23 @@ export function validatePackBundle(value: unknown): PackBundle {
       throw new Error(`A comunidade “${community.name}” precisa incluir sua Feature de comunidade vinculada.`);
     }
   }
+  for (const transformation of definitions.filter((definition) => definition.type === "transformation")) {
+    if (typeof transformation.benefit !== "string" || !transformation.benefit.trim() || typeof transformation.drawback !== "string" || !transformation.drawback.trim() || !Array.isArray(transformation.narrativeQuestions) || !transformation.narrativeQuestions.length || transformation.narrativeQuestions.some((question) => typeof question !== "string" || !question.trim()) || (transformation.rulesNotes !== undefined && (!Array.isArray(transformation.rulesNotes) || transformation.rulesNotes.some((note) => typeof note !== "string" || !note.trim())))) {
+      throw new Error(`A transformação “${transformation.name}” precisa declarar benefício, desvantagem e perguntas narrativas.`);
+    }
+    if (!isGameMarkerListValid(transformation.gameMarkers)) throw new Error(`A transformação “${transformation.name}” possui marcadores de jogo inválidos.`);
+  }
   return { format: "soulforge-pack-v1", manifest: manifest as PackManifest, definitions };
 
   function isDefinitionShapeValid(definition: unknown, candidateManifest: Partial<PackManifest>): definition is { id: string; name: string; summary: string; packId: string; type: string } {
     if (!definition || typeof definition !== "object") return false;
     const candidate = definition as { type?: string; id?: string; name?: string; summary?: string; packId?: string };
     return Boolean(knownTypes.has(candidate.type ?? "") && candidate.id && candidate.name && candidate.summary && candidate.packId === candidateManifest.id);
+  }
+
+  function hasSourceMetadata(value: object): boolean {
+    const source = value as { name?: unknown; url?: unknown; version?: unknown; reviewedAt?: unknown };
+    return typeof source.name === "string" && Boolean(source.name.trim()) && typeof source.url === "string" && /^https:\/\//.test(source.url) && typeof source.version === "string" && Boolean(source.version.trim()) && typeof source.reviewedAt === "string" && /^\d{4}-\d{2}-\d{2}$/.test(source.reviewedAt);
   }
 
   function isSheetModifierListValid(value: unknown): boolean {

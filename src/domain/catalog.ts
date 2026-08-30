@@ -8,7 +8,8 @@ import type {
   FeatureDefinition,
   ItemDefinition,
   PackManifest,
-  SubclassDefinition
+  SubclassDefinition,
+  TransformationDefinition
 } from "./types";
 
 export type Catalog = {
@@ -22,6 +23,7 @@ export type Catalog = {
   subclasses: SubclassDefinition[];
   features: FeatureDefinition[];
   items: ItemDefinition[];
+  transformations: TransformationDefinition[];
 };
 
 export function createCatalog(packs: PackManifest[], definitions: Definition[]): Catalog {
@@ -35,7 +37,8 @@ export function createCatalog(packs: PackManifest[], definitions: Definition[]):
     communities: definitions.filter((definition): definition is CommunityDefinition => definition.type === "community"),
     subclasses: definitions.filter((definition): definition is SubclassDefinition => definition.type === "subclass"),
     features: definitions.filter((definition): definition is FeatureDefinition => definition.type === "feature"),
-    items: definitions.filter((definition): definition is ItemDefinition => definition.type === "item")
+    items: definitions.filter((definition): definition is ItemDefinition => definition.type === "item"),
+    transformations: definitions.filter((definition): definition is TransformationDefinition => definition.type === "transformation")
   };
 }
 

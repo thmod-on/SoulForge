@@ -21,7 +21,8 @@ import { renderCreationActions, renderCreationProgress, renderCreationTitle } fr
 import { renderCreationAttributesStep, renderCreationClassStep, renderCreationCommunityStep, renderCreationExperiencesStep, renderCreationIdentityStep, renderCreationReviewStep } from "./features/character-creation/renderCreationSteps";
 import { renderCharacterCreationInPlace as renderCharacterCreationSurface } from "./features/character-creation/renderInPlace";
 import { characterCreationAttributes, createEmptyCreationAttributeValues, handleCreationAttributeAllocation } from "./features/character-creation/attributeAllocation";
-import { handleCommunityAction, renderCompendiumCommunitiesManager as renderCompendiumCommunitiesManagerView, renderCompendiumCommunityPreviewModal as renderCompendiumCommunityPreviewModalView, renderCompendiumFourthSpread as renderCompendiumFourthSpreadView, type CommunityFeatureDependencies } from "./features/compendium/communities";
+import { handleCommunityAction, renderCompendiumCommunitiesManager as renderCompendiumCommunitiesManagerView, renderCompendiumCommunityPreviewModal as renderCompendiumCommunityPreviewModalView, type CommunityFeatureDependencies } from "./features/compendium/communities";
+import { handleTransformationAction, renderCompendiumTransformationsManager as renderCompendiumTransformationsManagerView, renderCompendiumTransformationsSpread as renderCompendiumTransformationsSpreadView, type TransformationFeatureDependencies, type TransformationFeatureState } from "./features/compendium/transformations";
 import { validatePackBundle } from "./features/packs/packValidation";
 import { renderCharacterSelection as renderCharacterSelectionView } from "./features/character-selection/renderCharacterSelection";
 import { confirmStagedCharacterImport, downloadCharacterExport, renderCharacterImportModal, stageCharacterImport } from "./features/character-transfer/characterTransfer";
@@ -183,6 +184,7 @@ const state: {
   compendiumAncestrySearch: string;
   compendiumCommunitySearch: string;
   compendiumCommunityPackId: string;
+  transformationState: TransformationFeatureState;
   lastPlayerPage: Page;
   selectedItemId?: string;
   selectedCardId: string;
@@ -295,6 +297,7 @@ const state: {
   compendiumAncestrySearch: "",
   compendiumCommunitySearch: "",
   compendiumCommunityPackId: "todos",
+  transformationState: { compendiumTransformationSearch: "", transformationModalOpen: false },
   lastPlayerPage: "overview",
   selectedCardId: "card.demo.dread-veil",
   progressionStep: "advances",
@@ -584,18 +587,9 @@ function getAncestryFeatureDependencies(): AncestryFeatureDependencies {
   };
 }
 
-function getCommunityFeatureDependencies(): CommunityFeatureDependencies {
-  return {
-    state,
-    catalog,
-    escapeHtml,
-    getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs),
-    saveCustomDefinition,
-    deleteCustomDefinition,
-    refreshCatalog,
-    render
-  };
-}
+function getCommunityFeatureDependencies(): CommunityFeatureDependencies { return { state, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render }; }
+
+function getTransformationFeatureDependencies(): TransformationFeatureDependencies { return { state: state.transformationState, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render }; }
 
 function renderSettings(character: Character): string {
   return renderSettingsPage({
@@ -998,6 +992,7 @@ function renderCompendium(): string {
     return renderCompendiumAncestriesManagerView(getAncestryFeatureDependencies());
   }
   if (state.compendiumView === "communities") return renderCompendiumCommunitiesManagerView({ state, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render });
+  if (state.compendiumView === "transformations") return renderCompendiumTransformationsManagerView(getTransformationFeatureDependencies());
 
   return `
     <main class="content compendium-content compendium-index-content">
@@ -1011,10 +1006,10 @@ function renderCompendium(): string {
         <button class="sf-tab ${state.compendiumSpread === 1 ? "is-active" : ""}" type="button" data-compendium-spread="1" aria-current="${state.compendiumSpread === 1 ? "page" : "false"}">Abertura 1 <span>Dominios | Cartas</span></button>
         <button class="sf-tab ${state.compendiumSpread === 2 ? "is-active" : ""}" type="button" data-compendium-spread="2" aria-current="${state.compendiumSpread === 2 ? "page" : "false"}">Abertura 2 <span>Itens | Classes</span></button>
         <button class="sf-tab ${state.compendiumSpread === 3 ? "is-active" : ""}" type="button" data-compendium-spread="3" aria-current="${state.compendiumSpread === 3 ? "page" : "false"}">Abertura 3 <span>Ancestralidades | Comunidades</span></button>
-        <button class="sf-tab ${state.compendiumSpread === 4 ? "is-active" : ""}" type="button" data-compendium-spread="4" aria-current="${state.compendiumSpread === 4 ? "page" : "false"}">Abertura 4 <span>Condições | Transformações</span></button>
+        <button class="sf-tab ${state.compendiumSpread === 4 ? "is-active" : ""}" type="button" data-compendium-spread="4" aria-current="${state.compendiumSpread === 4 ? "page" : "false"}">Abertura 4 <span>Transformações</span></button>
       </nav>
 
-      ${state.compendiumSpread === 1 ? renderCompendiumFirstSpread() : state.compendiumSpread === 2 ? renderCompendiumSecondSpread() : state.compendiumSpread === 3 ? renderCompendiumThirdSpread() : renderCompendiumFourthSpreadView(renderCompendiumChapterCard)}
+      ${state.compendiumSpread === 1 ? renderCompendiumFirstSpread() : state.compendiumSpread === 2 ? renderCompendiumSecondSpread() : state.compendiumSpread === 3 ? renderCompendiumThirdSpread() : renderCompendiumTransformationsSpreadView(getTransformationFeatureDependencies(), renderCompendiumChapterCard)}
     </main>
   `;
 }
@@ -1135,8 +1130,8 @@ function renderCompendiumThirdSpread(): string {
             summary: "Origens culturais, sociais ou ambientais que concedem uma Feature permanente.",
             count: catalog.communities.length,
             countLabel: "Comunidades cadastradas",
-            primaryAction: "Consultar comunidades",
-            primaryActionId: "manage-compendium-communities",
+            primaryAction: "Nova comunidade",
+            primaryActionId: "new-compendium-community",
             secondaryAction: "Pesquisar e gerenciar",
             secondaryActionId: "manage-compendium-communities",
             details: [
@@ -2141,8 +2136,11 @@ function bindEvents(): void {
       return;
     }
 
+    if (target.closest('[data-action="new-compendium-community"]')) { state.compendiumView = "communities"; state.communityModalOpen = true; state.editingCompendiumCommunityId = undefined; render(); return; }
+    if (target.closest('[data-action="new-compendium-transformation"]')) { state.compendiumView = "transformations"; state.transformationState.transformationModalOpen = true; state.transformationState.editingCompendiumTransformationId = undefined; render(); return; }
     if (handleAncestryAction(target, getAncestryFeatureDependencies())) return;
     if (handleCommunityAction(target, { state, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render })) return;
+    if (handleTransformationAction(target, getTransformationFeatureDependencies())) return;
 
     const attributeAllocation = target.closest<HTMLElement>("[data-character-attribute-allocation]");
     if (attributeAllocation) {
@@ -2253,7 +2251,7 @@ function bindEvents(): void {
       state.editingCompendiumAncestryId = undefined;
       state.deletingCompendiumAncestryId = undefined;
       state.compendiumAncestryPreviewId = undefined;
-      state.compendiumCommunityPreviewId = undefined;
+      state.compendiumCommunityPreviewId = undefined; state.communityModalOpen = false; state.editingCompendiumCommunityId = undefined; state.deletingCompendiumCommunityId = undefined; state.transformationState.transformationModalOpen = false; state.transformationState.editingCompendiumTransformationId = undefined; state.transformationState.deletingCompendiumTransformationId = undefined; state.transformationState.compendiumTransformationPreviewId = undefined;
       state.packImportOpen = false;
       state.pendingPackBundle = undefined;
       state.packImportError = undefined;
@@ -2321,7 +2319,7 @@ function bindEvents(): void {
       state.editingCompendiumAncestryId = undefined;
       state.deletingCompendiumAncestryId = undefined;
       state.compendiumAncestryPreviewId = undefined;
-      state.compendiumCommunityPreviewId = undefined;
+      state.compendiumCommunityPreviewId = undefined; state.communityModalOpen = false; state.editingCompendiumCommunityId = undefined; state.deletingCompendiumCommunityId = undefined; state.transformationState.transformationModalOpen = false; state.transformationState.editingCompendiumTransformationId = undefined; state.transformationState.deletingCompendiumTransformationId = undefined; state.transformationState.compendiumTransformationPreviewId = undefined;
       state.packImportOpen = false;
       state.pendingPackBundle = undefined;
       state.packImportError = undefined;
@@ -2660,6 +2658,7 @@ function bindEvents(): void {
     }
 
     if (target.closest('[data-action="manage-compendium-communities"]')) { state.compendiumView = "communities"; render(); return; }
+    if (target.closest('[data-action="manage-compendium-transformations"]')) { state.compendiumView = "transformations"; render(); return; }
 
     if (target.closest('[data-action="new-compendium-domain"]')) {
       state.domainModalOpen = true;
@@ -3460,6 +3459,8 @@ function bindEvents(): void {
       render();
     }
 
+    if (event.key === "Escape" && (state.ancestryModalOpen || state.deletingCompendiumAncestryId || state.compendiumAncestryPreviewId || state.communityModalOpen || state.deletingCompendiumCommunityId || state.compendiumCommunityPreviewId || state.transformationState.transformationModalOpen || state.transformationState.deletingCompendiumTransformationId || state.transformationState.compendiumTransformationPreviewId)) { state.ancestryModalOpen = false; state.editingCompendiumAncestryId = undefined; state.deletingCompendiumAncestryId = undefined; state.compendiumAncestryPreviewId = undefined; state.communityModalOpen = false; state.editingCompendiumCommunityId = undefined; state.deletingCompendiumCommunityId = undefined; state.compendiumCommunityPreviewId = undefined; state.transformationState.transformationModalOpen = false; state.transformationState.editingCompendiumTransformationId = undefined; state.transformationState.deletingCompendiumTransformationId = undefined; state.transformationState.compendiumTransformationPreviewId = undefined; render(); }
+
     if (event.key === "Escape" && state.activatingStoredCardId) {
       state.activatingStoredCardId = undefined;
       state.cardActivationError = undefined;
@@ -3511,6 +3512,7 @@ function bindEvents(): void {
     }
 
     if (target.matches("[data-compendium-community-search]")) { state.compendiumCommunitySearch = target.value; render({ preserveMainScroll: true }); requestAnimationFrame(() => { const search = document.querySelector<HTMLInputElement>("[data-compendium-community-search]"); search?.focus({ preventScroll: true }); search?.setSelectionRange(search.value.length, search.value.length); }); }
+    if (target.matches("[data-compendium-transformation-search]")) { state.transformationState.compendiumTransformationSearch = target.value; render({ preserveMainScroll: true }); requestAnimationFrame(() => { const search = document.querySelector<HTMLInputElement>("[data-compendium-transformation-search]"); search?.focus({ preventScroll: true }); search?.setSelectionRange(search.value.length, search.value.length); }); }
 
     if (target.matches("[data-character-ancestry-search]")) {
       state.characterCreationAncestrySearch = target.value;

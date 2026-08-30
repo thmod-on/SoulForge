@@ -1,4 +1,4 @@
-export type DefinitionType = "domain" | "card" | "item" | "class" | "subclass" | "feature" | "ancestry" | "community";
+export type DefinitionType = "domain" | "card" | "item" | "class" | "subclass" | "feature" | "ancestry" | "community" | "transformation";
 
 export type ResourceTrack = {
   id: string;
@@ -195,6 +195,7 @@ export type PackManifest = {
   description: string;
   distribution?: "private-local-only" | "shared";
   contentFormat?: string;
+  source?: { name: string; url: string; version: string; reviewedAt: string };
 };
 
 export type PackBundle = {
@@ -294,6 +295,17 @@ export type CommunityDefinition = BaseDefinition & {
   image?: string;
 };
 
+/** Escolha opcional de identidade; a aplicação na ficha será tratada em uma etapa posterior. */
+export type TransformationDefinition = BaseDefinition & {
+  type: "transformation";
+  benefit: string;
+  drawback: string;
+  narrativeQuestions: string[];
+  gameMarkers?: GameMarkerDefinition[];
+  /** Observações mecânicas que não cabem nos controles atuais da ficha. */
+  rulesNotes?: string[];
+};
+
 export type FeatureDefinition = BaseDefinition & {
   type: "feature";
   sourceType: "class" | "subclass" | "ancestry" | "community";
@@ -305,7 +317,7 @@ export type FeatureDefinition = BaseDefinition & {
   activation?: FeatureActivationDefinition;
 };
 
-export type Definition = DomainDefinition | CardDefinition | ItemDefinition | ClassDefinition | SubclassDefinition | AncestryDefinition | CommunityDefinition | FeatureDefinition;
+export type Definition = DomainDefinition | CardDefinition | ItemDefinition | ClassDefinition | SubclassDefinition | AncestryDefinition | CommunityDefinition | TransformationDefinition | FeatureDefinition;
 
 export type InventoryEntry = {
   /** Identificador da pilha no inventário. Ausente em fichas antigas e atribuído na próxima alteração. */
