@@ -589,7 +589,7 @@ function getAncestryFeatureDependencies(): AncestryFeatureDependencies {
 
 function getCommunityFeatureDependencies(): CommunityFeatureDependencies { return { state, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render }; }
 
-function getTransformationFeatureDependencies(): TransformationFeatureDependencies { return { state: state.transformationState, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render }; }
+function getTransformationFeatureDependencies(): TransformationFeatureDependencies { return { state: state.transformationState, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render: () => render({ preserveMainScroll: true }) }; }
 
 function renderSettings(character: Character): string {
   return renderSettingsPage({
@@ -808,10 +808,10 @@ async function applyProgression(): Promise<void> {
 
   const resources = character.resources.map((resource) => {
     if (resource.id === "hp") {
-      return { ...resource, max: resource.max + hpSlots };
+      return { ...resource, baseMax: (resource.baseMax ?? resource.max) + hpSlots, max: resource.max + hpSlots };
     }
     if (resource.id === "stress") {
-      return { ...resource, max: resource.max + stressSlots };
+      return { ...resource, baseMax: (resource.baseMax ?? resource.max) + stressSlots, max: resource.max + stressSlots };
     }
     return resource;
   });
@@ -1490,12 +1490,12 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
     : undefined;
   const previousDocumentScrollTop = options.preserveMainScroll ? window.scrollY : undefined;
   const currentCharacter = state.character;
-
   if (state.characterSelectionOpen && isEditorPage(state.page)) {
     const editorContextCharacter = currentCharacter ?? state.characters[0] ?? demoCharacter;
     const editorScreen = state.page === "compendium" ? renderCompendium() : renderSettings(editorContextCharacter);
     appRoot.innerHTML = `<div class="editor-shell">${renderEditorHeaderView(getPlayerShellDependencies())}${editorScreen}</div>${renderPackImportModal()}${renderCharacterImportModal({ isOpen: state.characterImportOpen, character: state.pendingCharacterImport, error: state.characterImportError, escapeHtml })}${renderRemoveInstalledPackModal()}${renderDomainModalView(getDomainFeatureDependencies())}${renderDeleteDomainModalView(getDomainFeatureDependencies())}${renderCompendiumCardFormModalView(getCardFeatureDependencies())}${renderDeleteCompendiumCardModalView(getCardFeatureDependencies())}${renderCompendiumItemFormModalView(getItemFeatureDependencies())}${renderDeleteCompendiumItemModalView(getItemFeatureDependencies())}${renderCompendiumClassPreviewModalView(getClassFeatureDependencies())}${renderCompendiumClassFormModalView(getClassFeatureDependencies())}${renderDeleteCompendiumClassModalView(getClassFeatureDependencies())}${renderCompendiumAncestryFormModalView(getAncestryFeatureDependencies())}${renderDeleteCompendiumAncestryModalView(getAncestryFeatureDependencies())}`;
     document.body.classList.toggle("has-modal", state.packImportOpen || state.characterImportOpen || Boolean(state.deletingInstalledPackId) || state.domainModalOpen || Boolean(state.deletingDomainId) || state.cardModalOpen || Boolean(state.deletingCompendiumCardId) || state.itemDefinitionModalOpen || Boolean(state.deletingCompendiumItemId) || Boolean(state.compendiumItemPreviewId) || state.classModalOpen || Boolean(state.deletingCompendiumClassId) || Boolean(state.compendiumClassPreviewId) || state.ancestryModalOpen || Boolean(state.deletingCompendiumAncestryId) || Boolean(state.compendiumAncestryPreviewId) || Boolean(state.compendiumCommunityPreviewId));
+    if (previousContentScrollTop !== undefined) requestAnimationFrame(() => { const content = appRoot.querySelector<HTMLElement>(".content"); if (content) content.scrollTop = previousContentScrollTop; });
     return;
   }
 
@@ -2267,7 +2267,7 @@ function bindEvents(): void {
       state.restDialogKind = undefined;
       state.restChoices = [];
       state.restError = undefined;
-      render();
+      render({ preserveMainScroll: true });
       return;
     }
 
@@ -2335,7 +2335,7 @@ function bindEvents(): void {
       state.restDialogKind = undefined;
       state.restChoices = [];
       state.restError = undefined;
-      render();
+      render({ preserveMainScroll: true });
       return;
     }
 
@@ -3459,7 +3459,7 @@ function bindEvents(): void {
       render();
     }
 
-    if (event.key === "Escape" && (state.ancestryModalOpen || state.deletingCompendiumAncestryId || state.compendiumAncestryPreviewId || state.communityModalOpen || state.deletingCompendiumCommunityId || state.compendiumCommunityPreviewId || state.transformationState.transformationModalOpen || state.transformationState.deletingCompendiumTransformationId || state.transformationState.compendiumTransformationPreviewId)) { state.ancestryModalOpen = false; state.editingCompendiumAncestryId = undefined; state.deletingCompendiumAncestryId = undefined; state.compendiumAncestryPreviewId = undefined; state.communityModalOpen = false; state.editingCompendiumCommunityId = undefined; state.deletingCompendiumCommunityId = undefined; state.compendiumCommunityPreviewId = undefined; state.transformationState.transformationModalOpen = false; state.transformationState.editingCompendiumTransformationId = undefined; state.transformationState.deletingCompendiumTransformationId = undefined; state.transformationState.compendiumTransformationPreviewId = undefined; render(); }
+    if (event.key === "Escape" && (state.ancestryModalOpen || state.deletingCompendiumAncestryId || state.compendiumAncestryPreviewId || state.communityModalOpen || state.deletingCompendiumCommunityId || state.compendiumCommunityPreviewId || state.transformationState.transformationModalOpen || state.transformationState.deletingCompendiumTransformationId || state.transformationState.compendiumTransformationPreviewId)) { state.ancestryModalOpen = false; state.editingCompendiumAncestryId = undefined; state.deletingCompendiumAncestryId = undefined; state.compendiumAncestryPreviewId = undefined; state.communityModalOpen = false; state.editingCompendiumCommunityId = undefined; state.deletingCompendiumCommunityId = undefined; state.compendiumCommunityPreviewId = undefined; state.transformationState.transformationModalOpen = false; state.transformationState.editingCompendiumTransformationId = undefined; state.transformationState.deletingCompendiumTransformationId = undefined; state.transformationState.compendiumTransformationPreviewId = undefined; render({ preserveMainScroll: true }); }
 
     if (event.key === "Escape" && state.activatingStoredCardId) {
       state.activatingStoredCardId = undefined;

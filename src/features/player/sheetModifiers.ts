@@ -13,7 +13,7 @@ export function synchronizeCharacterSheetModifiers(character: Character, catalog
   const resourceBonuses = getResourceBonuses(modifiers);
   const defense = getModifiedDefense(character, modifiers);
   const resources = character.resources.map((resource) => {
-    const baseMax = resource.baseMax ?? resource.max;
+    const baseMax = getProgressionResourceBaseMax(character, catalog, resource.id, resource.baseMax ?? resource.max);
     const max = Math.max(0, baseMax + (resourceBonuses.get(resource.id) ?? 0));
     return resource.baseMax === baseMax && resource.max === max && resource.value <= max
       ? resource
@@ -25,6 +25,14 @@ export function synchronizeCharacterSheetModifiers(character: Character, catalog
   return resourcesChanged || defenseChanged
     ? { ...character, resources, defense, baseDefense: character.baseDefense ?? character.defense }
     : character;
+}
+
+function getProgressionResourceBaseMax(character: Character, catalog: Catalog, resourceId: string, fallback: number): number {
+  const selections = character.progression?.advancementSelections ?? [];
+  const advances = selections.filter((selection) => selection.kind === resourceId).length;
+  if (!advances) return fallback;
+  if (resourceId === "hp") return (catalog.classes.find((entry) => entry.id === character.identity.primaryClassId)?.startingHitPoints ?? fallback) + advances;
+  return resourceId === "stress" ? 6 + advances : fallback;
 }
 
 export function getActiveSheetModifiers(character: Character, catalog: Catalog): CharacterSheetModifier[] {

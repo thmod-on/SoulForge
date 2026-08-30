@@ -63,7 +63,7 @@ export function validatePackBundle(value: unknown): PackBundle {
     }
   }
   for (const transformation of definitions.filter((definition) => definition.type === "transformation")) {
-    if (typeof transformation.benefit !== "string" || !transformation.benefit.trim() || typeof transformation.drawback !== "string" || !transformation.drawback.trim() || !Array.isArray(transformation.narrativeQuestions) || !transformation.narrativeQuestions.length || transformation.narrativeQuestions.some((question) => typeof question !== "string" || !question.trim()) || (transformation.rulesNotes !== undefined && (!Array.isArray(transformation.rulesNotes) || transformation.rulesNotes.some((note) => typeof note !== "string" || !note.trim())))) {
+    if (typeof transformation.benefit !== "string" || !transformation.benefit.trim() || typeof transformation.drawback !== "string" || !transformation.drawback.trim() || !Array.isArray(transformation.narrativeQuestions) || !transformation.narrativeQuestions.length || transformation.narrativeQuestions.some((question) => typeof question !== "string" || !question.trim()) || (transformation.image !== undefined && (typeof transformation.image !== "string" || !transformation.image.trim())) || (transformation.rulesNotes !== undefined && (!Array.isArray(transformation.rulesNotes) || transformation.rulesNotes.some((note) => typeof note !== "string" || !note.trim())))) {
       throw new Error(`A transformação “${transformation.name}” precisa declarar benefício, desvantagem e perguntas narrativas.`);
     }
     if (!isGameMarkerListValid(transformation.gameMarkers)) throw new Error(`A transformação “${transformation.name}” possui marcadores de jogo inválidos.`);

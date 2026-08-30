@@ -298,6 +298,8 @@ export type CommunityDefinition = BaseDefinition & {
 /** Escolha opcional de identidade; a aplicação na ficha será tratada em uma etapa posterior. */
 export type TransformationDefinition = BaseDefinition & {
   type: "transformation";
+  /** Ilustração opcional, normalmente incorporada ao pack como data URL. */
+  image?: string;
   benefit: string;
   drawback: string;
   narrativeQuestions: string[];
