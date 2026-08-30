@@ -1,4 +1,5 @@
 import { baseCatalog } from "./content/installedPacks";
+import packageJson from "../package.json";
 import { syncScrollAffordances } from "./app/scrollAffordance";
 import { readLocalImage } from "./app/media";
 import { getSpellcastAttributeId } from "./content/spellcastAttributes";
@@ -142,7 +143,6 @@ import {
 import type { CompendiumSpread, CompendiumView, InventoryFilter, Page, ProgressionDraftChoice, ProgressionFlowStep, ProgressionMulticlassDraft, ProgressionPicker, ProgressionTierNumber, SettingsSection } from "./app/types";
 import { editorNavigation as sideNavItems, isEditorPage, playerNavigation as topNavItems } from "./app/navigation";
 import "./styles.css";
-
 function getAppRoot(): HTMLDivElement {
   const element = document.querySelector<HTMLDivElement>("#app");
 
@@ -347,7 +347,7 @@ const state: {
   }
 };
 
-const appVersion = "0.25.1";
+const appVersion = packageJson.version;
 
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
