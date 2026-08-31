@@ -20,19 +20,19 @@ describe("getEffectiveDefense", () => {
     expect(getEffectiveDefense(character, (id) => id === armor.id ? armor : undefined)).toEqual({ evasion: 9, armor: 2, minor: 7, major: 13 });
   });
 
-  it("inclui o nível nos limiares mesmo sem equipamento", () => {
+  it("usa nível e o dobro do nível nos limiares quando não há Armadura", () => {
     const levelFourCharacter = { ...character, identity: { ...character.identity, level: 4 }, inventory: { ...character.inventory, entries: [] } };
-    expect(getEffectiveDefense(levelFourCharacter, () => undefined)).toEqual({ evasion: 10, armor: 0, minor: 9, major: 14 });
+    expect(getEffectiveDefense(levelFourCharacter, () => undefined)).toEqual({ evasion: 10, armor: 0, minor: 4, major: 8 });
   });
 
   it("sincroniza os slots de Armadura com todos os itens equipados que concedem Armadura", () => {
     const characterWithArmorResource: Character = {
       ...character,
-      resources: [{ id: "armor-slots", label: "Armadura", value: 5, max: 6, tone: "focus" }],
+      resources: [{ id: "armor-slots", label: "Armadura", value: 0, max: 6, tone: "focus" }],
       inventory: { ...character.inventory, entries: [...character.inventory.entries, { definitionId: "item.shield", quantity: 1, compartmentId: "equipped" }] }
     };
     const synchronized = synchronizeArmorResource(characterWithArmorResource, (id) => id === armor.id ? armor : id === shield.id ? shield : undefined);
 
-    expect(synchronized.resources[0]).toMatchObject({ value: 3, max: 3 });
+    expect(synchronized.resources[0]).toMatchObject({ value: 0, max: 3 });
   });
 });

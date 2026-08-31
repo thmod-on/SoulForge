@@ -30,7 +30,7 @@ export async function activateFeatureEffect(featureId: string | undefined, deps:
 
   for (const [resourceId, amount] of resourceCosts) {
     const resource = synchronizedCharacter.resources.find((entry) => entry.id === resourceId);
-    if (!resource || resource.value < amount) return showError("Não há recurso suficiente para ativar esta Feature.", deps);
+    if (!resource || resource.value + amount > resource.max) return showError("Não há espaços disponíveis neste recurso para ativar esta Feature.", deps);
   }
   for (const [markerKey, amount] of markerCosts) {
     const marker = synchronizedCharacter.gameMarkers?.find((entry) => entry.key === markerKey && entry.kind === "counter");
@@ -39,7 +39,7 @@ export async function activateFeatureEffect(featureId: string | undefined, deps:
 
   const updatedCharacter: Character = {
     ...synchronizedCharacter,
-    resources: synchronizedCharacter.resources.map((resource) => resourceCosts.has(resource.id) ? { ...resource, value: resource.value - (resourceCosts.get(resource.id) ?? 0) } : resource),
+    resources: synchronizedCharacter.resources.map((resource) => resourceCosts.has(resource.id) ? { ...resource, value: resource.value + (resourceCosts.get(resource.id) ?? 0) } : resource),
     gameMarkers: synchronizedCharacter.gameMarkers?.map((marker) => {
       if (marker.kind !== "counter" || !markerCosts.has(marker.key)) return marker;
       return { ...marker, value: marker.value - (markerCosts.get(marker.key) ?? 0) };

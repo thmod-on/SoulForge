@@ -38,17 +38,17 @@ export const demoCharacter: Character = {
   },
   proficiency: 1,
   progression: {
-    demoBaselineVersion: 4,
+    demoBaselineVersion: 5,
     attributeMarks: {},
     acquiredSubclassTiers: ["foundation"],
     advancementSelections: [],
     history: []
   },
   resources: [
-    { id: "hp", label: "PV", value: 28, max: 28, tone: "hp" },
-    { id: "stress", label: "Estresse", value: 2, max: 5, tone: "stress" },
-    { id: "armor-slots", label: "Armadura", value: 3, max: 6, tone: "focus" },
-    { id: "hope", label: "Esperanca", value: 3, max: 5, tone: "hope" },
+    { id: "hp", label: "PV", value: 0, max: 28, tone: "hp" },
+    { id: "stress", label: "Estresse", value: 0, max: 5, tone: "stress" },
+    { id: "armor-slots", label: "Armadura", value: 0, max: 6, tone: "focus" },
+    { id: "hope", label: "Esperanca", value: 0, max: 5, tone: "hope" },
     { id: "shadow", label: "Essencia Sombria", value: 2, max: 4, tone: "shadow" },
     { id: "focus", label: "Determinacao", value: 1, max: 3, tone: "focus" }
   ],

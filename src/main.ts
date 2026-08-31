@@ -1858,10 +1858,10 @@ async function createCharacter(): Promise<void> {
     proficiency: 1,
     progression: { attributeMarks: {}, acquiredSubclassTiers: ["foundation"], advancementSelections: [], history: [] },
     resources: [
-      { id: "hp", label: "PV", value: hp, max: hp, tone: "hp" },
+      { id: "hp", label: "PV", value: 0, max: hp, tone: "hp" },
       { id: "stress", label: "Estresse", value: 0, max: 6, tone: "stress" },
       { id: "armor-slots", label: "Armadura", value: 0, max: 0, tone: "focus" },
-      { id: "hope", label: "Esperanca", value: 2, max: 6, tone: "hope" }
+      { id: "hope", label: "Esperanca", value: 0, max: 6, tone: "hope" }
     ],
     skills: subclassSkills.length ? subclassSkills : fallbackSkills,
     experiences: startingExperiences.map((experience) => ({ id: `experience.local.${crypto.randomUUID()}`, name: experience.name, value: 2, description: experience.description || undefined })),

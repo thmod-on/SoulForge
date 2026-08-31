@@ -2,15 +2,17 @@ import type { Character, Defense, ItemDefinition } from "../../domain/types";
 
 /** Calcula os valores exibidos na ficha sem alterar a defesa-base persistida. */
 export function getEffectiveDefense(character: Character, findItem: (id: string) => ItemDefinition | undefined, activeFeatureModifiers: Partial<Defense> = {}): Defense {
-  // Os limiares acompanham o nível atual do personagem e recebem, depois,
-  // quaisquer bônus ou penalidades declarados nos itens equipados.
+  const equippedItems = character.inventory.entries
+    .filter((entry) => (entry.compartmentId ?? (entry.equipped ? "equipped" : "backpack")) === "equipped");
+  const hasArmor = equippedItems.some((entry) => (findItem(entry.definitionId)?.combatModifiers?.armor ?? 0) * entry.quantity > 0);
+  // Sem Armadura, os limiares básicos são nível e o dobro do nível. Com
+  // Armadura, preservamos a base da ficha, o nível e os bônus equipados.
   const baseDefense: Defense = {
     ...character.defense,
-    minor: character.defense.minor + character.identity.level,
-    major: character.defense.major + character.identity.level
+    minor: hasArmor ? character.defense.minor + character.identity.level : character.identity.level,
+    major: hasArmor ? character.defense.major + character.identity.level : character.identity.level * 2
   };
-  const defenseWithItems = character.inventory.entries
-    .filter((entry) => (entry.compartmentId ?? (entry.equipped ? "equipped" : "backpack")) === "equipped")
+  const defenseWithItems = equippedItems
     .reduce<Defense>((defense, entry) => {
       const modifiers = findItem(entry.definitionId)?.combatModifiers;
       return modifiers
@@ -45,11 +47,10 @@ export function synchronizeArmorResource(character: Character, findItem: (id: st
 
   const current = character.resources[resourceIndex];
   const previousBaseMax = current.baseMax ?? current.max;
-  // Uma nova quantidade de slots representa uma armadura diferente (ou a
-  // remoção dela); nesse caso, a trilha inicia com todos os slots disponíveis.
-  // Se a mesma armadura continuar equipada, marcas já usadas são preservadas.
+  // A trilha registra slots marcados. Ao equipar ou trocar itens, preservamos
+  // apenas as marcas que ainda cabem na nova quantidade de slots.
   const effectBonus = Math.max(0, current.max - previousBaseMax);
-  const value = previousBaseMax === armorSlots ? Math.min(current.value, armorSlots + effectBonus) : armorSlots + effectBonus;
+  const value = Math.min(current.value, armorSlots + effectBonus);
   if (current.label === "Armadura" && current.baseMax === armorSlots && current.value === value) return character;
 
   return {
