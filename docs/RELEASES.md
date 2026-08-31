@@ -15,19 +15,21 @@ Enquanto o projeto estiver antes da versão `1.0.0`, mudanças ainda experimenta
 Em uma release, atualizar:
 
 - `package.json`;
-- a constante de versão exibida pela interface;
 - `CHANGELOG.md`.
+
+A interface lê a versão diretamente de `package.json`; não deve existir uma segunda constante de versão no código.
 
 ## Checklist de release
 
 1. revisar o escopo e o número da versão;
 2. atualizar a versão e o changelog;
-3. executar `pnpm run build`;
-4. executar `pnpm run test`;
+3. executar `pnpm run check` — a checagem de release falha se alterações funcionais em `src/` ou `packs/` não atualizarem versão e changelog;
+4. executar `pnpm run build`;
 5. validar manualmente o fluxo alterado em resolução de iPad e desktop quando aplicável;
 6. criar um commit com resumo claro;
-7. enviar para `main`;
-8. conferir a execução do GitHub Actions e a publicação no GitHub Pages.
+7. executar novamente `pnpm run check` já com o commit preparado;
+8. enviar para `main`;
+9. conferir a execução do GitHub Actions e a publicação no GitHub Pages.
 
 ## Publicação
 

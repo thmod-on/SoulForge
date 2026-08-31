@@ -1,6 +1,6 @@
 {
   "name": "soulforge",
-  "version": "0.25.2",
+  "version": "0.26.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.9.0",
@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "check:architecture": "node scripts/check-architecture.mjs",
-    "check": "pnpm run check:architecture && tsc --noEmit && vitest run"
+    "check:release": "node scripts/check-release.mjs",
+    "check": "pnpm run check:release && pnpm run check:architecture && tsc --noEmit && vitest run"
   },
   "dependencies": {
     "vite-plugin-pwa": "^0.21.1"

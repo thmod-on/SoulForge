@@ -4,6 +4,23 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.26.0]
+
+### Adicionado
+
+- catálogo de Transformações, com conteúdo local privado, detalhes completos e ilustrações originais incorporadas ao Pack;
+- movimento de downtime Preparação em grupo, que recupera 2 Esperanças.
+
+### Alterado
+
+- PV, Estresse, Armadura e Esperança passam a registrar marcas: novas fichas começam em `0/x`, custos aumentam a marcação e recuperações a reduzem;
+- personagens sem Armadura usam limiar menor igual ao nível e limiar maior igual ao dobro do nível.
+
+### Corrigido
+
+- detalhes de Transformações preservam a posição de rolagem do Compendium;
+- sincronização de máximos de PV e Estresse considera corretamente os avanços já escolhidos e os bônus de ancestralidade.
+
 ## [0.25.1]
 
 ### Alterado
