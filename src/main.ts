@@ -22,7 +22,7 @@ import { renderCreationActions, renderCreationProgress, renderCreationTitle } fr
 import { renderCreationAttributesStep, renderCreationClassStep, renderCreationCommunityStep, renderCreationExperiencesStep, renderCreationIdentityStep, renderCreationReviewStep } from "./features/character-creation/renderCreationSteps";
 import { renderCharacterCreationInPlace as renderCharacterCreationSurface } from "./features/character-creation/renderInPlace";
 import { characterCreationAttributes, createEmptyCreationAttributeValues, handleCreationAttributeAllocation } from "./features/character-creation/attributeAllocation";
-import { handleCommunityAction, renderCompendiumCommunitiesManager as renderCompendiumCommunitiesManagerView, renderCompendiumCommunityPreviewModal as renderCompendiumCommunityPreviewModalView, type CommunityFeatureDependencies } from "./features/compendium/communities";
+import { handleCommunityAction, renderCompendiumCommunitiesManager as renderCompendiumCommunitiesManagerView } from "./features/compendium/communities";
 import { handleTransformationAction, renderCompendiumTransformationsManager as renderCompendiumTransformationsManagerView, renderCompendiumTransformationsSpread as renderCompendiumTransformationsSpreadView, type TransformationFeatureDependencies, type TransformationFeatureState } from "./features/compendium/transformations";
 import { validatePackBundle } from "./features/packs/packValidation";
 import { renderCharacterSelection as renderCharacterSelectionView } from "./features/character-selection/renderCharacterSelection";
@@ -587,8 +587,6 @@ function getAncestryFeatureDependencies(): AncestryFeatureDependencies {
   };
 }
 
-function getCommunityFeatureDependencies(): CommunityFeatureDependencies { return { state, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render }; }
-
 function getTransformationFeatureDependencies(): TransformationFeatureDependencies { return { state: state.transformationState, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render: () => render({ preserveMainScroll: true }) }; }
 
 function renderSettings(character: Character): string {
@@ -1003,10 +1001,10 @@ function renderCompendium(): string {
       </div>
 
       <nav class="compendium-bookmarks" aria-label="Aberturas do Compendium">
-        <button class="sf-tab ${state.compendiumSpread === 1 ? "is-active" : ""}" type="button" data-compendium-spread="1" aria-current="${state.compendiumSpread === 1 ? "page" : "false"}">Abertura 1 <span>Dominios | Cartas</span></button>
-        <button class="sf-tab ${state.compendiumSpread === 2 ? "is-active" : ""}" type="button" data-compendium-spread="2" aria-current="${state.compendiumSpread === 2 ? "page" : "false"}">Abertura 2 <span>Itens | Classes</span></button>
-        <button class="sf-tab ${state.compendiumSpread === 3 ? "is-active" : ""}" type="button" data-compendium-spread="3" aria-current="${state.compendiumSpread === 3 ? "page" : "false"}">Abertura 3 <span>Ancestralidades | Comunidades</span></button>
-        <button class="sf-tab ${state.compendiumSpread === 4 ? "is-active" : ""}" type="button" data-compendium-spread="4" aria-current="${state.compendiumSpread === 4 ? "page" : "false"}">Abertura 4 <span>Transformações</span></button>
+        <button class="sf-tab ${state.compendiumSpread === 1 ? "is-active" : ""}" type="button" data-compendium-spread="1" aria-current="${state.compendiumSpread === 1 ? "page" : "false"}">Capítulo 1 <span>Dominios | Cartas</span></button>
+        <button class="sf-tab ${state.compendiumSpread === 2 ? "is-active" : ""}" type="button" data-compendium-spread="2" aria-current="${state.compendiumSpread === 2 ? "page" : "false"}">Capítulo 2 <span>Itens | Classes</span></button>
+        <button class="sf-tab ${state.compendiumSpread === 3 ? "is-active" : ""}" type="button" data-compendium-spread="3" aria-current="${state.compendiumSpread === 3 ? "page" : "false"}">Capítulo 3 <span>Ancestralidades | Comunidades</span></button>
+        <button class="sf-tab ${state.compendiumSpread === 4 ? "is-active" : ""}" type="button" data-compendium-spread="4" aria-current="${state.compendiumSpread === 4 ? "page" : "false"}">Capítulo 4 <span>Transformações</span></button>
       </nav>
 
       ${state.compendiumSpread === 1 ? renderCompendiumFirstSpread() : state.compendiumSpread === 2 ? renderCompendiumSecondSpread() : state.compendiumSpread === 3 ? renderCompendiumThirdSpread() : renderCompendiumTransformationsSpreadView(getTransformationFeatureDependencies(), renderCompendiumChapterCard)}
@@ -1493,8 +1491,8 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
   if (state.characterSelectionOpen && isEditorPage(state.page)) {
     const editorContextCharacter = currentCharacter ?? state.characters[0] ?? demoCharacter;
     const editorScreen = state.page === "compendium" ? renderCompendium() : renderSettings(editorContextCharacter);
-    appRoot.innerHTML = `<div class="editor-shell">${renderEditorHeaderView(getPlayerShellDependencies())}${editorScreen}</div>${renderPackImportModal()}${renderCharacterImportModal({ isOpen: state.characterImportOpen, character: state.pendingCharacterImport, error: state.characterImportError, escapeHtml })}${renderRemoveInstalledPackModal()}${renderDomainModalView(getDomainFeatureDependencies())}${renderDeleteDomainModalView(getDomainFeatureDependencies())}${renderCompendiumCardFormModalView(getCardFeatureDependencies())}${renderDeleteCompendiumCardModalView(getCardFeatureDependencies())}${renderCompendiumItemFormModalView(getItemFeatureDependencies())}${renderDeleteCompendiumItemModalView(getItemFeatureDependencies())}${renderCompendiumClassPreviewModalView(getClassFeatureDependencies())}${renderCompendiumClassFormModalView(getClassFeatureDependencies())}${renderDeleteCompendiumClassModalView(getClassFeatureDependencies())}${renderCompendiumAncestryFormModalView(getAncestryFeatureDependencies())}${renderDeleteCompendiumAncestryModalView(getAncestryFeatureDependencies())}`;
-    document.body.classList.toggle("has-modal", state.packImportOpen || state.characterImportOpen || Boolean(state.deletingInstalledPackId) || state.domainModalOpen || Boolean(state.deletingDomainId) || state.cardModalOpen || Boolean(state.deletingCompendiumCardId) || state.itemDefinitionModalOpen || Boolean(state.deletingCompendiumItemId) || Boolean(state.compendiumItemPreviewId) || state.classModalOpen || Boolean(state.deletingCompendiumClassId) || Boolean(state.compendiumClassPreviewId) || state.ancestryModalOpen || Boolean(state.deletingCompendiumAncestryId) || Boolean(state.compendiumAncestryPreviewId) || Boolean(state.compendiumCommunityPreviewId));
+    appRoot.innerHTML = `<div class="editor-shell">${renderEditorHeaderView(getPlayerShellDependencies())}${editorScreen}</div>${renderPackImportModal()}${renderCharacterImportModal({ isOpen: state.characterImportOpen, character: state.pendingCharacterImport, error: state.characterImportError, escapeHtml })}${renderRemoveInstalledPackModal()}${renderCardModalView(state.modalCardId, getCardFeatureDependencies())}${renderDomainModalView(getDomainFeatureDependencies())}${renderDeleteDomainModalView(getDomainFeatureDependencies())}${renderCompendiumCardFormModalView(getCardFeatureDependencies())}${renderDeleteCompendiumCardModalView(getCardFeatureDependencies())}${renderCompendiumItemFormModalView(getItemFeatureDependencies())}${renderDeleteCompendiumItemModalView(getItemFeatureDependencies())}${renderCompendiumItemPreviewModalView(getItemFeatureDependencies())}${renderCompendiumClassPreviewModalView(getClassFeatureDependencies())}${renderCompendiumClassFormModalView(getClassFeatureDependencies())}${renderDeleteCompendiumClassModalView(getClassFeatureDependencies())}${renderCompendiumAncestryFormModalView(getAncestryFeatureDependencies())}${renderDeleteCompendiumAncestryModalView(getAncestryFeatureDependencies())}`;
+    document.body.classList.toggle("has-modal", state.packImportOpen || state.characterImportOpen || Boolean(state.deletingInstalledPackId) || Boolean(state.modalCardId) || state.domainModalOpen || Boolean(state.deletingDomainId) || state.cardModalOpen || Boolean(state.deletingCompendiumCardId) || state.itemDefinitionModalOpen || Boolean(state.deletingCompendiumItemId) || Boolean(state.compendiumItemPreviewId) || state.classModalOpen || Boolean(state.deletingCompendiumClassId) || Boolean(state.compendiumClassPreviewId) || state.ancestryModalOpen || Boolean(state.deletingCompendiumAncestryId) || Boolean(state.compendiumAncestryPreviewId) || Boolean(state.compendiumCommunityPreviewId) || state.transformationState.transformationModalOpen || Boolean(state.transformationState.deletingCompendiumTransformationId) || Boolean(state.transformationState.compendiumTransformationPreviewId));
     if (previousContentScrollTop !== undefined) requestAnimationFrame(() => { const content = appRoot.querySelector<HTMLElement>(".content"); if (content) content.scrollTop = previousContentScrollTop; });
     return;
   }
@@ -1601,7 +1599,6 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
       activeFeatureIds: new Set(state.character ? getActiveFeatureEffects(state.character, catalog).map((effect) => effect.feature.id) : []),
       featureActivationError: state.featureActivationError
     })}
-    ${renderCompendiumCommunityPreviewModalView(getCommunityFeatureDependencies())}
     ${renderGameMarkerDieDialog()}
     ${renderRestModalView(character, state.restDialogKind, state.restChoices, state.restError, { escapeHtml })}
     ${renderPackImportModal()}

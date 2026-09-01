@@ -2083,11 +2083,12 @@ textarea:disabled {
 }
 
 .damage-threshold-band {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 0.86fr);
-  align-items: stretch;
-  gap: 0.22rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
   margin-top: 0.22rem;
+  white-space: nowrap;
 }
 
 .damage-threshold-band > i {
@@ -2098,23 +2099,14 @@ textarea:disabled {
   font-style: normal;
 }
 
-.damage-threshold {
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 0.22rem;
-  min-width: 0;
-  min-height: 1.8rem;
-}
-
-.damage-threshold b {
+.damage-threshold-label {
   color: var(--color-text);
   font-size: 0.53rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
-.damage-threshold strong {
+.damage-threshold-value {
   display: grid;
   place-items: center;
   min-width: 1.55rem;
@@ -2128,20 +2120,15 @@ textarea:disabled {
   line-height: 1;
 }
 
-.damage-threshold-minor strong {
+.damage-threshold-minor {
   border-color: rgba(117, 228, 130, 0.62);
 }
 
-.damage-threshold-major strong {
+.damage-threshold-major {
   border-color: rgba(226, 145, 70, 0.74);
 }
 
 .damage-threshold-severe {
-  align-items: center;
-  justify-content: center;
-}
-
-.damage-threshold-severe b {
   color: #f2919d;
 }
 
@@ -5826,6 +5813,59 @@ body:has(.modal-backdrop) {
 .trait-list span {
   border: 1px solid rgba(255, 255, 255, 0.12);
   padding: 0.4rem 0.55rem;
+}
+
+.item-weapon-profile {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.7rem 1rem;
+  align-items: stretch;
+  border-top: 1px solid rgba(244, 234, 219, 0.13);
+  border-bottom: 1px solid rgba(244, 234, 219, 0.08);
+  padding: 0.85rem 0;
+}
+
+.item-weapon-profile-heading {
+  display: grid;
+  align-content: center;
+  gap: 0.2rem;
+  min-width: 6.7rem;
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.item-weapon-profile-heading small {
+  color: var(--color-gold);
+  font-size: 0.62rem;
+  letter-spacing: 0.03em;
+}
+
+.item-weapon-damage {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.item-weapon-damage > span,
+.item-weapon-damage small {
+  color: var(--color-muted);
+  font-size: 0.72rem;
+}
+
+.item-weapon-damage strong {
+  color: var(--color-gold);
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.item-weapon-details {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
 }
 
 .item-quantity-management {

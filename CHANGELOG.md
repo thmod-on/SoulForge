@@ -4,6 +4,19 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.26.1]
+
+### Alterado
+
+- visão geral da ficha prioriza as Cartas ativas antes das Features de subclasse; limiares de dano passam a destacar cada valor em sua sequência de severidade;
+- detalhes de armas exibem dano, tipo de dano, atributo de ataque, alcance e empunhadura tanto no Compendium quanto antes de adicionar o item ao inventário;
+- abas do Compendium passam a usar a nomenclatura de capítulos.
+
+### Corrigido
+
+- detalhes de Itens e Cartas abrem corretamente quando o Compendium é acessado pelo seletor de personagens, sem reaparecer ao entrar em uma ficha;
+- novas fichas preservam PV, Estresse, Armadura e Esperança sem marcas iniciais, com cobertura automatizada para bônus de ancestralidade.
+
 ## [0.26.0]
 
 ### Adicionado

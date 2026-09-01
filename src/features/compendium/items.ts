@@ -55,7 +55,7 @@ export function renderCompendiumItemPreviewModal(dependencies: ItemFeatureDepend
   const { state, catalog, itemFilterLabels, escapeHtml, renderItemVisual } = dependencies;
   const item = state.compendiumItemPreviewId ? catalog.items.find((entry) => entry.id === state.compendiumItemPreviewId) : undefined;
   if (!item) return "";
-  return `<div class="modal-backdrop" data-modal-backdrop><section class="item-modal compendium-item-preview" role="dialog" aria-modal="true" aria-labelledby="compendium-item-preview-title"><button class="modal-close" data-modal-close aria-label="Fechar item">x</button><div class="item-modal-art">${renderItemVisual(item, "detail")}</div><div class="item-modal-body"><span class="resource-modal-label">${itemFilterLabels[item.category]}</span><h2 id="compendium-item-preview-title">${escapeHtml(item.name)}</h2><p>${escapeHtml(item.summary)}</p><dl class="detail-list item-modal-details"><div><dt>Tier</dt><dd>${item.tier ?? "-"}</dd></div><div><dt>Valor</dt><dd>${item.value ?? "-"}</dd></div><div><dt>Peso</dt><dd>${item.weight}</dd></div></dl><div class="trait-list">${(item.traits ?? []).map((trait) => `<span>${escapeHtml(trait)}</span>`).join("")}</div>${renderCombatModifiers(item)}</div></section></div>`;
+  return `<div class="modal-backdrop" data-modal-backdrop><section class="item-modal compendium-item-preview" role="dialog" aria-modal="true" aria-labelledby="compendium-item-preview-title"><button class="modal-close" data-modal-close aria-label="Fechar item">x</button><div class="item-modal-art">${renderItemVisual(item, "detail")}</div><div class="item-modal-body"><span class="resource-modal-label">${itemFilterLabels[item.category]}</span><h2 id="compendium-item-preview-title">${escapeHtml(item.name)}</h2><p>${escapeHtml(item.summary)}</p><dl class="detail-list item-modal-details"><div><dt>Tier</dt><dd>${item.tier ?? "-"}</dd></div><div><dt>Valor</dt><dd>${item.value ?? "-"}</dd></div><div><dt>Peso</dt><dd>${item.weight}</dd></div></dl>${renderWeaponProfile(item, escapeHtml)}<div class="trait-list">${(item.traits ?? []).map((trait) => `<span>${escapeHtml(trait)}</span>`).join("")}</div>${renderCombatModifiers(item)}</div></section></div>`;
 }
 
 export async function saveCompendiumItem(dependencies: ItemFeatureDependencies): Promise<void> {
@@ -107,4 +107,14 @@ export function renderCombatModifiers(item: ItemDefinition): string {
   if (!modifiers || !Object.keys(modifiers).length) return "";
   const labels: Record<keyof NonNullable<ItemDefinition["combatModifiers"]>, string> = { armor: "Armadura", evasion: "Evasão", minor: "Limiar menor", major: "Limiar maior" };
   return `<div class="trait-list item-combat-summary">${Object.entries(modifiers).map(([key, value]) => `<span>${labels[key as keyof typeof labels]} ${value >= 0 ? "+" : ""}${value}</span>`).join("")}</div>`;
+}
+
+export function renderWeaponProfile(item: ItemDefinition, escapeHtml: (value: string) => string): string {
+  const profile = item.weaponProfile;
+  if (!profile) return "";
+  const attackTrait = { dex: "Agilidade", for: "Força", cha: "Finesse", wil: "Instinto", con: "Presença", int: "Conhecimento", conjuracao: "Conjuração" }[profile.attackTrait];
+  const range = { "corpo-a-corpo": "Corpo a corpo", "muito-proximo": "Muito próximo", proximo: "Próximo", longe: "Longe", "muito-longe": "Muito longe" }[profile.range];
+  const damageType = { fisico: "Físico", magico: "Mágico", "fisico-ou-magico": "Físico ou mágico" }[profile.damageType];
+  const category = profile.category === "primaria" ? "Arma primária" : "Arma secundária";
+  return `<section class="item-weapon-profile" aria-label="Perfil de combate"><div class="item-weapon-profile-heading"><span>Perfil de arma</span><small>${category}</small></div><div class="item-weapon-damage"><span>Dano</span><strong>${escapeHtml(profile.damage)}</strong><small>${damageType}</small></div><dl class="detail-list item-weapon-details"><div><dt>Teste</dt><dd>${attackTrait}</dd></div><div><dt>Alcance</dt><dd>${range}</dd></div><div><dt>Empunhadura</dt><dd>${profile.burden === 1 ? "Uma mão" : "Duas mãos"}</dd></div></dl></section>`;
 }
