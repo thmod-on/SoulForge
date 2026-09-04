@@ -1,16 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { createCatalog } from "../../domain/catalog";
-import type { Character, FeatureDefinition } from "../../domain/types";
+import type { CardDefinition, Character, FeatureDefinition } from "../../domain/types";
 import { synchronizeCharacterSheetModifiers } from "./sheetModifiers";
 
 const humanFeature: FeatureDefinition = { id: "feature.human.top", type: "feature", packId: "test", name: "Alta Resistência", summary: "", sourceType: "ancestry", sourceId: "ancestry.human", tier: "top", sheetModifiers: [{ kind: "resource-max", resourceId: "stress", amount: 1 }] };
 const giantFeature: FeatureDefinition = { id: "feature.giant.top", type: "feature", packId: "test", name: "Resistência", summary: "", sourceType: "ancestry", sourceId: "ancestry.giant", tier: "top", sheetModifiers: [{ kind: "resource-max", resourceId: "hp", amount: 1 }] };
 const galapaFeature: FeatureDefinition = { id: "feature.galapa.top", type: "feature", packId: "test", name: "Casco", summary: "", sourceType: "ancestry", sourceId: "ancestry.galapa", tier: "top", sheetModifiers: [{ kind: "defense-per-proficiency", field: "minor", amount: 1 }, { kind: "defense-per-proficiency", field: "major", amount: 1 }] };
 const guardianFeature: FeatureDefinition = { id: "feature.guardian.foundation", type: "feature", packId: "test", name: "Inabalável", summary: "", sourceType: "subclass", sourceId: "subclass.guardian", tier: "foundation", sheetModifiers: [{ kind: "defense", field: "minor", amount: 1 }, { kind: "defense", field: "major", amount: 1 }] };
+const multiclassFeature: FeatureDefinition = { id: "feature.multiclass.foundation", type: "feature", packId: "test", name: "Fundação extra", summary: "", sourceType: "subclass", sourceId: "subclass.multiclass", tier: "foundation", sheetModifiers: [{ kind: "defense", field: "major", amount: 2 }] };
 const guardianSubclass = { id: "subclass.guardian", type: "subclass" as const, packId: "test", name: "Baluarte", summary: "", classId: "class.guardian", foundationFeatureIds: [guardianFeature.id], specializationFeatureIds: [], masteryFeatureIds: [] };
 const guardianClass = { id: "class.guardian", type: "class" as const, packId: "test", name: "Guardião", summary: "", domainIds: ["domain.a", "domain.b"] as [string, string], startingEvasion: 9, startingHitPoints: 7, featureIds: [], hopeFeatureId: "", subclassIds: [guardianSubclass.id, guardianSubclass.id] as [string, string] };
 const warlockClass = { ...guardianClass, id: "class.warlock", name: "Bruxo", startingHitPoints: 5 };
-const catalog = createCatalog([], [humanFeature, giantFeature, galapaFeature, guardianFeature, guardianSubclass, guardianClass, warlockClass]);
+const catalog = createCatalog([], [humanFeature, giantFeature, galapaFeature, guardianFeature, multiclassFeature, guardianSubclass, guardianClass, warlockClass]);
+const untouchable: CardDefinition = { id: "card.bone.untouchable", type: "card", packId: "test", name: "Intocável", summary: "", domainId: "domain.bone", tier: 1, cardType: "passiva", effect: "", sheetModifiers: [{ kind: "defense-per-attribute", field: "evasion", attributeId: "dex", divisor: 2 }] };
+const sharpenedReflexes: CardDefinition = { id: "card.test.reflexes", type: "card", packId: "test", name: "Reflexos aguçados", summary: "", domainId: "domain.bone", tier: 1, cardType: "passiva", effect: "", sheetModifiers: [{ kind: "attribute", attributeId: "dex", amount: 1 }] };
+const cardCatalog = createCatalog([], [humanFeature, giantFeature, galapaFeature, guardianFeature, multiclassFeature, guardianSubclass, guardianClass, warlockClass, untouchable, sharpenedReflexes]);
 
 function character(top?: string, bottom?: string): Character {
   return { id: "test", identity: { name: "Teste", ancestry: "Humano", ancestryFeatureIds: { top, bottom }, className: "Guardião", community: "", level: 1, xp: 0, nextLevelXp: 10, quote: "" }, attributes: [], defense: { evasion: 10, armor: 0, minor: 5, major: 10 }, proficiency: 2, resources: [{ id: "hp", label: "PV", value: 5, max: 6, tone: "hp" }, { id: "stress", label: "Estresse", value: 0, max: 6, tone: "stress" }], skills: [], experiences: [], notes: [], deck: { activeCardIds: [], learnedCardIds: [] }, inventory: { capacity: 0, compartments: [], entries: [] } };
@@ -50,5 +54,35 @@ describe("modificadores declarativos de ancestralidade", () => {
     const base = character();
     const updated = synchronizeCharacterSheetModifiers({ ...base, identity: { ...base.identity, primaryClassId: guardianClass.id, primarySubclassId: guardianSubclass.id } }, catalog);
     expect(updated.defense).toEqual({ evasion: 10, armor: 0, minor: 6, major: 11 });
+  });
+
+  it("aplica a carta passiva apenas enquanto ela está no Loadout e arredonda frações para cima", () => {
+    const base = { ...character(), attributes: [{ id: "dex" as const, label: "AGI", value: 3 }] };
+    const active = synchronizeCharacterSheetModifiers({ ...base, deck: { activeCardIds: [untouchable.id], learnedCardIds: [untouchable.id] } }, cardCatalog);
+    const stored = synchronizeCharacterSheetModifiers({ ...base, deck: { activeCardIds: [], learnedCardIds: [untouchable.id] } }, cardCatalog);
+    expect(active.defense.evasion).toBe(12);
+    expect(stored.defense.evasion).toBe(10);
+  });
+
+  it("recalcula atributos de cartas ativas a partir do valor-base, sem duplicar o bônus", () => {
+    const base = { ...character(), attributes: [{ id: "dex" as const, label: "AGI", value: 1 }] , deck: { activeCardIds: [sharpenedReflexes.id], learnedCardIds: [sharpenedReflexes.id] } };
+    const once = synchronizeCharacterSheetModifiers(base, cardCatalog);
+    const twice = synchronizeCharacterSheetModifiers(once, cardCatalog);
+    expect(once.attributes[0]).toMatchObject({ baseValue: 1, value: 2 });
+    expect(twice.attributes[0]).toEqual(once.attributes[0]);
+  });
+
+  it("reconstroi os avanços de Evasão já registrados a partir da defesa-base", () => {
+    const progressed = { ...character(), baseDefense: { evasion: 10, armor: 0, minor: 5, major: 10 }, defense: { evasion: 10, armor: 0, minor: 5, major: 10 }, progression: { attributeMarks: {}, acquiredSubclassTiers: ["foundation" as const], advancementSelections: [{ kind: "evasion" as const, tier: 1 as const, level: 2 }, { kind: "evasion" as const, tier: 2 as const, level: 5 }], history: [] } };
+    const once = synchronizeCharacterSheetModifiers(progressed, catalog);
+    const twice = synchronizeCharacterSheetModifiers(once, catalog);
+    expect(once.defense.evasion).toBe(12);
+    expect(twice.defense.evasion).toBe(12);
+  });
+
+  it("inclui a Feature e a Fundação recebidas por Multiclasse", () => {
+    const base = { ...character(), progression: { attributeMarks: {}, acquiredSubclassTiers: ["foundation" as const], advancementSelections: [], history: [], multiclass: { classId: "class.multiclass", className: "Outra", domainId: "domain.a", domainName: "A", featureId: "feature.unknown", featureName: "Classe", subclassId: "subclass.multiclass", subclassName: "Outra", foundationFeatureId: multiclassFeature.id, foundationFeatureName: multiclassFeature.name } } };
+    const updated = synchronizeCharacterSheetModifiers(base, catalog);
+    expect(updated.defense.major).toBe(12);
   });
 });

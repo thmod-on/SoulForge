@@ -21,10 +21,10 @@ export function validatePackBundle(value: unknown): PackBundle {
   }
 
   const definitions = bundle.definitions as Definition[];
-  for (const feature of definitions.filter((definition) => definition.type === "feature")) {
+  for (const feature of definitions.filter((definition) => definition.type === "feature" || definition.type === "card")) {
     if (!isGameMarkerListValid(feature.gameMarkers)) throw new Error(`A Feature “${feature.name}” possui marcadores de jogo inválidos.`);
-    if (!isSheetModifierListValid(feature.sheetModifiers)) throw new Error(`A Feature “${feature.name}” possui modificadores de ficha inválidos.`);
-    if (!isFeatureActivationValid(feature.activation)) throw new Error(`A Feature “${feature.name}” possui metadados de ativação inválidos.`);
+    if (!isSheetModifierListValid(feature.sheetModifiers)) throw new Error(`A ${feature.type === "card" ? "carta" : "Feature"} “${feature.name}” possui modificadores de ficha inválidos.`);
+    if (feature.type === "feature" && !isFeatureActivationValid(feature.activation)) throw new Error(`A Feature “${feature.name}” possui metadados de ativação inválidos.`);
   }
 
   function isGameMarkerListValid(value: unknown): boolean {
@@ -86,9 +86,11 @@ export function validatePackBundle(value: unknown): PackBundle {
     if (!Array.isArray(value)) return false;
     return value.every((modifier) => {
       if (!modifier || typeof modifier !== "object") return false;
-      const candidate = modifier as { kind?: string; resourceId?: unknown; field?: unknown; amount?: unknown };
+      const candidate = modifier as { kind?: string; resourceId?: unknown; attributeId?: unknown; field?: unknown; amount?: unknown; multiplier?: unknown; divisor?: unknown };
+      if (candidate.kind === "resource-max") return typeof candidate.resourceId === "string" && Boolean(candidate.resourceId) && Number.isFinite(candidate.amount);
+      if (candidate.kind === "attribute") return ["for", "dex", "con", "int", "wil", "cha"].includes(String(candidate.attributeId)) && Number.isFinite(candidate.amount);
+      if (candidate.kind === "defense-per-attribute") return ["evasion", "armor", "minor", "major"].includes(String(candidate.field)) && ["for", "dex", "con", "int", "wil", "cha"].includes(String(candidate.attributeId)) && (candidate.multiplier === undefined || Number.isFinite(candidate.multiplier)) && (candidate.divisor === undefined || Number.isFinite(candidate.divisor) && Number(candidate.divisor) > 0);
       if (!Number.isFinite(candidate.amount)) return false;
-      if (candidate.kind === "resource-max") return typeof candidate.resourceId === "string" && Boolean(candidate.resourceId);
       if (candidate.kind === "defense") return typeof candidate.field === "string" && ["evasion", "armor", "minor", "major"].includes(candidate.field);
       return candidate.kind === "defense-per-proficiency" && (candidate.field === "minor" || candidate.field === "major");
     });

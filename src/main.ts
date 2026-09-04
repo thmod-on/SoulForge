@@ -824,9 +824,11 @@ async function applyProgression(): Promise<void> {
     identity: { ...character.identity, level: nextLevel },
     attributes: character.attributes.map((attribute) => {
       const wasSelected = attributeIds.includes(attribute.id);
+      const baseValue = attribute.baseValue ?? attribute.value;
       return {
         ...attribute,
-        value: attribute.value + (wasSelected ? 1 : 0),
+        baseValue: baseValue + (wasSelected ? 1 : 0),
+        value: baseValue + (wasSelected ? 1 : 0),
         upgraded: wasSelected ? true : isTierAchievement ? false : attribute.upgraded
       };
     }),

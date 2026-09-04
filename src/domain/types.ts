@@ -79,6 +79,8 @@ export type CharacterActiveFeatureEffect = {
 export type Attribute = {
   id: "for" | "dex" | "con" | "int" | "wil" | "cha";
   label: string;
+  /** Valor permanente antes de modificadores declarados pelo Loadout. */
+  baseValue?: number;
   value: number;
   upgraded?: boolean;
 };
@@ -98,7 +100,9 @@ export type Defense = {
  */
 export type CharacterSheetModifier =
   | { kind: "resource-max"; resourceId: string; amount: number }
+  | { kind: "attribute"; attributeId: Attribute["id"]; amount: number }
   | { kind: "defense"; field: keyof Defense; amount: number }
+  | { kind: "defense-per-attribute"; field: keyof Defense; attributeId: Attribute["id"]; multiplier?: number; divisor?: number }
   | { kind: "defense-per-proficiency"; field: "minor" | "major"; amount: number };
 
 /** Custo declarativo de uma Feature que permanece ativa na ficha. */
@@ -227,6 +231,8 @@ export type CardDefinition = BaseDefinition & {
   effect: string;
   image?: string;
   gameMarkers?: GameMarkerDefinition[];
+  /** Bônus passivos aplicados automaticamente enquanto a carta está no Loadout. */
+  sheetModifiers?: CharacterSheetModifier[];
 };
 
 export type ItemDefinition = BaseDefinition & {

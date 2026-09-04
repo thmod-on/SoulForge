@@ -53,7 +53,12 @@ export function renderCharacterIdentityModal(deps: CharacterIdentityModalDepende
   ] as const).flatMap(([tier, label, ids]) => ids.map((id) => ({ feature: catalog.features.find((entry) => entry.id === id), label, locked: !acquiredSubclassTiers.has(tier) }))) : [];
   const featureCard = (feature: FeatureDefinition | CharacterSkill | undefined, label: string, origin?: string, locked = false) => {
     if (!feature) return `<article class="character-identity-feature"><span>${escapeHtml(label)}</span><h3>Indisponível</h3><p>O conteúdo desta escolha não foi encontrado no Compendium instalado.</p></article>`;
-    const modifiers = "sheetModifiers" in feature ? feature.sheetModifiers?.map((modifier) => modifier.kind === "resource-max" ? `+${modifier.amount} máximo de ${modifier.resourceId}` : `+${modifier.amount} em ${modifier.field}`).join(" · ") : undefined;
+    const modifiers = "sheetModifiers" in feature ? feature.sheetModifiers?.map((modifier) => {
+      if (modifier.kind === "resource-max") return `+${modifier.amount} máximo de ${modifier.resourceId}`;
+      if (modifier.kind === "attribute") return `+${modifier.amount} em ${modifier.attributeId}`;
+      if (modifier.kind === "defense-per-attribute") return `${modifier.field} por ${modifier.attributeId}`;
+      return `+${modifier.amount} em ${modifier.field}`;
+    }).join(" · ") : undefined;
     const activation = !locked && "summary" in feature ? deps.getFeatureActivation?.(character, feature.id) : undefined;
     const active = deps.activeFeatureIds?.has(feature.id);
     const metadata = [label, locked ? "Bloqueada" : "", origin].filter(Boolean).map((value) => escapeHtml(value!)).join(" · ");

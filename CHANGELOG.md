@@ -4,6 +4,18 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.26.2]
+
+### Adicionado
+
+- cartas podem declarar modificadores passivos de atributos, Evasão, Armadura e limiares, aplicados automaticamente somente enquanto estiverem no Loadout;
+- Intocável (Untouchable) passa a conceder Evasão igual à metade da Agilidade, com arredondamento para cima.
+
+### Corrigido
+
+- avanços permanentes de Evasão são reconstruídos a partir do histórico da progressão, incluindo escolhas já registradas;
+- Features recebidas pela Multiclasse passam a participar do cálculo dos modificadores permanentes da ficha.
+
 ## [0.26.1]
 
 ### Alterado

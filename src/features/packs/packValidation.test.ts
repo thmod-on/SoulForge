@@ -32,6 +32,15 @@ describe("validação de Packs", () => {
     expect(validatePackBundle({ format: "soulforge-pack-v1", manifest, definitions: [diceFeature] }).definitions).toHaveLength(1);
   });
 
+  it("aceita modificador passivo em carta enquanto ela estiver no Loadout", () => {
+    const card = {
+      id: "card.test.intocavel", type: "card" as const, packId: manifest.id, name: "Intocável", summary: "Bônus de Evasão.",
+      domainId: "domain.test.bone", tier: 1, cardType: "passiva" as const, effect: "Ganhe bônus na Evasão.",
+      sheetModifiers: [{ kind: "defense-per-attribute" as const, field: "evasion" as const, attributeId: "dex" as const, divisor: 2 }]
+    };
+    expect(validatePackBundle({ format: "soulforge-pack-v1", manifest, definitions: [card] }).definitions).toHaveLength(1);
+  });
+
   it("aceita uma transformação com fonte e metadados de marcador", () => {
     const transformation = {
       id: "transformation.test.vampiro", type: "transformation" as const, packId: manifest.id, name: "Vampiro de teste", summary: "Identidade sobrenatural.",
