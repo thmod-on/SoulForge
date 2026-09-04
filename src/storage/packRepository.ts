@@ -36,9 +36,21 @@ export async function installLocalPack(manifest: PackManifest, definitions: Defi
   const database = await openDatabase();
   await new Promise<void>((resolve, reject) => {
     const transaction = database.transaction([packStoreName, definitionStoreName], "readwrite");
-    transaction.objectStore(packStoreName).add(manifest);
+    // A importação de uma versão mais nova do mesmo Pack deve substituir
+    // somente o conteúdo daquele Pack, preservando fichas, overrides e
+    // Definitions locais que não pertencem a ele.
+    transaction.objectStore(packStoreName).put(manifest);
     const definitionsStore = transaction.objectStore(definitionStoreName);
-    definitions.forEach((definition) => definitionsStore.add(definition));
+    const incomingIds = new Set(definitions.map((definition) => definition.id));
+    const cursorRequest = definitionsStore.openCursor();
+    cursorRequest.onsuccess = () => {
+      const cursor = cursorRequest.result;
+      if (!cursor) return;
+      const definition = cursor.value as Definition;
+      if (definition.packId === manifest.id && !incomingIds.has(definition.id)) cursor.delete();
+      cursor.continue();
+    };
+    definitions.forEach((definition) => definitionsStore.put(definition));
     transaction.oncomplete = () => resolve();
     transaction.onerror = () => reject(transaction.error);
     transaction.onabort = () => reject(transaction.error);

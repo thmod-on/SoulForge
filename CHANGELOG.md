@@ -4,6 +4,40 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.26.6]
+
+### Adicionado
+- Ativações de ancestralidade na ficha, com lembretes de custos recorrentes manuais e encerramento pelo jogador.
+- Escolha entre você e aliado para efeitos direcionados, sem aplicar à própria defesa bônus destinados a terceiros.
+- Packs privados de ancestralidades 1.2.0-local com Retrair-se, Ignição, Olho da Tempestade e voo de Faerie e Aetheris.
+
+## [0.26.5]
+
+### Adicionado
+
+- bônus permanentes de ancestralidade declarados nos packs: Casco do Galapa, Resistência do Gigante, Alta Resistência do Humano, Ágil do Simiah e Pele de Pedra do Earthkin;
+- ancestralidades mistas passam a aplicar esses bônus conforme as Features Top e Bottom efetivamente escolhidas.
+
+## [0.26.4]
+
+### Adicionado
+
+- efeitos ativos de Features podem declarar fichas efêmeras, originadas por rolagem, atributo de Conjuração ou escolha do jogador, com controle visual de consumo;
+- Misturas Tóxicas, Talismã Encantado, Caminhar Entre Mundos e Círculo de Poder passam a usar esse modelo no pack Hope & Fear.
+
+## [0.26.3]
+
+### Adicionado
+
+- cartas podem declarar requisitos verificáveis de armadura equipada ou quatro cartas do mesmo domínio no Loadout; quando atendidos, seus bônus aparecem em Efeitos ativos;
+- reserva reutilizável de dados armazenados: guardar após rolar com Esperança, gastar vários dados, rolar e somar o resultado, com recuperação declarativa no fim da sessão;
+- Matador do Guerreiro passa a declarar Dados do Matador: d6, capacidade igual à Proficiência e recuperação de 1 Esperança por dado não gasto ao encerrar a sessão.
+
+### Alterado
+
+- previews das Cartas ativas exibem o domínio em vez do tipo editorial e usam um degradê discreto na cor do domínio, independente de haver arte;
+- o pack Core — Classes e Subclasses foi revisado para a versão `1.12.0-local`; o pack Core — Domínios e Cartas permanece em `1.9.0-local`.
+
 ## [0.26.2]
 
 ### Adicionado

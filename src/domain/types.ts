@@ -46,8 +46,25 @@ export type DiceGameMarkerDefinition = {
   reset?: "session";
 };
 
+/**
+ * Dados armazenados sem resultado. São conquistados durante a sessão e só
+ * rolam quando gastos, como os Dados do Matador.
+ */
+export type StoredDiceGameMarkerDefinition = {
+  id: string;
+  kind: "stored-dice";
+  label: string;
+  die: GameMarkerDie;
+  quantity: GameMarkerQuantity;
+  /** Evento narrativo que permite guardar um dado vazio. */
+  gainTrigger: "hope-roll";
+  reset: "session";
+  /** Recuperação aplicada por dado ainda guardado ao encerrar a sessão. */
+  resetRecovery?: { resourceId: string; amountPerDie: number };
+};
+
 /** Declaracao reutilizavel do conteudo; nunca guarda dados de uma sessao. */
-export type GameMarkerDefinition = CounterGameMarkerDefinition | DiceGameMarkerDefinition;
+export type GameMarkerDefinition = CounterGameMarkerDefinition | DiceGameMarkerDefinition | StoredDiceGameMarkerDefinition;
 
 export type CounterGameMarkerState = {
   key: string;
@@ -67,13 +84,26 @@ export type DiceGameMarkerState = {
   results: Array<{ id: string; value: number; used: boolean }>;
 };
 
+export type StoredDiceGameMarkerState = {
+  key: string;
+  sourceDefinitionId: string;
+  markerId: string;
+  kind: "stored-dice";
+  die: GameMarkerDie;
+  available: number;
+  max: number;
+};
+
 /** Estado variavel do personagem. E preservado mesmo se a fonte ficar inativa. */
-export type CharacterGameMarkerState = CounterGameMarkerState | DiceGameMarkerState;
+export type CharacterGameMarkerState = CounterGameMarkerState | DiceGameMarkerState | StoredDiceGameMarkerState;
 
 /** Estado persistido de uma Feature temporariamente ativa na ficha. */
 export type CharacterActiveFeatureEffect = {
+  target?: "self" | "ally";
   featureId: string;
   activatedAt: string;
+  /** Fichas efêmeras vinculadas a esta ativação, jamais à Definition. */
+  tokens?: { label: string; value: number };
 };
 
 export type Attribute = {
@@ -98,17 +128,36 @@ export type Defense = {
  * A definição descreve o bônus; a ficha preserva apenas seus valores atuais.
  * Novas fontes (cartas, classes e itens) podem reutilizar os mesmos tipos.
  */
+/** Condição verificável pela ficha para manter um bônus de Loadout ativo. */
+export type SheetModifierCondition =
+  /** Exige ao menos uma armadura equipada; escudos e acessórios não contam. */
+  | { kind: "equipped-armor" }
+  /** Exige uma quantidade mínima de cartas de um domínio no Loadout. */
+  | { kind: "active-domain-cards"; domainId: string; minimum: number };
+
+type ConditionalSheetModifier = { condition?: SheetModifierCondition };
+
 export type CharacterSheetModifier =
-  | { kind: "resource-max"; resourceId: string; amount: number }
-  | { kind: "attribute"; attributeId: Attribute["id"]; amount: number }
-  | { kind: "defense"; field: keyof Defense; amount: number }
-  | { kind: "defense-per-attribute"; field: keyof Defense; attributeId: Attribute["id"]; multiplier?: number; divisor?: number }
-  | { kind: "defense-per-proficiency"; field: "minor" | "major"; amount: number };
+  | ({ kind: "resource-max"; resourceId: string; amount: number } & ConditionalSheetModifier)
+  | ({ kind: "attribute"; attributeId: Attribute["id"]; amount: number } & ConditionalSheetModifier)
+  | ({ kind: "defense"; field: keyof Defense; amount: number } & ConditionalSheetModifier)
+  | ({ kind: "defense-per-attribute"; field: keyof Defense; attributeId: Attribute["id"]; multiplier?: number; divisor?: number } & ConditionalSheetModifier)
+  | ({ kind: "defense-per-proficiency"; field: "minor" | "major"; amount: number } & ConditionalSheetModifier);
 
 /** Custo declarativo de uma Feature que permanece ativa na ficha. */
 export type FeatureActivationCost =
-  | { kind: "resource"; resourceId: string; amount: number }
-  | { kind: "game-marker"; sourceDefinitionId: string; markerId: string; amount: number };
+  | { kind: "resource"; resourceId: string; amount: number | "per-token" }
+  | { kind: "game-marker"; sourceDefinitionId: string; markerId: string; amount: number | "per-token" };
+
+/** Como uma Feature ativa cria as fichas que mantém durante a cena. */
+export type FeatureActivationTokens = {
+  label: string;
+  initial:
+    | { kind: "fixed"; value: number }
+    | { kind: "spellcast-trait" }
+    | { kind: "roll"; die: GameMarkerDie; bonus?: number }
+    | { kind: "manual"; min?: number; maximumResourceId?: string };
+};
 
 /** Modificadores temporários que dependem do tier atual do personagem. */
 export type FeatureActivationModifier =
@@ -122,11 +171,14 @@ export type FeatureEffectEndCondition = "scene-end" | "severe-damage" | "short-r
  * guardará o estado temporário da ativação em uma etapa posterior.
  */
 export type FeatureActivationDefinition = {
+  target?: "self-or-ally";
   label: string;
   costs: FeatureActivationCost[];
   endsOn: FeatureEffectEndCondition[];
   modifiers: FeatureActivationModifier[];
   reminders?: string[];
+  /** Fichas consumidas manualmente enquanto o efeito estiver ativo. */
+  tokens?: FeatureActivationTokens;
 };
 
 /** Bônus declarados por um item enquanto ele estiver em Equipados. */

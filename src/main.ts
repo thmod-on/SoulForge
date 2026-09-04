@@ -6,9 +6,11 @@ import { getSpellcastAttributeId } from "./content/spellcastAttributes";
 import { getOfficialCardMarkers } from "./content/officialCardMarkers";
 import { createCatalog, findDefinition, findDomain } from "./domain/catalog";
 import { demoCharacter } from "./domain/demoCharacter";
-import type { AncestryDefinition, Attribute, CardDefinition, Character, CharacterNote, CharacterNoteCategory, CharacterSkill, CharacterProgressionEntry, ClassDefinition, DiceGameMarkerState, FeatureDefinition, InventoryCompartment, ItemDefinition, PackBundle, PackManifest, ProgressionAdvanceKind, SubclassDefinition } from "./domain/types";
+import type { AncestryDefinition, Attribute, CardDefinition, Character, CharacterNote, CharacterNoteCategory, CharacterSkill, CharacterProgressionEntry, ClassDefinition, FeatureDefinition, InventoryCompartment, ItemDefinition, PackBundle, PackManifest, ProgressionAdvanceKind, SubclassDefinition } from "./domain/types";
 import { deleteCharacter as deleteStoredCharacter, ensureDemoCharacter, ensureDemoKaelII, listCharacters, loadCharacter, saveCharacter as persistCharacter } from "./storage/characterRepository";
-import { getActiveGameMarkers, resetGameMarkers, synchronizeGameMarkers, type ActiveGameMarker } from "./features/game-markers/gameMarkerSync";
+import { getActiveGameMarkers, resetGameMarkers, synchronizeGameMarkers } from "./features/game-markers/gameMarkerSync";
+import { renderGameMarkerDiceDialog } from "./features/game-markers/renderDiceDialog";
+import { handleStoredDiceAction, renderStoredDiceDialog, type StoredDiceDialogState } from "./features/game-markers/storedDice";
 import { deleteCustomDefinition, loadCardMarkerOverrides, loadCustomDefinitions, saveCardMarkerOverride, saveCustomDefinition, type CardMarkerOverride } from "./storage/compendiumRepository";
 import { installLocalPack, loadInstalledPacks, removeLocalPack } from "./storage/packRepository";
 import { renderSettings as renderSettingsPage, getPackDefinitionSummary } from "./features/settings/renderSettings";
@@ -72,9 +74,9 @@ import {
   type InventoryDragDependencies
 } from "./features/inventory/bindInventoryDrag";
 import { getEffectiveDefense, synchronizeArmorResource } from "./features/inventory/combatModifiers";
-import { synchronizeCharacterSheetModifiers } from "./features/player/sheetModifiers";
+import { getActiveSheetModifierEffects, synchronizeCharacterSheetModifiers } from "./features/player/sheetModifiers";
 import { getActiveFeatureEffectDefenseModifiers, getActiveFeatureEffects, getFeatureActivationForCharacter } from "./features/feature-effects/featureEffects";
-import { activateFeatureEffect as activateFeatureEffectAction, endFeatureEffect as endFeatureEffectAction } from "./features/feature-effects/featureEffectActions";
+import { handleFeatureEffectAction, renderFeatureTokenActivationDialog, type FeatureTokenActivationDialogState } from "./features/feature-effects/featureTokenActivation";
 import { renderCharacterIdentityModal as renderCharacterIdentityModalView } from "./features/character-identity/renderCharacterIdentityModal";
 import { getSubclassStageSkills } from "./features/player/subclassTrack";
 import type { RestKind, RestMoveChoice } from "./features/rest/restRules";
@@ -189,6 +191,7 @@ const state: {
   selectedItemId?: string;
   selectedCardId: string;
   featureActivationError?: string;
+  featureTokenActivation?: FeatureTokenActivationDialogState;
   progressionStep: ProgressionFlowStep;
   modalCardId?: string;
   resourceModalId?: string;
@@ -248,6 +251,7 @@ const state: {
   characterPortraitPreviewOpen: boolean;
   characterIdentityModalSection?: "character" | "class" | "ancestry" | "community";
   gameMarkerDieDialog?: { markerKey: string; dieId: string; mode: "result" | "consume" };
+  storedDiceDialog?: StoredDiceDialogState;
   restDialogKind?: RestKind;
   restChoices: RestMoveChoice[];
   restError?: string;
@@ -501,8 +505,13 @@ function getPlayerOverviewDependencies(): PlayerOverviewDependencies {
     renderResources: (character) => renderResourcesView(character, getPlayerShellDependencies()),
     renderEmptyInline,
     getActiveCards, getInactiveCardCount, getStoredCards,
+    getDomainInfo: (domainId) => {
+      const domain = findDomain(catalog, domainId);
+      return domain ? { name: domain.name, color: domain.color } : undefined;
+    },
     getAcquiredSubclassTiers: (character) => getProgression(character).acquiredSubclassTiers,
     getActiveFeatureEffects: (character) => getActiveFeatureEffects(character, catalog),
+    getActiveSheetModifierEffects: (character) => getActiveSheetModifierEffects(character, catalog),
     getFeatureActivation: (character, featureId) => getFeatureActivationForCharacter(character, catalog, featureId),
     featureActivationError: state.featureActivationError,
     getActiveGameMarkers: (character) => getActiveGameMarkers(character, catalog), getSubclassStageSkills: (character, tier) => getSubclassStageSkills(character, catalog, tier), modalCardId: state.modalCardId
@@ -1256,27 +1265,6 @@ function renderCharacterPortraitPreviewModal(): string {
   return `<div class="modal-backdrop portrait-preview-backdrop" data-modal-backdrop><section class="portrait-preview-modal" role="dialog" aria-modal="true" aria-labelledby="portrait-preview-title"><button class="modal-close" type="button" data-modal-close aria-label="Fechar foto ampliada">x</button><h2 id="portrait-preview-title">${escapeHtml(character.identity.name)}</h2><img src="${escapeHtml(portrait)}" alt="Retrato ampliado de ${escapeHtml(character.identity.name)}" /></section></div>`;
 }
 
-function getGameMarkerDieFaces(die: import("./domain/types").GameMarkerDie): number[] {
-  return Array.from({ length: Number(die.slice(1)) }, (_, index) => index + 1);
-}
-
-function renderGameMarkerDieDialog(): string {
-  const dialog = state.gameMarkerDieDialog;
-  const character = state.character;
-  if (!dialog || !character) return "";
-  const marker = getActiveGameMarkers(character, catalog).find((entry) => entry.key === dialog.markerKey && entry.state.kind === "dice") as (ActiveGameMarker & { state: DiceGameMarkerState }) | undefined;
-  const diceState = marker?.state;
-  if (!marker || !diceState || diceState.kind !== "dice") return "";
-  const die = diceState.results.find((entry) => entry.id === dialog.dieId);
-  if (!die) return "";
-
-  if (dialog.mode === "result") {
-    return `<div class="modal-backdrop" data-modal-backdrop><section class="confirm-modal game-marker-die-dialog" role="dialog" aria-modal="true" aria-labelledby="game-marker-result-title"><button class="modal-close" type="button" data-modal-close aria-label="Cancelar">x</button><span class="resource-modal-label">${diceState.die}</span><h2 id="game-marker-result-title">Definir resultado</h2><p>Escolha o resultado deste dado de ${escapeHtml(marker.definition.label)}.</p><div class="game-marker-result-picker">${getGameMarkerDieFaces(diceState.die).map((value) => `<button type="button" class="die-${diceState.die}" data-action="set-game-marker-die-result" data-game-marker-die-value="${value}">${value}</button>`).join("")}</div></section></div>`;
-  }
-
-  return `<div class="modal-backdrop" data-modal-backdrop><section class="confirm-modal game-marker-die-dialog" role="dialog" aria-modal="true" aria-labelledby="game-marker-consume-title"><button class="modal-close" type="button" data-modal-close aria-label="Cancelar">x</button><span class="resource-modal-label">${marker.state.die}</span><h2 id="game-marker-consume-title">Consumir dado?</h2><p>Você consumirá um dado de <strong>${escapeHtml(marker.definition.label)}</strong> com resultado <strong>${die.value}</strong>.</p><div class="modal-actions"><button class="sf-action sf-action--secondary secondary-action" type="button" data-modal-close>Cancelar</button><button class="sf-action sf-action--primary primary-action" type="button" data-action="confirm-game-marker-die-use">Consumir dado</button></div></section></div>`;
-}
-
 function renderCharacterCreationModal(): string {
   if (!state.characterCreationOpen) {
     return "";
@@ -1528,7 +1516,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
   const screen = state.page === "overview"
     ? renderOverviewView(character, getPlayerOverviewDependencies())
     : state.page === "skills"
-      ? renderTraitsView(character, { escapeHtml, renderEmptyInline })
+      ? renderTraitsView(character, { escapeHtml, renderEmptyInline, catalog, featureActivationError: state.featureActivationError })
       : state.page === "storedCards"
           ? renderStoredCardsView(character, getPlayerOverviewDependencies())
           : state.page === "progression"
@@ -1601,7 +1589,9 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
       activeFeatureIds: new Set(state.character ? getActiveFeatureEffects(state.character, catalog).map((effect) => effect.feature.id) : []),
       featureActivationError: state.featureActivationError
     })}
-    ${renderGameMarkerDieDialog()}
+    ${renderGameMarkerDiceDialog(state.gameMarkerDieDialog, state.character, catalog, escapeHtml)}
+    ${renderStoredDiceDialog({ state, catalog, escapeHtml })}
+    ${renderFeatureTokenActivationDialog({ state, catalog, escapeHtml })}
     ${renderRestModalView(character, state.restDialogKind, state.restChoices, state.restError, { escapeHtml })}
     ${renderPackImportModal()}
     ${renderCharacterImportModal({ isOpen: state.characterImportOpen, character: state.pendingCharacterImport, error: state.characterImportError, escapeHtml })}
@@ -2207,6 +2197,7 @@ function bindEvents(): void {
     if (target.closest("[data-modal-close]")) {
       state.modalCardId = undefined;
       state.featureActivationError = undefined;
+      state.featureTokenActivation = undefined;
       state.selectedItemId = undefined;
       state.resourceModalId = undefined;
       state.addResourceModalOpen = false;
@@ -2263,6 +2254,7 @@ function bindEvents(): void {
       state.characterPortraitPreviewOpen = false;
       state.characterIdentityModalSection = undefined;
       state.gameMarkerDieDialog = undefined;
+      state.storedDiceDialog = undefined;
       state.restDialogKind = undefined;
       state.restChoices = [];
       state.restError = undefined;
@@ -2275,6 +2267,7 @@ function bindEvents(): void {
       state.characterCreationOpen = false;
       state.characterCreationError = undefined;
       state.modalCardId = undefined;
+      state.featureTokenActivation = undefined;
       state.selectedItemId = undefined;
       state.resourceModalId = undefined;
       state.addResourceModalOpen = false;
@@ -2331,6 +2324,7 @@ function bindEvents(): void {
       state.characterPortraitPreviewOpen = false;
       state.characterIdentityModalSection = undefined;
       state.gameMarkerDieDialog = undefined;
+      state.storedDiceDialog = undefined;
       state.restDialogKind = undefined;
       state.restChoices = [];
       state.restError = undefined;
@@ -2354,6 +2348,8 @@ function bindEvents(): void {
       if (markerKey) void adjustGameMarker(markerKey, delta);
       return;
     }
+
+    if (handleStoredDiceAction(target, { state, catalog, saveCharacter, render: () => render({ preserveMainScroll: true }), escapeHtml })) return;
 
     const gameMarkerDieSlot = target.closest<HTMLElement>('[data-action="interact-game-marker-die"]');
     if (gameMarkerDieSlot && state.character) {
@@ -3304,17 +3300,7 @@ function bindEvents(): void {
       return;
     }
 
-    const activateFeatureEffectButton = target.closest<HTMLElement>('[data-action="activate-feature-effect"]');
-    if (activateFeatureEffectButton) {
-      void activateFeatureEffectAction(activateFeatureEffectButton.dataset.featureId, { state, catalog, saveCharacter, render });
-      return;
-    }
-
-    const endFeatureEffectButton = target.closest<HTMLElement>('[data-action="end-feature-effect"]');
-    if (endFeatureEffectButton) {
-      void endFeatureEffectAction(endFeatureEffectButton.dataset.featureId, { state, catalog, saveCharacter, render });
-      return;
-    }
+    if (handleFeatureEffectAction(target, { state, catalog, saveCharacter, render: () => render({ preserveMainScroll: true }) })) return;
 
     const cardModalButton = target.closest<HTMLElement>("[data-card-modal-id]");
     if (cardModalButton) {

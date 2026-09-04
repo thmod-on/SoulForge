@@ -41,6 +41,27 @@ describe("validação de Packs", () => {
     expect(validatePackBundle({ format: "soulforge-pack-v1", manifest, definitions: [card] }).definitions).toHaveLength(1);
   });
 
+  it("aceita condições declarativas de armadura equipada e cartas de domínio", () => {
+    const card = {
+      id: "card.test.condicional", type: "card" as const, packId: manifest.id, name: "Bônus condicionado", summary: "Bônus conforme o Loadout.",
+      domainId: "domain.test.bone", tier: 1, cardType: "passiva" as const, effect: "Ganhe um bônus condicionado.",
+      sheetModifiers: [
+        { kind: "defense" as const, field: "minor" as const, amount: 2, condition: { kind: "equipped-armor" as const } },
+        { kind: "attribute" as const, attributeId: "dex" as const, amount: 1, condition: { kind: "active-domain-cards" as const, domainId: "domain.test.bone", minimum: 4 } }
+      ]
+    };
+    expect(validatePackBundle({ format: "soulforge-pack-v1", manifest, definitions: [card] }).definitions).toHaveLength(1);
+  });
+
+  it("aceita uma reserva de dados criada por rolagem com Esperança", () => {
+    const storedDiceFeature = {
+      id: "feature.test.matador", type: "feature" as const, packId: manifest.id, name: "Matador", summary: "Reserva de dados.",
+      sourceType: "subclass" as const, sourceId: "subclass.test.matador", tier: "foundation" as const,
+      gameMarkers: [{ id: "slayer-dice", kind: "stored-dice" as const, label: "Dados do Matador", die: "d6" as const, quantity: { kind: "proficiency" as const }, gainTrigger: "hope-roll" as const, reset: "session" as const, resetRecovery: { resourceId: "hope", amountPerDie: 1 } }]
+    };
+    expect(validatePackBundle({ format: "soulforge-pack-v1", manifest, definitions: [storedDiceFeature] }).definitions).toHaveLength(1);
+  });
+
   it("aceita uma transformação com fonte e metadados de marcador", () => {
     const transformation = {
       id: "transformation.test.vampiro", type: "transformation" as const, packId: manifest.id, name: "Vampiro de teste", summary: "Identidade sobrenatural.",

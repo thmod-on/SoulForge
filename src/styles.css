@@ -3342,6 +3342,26 @@ textarea:disabled {
   background: rgba(14, 9, 20, 0.84);
 }
 
+.ability-card::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  right: 0;
+  bottom: 0;
+  left: 12%;
+  height: 52%;
+  pointer-events: none;
+  opacity: 0.12;
+  background: linear-gradient(90deg, transparent 0%, transparent 32%, var(--card-domain-color) 100%);
+}
+
+.ability-card > h3,
+.ability-card > .card-domain,
+.ability-card > p {
+  position: relative;
+  z-index: 1;
+}
+
 .ability-card:hover {
   border-color: rgba(195, 155, 255, 0.78);
   transform: translateY(-1px);
@@ -3477,6 +3497,14 @@ textarea:disabled {
 .ability-card h3 {
   margin: 0 0 0.3rem;
   font-size: 1rem;
+}
+
+.ability-card .card-domain {
+  display: block;
+  color: var(--card-domain-color);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.025em;
 }
 
 .ability-card p,
@@ -8905,6 +8933,107 @@ body:has(.modal-backdrop) {
   cursor: default;
 }
 
+.game-marker-stored-dice .game-marker-die-slot {
+  pointer-events: none;
+  opacity: 0.34;
+}
+
+.game-marker-stored-dice .game-marker-die-slot.is-stored {
+  opacity: 1;
+  color: #fff5dd;
+  background: color-mix(in srgb, var(--accent) 46%, var(--surface));
+  box-shadow: inset 0 0 0 1px var(--accent), 0 0 1rem color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.game-marker-stored-dice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.42rem;
+  padding: 0.12rem 0.25rem;
+}
+
+.game-marker-stored-dice > em {
+  color: var(--color-muted);
+  font-size: 0.68rem;
+  font-style: normal;
+}
+
+.stored-dice-amount-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.stored-dice-amount-picker button {
+  min-width: 2.1rem;
+}
+
+.stored-dice-roll-results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.stored-dice-roll-results span {
+  display: grid;
+  width: 2.45rem;
+  height: 2.45rem;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--accent) 68%, transparent);
+  border-radius: 0.2rem;
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.active-effect-tokens {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-block: 0.5rem;
+  padding: 0.38rem 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.active-effect-tokens > span {
+  color: var(--color-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.active-effect-tokens > div {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+}
+
+.active-effect-tokens button {
+  display: grid;
+  width: 1.7rem;
+  height: 1.7rem;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--accent) 64%, var(--border));
+  background: var(--surface);
+  color: var(--accent);
+  font-size: 1rem;
+}
+
+.active-effect-tokens button:disabled { opacity: 0.4; }
+
+.active-effect-tokens strong {
+  min-width: 1.35rem;
+  text-align: center;
+  color: var(--color-text);
+}
+
+.feature-token-activation-dialog {
+  display: grid;
+  gap: 0.9rem;
+  width: min(27rem, calc(100vw - 2rem));
+}
+
 .game-marker-die-slot:disabled { pointer-events: none; }
 
 .game-marker-die-dialog {
@@ -9129,3 +9258,5 @@ body:has(.modal-backdrop) {
 .modal-backdrop > .character-creation-modal.is-opening {
   animation: sf-modal-enter var(--motion-emphasis) var(--easing-standard) both;
 }
+.feature-activation-controls { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.feature-activation-controls small { flex-basis: 100%; }

@@ -31,6 +31,7 @@ export function getActiveGameMarkers(character: Character, catalog: Catalog): Ac
 export function resetGameMarkers(character: Character, catalog: Catalog, reset: "session" | "short-rest" | "long-rest"): Character {
   const markerByKey = new Map(getActiveGameMarkers(character, catalog).map((marker) => [marker.key, marker]));
   let changed = false;
+  const recoveredResources = new Map<string, number>();
   const gameMarkers = (character.gameMarkers ?? []).map((state) => {
     const active = markerByKey.get(state.key);
     if (!active || active.definition.reset !== reset) return state;
@@ -40,9 +41,20 @@ export function resetGameMarkers(character: Character, catalog: Catalog, reset: 
       return { ...state, value: state.max === undefined ? value : Math.min(value, state.max) };
     }
     if (state.kind === "dice") return { ...state, results: state.results.map((die) => ({ ...die, value: 0, used: false })) };
+    if (state.kind === "stored-dice" && active.definition.kind === "stored-dice") {
+      const recovery = active.definition.resetRecovery;
+      if (recovery && state.available) recoveredResources.set(recovery.resourceId, (recoveredResources.get(recovery.resourceId) ?? 0) + state.available * recovery.amountPerDie);
+      return { ...state, available: 0 };
+    }
     return state;
   });
-  return changed ? { ...character, gameMarkers } : character;
+  if (!changed) return character;
+  // Recursos da ficha registram espaços marcados. Recuperar Esperança limpa
+  // essas marcas, sem ultrapassar o mínimo zero.
+  const resources = recoveredResources.size
+    ? character.resources.map((resource) => ({ ...resource, value: Math.max(0, resource.value - (recoveredResources.get(resource.id) ?? 0)) }))
+    : character.resources;
+  return { ...character, gameMarkers, resources };
 }
 
 export function getGameMarkerKey(sourceDefinitionId: string, markerId: string): string { return `${sourceDefinitionId}:${markerId}`; }
@@ -101,6 +113,11 @@ function synchronizeMarkerState(existing: CharacterGameMarkerState | undefined, 
     if (existing?.kind === "counter") return { ...existing, key, sourceDefinitionId, markerId: definition.id, max, value: max === undefined ? existing.value : Math.min(existing.value, max) };
     const value = getCounterResetValue(definition, character, catalog, sourceDefinitionId);
     return { key, sourceDefinitionId, markerId: definition.id, kind: "counter", value: max === undefined ? value : Math.min(value, max), ...(max === undefined ? {} : { max }) };
+  }
+  if (definition.kind === "stored-dice") {
+    const max = getMarkerQuantity(definition.quantity, character, catalog, sourceDefinitionId);
+    if (existing?.kind === "stored-dice" && existing.die === definition.die) return { ...existing, key, sourceDefinitionId, markerId: definition.id, max, available: Math.min(existing.available, max) };
+    return { key, sourceDefinitionId, markerId: definition.id, kind: "stored-dice", die: definition.die, available: 0, max };
   }
   const quantity = getDiceQuantity(definition, character, catalog, sourceDefinitionId);
   if (existing?.kind === "dice" && existing.die === definition.die) {

@@ -32,13 +32,20 @@ export function validatePackBundle(value: unknown): PackBundle {
     if (!Array.isArray(value)) return false;
     return value.every((marker) => {
       if (!marker || typeof marker !== "object") return false;
-      const candidate = marker as { id?: unknown; kind?: unknown; label?: unknown; die?: unknown; quantity?: unknown; initialValue?: unknown; max?: unknown; reset?: unknown };
+      const candidate = marker as { id?: unknown; kind?: unknown; label?: unknown; die?: unknown; quantity?: unknown; initialValue?: unknown; max?: unknown; reset?: unknown; gainTrigger?: unknown; resetRecovery?: unknown };
       if (typeof candidate.id !== "string" || !candidate.id || typeof candidate.label !== "string" || !candidate.label) return false;
       if (candidate.reset !== undefined && !["session", "short-rest", "long-rest"].includes(String(candidate.reset))) return false;
       if (candidate.kind === "counter") {
         if (candidate.initialValue !== undefined && (!Number.isInteger(candidate.initialValue) || Number(candidate.initialValue) < 0)) return false;
         if (candidate.max !== undefined && (!Number.isInteger(candidate.max) || Number(candidate.max) < 0)) return false;
         return candidate.quantity === undefined || isGameMarkerQuantityValid(candidate.quantity);
+      }
+      if (candidate.kind === "stored-dice") {
+        if (candidate.reset !== "session" || candidate.gainTrigger !== "hope-roll" || !isGameMarkerQuantityValid(candidate.quantity) || !["d4", "d6", "d8", "d10", "d12", "d20"].includes(String(candidate.die))) return false;
+        if (candidate.resetRecovery === undefined) return true;
+        if (!candidate.resetRecovery || typeof candidate.resetRecovery !== "object") return false;
+        const recovery = candidate.resetRecovery as { resourceId?: unknown; amountPerDie?: unknown };
+        return typeof recovery.resourceId === "string" && Boolean(recovery.resourceId) && Number.isInteger(recovery.amountPerDie) && Number(recovery.amountPerDie) > 0;
       }
       return candidate.kind === "dice"
         && ["d4", "d6", "d8", "d10", "d12", "d20"].includes(String(candidate.die))
@@ -86,7 +93,8 @@ export function validatePackBundle(value: unknown): PackBundle {
     if (!Array.isArray(value)) return false;
     return value.every((modifier) => {
       if (!modifier || typeof modifier !== "object") return false;
-      const candidate = modifier as { kind?: string; resourceId?: unknown; attributeId?: unknown; field?: unknown; amount?: unknown; multiplier?: unknown; divisor?: unknown };
+      const candidate = modifier as { kind?: string; resourceId?: unknown; attributeId?: unknown; field?: unknown; amount?: unknown; multiplier?: unknown; divisor?: unknown; condition?: unknown };
+      if (!isSheetModifierConditionValid(candidate.condition)) return false;
       if (candidate.kind === "resource-max") return typeof candidate.resourceId === "string" && Boolean(candidate.resourceId) && Number.isFinite(candidate.amount);
       if (candidate.kind === "attribute") return ["for", "dex", "con", "int", "wil", "cha"].includes(String(candidate.attributeId)) && Number.isFinite(candidate.amount);
       if (candidate.kind === "defense-per-attribute") return ["evasion", "armor", "minor", "major"].includes(String(candidate.field)) && ["for", "dex", "con", "int", "wil", "cha"].includes(String(candidate.attributeId)) && (candidate.multiplier === undefined || Number.isFinite(candidate.multiplier)) && (candidate.divisor === undefined || Number.isFinite(candidate.divisor) && Number(candidate.divisor) > 0);
@@ -96,15 +104,24 @@ export function validatePackBundle(value: unknown): PackBundle {
     });
   }
 
+  function isSheetModifierConditionValid(value: unknown): boolean {
+    if (value === undefined) return true;
+    if (!value || typeof value !== "object") return false;
+    const condition = value as { kind?: unknown; domainId?: unknown; minimum?: unknown };
+    if (condition.kind === "equipped-armor") return true;
+    return condition.kind === "active-domain-cards" && typeof condition.domainId === "string" && Boolean(condition.domainId) && Number.isInteger(condition.minimum) && Number(condition.minimum) > 0;
+  }
+
   function isFeatureActivationValid(value: unknown): boolean {
     if (value === undefined) return true;
     if (!value || typeof value !== "object") return false;
-    const candidate = value as { label?: unknown; costs?: unknown; endsOn?: unknown; modifiers?: unknown; reminders?: unknown };
+    const candidate = value as { label?: unknown; costs?: unknown; endsOn?: unknown; modifiers?: unknown; reminders?: unknown; tokens?: unknown; target?: unknown };
+    if (candidate.target !== undefined && candidate.target !== "self-or-ally") return false;
     if (typeof candidate.label !== "string" || !candidate.label.trim() || !Array.isArray(candidate.costs) || !Array.isArray(candidate.endsOn) || !Array.isArray(candidate.modifiers)) return false;
     if (!candidate.costs.every((cost) => {
       if (!cost || typeof cost !== "object") return false;
       const entry = cost as { kind?: unknown; resourceId?: unknown; sourceDefinitionId?: unknown; markerId?: unknown; amount?: unknown };
-      if (!Number.isInteger(entry.amount) || Number(entry.amount) < 1) return false;
+      if ((entry.amount !== "per-token") && (!Number.isInteger(entry.amount) || Number(entry.amount) < 1)) return false;
       if (entry.kind === "resource") return typeof entry.resourceId === "string" && Boolean(entry.resourceId);
       return entry.kind === "game-marker" && typeof entry.sourceDefinitionId === "string" && Boolean(entry.sourceDefinitionId) && typeof entry.markerId === "string" && Boolean(entry.markerId);
     })) return false;
@@ -116,6 +133,19 @@ export function validatePackBundle(value: unknown): PackBundle {
       if (entry.kind === "defense") return Number.isFinite(entry.amount) && entry.fields.every((field) => ["evasion", "armor", "minor", "major"].includes(String(field)));
       return entry.kind === "defense-per-tier" && entry.fields.every((field) => field === "minor" || field === "major");
     })) return false;
-    return candidate.reminders === undefined || (Array.isArray(candidate.reminders) && candidate.reminders.every((reminder) => typeof reminder === "string" && Boolean(reminder.trim())));
+    if (candidate.reminders !== undefined && (!Array.isArray(candidate.reminders) || candidate.reminders.some((reminder) => typeof reminder !== "string" || !reminder.trim()))) return false;
+    return isFeatureActivationTokensValid(candidate.tokens);
+  }
+
+  function isFeatureActivationTokensValid(value: unknown): boolean {
+    if (value === undefined) return true;
+    if (!value || typeof value !== "object") return false;
+    const tokens = value as { label?: unknown; initial?: unknown };
+    if (typeof tokens.label !== "string" || !tokens.label.trim() || !tokens.initial || typeof tokens.initial !== "object") return false;
+    const initial = tokens.initial as { kind?: unknown; value?: unknown; die?: unknown; bonus?: unknown; min?: unknown; maximumResourceId?: unknown };
+    if (initial.kind === "fixed") return Number.isInteger(initial.value) && Number(initial.value) >= 0;
+    if (initial.kind === "spellcast-trait") return true;
+    if (initial.kind === "roll") return ["d4", "d6", "d8", "d10", "d12", "d20"].includes(String(initial.die)) && (initial.bonus === undefined || Number.isInteger(initial.bonus));
+    return initial.kind === "manual" && (initial.min === undefined || Number.isInteger(initial.min) && Number(initial.min) >= 0) && (initial.maximumResourceId === undefined || typeof initial.maximumResourceId === "string" && Boolean(initial.maximumResourceId));
   }
 }

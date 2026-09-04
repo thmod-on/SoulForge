@@ -37,6 +37,7 @@ export function endFeatureEffectsForCondition(character: Character, catalog: Cat
 export function getActiveFeatureEffectDefenseModifiers(character: Character, catalog: Catalog): Partial<Defense> {
   const tier = getCharacterTier(character.identity.level);
   return getActiveFeatureEffects(character, catalog).reduce<Partial<Defense>>((bonus, effect) => {
+    if (effect.state.target === "ally") return bonus;
     for (const modifier of effect.activation.modifiers) {
       if (modifier.kind === "defense") {
         for (const field of modifier.fields) bonus[field] = (bonus[field] ?? 0) + modifier.amount;

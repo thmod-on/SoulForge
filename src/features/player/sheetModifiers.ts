@@ -1,5 +1,12 @@
 import type { Catalog } from "../../domain/catalog";
-import type { Attribute, CardDefinition, Character, CharacterSheetModifier, Defense, FeatureDefinition } from "../../domain/types";
+import type { Attribute, CardDefinition, Character, CharacterSheetModifier, Defense, FeatureDefinition, SheetModifierCondition } from "../../domain/types";
+
+/** Um bônus condicional que está valendo agora e merece ser explicado na ficha. */
+export type ActiveSheetModifierEffect = {
+  card: CardDefinition;
+  condition: SheetModifierCondition;
+  modifiers: CharacterSheetModifier[];
+};
 
 /**
  * Calcula os bônus permanentes das fontes ativas da ficha.
@@ -43,7 +50,40 @@ export function getActiveSheetModifiers(character: Character, catalog: Catalog):
     ...getActiveClassFeatures(character, catalog),
     ...getActiveMulticlassFeatures(character, catalog),
     ...getActiveCards(character, catalog)
-  ].flatMap((definition) => definition.sheetModifiers ?? []);
+  ].flatMap((definition) => (definition.sheetModifiers ?? []).filter((modifier) => isSheetModifierConditionMet(character, catalog, modifier.condition)));
+}
+
+/**
+ * Lista somente efeitos de carta cujo requisito já é verdadeiro. A ficha usa
+ * esta lista para dar contexto aos valores alterados, sem gravar estado extra.
+ */
+export function getActiveSheetModifierEffects(character: Character, catalog: Catalog): ActiveSheetModifierEffect[] {
+  const grouped = new Map<string, ActiveSheetModifierEffect>();
+  for (const card of getActiveCards(character, catalog)) {
+    for (const modifier of card.sheetModifiers ?? []) {
+      if (!modifier.condition || !isSheetModifierConditionMet(character, catalog, modifier.condition)) continue;
+      const key = `${card.id}:${JSON.stringify(modifier.condition)}`;
+      const effect = grouped.get(key);
+      if (effect) effect.modifiers.push(modifier);
+      else grouped.set(key, { card, condition: modifier.condition, modifiers: [modifier] });
+    }
+  }
+  return [...grouped.values()];
+}
+
+export function isSheetModifierConditionMet(character: Character, catalog: Catalog, condition?: SheetModifierCondition): boolean {
+  if (!condition) return true;
+  if (condition.kind === "equipped-armor") {
+    return character.inventory.entries.some((entry) => {
+      const compartmentId = entry.compartmentId ?? (entry.equipped ? "equipped" : "backpack");
+      return compartmentId === "equipped" && entry.quantity > 0 && catalog.items.find((item) => item.id === entry.definitionId)?.category === "armadura";
+    });
+  }
+  if (condition.kind === "active-domain-cards") {
+    const amount = getActiveCards(character, catalog).filter((card) => card.domainId === condition.domainId).length;
+    return amount >= condition.minimum;
+  }
+  return false;
 }
 
 function getActiveCards(character: Character, catalog: Catalog): CardDefinition[] {

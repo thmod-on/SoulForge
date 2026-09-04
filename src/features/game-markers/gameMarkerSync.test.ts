@@ -60,6 +60,31 @@ describe("marcadores de jogo", () => {
     expect(marker?.kind === "dice" ? marker.results : []).toHaveLength(3);
   });
 
+  it("mantém dados armazenados vazios até serem conquistados e limita a reserva pela Proficiência", () => {
+    const feature: FeatureDefinition = { id: "feature.test.slayer", type: "feature", packId: "test", name: "Matador", summary: "", sourceType: "subclass", sourceId: "subclass.test.slayer", tier: "foundation", gameMarkers: [{ id: "slayer-dice", kind: "stored-dice", label: "Dados do Matador", die: "d6", quantity: { kind: "proficiency" }, gainTrigger: "hope-roll", reset: "session", resetRecovery: { resourceId: "hope", amountPerDie: 1 } }] };
+    const subclass: SubclassDefinition = { id: "subclass.test.slayer", type: "subclass", packId: "test", name: "Matador", summary: "", classId: "class.test.warrior", foundationFeatureIds: [feature.id], specializationFeatureIds: [], masteryFeatureIds: [] };
+    const characterClass: ClassDefinition = { id: "class.test.warrior", type: "class", packId: "test", name: "Guerreiro", summary: "", domainIds: ["domain.a", "domain.b"], startingEvasion: 10, startingHitPoints: 6, featureIds: [], hopeFeatureId: "", subclassIds: [subclass.id, subclass.id] };
+    const catalog = createCatalog([], [feature, subclass, characterClass]);
+    const character = { ...demoCharacter, proficiency: 3, identity: { ...demoCharacter.identity, primaryClassId: characterClass.id, primarySubclassId: subclass.id }, gameMarkers: undefined };
+    const synchronized = synchronizeGameMarkers(character, catalog);
+    expect(synchronized.gameMarkers?.[0]).toMatchObject({ kind: "stored-dice", die: "d6", available: 0, max: 3 });
+    const filled = { ...synchronized, gameMarkers: synchronized.gameMarkers?.map((marker) => marker.kind === "stored-dice" ? { ...marker, available: 5 } : marker) };
+    expect(synchronizeGameMarkers(filled, catalog).gameMarkers?.[0]).toMatchObject({ available: 3, max: 3 });
+  });
+
+  it("converte cada Dado do Matador não gasto em Esperança ao fim da sessão", () => {
+    const feature: FeatureDefinition = { id: "feature.test.slayer-reset", type: "feature", packId: "test", name: "Matador", summary: "", sourceType: "subclass", sourceId: "subclass.test.slayer-reset", tier: "foundation", gameMarkers: [{ id: "slayer-dice", kind: "stored-dice", label: "Dados do Matador", die: "d6", quantity: { kind: "proficiency" }, gainTrigger: "hope-roll", reset: "session", resetRecovery: { resourceId: "hope", amountPerDie: 1 } }] };
+    const subclass: SubclassDefinition = { id: "subclass.test.slayer-reset", type: "subclass", packId: "test", name: "Matador", summary: "", classId: "class.test.warrior-reset", foundationFeatureIds: [feature.id], specializationFeatureIds: [], masteryFeatureIds: [] };
+    const characterClass: ClassDefinition = { id: "class.test.warrior-reset", type: "class", packId: "test", name: "Guerreiro", summary: "", domainIds: ["domain.a", "domain.b"], startingEvasion: 10, startingHitPoints: 6, featureIds: [], hopeFeatureId: "", subclassIds: [subclass.id, subclass.id] };
+    const catalog = createCatalog([], [feature, subclass, characterClass]);
+    const character = { ...demoCharacter, identity: { ...demoCharacter.identity, primaryClassId: characterClass.id, primarySubclassId: subclass.id }, resources: demoCharacter.resources.map((resource) => resource.id === "hope" ? { ...resource, value: 4 } : resource) };
+    const synchronized = synchronizeGameMarkers(character, catalog);
+    const stored = { ...synchronized, gameMarkers: synchronized.gameMarkers?.map((marker) => marker.kind === "stored-dice" ? { ...marker, available: 2 } : marker) };
+    const reset = resetGameMarkers(stored, catalog, "session");
+    expect(reset.gameMarkers?.[0]).toMatchObject({ kind: "stored-dice", available: 0 });
+    expect(reset.resources.find((resource) => resource.id === "hope")?.value).toBe(2);
+  });
+
   it("mantem a fonte ativa quando uma ficha local possui IDs antigos, mas os mesmos nomes", () => {
     const feature: FeatureDefinition = { id: "feature.legacy.serafim.class", type: "feature", packId: "test", name: "Dados de Oração", summary: "", sourceType: "class", sourceId: "class.legacy.serafim", tier: "class", gameMarkers: [{ id: "prayer-dice", kind: "dice", label: "Dados de Oração", die: "d4", quantity: { kind: "spellcast-trait" }, reset: "session" }] };
     const subclass: SubclassDefinition = { id: "subclass.legacy.serafim.portador-divino", type: "subclass", packId: "test", name: "Portador Divino", summary: "", classId: "class.legacy.serafim", foundationFeatureIds: [], specializationFeatureIds: [], masteryFeatureIds: [], spellcastAttributeId: "for" };

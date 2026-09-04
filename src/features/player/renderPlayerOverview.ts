@@ -3,17 +3,20 @@ import type { ActiveGameMarker } from "../game-markers/gameMarkerSync";
 import { renderGameMarkers } from "../game-markers/renderGameMarkers";
 import type { ActiveFeatureEffect } from "../feature-effects/featureEffects";
 import { renderActiveFeatureEffects } from "../feature-effects/renderActiveFeatureEffects";
+import type { ActiveSheetModifierEffect } from "./sheetModifiers";
 
 export type PlayerOverviewDependencies = {
   escapeHtml: (value: string) => string;
   renderResources: (character: Character) => string;
   renderEmptyInline: (message: string) => string;
   getActiveCards: (character: Character) => CardDefinition[];
+  getDomainInfo: (domainId: string) => { name: string; color: string } | undefined;
   getInactiveCardCount: (character: Character) => number;
   getStoredCards: (character: Character) => CardDefinition[];
   getAcquiredSubclassTiers: (character: Character) => Array<NonNullable<CharacterSkill["tier"]>>;
   getActiveGameMarkers: (character: Character) => ActiveGameMarker[];
   getActiveFeatureEffects: (character: Character) => ActiveFeatureEffect[];
+  getActiveSheetModifierEffects: (character: Character) => ActiveSheetModifierEffect[];
   getFeatureActivation: (character: Character, featureId: string) => FeatureActivationDefinition | undefined;
   featureActivationError?: string;
   getSubclassStageSkills: (character: Character, tier: NonNullable<CharacterSkill["tier"]>) => CharacterSkill[];
@@ -25,8 +28,9 @@ export function renderOverview(character: Character, dependencies: PlayerOvervie
   const inactiveCards = dependencies.getInactiveCardCount(character);
   const gameMarkers = dependencies.getActiveGameMarkers(character);
   const activeFeatureEffects = dependencies.getActiveFeatureEffects(character);
+  const activeSheetModifierEffects = dependencies.getActiveSheetModifierEffects(character);
   const hasSessionReset = gameMarkers.some((marker) => marker.definition.reset === "session");
-  return `<main class="content">${renderActiveFeatureEffects(character, activeFeatureEffects, dependencies.escapeHtml)}${dependencies.renderResources(character)}${renderGameMarkers(gameMarkers, dependencies.escapeHtml)}<section class="band"><div class="section-heading"><h2>Cartas ativas</h2><span>${activeCards.length} / 5 ativas</span></div><div class="card-row">${activeCards.map((card) => renderCardTile(card, dependencies)).join("")}</div><button class="sf-action sf-action--secondary deck-drawer-button" data-action="open-stored-cards">Ver Vault (${inactiveCards})</button></section>${renderSubclassTrack(character, dependencies)}${renderMulticlassTrack(character, dependencies)}<section class="quick-actions"><button class="sf-action sf-action--secondary" data-action="open-rest" aria-label="Abrir downtime" title="Downtime"><span aria-hidden="true">🛏</span> Downtime</button>${hasSessionReset ? '<button class="sf-action sf-action--secondary" data-action="reset-game-markers-session"><span>NEW</span> Nova sessao</button>' : ""}<button class="sf-action sf-action--secondary" data-page="skills"><span>XP</span> Registrar experiencia</button></section></main>${renderSubclassFeatureModal(character, dependencies)}`;
+  return `<main class="content">${renderActiveFeatureEffects(character, activeFeatureEffects, activeSheetModifierEffects, dependencies.escapeHtml)}${dependencies.renderResources(character)}${renderGameMarkers(gameMarkers, dependencies.escapeHtml)}<section class="band"><div class="section-heading"><h2>Cartas ativas</h2><span>${activeCards.length} / 5 ativas</span></div><div class="card-row">${activeCards.map((card) => renderCardTile(card, dependencies)).join("")}</div><button class="sf-action sf-action--secondary deck-drawer-button" data-action="open-stored-cards">Ver Vault (${inactiveCards})</button></section>${renderSubclassTrack(character, dependencies)}${renderMulticlassTrack(character, dependencies)}<section class="quick-actions"><button class="sf-action sf-action--secondary" data-action="open-rest" aria-label="Abrir downtime" title="Downtime"><span aria-hidden="true">🛏</span> Downtime</button>${hasSessionReset ? '<button class="sf-action sf-action--secondary" data-action="reset-game-markers-session"><span>NEW</span> Nova sessao</button>' : ""}<button class="sf-action sf-action--secondary" data-page="skills"><span>XP</span> Registrar experiencia</button></section></main>${renderSubclassFeatureModal(character, dependencies)}`;
 }
 
 export function renderStoredCards(character: Character, dependencies: PlayerOverviewDependencies): string {
@@ -34,9 +38,11 @@ export function renderStoredCards(character: Character, dependencies: PlayerOver
   return `<main class="content vault-content"><section class="band"><div class="screen-title"><div><h1>Vault</h1><p>Cartas aprendidas pelo personagem que nao estao ativas no Loadout.</p></div></div><div class="section-heading"><h2>Cartas no Vault</h2><span>${storedCards.length} no Vault</span></div>${storedCards.length ? `<div class="card-row stored-card-row">${storedCards.map((card) => renderStoredCardTile(card, dependencies)).join("")}</div>` : dependencies.renderEmptyInline("O Vault esta vazio por enquanto.")}</section></main>`;
 }
 
-export function renderCardTile(card: CardDefinition, dependencies: Pick<PlayerOverviewDependencies, "escapeHtml">): string {
+export function renderCardTile(card: CardDefinition, dependencies: Pick<PlayerOverviewDependencies, "escapeHtml" | "getDomainInfo">): string {
   const { escapeHtml } = dependencies;
-  return `<button class="ability-card" data-card-modal-id="${card.id}"><div class="card-tier" aria-label="Nível ${card.tier}"><small>Nível</small><strong>${card.tier}</strong></div><div class="card-recall" aria-label="Custo de recall: ${card.recallCost ?? 0} Stress" title="Custo de recall: ${card.recallCost ?? 0} Stress"><span aria-hidden="true">⚡</span><strong>${card.recallCost ?? 0}</strong></div><div class="card-art ${card.image ? "has-image" : ""}" ${card.image ? `style="background-image: url('${escapeHtml(card.image)}')"` : ""}></div><h3>${escapeHtml(card.name)}</h3><span>${escapeHtml(card.cardType)}</span><p>${escapeHtml(card.summary)}</p></button>`;
+  const domain = dependencies.getDomainInfo(card.domainId);
+  const domainColor = domain?.color ?? "#8e4fc4";
+  return `<button class="ability-card" data-card-modal-id="${card.id}" style="--card-domain-color: ${escapeHtml(domainColor)}"><div class="card-tier" aria-label="Nível ${card.tier}"><small>Nível</small><strong>${card.tier}</strong></div><div class="card-recall" aria-label="Custo de recall: ${card.recallCost ?? 0} Stress" title="Custo de recall: ${card.recallCost ?? 0} Stress"><span aria-hidden="true">⚡</span><strong>${card.recallCost ?? 0}</strong></div><div class="card-art ${card.image ? "has-image" : ""}" ${card.image ? `style="background-image: url('${escapeHtml(card.image)}')"` : ""}></div><h3>${escapeHtml(card.name)}</h3><span class="card-domain">${escapeHtml(domain?.name ?? "Domínio")}</span><p>${escapeHtml(card.summary)}</p></button>`;
 }
 
 function renderSubclassTrack(character: Character, dependencies: PlayerOverviewDependencies): string {
