@@ -9261,6 +9261,70 @@ body:has(.modal-backdrop) {
 .feature-activation-controls { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
 .feature-activation-controls small { flex-basis: 100%; }
 
+/* Shared inventory preview: uninterrupted artwork with a readable footer. */
+.item-tile.inventory-art-card {
+  position: relative;
+  display: grid;
+  grid-template-rows: 7.5rem auto;
+  align-content: start;
+  gap: 0;
+  min-width: 0;
+  min-height: min-content;
+  height: auto;
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--radius-control);
+  background: linear-gradient(155deg, #101920, #080d13);
+}
+.inventory-art-card .item-media {
+  height: 7.5rem;
+  min-height: 0;
+  width: 100%;
+  border: 0;
+  background: transparent;
+}
+.inventory-art-card .item-media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(transparent 72%, #080d13);
+}
+.inventory-art-card .item-media img {
+  object-fit: contain;
+  padding: 0.35rem;
+}
+.inventory-card-symbol { width: 3rem; height: 3rem; color: #aaa6b5; opacity: 0.8; }
+.inventory-card-copy { display: grid; gap: 0.25rem; padding: 0.35rem 0.7rem 0.7rem; align-content: start; }
+.inventory-art-card .inventory-card-copy strong {
+  display: block;
+  margin: 0;
+  min-height: 0;
+  max-height: none;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.inventory-art-card .inventory-card-copy small { margin: 0; font-size: 0.75rem; color: var(--color-muted); }
+.inventory-card-state { color: var(--color-gold); font-size: 0.65rem; }
+.inventory-art-card .item-quantity { z-index: 1; border-radius: var(--radius-control); color: var(--color-text); }
+.item-tile.inventory-art-card.is-active,
+.item-tile.inventory-art-card:focus-visible { border-color: var(--color-gold); box-shadow: inset 0 0 0 1px var(--color-gold); }
+.inventory-main .inventory-compartment { background: transparent; border-color: transparent; padding: 0; box-shadow: none; }
+.inventory-main .compartment-heading { border-bottom: 1px solid var(--color-border); padding-bottom: 0.6rem; }
+.inventory-main .inventory-compartment.is-drop-target { border-color: #56d49d; }
+.inventory-main .inventory-compartment.is-drop-invalid { border-color: #c92e42; }
+.inventory-main .item-grid,
+.add-item-modal .add-item-catalog {
+  grid-template-columns: repeat(auto-fill, minmax(min(10rem, 100%), 1fr));
+  align-content: start;
+  /* Auto tracks can shrink to borders when many overflow-hidden cards share
+     a constrained scroll area. Size rows from content, not available height. */
+  grid-auto-rows: max-content;
+}
+
 /* Core resources keep the same footprint regardless of their maximum. */
 .sidebar {
   overflow-y: auto;

@@ -1,4 +1,5 @@
 import type { Catalog } from "../../domain/catalog";
+import { renderItemCardBody } from "./renderItemCard";
 import type { Character, InventoryCompartment, ItemDefinition } from "../../domain/types";
 import { renderCombatModifiers, renderWeaponProfile } from "../compendium/items";
 import { getItemTierFilterOptions, matchesItemTierFilter } from "../items/itemTierFilters";
@@ -88,7 +89,7 @@ export function renderAddItemToContainerModal(dependencies: InventoryRenderDepen
 }
 
 function renderAddItemCatalogTile(item: ItemDefinition, selected: boolean, itemFilterLabels: Record<InventoryFilter, string>, escapeHtml: (value: string) => string): string {
-  return `<button class="item-tile add-item-choice ${selected ? "is-active" : ""}" type="button" data-add-item-preview-definition-id="${item.id}" aria-label="Ver detalhes de ${escapeHtml(item.name)}"><span class="item-media">${renderItemVisual(item, "tile", escapeHtml)}</span><strong>${escapeHtml(item.name)}</strong><small>${item.tier ? `Nível ${item.tier}` : "Sem nível"} · ${itemFilterLabels[item.category]} · Peso ${item.weight}</small><span class="item-catalog-footer">${selected ? "<em class=\"item-selection-state\">Selecionado</em>" : ""}</span></button>`;
+  return `<button class="item-tile inventory-art-card add-item-choice ${selected ? "is-active" : ""}" type="button" data-add-item-preview-definition-id="${item.id}" aria-label="Ver detalhes de ${escapeHtml(item.name)}">${renderItemCardBody(item, { selected, categoryLabel: itemFilterLabels[item.category] }, escapeHtml)}</button>`;
 }
 
 function renderCompartmentHint(compartment: InventoryCompartment, dependencies: InventoryRenderDependencies): string {
@@ -98,7 +99,7 @@ function renderCompartmentHint(compartment: InventoryCompartment, dependencies: 
 
 function renderItemTile(entry: Character["inventory"]["entries"][number], item: ItemDefinition, selected: boolean, equipped: boolean, compartmentId: string, dependencies: InventoryRenderDependencies): string {
   const { escapeHtml, itemFilterLabels } = dependencies;
-  return `<button class="item-tile ${selected ? "is-active" : ""}" data-item-id="${item.id}" data-inventory-entry-id="${getEntryId(entry)}" data-item-compartment-id="${compartmentId}" draggable="false"><span class="item-media">${renderItemVisual(item, "tile", escapeHtml)}<span class="item-quantity">x${entry.quantity}</span></span><strong>${escapeHtml(item.name)}</strong><small>${item.tier ? `Tier ${item.tier}` : itemFilterLabels[item.category]} - ${itemFilterLabels[item.category]}</small>${equipped ? "<em>Equipado</em>" : ""}</button>`;
+  return `<button class="item-tile inventory-art-card ${selected ? "is-active" : ""}" type="button" data-item-id="${item.id}" data-inventory-entry-id="${getEntryId(entry)}" data-item-compartment-id="${compartmentId}" draggable="false">${renderItemCardBody(item, { quantity: entry.quantity, equipped, categoryLabel: itemFilterLabels[item.category] }, escapeHtml)}</button>`;
 }
 
 export function renderItemVisual(item: ItemDefinition, variant: "tile" | "detail", escapeHtml: (value: string) => string): string {

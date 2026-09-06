@@ -2,6 +2,10 @@
 
 ## Propósito
 
+### Cards de inventário — teste visual
+
+Containers e seleção reutilizam `renderItemCardBody`. Arte sem moldura interna, preservada por `object-fit: contain`; símbolo vetorial de categoria quando não há imagem, sem brilho radial. Nome completo e tier ficam juntos no rodapé, quantidade no canto superior e estado em linha própria. A grade iguala os cards na mesma linha e cresce com títulos longos, sem limitar linhas nem usar rolagem interna. Seleção/foco usam violeta; detalhes continuam mostrando categoria, peso e demais propriedades. Este teste não altera as ações de inventário.
+
 ### Recursos compactos da sidebar
 
 - PV, Estresse, Esperança e Armadura usam um único SVG por recurso em uma grade 2 × 2, depois de Combate. Máximos maiores não criam novos marcadores nem alteram o tamanho do componente.

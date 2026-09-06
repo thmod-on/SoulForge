@@ -4,6 +4,15 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.26.8]
+
+### Corrigido
+- Cards da seleção não são mais comprimidos em linhas quando o catálogo contém muitos itens; a grade preserva a altura do conteúdo e rola internamente.
+
+### Alterado
+- Teste visual compartilhado para cards de itens nos containers e na seleção: arte integrada, rodapé compacto e quantidade no canto.
+- Símbolos de categoria para itens sem imagem e cabeçalhos de compartimento mais leves.
+
 ## [0.26.7]
 
 ### Alterado
