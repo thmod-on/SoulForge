@@ -2,6 +2,14 @@
 
 ## Propósito
 
+### Recursos compactos da sidebar
+
+- PV, Estresse, Esperança e Armadura usam um único SVG por recurso em uma grade 2 × 2, depois de Combate. Máximos maiores não criam novos marcadores nem alteram o tamanho do componente.
+- O preenchimento sobe proporcionalmente ao valor registrado, sem alterar sua semântica de jogo. Estresse: branco para amarelo (#f4cc57); PV: vermelho (#ef6579); Esperança: marfim (#f3eadc); Armadura: azul (#65c8df). Os três últimos usam interior neutro escuro quando vazios.
+- Nome curto e valor atual/máximo sempre acompanham os ícones: a cor não é a única indicação. Controles +/− usam alvos de 44 × 44 px e ficam desabilitados nos limites.
+- O componente-base é `renderCoreResources`; reaproveita o tratamento de ajustes de recursos existente. Recursos especiais continuam na área principal.
+- A sidebar preserva retrato e origem narrativa; o nome e nível ficam no topo, e XP em Progressão. Em pouca altura, o retrato é compacto e a sidebar permite rolagem sem cortar controles.
+
 O SoulForge é um companheiro de mesa para Daggerheart. Sua interface deve ser rápida de consultar, confortável em iPad na horizontal e visualmente evocativa sem competir com a sessão de jogo.
 
 A direção de arte é **fantasia sombria refinada**: superfícies profundas, contraste legível, detalhes arcanos pontuais e movimento discreto.

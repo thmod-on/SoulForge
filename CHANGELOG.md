@@ -4,6 +4,14 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.26.7]
+
+### Alterado
+- Recursos fixos na sidebar, com ícone único, preenchimento proporcional e controles de toque.
+- Recursos especiais preservados na ficha, sem duplicar PV, Estresse, Esperança e Armadura.
+- Nome e nível na identificação do topo; experiência na tela de Progressão.
+- Sidebar com rolagem de segurança e retrato compacto em telas de pouca altura.
+
 ## [0.26.6]
 
 ### Adicionado

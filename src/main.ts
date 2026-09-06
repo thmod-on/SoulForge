@@ -1477,6 +1477,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
     ? appRoot.querySelector<HTMLElement>(".content")?.scrollTop
     : undefined;
   const previousDocumentScrollTop = options.preserveMainScroll ? window.scrollY : undefined;
+  const previousSidebarScrollTop = options.preserveMainScroll ? appRoot.querySelector<HTMLElement>(".sidebar")?.scrollTop : undefined;
   const currentCharacter = state.character;
   if (state.characterSelectionOpen && isEditorPage(state.page)) {
     const editorContextCharacter = currentCharacter ?? state.characters[0] ?? demoCharacter;
@@ -1606,6 +1607,8 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
   if (previousMainScrollTop !== undefined) {
     requestAnimationFrame(() => {
       const mainShell = appRoot.querySelector<HTMLElement>(".main-shell");
+      const sidebar = appRoot.querySelector<HTMLElement>(".sidebar");
+      if (sidebar && previousSidebarScrollTop !== undefined) sidebar.scrollTop = previousSidebarScrollTop;
       if (mainShell) {
         mainShell.scrollTop = previousMainScrollTop;
       }
@@ -1976,7 +1979,7 @@ async function adjustResource(resourceId: string | undefined, delta: number): Pr
   const updatedCharacter = { ...character, resources };
   state.character = updatedCharacter;
   await saveCharacter(updatedCharacter);
-  render();
+  render({ preserveMainScroll: true });
 }
 
 async function createResource(): Promise<void> {
