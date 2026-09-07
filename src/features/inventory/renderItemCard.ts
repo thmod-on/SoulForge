@@ -1,4 +1,5 @@
 import type { ItemDefinition } from "../../domain/types";
+import { getItemArtwork } from "../items/itemArtwork";
 
 type ItemCardOptions = { quantity?: number; equipped?: boolean; selected?: boolean; categoryLabel: string };
 
@@ -12,8 +13,9 @@ const categoryShapes: Record<ItemDefinition["category"], string> = {
 
 /** Shared card content for owned items and the add-item catalog. */
 export function renderItemCardBody(item: ItemDefinition, options: ItemCardOptions, escapeHtml: (value: string) => string): string {
-  const art = item.image
-    ? `<img class="sf-media-image sf-media-image--item" src="${escapeHtml(item.image)}" alt="" loading="lazy" />`
+  const image = getItemArtwork(item);
+  const art = image
+    ? `<img class="sf-media-image sf-media-image--item ${!item.image ? "is-generic-art" : ""}" src="${escapeHtml(image)}" alt="" loading="lazy" />`
     : `<svg class="inventory-card-symbol" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">${categoryShapes[item.category]}</svg>`;
-  return `<span class="item-media ${item.image ? "has-image" : "is-placeholder"}">${art}</span>${options.quantity !== undefined ? `<span class="item-quantity" aria-label="Quantidade: ${options.quantity}">×${options.quantity}</span>` : ""}<span class="inventory-card-copy"><strong>${escapeHtml(item.name)}</strong><small>${item.tier ? `Tier ${item.tier}` : escapeHtml(options.categoryLabel)}</small>${options.equipped || options.selected ? `<span class="inventory-card-state">${options.selected ? "✓ Selecionado" : "Equipado"}</span>` : ""}</span>`;
+  return `<span class="item-media ${image ? "has-image" : "is-placeholder"}">${art}</span>${options.quantity !== undefined ? `<span class="item-quantity" aria-label="Quantidade: ${options.quantity}">×${options.quantity}</span>` : ""}<span class="inventory-card-copy"><strong>${escapeHtml(item.name)}</strong><small>${item.tier ? `Tier ${item.tier}` : escapeHtml(options.categoryLabel)}</small>${options.equipped || options.selected ? `<span class="inventory-card-state">${options.selected ? "✓ Selecionado" : "Equipado"}</span>` : ""}</span>`;
 }

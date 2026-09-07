@@ -3,7 +3,7 @@ import type { CommunityDefinition, FeatureDefinition } from "../../domain/types"
 import { readFeatureAuthoringFields, renderFeatureAuthoringFields } from "./featureAuthoring";
 
 export type CommunityFeatureState = { compendiumCommunitySearch: string; compendiumCommunityPackId: string; communityModalOpen: boolean; editingCompendiumCommunityId?: string; deletingCompendiumCommunityId?: string; compendiumCommunityPreviewId?: string };
-export type CommunityFeatureDependencies = { state: CommunityFeatureState; catalog: Catalog; escapeHtml: (value: string) => string; getPackDisplayName: (packId: string) => string; saveCustomDefinition: (definition: CommunityDefinition | FeatureDefinition) => Promise<void>; deleteCustomDefinition: (id: string) => Promise<void>; refreshCatalog: () => Promise<void>; render: () => void };
+export type CommunityFeatureDependencies = { state: CommunityFeatureState; catalog: Catalog; escapeHtml: (value: string) => string; getPackDisplayName: (packId: string) => string; saveCustomDefinition: (definition: CommunityDefinition | FeatureDefinition) => Promise<void>; deleteCustomDefinition: (id: string) => Promise<void>; refreshCatalog: () => Promise<void>; render: (options?: { preserveMainScroll?: boolean }) => void };
 
 export function renderCompendiumCommunitiesManager(deps: CommunityFeatureDependencies): string {
   const allCommunities = [...deps.catalog.communities].sort((left, right) => left.name.localeCompare(right.name, "pt-BR"));
@@ -33,7 +33,7 @@ export function renderCompendiumCommunityFormModal(deps: CommunityFeatureDepende
 export function renderDeleteCompendiumCommunityModal(deps: CommunityFeatureDependencies): string { const community = deps.catalog.communities.find((entry) => entry.id === deps.state.deletingCompendiumCommunityId); return community ? `<div class="modal-backdrop" data-modal-backdrop><section class="modal confirm-modal"><h2>Excluir comunidade?</h2><p>"${deps.escapeHtml(community.name)}" e sua Feature serão removidas deste dispositivo.</p><div class="modal-actions"><button class="sf-action sf-action--secondary secondary-action" type="button" data-action="cancel-delete-compendium-community">Cancelar</button><button class="sf-action sf-action--danger danger-action" type="button" data-action="confirm-delete-compendium-community">Excluir</button></div></section></div>` : ""; }
 
 export function handleCommunityAction(target: HTMLElement, deps: CommunityFeatureDependencies): boolean {
-  const preview = target.closest<HTMLElement>("[data-community-preview-id]"); if (preview) { deps.state.compendiumCommunityPreviewId = preview.dataset.communityPreviewId; deps.render(); return true; }
+  const preview = target.closest<HTMLElement>("[data-community-preview-id]"); if (preview) { deps.state.compendiumCommunityPreviewId = preview.dataset.communityPreviewId; deps.render({ preserveMainScroll: true }); return true; }
   if (target.closest('[data-action="new-compendium-community"]')) { deps.state.communityModalOpen = true; deps.state.editingCompendiumCommunityId = undefined; deps.render(); return true; }
   const edit = target.closest<HTMLElement>('[data-action="edit-compendium-community"]'); if (edit) { deps.state.communityModalOpen = true; deps.state.editingCompendiumCommunityId = edit.dataset.communityId; deps.render(); return true; }
   if (target.closest('[data-action="cancel-compendium-community"]')) { deps.state.communityModalOpen = false; deps.state.editingCompendiumCommunityId = undefined; deps.render(); return true; }

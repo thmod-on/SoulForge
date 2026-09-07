@@ -1484,7 +1484,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
     const editorScreen = state.page === "compendium" ? renderCompendium() : renderSettings(editorContextCharacter);
     appRoot.innerHTML = `<div class="editor-shell">${renderEditorHeaderView(getPlayerShellDependencies())}${editorScreen}</div>${renderPackImportModal()}${renderCharacterImportModal({ isOpen: state.characterImportOpen, character: state.pendingCharacterImport, error: state.characterImportError, escapeHtml })}${renderRemoveInstalledPackModal()}${renderCardModalView(state.modalCardId, getCardFeatureDependencies())}${renderDomainModalView(getDomainFeatureDependencies())}${renderDeleteDomainModalView(getDomainFeatureDependencies())}${renderCompendiumCardFormModalView(getCardFeatureDependencies())}${renderDeleteCompendiumCardModalView(getCardFeatureDependencies())}${renderCompendiumItemFormModalView(getItemFeatureDependencies())}${renderDeleteCompendiumItemModalView(getItemFeatureDependencies())}${renderCompendiumItemPreviewModalView(getItemFeatureDependencies())}${renderCompendiumClassPreviewModalView(getClassFeatureDependencies())}${renderCompendiumClassFormModalView(getClassFeatureDependencies())}${renderDeleteCompendiumClassModalView(getClassFeatureDependencies())}${renderCompendiumAncestryFormModalView(getAncestryFeatureDependencies())}${renderDeleteCompendiumAncestryModalView(getAncestryFeatureDependencies())}`;
     document.body.classList.toggle("has-modal", state.packImportOpen || state.characterImportOpen || Boolean(state.deletingInstalledPackId) || Boolean(state.modalCardId) || state.domainModalOpen || Boolean(state.deletingDomainId) || state.cardModalOpen || Boolean(state.deletingCompendiumCardId) || state.itemDefinitionModalOpen || Boolean(state.deletingCompendiumItemId) || Boolean(state.compendiumItemPreviewId) || state.classModalOpen || Boolean(state.deletingCompendiumClassId) || Boolean(state.compendiumClassPreviewId) || state.ancestryModalOpen || Boolean(state.deletingCompendiumAncestryId) || Boolean(state.compendiumAncestryPreviewId) || Boolean(state.compendiumCommunityPreviewId) || state.transformationState.transformationModalOpen || Boolean(state.transformationState.deletingCompendiumTransformationId) || Boolean(state.transformationState.compendiumTransformationPreviewId));
-    if (previousContentScrollTop !== undefined) requestAnimationFrame(() => { const content = appRoot.querySelector<HTMLElement>(".content"); if (content) content.scrollTop = previousContentScrollTop; });
+    if (options.preserveMainScroll) requestAnimationFrame(() => { const content = appRoot.querySelector<HTMLElement>(".content"); if (content && previousContentScrollTop !== undefined) content.scrollTop = previousContentScrollTop; if (previousDocumentScrollTop !== undefined) window.scrollTo({ top: previousDocumentScrollTop, behavior: "auto" }); });
     return;
   }
 
@@ -1604,12 +1604,12 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
   document.body.classList.toggle("has-modal", Boolean(appRoot.querySelector(".modal-backdrop")));
   if (state.addItemToCompartmentId && state.addItemCatalogScrollTop) requestAnimationFrame(() => { const catalog = appRoot.querySelector<HTMLElement>(".add-item-catalog"); if (catalog) catalog.scrollTop = state.addItemCatalogScrollTop ?? 0; });
   if (state.progressionCardPickerMode && state.progressionCardPickerScrollTop !== undefined) requestAnimationFrame(() => { const list = appRoot.querySelector<HTMLElement>(".progression-card-choice-list"); if (list) list.scrollTop = state.progressionCardPickerScrollTop ?? 0; });
-  if (previousMainScrollTop !== undefined) {
+  if (options.preserveMainScroll) {
     requestAnimationFrame(() => {
       const mainShell = appRoot.querySelector<HTMLElement>(".main-shell");
       const sidebar = appRoot.querySelector<HTMLElement>(".sidebar");
       if (sidebar && previousSidebarScrollTop !== undefined) sidebar.scrollTop = previousSidebarScrollTop;
-      if (mainShell) {
+      if (mainShell && previousMainScrollTop !== undefined) {
         mainShell.scrollTop = previousMainScrollTop;
       }
       const content = appRoot.querySelector<HTMLElement>(".content");
@@ -2789,14 +2789,14 @@ function bindEvents(): void {
     const compendiumClassPreviewButton = target.closest<HTMLElement>("[data-compendium-class-preview-id]");
     if (compendiumClassPreviewButton) {
       state.compendiumClassPreviewId = compendiumClassPreviewButton.dataset.compendiumClassPreviewId;
-      render();
+      render({ preserveMainScroll: true });
       return;
     }
 
     const compendiumItemPreviewButton = target.closest<HTMLElement>("[data-compendium-item-preview-id]");
     if (compendiumItemPreviewButton) {
       state.compendiumItemPreviewId = compendiumItemPreviewButton.dataset.compendiumItemPreviewId;
-      render();
+      render({ preserveMainScroll: true });
       return;
     }
 
@@ -3436,7 +3436,7 @@ function bindEvents(): void {
       state.editingCompendiumItemId = undefined;
       state.deletingCompendiumItemId = undefined;
       state.compendiumItemPreviewId = undefined;
-      render();
+      render({ preserveMainScroll: true });
     }
 
     if (event.key === "Escape" && (state.classModalOpen || state.deletingCompendiumClassId || state.compendiumClassPreviewId)) {
@@ -3444,7 +3444,7 @@ function bindEvents(): void {
       state.editingCompendiumClassId = undefined;
       state.deletingCompendiumClassId = undefined;
       state.compendiumClassPreviewId = undefined;
-      render();
+      render({ preserveMainScroll: true });
     }
 
     if (event.key === "Escape" && (state.ancestryModalOpen || state.deletingCompendiumAncestryId || state.compendiumAncestryPreviewId || state.communityModalOpen || state.deletingCompendiumCommunityId || state.compendiumCommunityPreviewId || state.transformationState.transformationModalOpen || state.transformationState.deletingCompendiumTransformationId || state.transformationState.compendiumTransformationPreviewId)) { state.ancestryModalOpen = false; state.editingCompendiumAncestryId = undefined; state.deletingCompendiumAncestryId = undefined; state.compendiumAncestryPreviewId = undefined; state.communityModalOpen = false; state.editingCompendiumCommunityId = undefined; state.deletingCompendiumCommunityId = undefined; state.compendiumCommunityPreviewId = undefined; state.transformationState.transformationModalOpen = false; state.transformationState.editingCompendiumTransformationId = undefined; state.transformationState.deletingCompendiumTransformationId = undefined; state.transformationState.compendiumTransformationPreviewId = undefined; render({ preserveMainScroll: true }); }

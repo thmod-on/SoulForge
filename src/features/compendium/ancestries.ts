@@ -4,7 +4,7 @@ import { readLocalImage } from "../../app/media";
 import { readFeatureAuthoringFields, renderFeatureAuthoringFields } from "./featureAuthoring";
 
 export type AncestryFeatureState = { compendiumAncestrySearch: string; ancestryModalOpen: boolean; editingCompendiumAncestryId?: string; deletingCompendiumAncestryId?: string; compendiumAncestryPreviewId?: string };
-export type AncestryFeatureDependencies = { state: AncestryFeatureState; catalog: Catalog; escapeHtml: (value: string) => string; renderEmptyInline: (message: string) => string; getPackDisplayName: (packId: string) => string; saveCustomDefinition: (definition: AncestryDefinition | FeatureDefinition) => Promise<void>; deleteCustomDefinition: (definitionId: string) => Promise<void>; refreshCatalog: () => Promise<void>; render: () => void };
+export type AncestryFeatureDependencies = { state: AncestryFeatureState; catalog: Catalog; escapeHtml: (value: string) => string; renderEmptyInline: (message: string) => string; getPackDisplayName: (packId: string) => string; saveCustomDefinition: (definition: AncestryDefinition | FeatureDefinition) => Promise<void>; deleteCustomDefinition: (definitionId: string) => Promise<void>; refreshCatalog: () => Promise<void>; render: (options?: { preserveMainScroll?: boolean }) => void };
 
 export function renderCompendiumAncestriesManager(deps: AncestryFeatureDependencies): string {
   const search = deps.state.compendiumAncestrySearch.trim().toLocaleLowerCase("pt-BR");
@@ -23,7 +23,7 @@ export function handleAncestryAction(target: HTMLElement, deps: AncestryFeatureD
   const preview = target.closest<HTMLElement>("[data-ancestry-preview-id]");
   if (!preview) return false;
   deps.state.compendiumAncestryPreviewId = preview.dataset.ancestryPreviewId;
-  deps.render();
+  deps.render({ preserveMainScroll: true });
   return true;
 }
 

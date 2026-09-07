@@ -4,6 +4,10 @@
 
 ### Cards de inventário — teste visual
 
+Artes-piloto de tocha, ouro e couro: política de correspondência, arquivos e prompts documentados em [ITEM_ARTWORK.md](ITEM_ARTWORK.md). Imagens próprias sempre têm prioridade; nenhum pack precisa ser reimportado.
+
+A lista de itens do Compendium também reutiliza esse componente. Ações de edição/exclusão de itens locais e indicação de conteúdo de pack ficam fora do botão de preview, em rodapé próprio. As linhas crescem pelo conteúdo e mantêm os cards alinhados sem comprimir catálogos extensos.
+
 Containers e seleção reutilizam `renderItemCardBody`. Arte sem moldura interna, preservada por `object-fit: contain`; símbolo vetorial de categoria quando não há imagem, sem brilho radial. Nome completo e tier ficam juntos no rodapé, quantidade no canto superior e estado em linha própria. A grade iguala os cards na mesma linha e cresce com títulos longos, sem limitar linhas nem usar rolagem interna. Seleção/foco usam violeta; detalhes continuam mostrando categoria, peso e demais propriedades. Este teste não altera as ações de inventário.
 
 ### Recursos compactos da sidebar

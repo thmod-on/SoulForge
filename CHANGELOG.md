@@ -4,6 +4,20 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.26.9]
+
+### Corrigido
+- Detalhes de classes, ancestralidades e comunidades também preservam a rolagem da listagem ao abrir e fechar.
+- Listagem de itens do Compendium mantém a posição de rolagem ao abrir e fechar detalhes, inclusive pela tecla Esc e no acesso pela seleção de personagens.
+
+### Adicionado
+- Seis artes de poções: vida/cura vermelha e vigor amarelo, cada uma nas variantes menor, normal e maior; associação visual por nome e categoria, preservando imagens personalizadas.
+- Artes-piloto reutilizáveis para tocha, ouro e armadura de couro, em WebP compacto, disponíveis offline e sem substituir imagens próprias dos itens.
+
+### Alterado
+- Lista de itens do Compendium reutiliza os cards do inventário, com arte integrada, símbolos de categoria e nomes completos.
+- Ações de editar/excluir itens locais e indicação de conteúdo protegido permanecem separadas do preview.
+
 ## [0.26.8]
 
 ### Corrigido

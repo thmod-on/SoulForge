@@ -1,4 +1,5 @@
 import type { Catalog } from "../../domain/catalog";
+import { renderItemCardBody } from "../inventory/renderItemCard";
 import type { Character, ItemDefinition } from "../../domain/types";
 import { readLocalImage } from "../../app/media";
 import type { InventoryFilter } from "../../app/types";
@@ -94,8 +95,8 @@ function getFilteredItems(dependencies: ItemFeatureDependencies): ItemDefinition
 }
 
 function renderItemResult(item: ItemDefinition, dependencies: ItemFeatureDependencies): string {
-  const { escapeHtml, itemFilterLabels, renderItemVisual } = dependencies;
-  return `<article class="compendium-item-result"><button class="item-tile compendium-item-tile" type="button" data-compendium-item-preview-id="${item.id}" aria-label="Ver detalhes de ${escapeHtml(item.name)}"><span class="item-media">${renderItemVisual(item, "tile")}</span><strong>${escapeHtml(item.name)}</strong><small>${item.tier ? `Tier ${item.tier} - ` : ""}${itemFilterLabels[item.category]} · Peso ${item.weight}</small></button><div class="compendium-card-result-actions">${item.packId === "local" ? `<button class="sf-action sf-action--secondary sf-action--compact" type="button" data-action="edit-compendium-item" data-item-id="${item.id}">Editar</button><button class="sf-action sf-action--danger sf-action--compact" type="button" data-action="delete-compendium-item" data-item-id="${item.id}">Excluir</button>` : '<span class="readonly-label">Conteudo do pack</span>'}</div></article>`;
+  const { escapeHtml, itemFilterLabels } = dependencies;
+  return `<article class="compendium-item-result"><button class="item-tile inventory-art-card compendium-item-tile" type="button" data-compendium-item-preview-id="${item.id}" aria-label="Ver detalhes de ${escapeHtml(item.name)}">${renderItemCardBody(item, { categoryLabel: itemFilterLabels[item.category] }, escapeHtml)}</button><div class="compendium-card-result-actions">${item.packId === "local" ? `<button class="sf-action sf-action--secondary sf-action--compact" type="button" data-action="edit-compendium-item" data-item-id="${item.id}">Editar</button><button class="sf-action sf-action--danger sf-action--compact" type="button" data-action="delete-compendium-item" data-item-id="${item.id}">Excluir</button>` : '<span class="readonly-label">Conteudo do pack</span>'}</div></article>`;
 }
 
 function readDefinitionImage(selector: string): Promise<string | undefined> {

@@ -1,5 +1,6 @@
 import type { Catalog } from "../../domain/catalog";
 import { renderItemCardBody } from "./renderItemCard";
+import { getItemArtwork } from "../items/itemArtwork";
 import type { Character, InventoryCompartment, ItemDefinition } from "../../domain/types";
 import { renderCombatModifiers, renderWeaponProfile } from "../compendium/items";
 import { getItemTierFilterOptions, matchesItemTierFilter } from "../items/itemTierFilters";
@@ -103,7 +104,8 @@ function renderItemTile(entry: Character["inventory"]["entries"][number], item: 
 }
 
 export function renderItemVisual(item: ItemDefinition, variant: "tile" | "detail", escapeHtml: (value: string) => string): string {
-  return item.image ? `<img class="sf-media-image sf-media-image--item" src="${escapeHtml(item.image)}" alt="" />` : `<span class="item-icon item-icon-${variant}" aria-label="Sem imagem; tipo ${itemIcon(item.category)}">${itemIcon(item.category)}</span>`;
+  const image = getItemArtwork(item);
+  return image ? `<img class="sf-media-image sf-media-image--item ${!item.image ? "is-generic-art" : ""}" src="${escapeHtml(image)}" alt="" />` : `<span class="item-icon item-icon-${variant}" aria-label="Sem imagem; tipo ${itemIcon(item.category)}">${itemIcon(item.category)}</span>`;
 }
 
 function itemIcon(category: ItemDefinition["category"]): string {

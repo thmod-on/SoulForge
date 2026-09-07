@@ -7816,11 +7816,15 @@ body:has(.modal-backdrop) {
 }
 
 .compendium-item-results {
-  grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(10rem, 100%), 1fr));
+  grid-auto-rows: max-content;
+  align-content: start;
 }
 
 .compendium-item-result {
   display: grid;
+  grid-template-rows: 1fr auto;
+  min-width: 0;
   gap: 0.45rem;
 }
 
@@ -9295,6 +9299,11 @@ body:has(.modal-backdrop) {
   padding: 0.35rem;
 }
 .inventory-card-symbol { width: 3rem; height: 3rem; color: #aaa6b5; opacity: 0.8; }
+.inventory-art-card .item-media:has(.is-generic-art),
+.item-modal-art:has(.is-generic-art),
+.add-item-preview-art:has(.is-generic-art) { background: #080d13; }
+.item-modal-art .sf-media-image--item.is-generic-art,
+.add-item-preview-art .sf-media-image--item.is-generic-art { object-fit: contain; padding: 1rem; }
 .inventory-card-copy { display: grid; gap: 0.25rem; padding: 0.35rem 0.7rem 0.7rem; align-content: start; }
 .inventory-art-card .inventory-card-copy strong {
   display: block;
