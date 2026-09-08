@@ -25,7 +25,7 @@ export type SettingsViewState = {
   installedPacks: PackManifest[];
   openSettingsSections: Record<SettingsSection, boolean>;
   packImportOpen: boolean;
-  pendingPackBundle?: PackBundle;
+  pendingPackBundles?: PackBundle[];
   packImportError?: string;
   deletingInstalledPackId?: string;
 };

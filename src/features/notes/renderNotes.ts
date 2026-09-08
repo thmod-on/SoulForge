@@ -1,4 +1,5 @@
 import type { Character, CharacterNote, CharacterNoteCategory } from "../../domain/types";
+import { noteCategoryLabels } from "./noteCategories";
 
 export type NotesRenderState = {
   character?: Character;
@@ -10,7 +11,6 @@ export type NotesRenderState = {
 
 export type NotesRenderDependencies = {
   state: NotesRenderState;
-  noteCategoryLabels: Record<CharacterNoteCategory, string>;
   escapeHtml: (value: string) => string;
   renderEmptyInline: (message: string) => string;
 };
@@ -21,7 +21,7 @@ export function renderNotes(character: Character, dependencies: NotesRenderDepen
 }
 
 function renderNoteCard(note: CharacterNote, dependencies: NotesRenderDependencies): string {
-  const { escapeHtml, noteCategoryLabels } = dependencies;
+  const { escapeHtml } = dependencies;
   return `<article class="note-card" data-action="view-note" data-note-id="${note.id}"><div class="note-card-heading"><span>${noteCategoryLabels[note.category]}</span><small>${formatNoteDate(note.updatedAt)}</small></div><h2>${escapeHtml(note.title)}</h2><p>${escapeHtml(note.content)}</p><div class="note-actions"><button class="sf-action sf-action--secondary sf-action--compact secondary-action" type="button" data-action="edit-note" data-note-id="${note.id}">Editar</button><button class="sf-action sf-action--danger sf-action--compact danger-action" type="button" data-action="delete-note" data-note-id="${note.id}">Excluir</button></div></article>`;
 }
 
@@ -30,7 +30,7 @@ function formatNoteDate(value: string): string {
 }
 
 export function renderNoteModal(dependencies: NotesRenderDependencies): string {
-  const { state, noteCategoryLabels, escapeHtml } = dependencies;
+  const { state, escapeHtml } = dependencies;
   const character = state.character;
   if (!character || !state.noteModalOpen) return "";
   const note = character.notes.find((entry) => entry.id === state.editingNoteId);
@@ -39,7 +39,7 @@ export function renderNoteModal(dependencies: NotesRenderDependencies): string {
 }
 
 export function renderViewNoteModal(dependencies: NotesRenderDependencies): string {
-  const { state, noteCategoryLabels, escapeHtml } = dependencies;
+  const { state, escapeHtml } = dependencies;
   const note = state.character?.notes.find((entry) => entry.id === state.viewingNoteId);
   if (!note) return "";
   return `<div class="modal-backdrop" data-modal-backdrop><section class="note-view-modal sf-scroll-region" role="dialog" aria-modal="true" aria-labelledby="view-note-title"><div class="container-modal-heading"><div><span class="resource-modal-label">${noteCategoryLabels[note.category]}</span><h2 id="view-note-title">${escapeHtml(note.title)}</h2></div><button class="modal-close modal-close-inline" data-modal-close aria-label="Fechar anotacao">x</button></div><small>Atualizado em ${formatNoteDate(note.updatedAt)}</small><p>${escapeHtml(note.content)}</p><button class="sf-action sf-action--primary primary-action" type="button" data-action="edit-note" data-note-id="${note.id}">Editar anotacao</button></section></div>`;

@@ -1,4 +1,4 @@
-import type { Definition, PackManifest } from "../domain/types";
+import type { Definition, PackBundle, PackManifest } from "../domain/types";
 
 const databaseName = "soulforge";
 const databaseVersion = 4;
@@ -33,24 +33,32 @@ export async function loadInstalledPacks(): Promise<PackManifest[]> {
 }
 
 export async function installLocalPack(manifest: PackManifest, definitions: Definition[]): Promise<void> {
+  await installLocalPacks([{ format: "soulforge-pack-v1", manifest, definitions }]);
+}
+
+/** Instala ou atualiza um lote inteiro dentro de uma unica transacao. */
+export async function installLocalPacks(packs: PackBundle[]): Promise<void> {
   const database = await openDatabase();
   await new Promise<void>((resolve, reject) => {
     const transaction = database.transaction([packStoreName, definitionStoreName], "readwrite");
-    // A importação de uma versão mais nova do mesmo Pack deve substituir
-    // somente o conteúdo daquele Pack, preservando fichas, overrides e
-    // Definitions locais que não pertencem a ele.
-    transaction.objectStore(packStoreName).put(manifest);
+    const packsStore = transaction.objectStore(packStoreName);
     const definitionsStore = transaction.objectStore(definitionStoreName);
-    const incomingIds = new Set(definitions.map((definition) => definition.id));
+    const importedPackIds = new Set(packs.map((pack) => pack.manifest.id));
+    const incomingIds = new Set(packs.flatMap((pack) => pack.definitions.map((definition) => definition.id)));
+
+    packs.forEach((pack) => packsStore.put(pack.manifest));
+
+    // Uma versao mais nova substitui somente o conteudo dos Packs presentes
+    // no lote, preservando fichas, overrides e Definitions dos demais Packs.
     const cursorRequest = definitionsStore.openCursor();
     cursorRequest.onsuccess = () => {
       const cursor = cursorRequest.result;
       if (!cursor) return;
       const definition = cursor.value as Definition;
-      if (definition.packId === manifest.id && !incomingIds.has(definition.id)) cursor.delete();
+      if (importedPackIds.has(definition.packId) && !incomingIds.has(definition.id)) cursor.delete();
       cursor.continue();
     };
-    definitions.forEach((definition) => definitionsStore.put(definition));
+    packs.forEach((pack) => pack.definitions.forEach((definition) => definitionsStore.put(definition)));
     transaction.oncomplete = () => resolve();
     transaction.onerror = () => reject(transaction.error);
     transaction.onabort = () => reject(transaction.error);

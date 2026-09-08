@@ -11,6 +11,7 @@ A interface é modular por responsabilidade, mesmo sendo uma PWA sem framework:
 - `src/app/`: tipos compartilhados, navegação e composição geral da aplicação;
 - `src/features/`: telas e fluxos por área de produto, como Configurações, Compendium, Inventário e Progressão;
 - `src/features/settings/`: renderização de Configurações e administração visual de dados locais;
+- `src/features/packs/`: validação, importação, remoção e diálogos dos packs locais;
 - `src/features/character-transfer/`: formato, validação, importação e exportação local de fichas;
 - `src/features/compendium/`: regras de apresentação e futuras telas do catálogo;
 - `src/domain/`: tipos e regras do domínio de jogo;
@@ -22,13 +23,19 @@ No InventÃ¡rio, `src/features/inventory/renderInventory.ts` concentra a render
 
 As regras estÃ¡veis de ProgressÃ£o — tiers, custos, nomes e limites de escolha — ficam em `src/features/progression/progressionRules.ts`. A aplicaÃ§Ã£o de uma evoluÃ§Ã£o continua associada Ã  persistÃªncia da ficha.
 
-AnotaÃ§Ãµes possui sua renderizaÃ§Ã£o em `src/features/notes/renderNotes.ts`; os fluxos de salvar, editar e excluir seguem no orquestrador para centralizar a atualizaÃ§Ã£o local da ficha.
+A preparação e a aplicação de uma evolução ficam em `src/features/progression/progressionActions.ts`: contagem de escolhas, disponibilidade de cartas, avanço de subclasse e atualização atômica da ficha. `main.ts` fornece catálogo e persistência, mas não calcula os resultados da passagem de nível.
+
+Anotações mantém sua renderização em `src/features/notes/renderNotes.ts`, as categorias compartilhadas em `noteCategories.ts` e criação, edição, visualização e exclusão em `noteActions.ts`. O orquestrador fornece somente estado, persistência e atualização visual.
 
 Os modais de ProgressÃ£o sÃ£o renderizados por `src/features/progression/renderProgressionDialogs.ts`; o orquestrador conserva as validaÃ§Ãµes e a gravaÃ§Ã£o da evoluÃ§Ã£o.
 
 O espaÃ§o de escolhas da ProgressÃ£o fica em `src/features/progression/renderProgressionWorkspace.ts`, separado das regras que aplicam a evoluÃ§Ã£o ao personagem.
 
 As aÃ§Ãµes de InventÃ¡rio ficam em `src/features/inventory/inventoryActions.ts`; elas atualizam dados e persistem a ficha, enquanto o drag-and-drop permanece como integraÃ§Ã£o de eventos no orquestrador.
+
+Os seletores e cálculos compartilhados do Inventário ficam em `src/features/inventory/inventoryModel.ts`: resolução das Definitions, containers, peso, compatibilidade e capacidade. Renderização, ações e arraste devem consumir esse mesmo modelo, sem recriar essas regras no orquestrador.
+
+Os diálogos de criação e exclusão de containers ficam em `src/features/inventory/renderContainerDialogs.ts`.
 
 O drag-and-drop do InventÃ¡rio usa `src/features/inventory/bindInventoryDrag.ts`, encapsulando Pointer Events, feedback visual e validaÃ§Ã£o do destino antes de solicitar a movimentaÃ§Ã£o do item.
 
@@ -40,6 +47,14 @@ DomÃ­nios do Compendium sÃ£o encapsulados em `src/features/compendium/domain
 
 Cartas do Compendium estÃ£o em `src/features/compendium/cards.ts`, incluindo filtros, detalhes, imagem, formulÃ¡rio, validaÃ§Ãµes e o CRUD local. A ativaÃ§Ã£o entre Vault e Loadout permanece na ficha do jogador.
 
+O índice e os capítulos do Compendium são compostos em `src/features/compendium/renderCompendiumIndex.ts`. O orquestrador decide apenas entre índice e telas de gerenciamento; novos capítulos e cards editoriais não devem ser montados em `main.ts`.
+
+O ciclo de gestão de packs locais fica em `src/features/packs/packManagement.ts`, incluindo leitura, validação, instalação, remoção e seus diálogos. O orquestrador fornece o catálogo atual e reage à sua atualização, sem conhecer os detalhes do armazenamento do pack.
+
+A importação aceita um ou vários arquivos `.soulforge-pack.json`. O lote completo deve ser validado antes da persistência e instalado em uma única transação, sem deixar Packs parcialmente importados quando qualquer arquivo ou conflito invalidar a operação.
+
+As interações dos marcadores de jogo ficam em `src/features/game-markers/gameMarkerActions.ts`: ajuste de contadores, definição e consumo de dados e reinicialização declarativa. `main.ts` apenas encaminha o evento e fornece catálogo, persistência e renderização.
+
 Itens do Compendium ficam em `src/features/compendium/items.ts`, incluindo busca, categorias, imagens, prÃ©via, validaÃ§Ãµes e CRUD local sem permitir exclusÃ£o de um item ainda usado pela ficha.
 
 Classes do Compendium estÃ£o em `src/features/compendium/classes.ts`, incluindo subclasses, features, imagem, visualizaÃ§Ã£o detalhada e o CRUD que persiste todas as Definitions relacionadas.
@@ -47,6 +62,8 @@ Classes do Compendium estÃ£o em `src/features/compendium/classes.ts`, incluind
 Ancestralidades do Compendium ficam em `src/features/compendium/ancestries.ts`, reunindo busca, Top/Bottom Features, imagem e o CRUD local que persiste as trÃªs Definitions relacionadas.
 
 O editor de uma Feature fica em `src/features/compendium/featureAuthoring.ts`. Classes, subclasses e comunidades devem reutilizá-lo para nome, descrição e metadados declarativos. O formulário de marcador em `src/features/compendium/gameMarkerForm.ts` é a única fonte dos campos de contador e dados: novas fontes não devem duplicar esses controles nem inferir comportamento a partir de texto livre.
+
+A Criação de Personagem é dividida em três responsabilidades: `characterCreationRules.ts` valida e constrói a ficha, `characterCreationState.ts` controla as transições do rascunho e `renderCharacterCreation.ts` compõe o fluxo visual. `main.ts` apenas conecta eventos globais, catálogo e persistência; novas regras, estados ou trechos visuais desse fluxo não devem ser implementados nele.
 
 # Padrao obrigatorio para novas features
 

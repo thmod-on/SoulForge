@@ -4,6 +4,58 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.26.15]
+
+### Adicionado
+- Seleção e prévia de vários arquivos `.soulforge-pack.json` em uma única importação, com validação consolidada de conflitos.
+- Testes isolados para importação em lote, ações de marcadores de jogo e ciclo de criação, edição e exclusão de anotações.
+
+### Alterado
+- Instalação de múltiplos Packs executada em uma única transação, evitando catálogos parcialmente atualizados.
+- Ações de contadores e dados dos marcadores de jogo movidas do `main.ts` para a feature responsável.
+- Categorias e ações de Anotações movidas do `main.ts` para módulos próprios.
+- Barreira arquitetural reduzida novamente após as extrações do orquestrador.
+
+### Corrigido
+- Marcadores d8, d10, d12 e d20 agora aceitam resultados acima de 6 conforme o dado declarado.
+
+## [0.26.14]
+
+### Alterado
+- Resolução de itens, containers, peso, compatibilidade e capacidade centralizada em um modelo compartilhado do Inventário.
+- Diálogos de criação e exclusão de containers retirados do `main.ts` e movidos para a feature de Inventário.
+- Renderização, ações e arraste passam a receber as mesmas regras de inventário, com cobertura isolada para peso e capacidade.
+- Barreira arquitetural reduzida após a retirada de mais dois renderizadores do orquestrador.
+
+## [0.26.13]
+
+### Alterado
+- Importação e remoção de packs locais, incluindo validação e diálogos, movidas para a feature de Packs.
+- Atualização da ficha demonstrativa após uma importação preservada como integração explícita do orquestrador.
+- Barreira arquitetural reduzida após retirar mais dois renderizadores e cinco templates do `main.ts`.
+
+## [0.26.12]
+
+### Alterado
+- Cálculo e aplicação da passagem de nível movidos para a feature de Progressão, incluindo recursos, atributos, Evasão, Proficiência, cartas, subclasse, multiclasse e histórico.
+- Seletores de cartas elegíveis, contadores de escolhas e disponibilidade de avanços deixaram o `main.ts` e passaram a ter testes isolados.
+- Barreira arquitetural reduzida novamente após a extração das regras de Progressão.
+
+## [0.26.11]
+
+### Alterado
+- Índice, capítulos, marcadores e cards editoriais do Compendium movidos para um módulo próprio, deixando no `main.ts` somente a escolha entre índice e telas de gerenciamento.
+- Barreira arquitetural novamente reduzida após a retirada de renderizações e templates do orquestrador.
+
+## [0.26.10]
+
+### Alterado
+- Criação de personagem separada em módulos de renderização, estado e regras; o `main.ts` permanece responsável somente pela orquestração do fluxo.
+- Barreira arquitetural reduzida para impedir que o `main.ts` recupere o volume de código e templates removidos nesta refatoração.
+
+### Removido
+- Implementação antiga e inalcançável de criação de personagem que permanecia duplicada após o fluxo atual.
+
 ## [0.26.9]
 
 ### Corrigido
