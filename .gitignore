@@ -9,4 +9,5 @@ coverage/
 .env.*
 !.env.example
 .vite-dev.*.log
+.codex-dev*.log
 /local-packs/

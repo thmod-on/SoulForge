@@ -27,9 +27,9 @@ import { closeCharacterCreation, getCharacterCreationDraft, openCharacterCreatio
 import { renderCharacterCreationModal as renderCharacterCreationModalView, type CharacterCreationRenderDependencies } from "./features/character-creation/renderCharacterCreation";
 import { renderCharacterCreationInPlace as renderCharacterCreationSurface } from "./features/character-creation/renderInPlace";
 import { createEmptyCreationAttributeValues, handleCreationAttributeAllocation } from "./features/character-creation/attributeAllocation";
-import { handleCommunityAction, renderCompendiumCommunitiesManager as renderCompendiumCommunitiesManagerView } from "./features/compendium/communities";
-import { handleTransformationAction, renderCompendiumTransformationsManager as renderCompendiumTransformationsManagerView, renderCompendiumTransformationsSpread as renderCompendiumTransformationsSpreadView, type TransformationFeatureDependencies, type TransformationFeatureState } from "./features/compendium/transformations";
-import { confirmPackImport, confirmRemoveInstalledPack, readPackImportFiles, renderPackManagementDialogs, type PackManagementDependencies } from "./features/packs/packManagement";
+import { handleCommunityAction, renderCompendiumCommunityFormModal, renderCompendiumCommunitiesManager as renderCompendiumCommunitiesManagerView } from "./features/compendium/communities";
+import { handleTransformationAction, renderTransformationFormModal, renderCompendiumTransformationsManager as renderCompendiumTransformationsManagerView, renderCompendiumTransformationsSpread as renderCompendiumTransformationsSpreadView, type TransformationFeatureDependencies, type TransformationFeatureState } from "./features/compendium/transformations";
+import { handlePackManagementAction, readPackImportFiles, renderPackManagementDialogs, type PackManagementDependencies } from "./features/packs/packManagement";
 import { renderCharacterSelection as renderCharacterSelectionView } from "./features/character-selection/renderCharacterSelection";
 import { confirmStagedCharacterImport, downloadCharacterExport, renderCharacterImportModal, stageCharacterImport } from "./features/character-transfer/characterTransfer";
 import { renderProgression as renderProgressionView, type ProgressionRenderDependencies } from "./features/progression/renderProgression";
@@ -287,6 +287,8 @@ const state: {
   packImportOpen: boolean;
   pendingPackBundles?: PackBundle[];
   packImportError?: string;
+  removeAllInstalledPacksOpen: boolean;
+  removeAllInstalledPacksError?: string;
   characterImportOpen: boolean;
   pendingCharacterImport?: Character;
   characterImportError?: string;
@@ -347,6 +349,7 @@ const state: {
   characters: [],
   installedPacks: [],
   packImportOpen: false,
+  removeAllInstalledPacksOpen: false,
   characterImportOpen: false,
   openSettingsSections: {
     general: true,
@@ -557,6 +560,7 @@ function getPackManagementDependencies(): PackManagementDependencies {
     getCatalog: () => catalog,
     refreshCatalog,
     escapeHtml,
+    render: () => render({ preserveMainScroll: true }),
     afterImport: async () => {
       if (state.character?.id !== demoCharacter.id) return;
       await ensureDemoCharacter();
@@ -702,7 +706,7 @@ function renderCompendium(): string {
     catalog,
     escapeHtml,
     renderTransformationsSpread: (renderChapterCard) => renderCompendiumTransformationsSpreadView(getTransformationFeatureDependencies(), renderChapterCard)
-  });
+  }) + renderCompendiumCommunityFormModal({ state, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render }) + renderTransformationFormModal(getTransformationFeatureDependencies());
 }
 
 function renderActivateStoredCardModal(): string {
@@ -912,7 +916,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
     const editorContextCharacter = currentCharacter ?? state.characters[0] ?? demoCharacter;
     const editorScreen = state.page === "compendium" ? renderCompendium() : renderSettings(editorContextCharacter);
     appRoot.innerHTML = `<div class="editor-shell">${renderEditorHeaderView(getPlayerShellDependencies())}${editorScreen}</div>${renderPackManagementDialogs(getPackManagementDependencies())}${renderCharacterImportModal({ isOpen: state.characterImportOpen, character: state.pendingCharacterImport, error: state.characterImportError, escapeHtml })}${renderCardModalView(state.modalCardId, getCardFeatureDependencies())}${renderDomainModalView(getDomainFeatureDependencies())}${renderDeleteDomainModalView(getDomainFeatureDependencies())}${renderCompendiumCardFormModalView(getCardFeatureDependencies())}${renderDeleteCompendiumCardModalView(getCardFeatureDependencies())}${renderCompendiumItemFormModalView(getItemFeatureDependencies())}${renderDeleteCompendiumItemModalView(getItemFeatureDependencies())}${renderCompendiumItemPreviewModalView(getItemFeatureDependencies())}${renderCompendiumClassPreviewModalView(getClassFeatureDependencies())}${renderCompendiumClassFormModalView(getClassFeatureDependencies())}${renderDeleteCompendiumClassModalView(getClassFeatureDependencies())}${renderCompendiumAncestryFormModalView(getAncestryFeatureDependencies())}${renderDeleteCompendiumAncestryModalView(getAncestryFeatureDependencies())}`;
-    document.body.classList.toggle("has-modal", state.packImportOpen || state.characterImportOpen || Boolean(state.deletingInstalledPackId) || Boolean(state.modalCardId) || state.domainModalOpen || Boolean(state.deletingDomainId) || state.cardModalOpen || Boolean(state.deletingCompendiumCardId) || state.itemDefinitionModalOpen || Boolean(state.deletingCompendiumItemId) || Boolean(state.compendiumItemPreviewId) || state.classModalOpen || Boolean(state.deletingCompendiumClassId) || Boolean(state.compendiumClassPreviewId) || state.ancestryModalOpen || Boolean(state.deletingCompendiumAncestryId) || Boolean(state.compendiumAncestryPreviewId) || Boolean(state.compendiumCommunityPreviewId) || state.transformationState.transformationModalOpen || Boolean(state.transformationState.deletingCompendiumTransformationId) || Boolean(state.transformationState.compendiumTransformationPreviewId));
+    document.body.classList.toggle("has-modal", state.packImportOpen || state.removeAllInstalledPacksOpen || state.characterImportOpen || Boolean(state.deletingInstalledPackId) || Boolean(state.modalCardId) || state.domainModalOpen || Boolean(state.deletingDomainId) || state.cardModalOpen || Boolean(state.deletingCompendiumCardId) || state.itemDefinitionModalOpen || Boolean(state.deletingCompendiumItemId) || Boolean(state.compendiumItemPreviewId) || state.classModalOpen || Boolean(state.deletingCompendiumClassId) || Boolean(state.compendiumClassPreviewId) || state.ancestryModalOpen || Boolean(state.deletingCompendiumAncestryId) || Boolean(state.compendiumAncestryPreviewId) || Boolean(state.compendiumCommunityPreviewId) || state.transformationState.transformationModalOpen || Boolean(state.transformationState.deletingCompendiumTransformationId) || Boolean(state.transformationState.compendiumTransformationPreviewId));
     if (options.preserveMainScroll) requestAnimationFrame(() => { const content = appRoot.querySelector<HTMLElement>(".content"); if (content && previousContentScrollTop !== undefined) content.scrollTop = previousContentScrollTop; if (previousDocumentScrollTop !== undefined) window.scrollTo({ top: previousDocumentScrollTop, behavior: "auto" }); });
     return;
   }
@@ -1296,8 +1300,6 @@ function bindEvents(): void {
       return;
     }
 
-    if (target.closest('[data-action="new-compendium-community"]')) { state.compendiumView = "communities"; state.communityModalOpen = true; state.editingCompendiumCommunityId = undefined; render(); return; }
-    if (target.closest('[data-action="new-compendium-transformation"]')) { state.compendiumView = "transformations"; state.transformationState.transformationModalOpen = true; state.transformationState.editingCompendiumTransformationId = undefined; render(); return; }
     if (handleAncestryAction(target, getAncestryFeatureDependencies())) return;
     if (handleCommunityAction(target, { state, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render })) return;
     if (handleTransformationAction(target, getTransformationFeatureDependencies())) return;
@@ -1416,6 +1418,8 @@ function bindEvents(): void {
       state.packImportOpen = false;
       state.pendingPackBundles = undefined;
       state.packImportError = undefined;
+      state.removeAllInstalledPacksOpen = false;
+      state.removeAllInstalledPacksError = undefined;
       state.characterImportOpen = false;
       state.pendingCharacterImport = undefined;
       state.characterImportError = undefined;
@@ -1486,6 +1490,8 @@ function bindEvents(): void {
       state.packImportOpen = false;
       state.pendingPackBundles = undefined;
       state.packImportError = undefined;
+      state.removeAllInstalledPacksOpen = false;
+      state.removeAllInstalledPacksError = undefined;
       state.characterImportOpen = false;
       state.pendingCharacterImport = undefined;
       state.characterImportError = undefined;
@@ -1546,41 +1552,7 @@ function bindEvents(): void {
       return;
     }
 
-    if (target.closest('[data-action="open-pack-import"]')) {
-      state.packImportOpen = true;
-      state.pendingPackBundles = undefined;
-      state.packImportError = undefined;
-      render({ preserveMainScroll: true });
-      return;
-    }
-
-    if (target.closest('[data-action="choose-pack-file"]')) {
-      document.querySelector<HTMLInputElement>("[data-pack-file]")?.click();
-      return;
-    }
-
-    if (target.closest('[data-action="confirm-pack-import"]')) {
-      void confirmPackImport(getPackManagementDependencies()).then(() => render());
-      return;
-    }
-
-    const removeInstalledPackButton = target.closest<HTMLElement>('[data-action="remove-installed-pack"]');
-    if (removeInstalledPackButton) {
-      state.deletingInstalledPackId = removeInstalledPackButton.dataset.packId;
-      render();
-      return;
-    }
-
-    if (target.closest('[data-action="cancel-remove-installed-pack"]')) {
-      state.deletingInstalledPackId = undefined;
-      render();
-      return;
-    }
-
-    if (target.closest('[data-action="confirm-remove-installed-pack"]')) {
-      void confirmRemoveInstalledPack(getPackManagementDependencies()).then(() => render());
-      return;
-    }
+    if (handlePackManagementAction(target, getPackManagementDependencies())) return;
 
     if (target.closest('[data-action="open-character-select"]')) {
       state.characterSelectionOpen = true;

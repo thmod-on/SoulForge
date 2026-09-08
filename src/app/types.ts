@@ -28,4 +28,6 @@ export type SettingsViewState = {
   pendingPackBundles?: PackBundle[];
   packImportError?: string;
   deletingInstalledPackId?: string;
+  removeAllInstalledPacksOpen: boolean;
+  removeAllInstalledPacksError?: string;
 };

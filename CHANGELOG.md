@@ -4,6 +4,19 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.26.17]
+
+- O Serafim agora usa um brasão isolado nos previews e um estandarte vertical finalizado no detalhe, reduzindo a composição visual em CSS e eliminando emendas entre arte e atmosfera.
+- Padronizados os sete formulários de criação/edição do Compendium: largura responsiva, cabeçalho e ações sempre visíveis, rolagem no corpo e distribuição das features de ancestralidade.
+- Adicionado o lote piloto de brasões autorais para Guerreiro, Mago e Serafim, com associação por ID estável e prioridade para imagens fornecidas por Packs.
+
+### Adicionado
+- Remoção atômica de todos os Packs importados, com confirmação, relação do conteúdo afetado e preservação de personagens, configurações, complementos e Definitions criadas manualmente.
+- Política obrigatória e plano de escalabilidade para artes e assets visuais.
+
+### Alterado
+- A ação ambígua `Apagar dados locais` passa a se chamar `Remover todos os Packs` e fica disponível somente quando há Packs instalados.
+
 ## [0.26.16]
 
 ### Adicionado

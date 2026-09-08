@@ -74,6 +74,7 @@ Toda funcionalidade nova deve ser criada em `src/features/<area>/` e agrupada po
 - Tipos e regras de Daggerheart ficam em `src/domain/`.
 - Persistencia local fica em `src/storage/`.
 - `src/main.ts` coordena estado transitório, eventos globais, inicializacao e composicao das features; nao deve voltar a concentrar uma tela ou CRUD completo.
+- Artes incorporadas, seus resolvedores e sua estratégia de cache devem respeitar `docs/ASSET_POLICY.md`; associações pertencem a módulos centrais de conteúdo/apresentação e nunca a condicionais espalhadas no orquestrador.
 - Cada nova feature deve documentar sua fronteira arquitetural e passar por `pnpm run build` e `pnpm run test` antes de uma release.
 
 ## Barreira arquitetural automatizada

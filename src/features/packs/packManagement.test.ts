@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { SettingsViewState } from "../../app/types";
 import { createCatalog } from "../../domain/catalog";
 import type { PackBundle } from "../../domain/types";
-import { readPackImportFiles, renderPackManagementDialogs } from "./packManagement";
+import { confirmRemoveAllInstalledPacks, readPackImportFiles, renderPackManagementDialogs } from "./packManagement";
 
 const escapeHtml = (value: string) => value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 
 function createState(): SettingsViewState {
-  return { installedPacks: [], openSettingsSections: { general: false, localData: false, loadRules: false, appearance: false, progression: false }, packImportOpen: false };
+  return { installedPacks: [], openSettingsSections: { general: false, localData: false, loadRules: false, appearance: false, progression: false }, packImportOpen: false, removeAllInstalledPacksOpen: false };
 }
 
 function createBundle(id: string, name: string): PackBundle {
@@ -75,5 +75,61 @@ describe("gestão visual de packs", () => {
     state.deletingInstalledPackId = "pack.test";
 
     expect(renderPackManagementDialogs({ state, escapeHtml })).toContain("Pack &lt;Teste&gt;");
+  });
+
+  it("explica o escopo e lista os Packs antes da remoção em lote", () => {
+    const state = createState();
+    state.installedPacks = [
+      { id: "pack.first", name: "Primeiro", version: "1.0.0", description: "" },
+      { id: "pack.second", name: "Segundo", version: "2.0.0", description: "" }
+    ];
+    state.removeAllInstalledPacksOpen = true;
+
+    const html = renderPackManagementDialogs({ state, escapeHtml });
+
+    expect(html).toContain("Remover todos os Packs?");
+    expect(html).toContain("2 Packs importados");
+    expect(html).toContain("Primeiro");
+    expect(html).toContain("Segundo");
+    expect(html).toContain("Personagens, conteúdo criado manualmente, configurações e complementos locais serão preservados");
+  });
+
+  it("remove o lote uma vez e atualiza o catálogo somente após sucesso", async () => {
+    const state = createState();
+    state.installedPacks = [{ id: "pack.first", name: "Primeiro", version: "1.0.0", description: "" }];
+    state.removeAllInstalledPacksOpen = true;
+    const calls: string[] = [];
+
+    const removed = await confirmRemoveAllInstalledPacks({
+      state,
+      getCatalog: () => createCatalog([], []),
+      escapeHtml,
+      render: () => undefined,
+      removeAllPacks: async () => { calls.push("remove"); },
+      refreshCatalog: async () => { calls.push("refresh"); }
+    });
+
+    expect(removed).toBe(true);
+    expect(calls).toEqual(["remove", "refresh"]);
+    expect(state.removeAllInstalledPacksOpen).toBe(false);
+  });
+
+  it("mantém a confirmação aberta quando a remoção em lote falha", async () => {
+    const state = createState();
+    state.installedPacks = [{ id: "pack.first", name: "Primeiro", version: "1.0.0", description: "" }];
+    state.removeAllInstalledPacksOpen = true;
+
+    const removed = await confirmRemoveAllInstalledPacks({
+      state,
+      getCatalog: () => createCatalog([], []),
+      escapeHtml,
+      render: () => undefined,
+      removeAllPacks: async () => { throw new Error("falha"); },
+      refreshCatalog: async () => undefined
+    });
+
+    expect(removed).toBe(false);
+    expect(state.removeAllInstalledPacksOpen).toBe(true);
+    expect(state.removeAllInstalledPacksError).toContain("Nenhuma alteração foi concluída");
   });
 });

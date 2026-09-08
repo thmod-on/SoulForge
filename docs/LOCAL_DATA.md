@@ -2,6 +2,8 @@
 
 > Packs locais importados são persistidos no armazenamento `installedPacks`, enquanto suas Definitions ficam no armazenamento local de Definitions. Instalação e remoção são operações locais do navegador.
 
+A ação **Remover todos os Packs** apaga, em uma única transação, somente os Packs importados e suas Definitions. Personagens, configurações, complementos locais e Definitions criadas manualmente são preservados. Referências usadas pelas fichas podem ficar indisponíveis até que os Packs correspondentes sejam reimportados.
+
 ## Princípio
 
 O SoulForge é local em primeiro lugar. Cada navegador mantém seus próprios personagens e preferências, sem depender de um servidor durante a sessão.

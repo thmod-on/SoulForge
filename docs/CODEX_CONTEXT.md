@@ -16,6 +16,7 @@ Este documento complementa:
 - DOMAIN_MODEL.md
 - DOMAIN_BEHAVIORS.md
 - JSON_CONVENTIONS.md
+- ASSET_POLICY.md, antes de gerar, importar ou incorporar imagens
 - ADRs
 
 Em caso de conflito, os documentos arquiteturais prevalecem.
@@ -328,4 +329,5 @@ Ao contribuir com o SoulForge, siga sempre estes princípios:
 - Consulte a documentação antes de implementar.
 - Quando houver dúvida, preserve o contrato arquitetural.
 - Consulte e respeite `CONTENT_POLICY.md` antes de adicionar, importar ou publicar conteúdo derivado de Daggerheart.
+- Consulte e respeite `ASSET_POLICY.md` antes de gerar ou adicionar imagens; valide dimensões, peso, cache, origem e associação por ID estável.
 - Nunca inclua conteúdo oficial em builds públicos ou no Git sem que a permissão de distribuição tenha sido confirmada.

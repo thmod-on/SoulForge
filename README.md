@@ -53,6 +53,8 @@ pnpm run test
 - [Ancestralidades](docs/ANCESTRY.md)
 - [Compendium](docs/COMPENDIUM.md)
 - [PWA e uso offline](docs/PWA_OFFLINE.md)
+- [Política de artes e assets visuais](docs/ASSET_POLICY.md)
+- [Processo de artes de classe](docs/CLASS_ARTWORK.md)
 - [Dados locais](docs/LOCAL_DATA.md)
 - [Packs](docs/PACKS.md)
 - [Padrões de interface](docs/UI_PATTERNS.md)

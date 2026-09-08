@@ -43,6 +43,8 @@ Não incluir, copiar ou distribuir sem autorização específica:
 
 Imagens usadas em Packs devem ser originais, licenciadas para redistribuição ou fornecidas pelo próprio usuário com os direitos necessários.
 
+Mesmo quando a distribuição for permitida, dimensões, formatos, associação, cache e orçamento seguem a [Política de artes e assets visuais](ASSET_POLICY.md).
+
 ## GitHub Pages e distribuição pública
 
 O GitHub Pages é distribuição pública. O SoulForge não deve publicar Packs que reproduzam Public Game Content até haver confirmação de que esse formato é permitido pela DPCGL ou autorização escrita da Darrington Press.

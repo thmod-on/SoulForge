@@ -66,6 +66,8 @@ Cards são superfícies de leitura. Por padrão, usam borda discreta. A seleçã
 
 ### Modais
 
+Os cadastros de Domínio, Carta, Item, Classe, Ancestralidade, Comunidade e Transformação reutilizam `compendium-form-modal`, também na edição. A largura cresce até 58rem respeitando a margem segura da tela. `compendium-form-header` e `compendium-form-footer` ficam visíveis; somente `compendium-form-body` rola. O rodapé usa ações textuais Cancelar/Salvar e reserva espaço para erros apenas quando houver mensagem. Features de ancestralidade ficam em duas colunas em telas largas e em uma coluna abaixo de 42rem; os controles não podem ultrapassar sua coluna. Não adicionar dimensões individuais que sobreponham esse contrato.
+
 - backdrop escuro e desfoque leve;
 - título e fechar sempre visíveis;
 - rolagem fica no corpo quando o conteúdo exceder o espaço;
@@ -85,7 +87,11 @@ Use preferencialmente `opacity` e `transform`; não anime dimensões, posição 
 
 ## Imagens e assets
 
+O processo sob demanda para símbolos e banners de classe está documentado em [Artes de classe](CLASS_ARTWORK.md). Guerreiro, Mago e Serafim usam uma família heráldica comum e são resolvidos somente por ID estável; o Serafim valida a separação entre preview compacto e banner vertical finalizado.
+
 As imagens são opcionais e ficam apenas no dispositivo quando forem enviadas pelo usuário. Um conteúdo sem imagem deve continuar legível e reconhecível pelo nome, tipo e fallback visual.
+
+Geração, formatos, dimensões, orçamento de cache e gatilhos para evolução da infraestrutura seguem obrigatoriamente a [Política de artes e assets visuais](ASSET_POLICY.md).
 
 | Uso | Proporção de referência | Encaixe | Fallback |
 | --- | --- | --- | --- |

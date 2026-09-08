@@ -21,6 +21,8 @@ Em navegadores compatíveis, como Edge e Chrome, use a ação de instalar exibid
 
 O Service Worker registra a casca do aplicativo e os arquivos gerados no build, como HTML, JavaScript, CSS, imagens e JSON dos Packs incluídos na publicação.
 
+Artes incorporadas devem respeitar os orçamentos e estágios definidos em [Política de artes e assets visuais](ASSET_POLICY.md). Ao atingir os gatilhos documentados, imagens de detalhe deixam o precache global e passam a usar carregamento e cache sob demanda; o conteúdo textual permanece offline e independente da arte.
+
 Depois de uma abertura bem-sucedida com internet, a aplicação deve iniciar novamente sem conexão. Os dados dos personagens continuam no IndexedDB do próprio navegador.
 
 Uso offline não significa sincronização entre dispositivos. Um personagem salvo no iPad não aparece automaticamente no notebook.

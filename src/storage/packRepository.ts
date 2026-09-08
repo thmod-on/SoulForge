@@ -86,3 +86,24 @@ export async function removeLocalPack(packId: string): Promise<void> {
   });
   database.close();
 }
+
+/** Remove todos os Packs importados e suas Definitions em uma unica transacao. */
+export async function removeAllLocalPacks(): Promise<void> {
+  const database = await openDatabase();
+  await new Promise<void>((resolve, reject) => {
+    const transaction = database.transaction([packStoreName, definitionStoreName], "readwrite");
+    transaction.objectStore(packStoreName).clear();
+    const cursorRequest = transaction.objectStore(definitionStoreName).openCursor();
+    cursorRequest.onsuccess = () => {
+      const cursor = cursorRequest.result;
+      if (!cursor) return;
+      const definition = cursor.value as Definition;
+      if (definition.packId !== "local") cursor.delete();
+      cursor.continue();
+    };
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+  database.close();
+}
