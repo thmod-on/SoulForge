@@ -3,7 +3,7 @@ import packageJson from "../package.json";
 import { syncScrollAffordances } from "./app/scrollAffordance";
 import { readLocalImage } from "./app/media";
 import { getSpellcastAttributeId } from "./content/spellcastAttributes";
-import { getOfficialCardMarkers } from "./content/officialCardMarkers";
+import { applyCardContentDefaults } from "./content/cardArtwork";
 import { createCatalog, findDefinition, findDomain } from "./domain/catalog";
 import { demoCharacter } from "./domain/demoCharacter";
 import type { Attribute, CardDefinition, Character, ClassDefinition, ItemDefinition, PackBundle, PackManifest, ProgressionAdvanceKind, SubclassDefinition } from "./domain/types";
@@ -715,7 +715,7 @@ function renderActivateStoredCardModal(): string {
   const recallCost = definition.recallCost ?? 0;
   const stress = character.resources.find((resource) => resource.id === "stress");
   const loadoutFull = activeCards.length >= 5;
-  return `<div class="modal-backdrop" data-modal-backdrop><section class="confirm-modal card-activation-modal" role="dialog" aria-modal="true" aria-labelledby="activate-card-title"><button class="modal-close" data-modal-close aria-label="Cancelar ativação">x</button><span class="resource-modal-label">Vault para Loadout</span><h2 id="activate-card-title">Ativar ${escapeHtml(definition.name)}?</h2><div class="card-activation-frame"><p>Esta carta passará a ficar ativa no Loadout.</p>${loadoutFull ? `<label class="form-field"><span>O Loadout já possui cinco cartas. Escolha uma para guardar *</span><select data-recall-swap-card><option value="">Selecione uma carta ativa</option>${activeCards.map((card) => `<option value="${card.id}">${escapeHtml(card.name)}</option>`).join("")}</select></label>` : ""}<div class="card-activation-options"><button class="card-activation-option" type="button" data-action="activate-stored-card-free"><span><strong>Durante um descanso</strong><small>A troca é gratuita.</small></span><i aria-hidden="true">›</i></button><button class="card-activation-option card-activation-option--immediate" type="button" data-action="activate-stored-card-stress"><span><strong>Agora</strong><small>Marque ${recallCost} Stress.${stress ? ` Disponível: ${stress.value}/${stress.max}.` : ""}</small></span><i aria-hidden="true">›</i></button></div></div>${state.cardActivationError ? `<p class="form-error" data-card-activation-error>${escapeHtml(state.cardActivationError)}</p>` : ""}</section></div>`;
+  return `<div class="modal-backdrop" data-modal-backdrop><section class="confirm-modal card-activation-modal" role="dialog" aria-modal="true" aria-labelledby="activate-card-title"><button class="modal-close" type="button" data-modal-close aria-label="Cancelar ativação">x</button><span class="resource-modal-label">Vault para Loadout</span><h2 id="activate-card-title">Ativar ${escapeHtml(definition.name)}?</h2><div class="card-activation-frame"><p>Esta carta passará a ficar ativa no Loadout.</p>${loadoutFull ? `<label class="form-field"><span>O Loadout já possui cinco cartas. Escolha uma para guardar *</span><select data-recall-swap-card><option value="">Selecione uma carta ativa</option>${activeCards.map((card) => `<option value="${card.id}">${escapeHtml(card.name)}</option>`).join("")}</select></label>` : ""}<div class="card-activation-options"><button class="card-activation-option" type="button" data-action="activate-stored-card-free"><span><strong>Durante um descanso</strong><small>A troca é gratuita.</small></span><i aria-hidden="true">›</i></button><button class="card-activation-option card-activation-option--immediate" type="button" data-action="activate-stored-card-stress"><span><strong>Agora</strong><small>Marque ${recallCost} Stress.${stress ? ` Disponível: ${stress.value}/${stress.max}.` : ""}</small></span><i aria-hidden="true">›</i></button></div></div>${state.cardActivationError ? `<p class="form-error" data-card-activation-error>${escapeHtml(state.cardActivationError)}</p>` : ""}</section></div>`;
 }
 
 const fallbackCharacterClass: ClassDefinition = {
@@ -1093,8 +1093,7 @@ async function refreshCatalog(): Promise<void> {
   const definitions = [...baseCatalog.definitions, ...customDefinitions].map((definition) => {
     if (definition.type !== "card") return definition;
     const override = overrideByDefinitionId.get(definition.id);
-    const officialMarkers = getOfficialCardMarkers(definition);
-    return { ...definition, gameMarkers: override ? override.gameMarkers : officialMarkers ?? definition.gameMarkers };
+    return applyCardContentDefaults(definition, override?.gameMarkers);
   });
   catalog = createCatalog([...baseCatalog.packs, ...state.installedPacks], definitions);
 }

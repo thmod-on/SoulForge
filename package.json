@@ -1,6 +1,6 @@
 {
   "name": "soulforge",
-  "version": "0.26.15",
+  "version": "0.26.16",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.9.0",

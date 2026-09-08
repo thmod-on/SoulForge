@@ -4,6 +4,14 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.26.16]
+
+### Adicionado
+- Artes originais e não oficiais para Voz do Pavor, Palavras Inspiradoras, Sifonar Essência, Brilho Hipnótico, Correntes da Aflição e Névoa Espectral, aplicadas como fallback visual sem sobrescrever imagens definidas pelos Packs.
+
+### Corrigido
+- Botão de fechar do modal de ativação de carta do Vault mantém toda a área visual disponível para clique e toque, sem sobreposição do conteúdo.
+
 ## [0.26.15]
 
 ### Adicionado

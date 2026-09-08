@@ -7557,6 +7557,16 @@ body:has(.modal-backdrop) {
   z-index: 1;
 }
 
+.card-activation-modal > .modal-close {
+  position: absolute;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  line-height: 1;
+  touch-action: manipulation;
+}
+
 .card-activation-modal > p,
 .card-activation-option small {
   margin: 0;
