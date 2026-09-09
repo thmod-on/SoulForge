@@ -8,9 +8,25 @@ const warrior: ClassDefinition = {
   featureIds: [], hopeFeatureId: "feature.test.hope", subclassIds: ["subclass.test.one", "subclass.test.two"]
 };
 
+const coreArtwork = [
+  ["class.core.bardo", "bard.webp", "bard-banner.webp"],
+  ["class.core.druida", "druid.webp", "druid-banner.webp"],
+  ["class.core.guardiao", "guardian.webp", "guardian-banner.webp"],
+  ["class.core.ranger", "ranger.webp", "ranger-banner.webp"],
+  ["class.core.ladino", "rogue.webp", "rogue-banner.webp"],
+  ["class.core.feiticeiro", "sorcerer.webp", "sorcerer-banner.webp"],
+  ["class.core.guerreiro", "warrior.webp", "warrior-banner.webp"],
+  ["class.core.mago", "wizard.webp", "wizard-banner.webp"],
+  ["class.core.serafim", "seraph-emblem.webp", "seraph-banner.webp"],
+  ["class.hope-fear.assassin", "assassin.webp", "assassin-banner.webp"],
+  ["class.hope-fear.brawler", "brawler.webp", "brawler-banner.webp"],
+  ["class.hope-fear.warlock", "warlock.webp", "warlock-banner.webp"],
+  ["class.hope-fear.witch", "witch.webp", "witch-banner.webp"]
+] as const;
+
 describe("getClassArtwork", () => {
-  it("associa a arte autoral pelo ID estável da classe", () => {
-    expect(getClassArtwork(warrior)).toContain("assets/classes/generic/warrior.webp");
+  it.each(coreArtwork)("associa o preview autoral de %s", (id, preview) => {
+    expect(getClassArtwork({ ...warrior, id })).toContain(`assets/classes/generic/${preview}`);
   });
 
   it("preserva a imagem fornecida pela Definition", () => {
@@ -21,18 +37,11 @@ describe("getClassArtwork", () => {
     expect(getClassArtwork({ ...warrior, id: "class.local.guerreiro" })).toBeUndefined();
   });
 
-  it("usa o brasão isolado do Serafim nos previews", () => {
-    expect(getClassArtwork({ ...warrior, id: "class.core.serafim" })).toContain("assets/classes/generic/seraph-emblem.webp");
-  });
 });
 
 describe("getClassDetailArtwork", () => {
-  it("associa o banner finalizado ao detalhe do Serafim", () => {
-    expect(getClassDetailArtwork({ ...warrior, id: "class.core.serafim" })).toContain("assets/classes/generic/seraph-banner.webp");
-  });
-
-  it("faz fallback para a arte comum nas classes sem banner próprio", () => {
-    expect(getClassDetailArtwork(warrior)).toContain("assets/classes/generic/warrior.webp");
+  it.each(coreArtwork)("associa o banner finalizado de %s", (id, _preview, banner) => {
+    expect(getClassDetailArtwork({ ...warrior, id })).toContain(`assets/classes/generic/${banner}`);
   });
 
   it("preserva uma imagem fornecida pela Definition", () => {

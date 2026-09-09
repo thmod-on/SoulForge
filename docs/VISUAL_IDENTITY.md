@@ -87,7 +87,7 @@ Use preferencialmente `opacity` e `transform`; não anime dimensões, posição 
 
 ## Imagens e assets
 
-O processo sob demanda para símbolos e banners de classe está documentado em [Artes de classe](CLASS_ARTWORK.md). Guerreiro, Mago e Serafim usam uma família heráldica comum e são resolvidos somente por ID estável; o Serafim valida a separação entre preview compacto e banner vertical finalizado.
+O processo sob demanda para símbolos e banners de classe está documentado em [Artes de classe](CLASS_ARTWORK.md). As 13 classes dos Packs Core e Hope & Fear usam uma família heráldica comum e são resolvidas somente por ID estável; cada uma possui preview compacto e banner vertical finalizado.
 
 As imagens são opcionais e ficam apenas no dispositivo quando forem enviadas pelo usuário. Um conteúdo sem imagem deve continuar legível e reconhecível pelo nome, tipo e fallback visual.
 

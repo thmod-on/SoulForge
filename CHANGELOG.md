@@ -4,6 +4,14 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.26.18]
+
+- Todas as nove classes principais agora possuem brasão próprio nos previews e estandarte vertical finalizado no detalhe.
+- Assassino, Brigão, Bruxo e Bruxa, de Hope & Fear, também receberam brasões e estandartes próprios na mesma família visual.
+- A lista de classes do Compendium identifica a origem de entradas protegidas, como `Pack: Core` ou `Pack: Hope & Fear`.
+- Banners de classe passam a ser carregados e armazenados sob demanda, preservando o precache enxuto e o uso offline depois da primeira abertura.
+- Ampliados os testes do resolvedor central para garantir o pareamento correto entre classe, preview e detalhe, mantendo prioridade para imagens fornecidas pelos Packs.
+
 ## [0.26.17]
 
 - O Serafim agora usa um brasão isolado nos previews e um estandarte vertical finalizado no detalhe, reduzindo a composição visual em CSS e eliminando emendas entre arte e atmosfera.

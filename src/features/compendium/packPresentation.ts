@@ -18,7 +18,9 @@ const origins: Record<string, string> = {
   "daggerheart-core-ancestries-local": "Core",
   "daggerheart-hope-and-fear-ancestries-local": "Hope & Fear",
   "daggerheart-core-domains-local": "Core",
-  "daggerheart-hope-and-fear-domains-local": "Hope & Fear"
+  "daggerheart-hope-and-fear-domains-local": "Hope & Fear",
+  "daggerheart-core-classes-local": "Core",
+  "daggerheart-hope-and-fear-classes-local": "Hope & Fear"
 };
 
 export function getPackDisplayName(packId: string, packs: PackManifest[]): string {

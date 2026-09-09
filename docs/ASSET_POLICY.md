@@ -117,7 +117,7 @@ Aplicável enquanto o projeto permanecer dentro da faixa saudável.
 - Uma única representação otimizada pode servir à miniatura e ao detalhe.
 - O resolvedor central associa a arte pelo ID exato e preserva imagens próprias.
 - É o estágio atual do SoulForge.
-- Artes de detalhe de classe podem permanecer no precache enquanto forem apenas um piloto; sua expansão para o catálogo completo exige antecipar o cache sob demanda do Estágio 2.
+- Previews essenciais podem permanecer no precache; banners de detalhe de classe usam cache sob demanda mesmo no Estágio 1 para preservar uma instalação inicial enxuta.
 
 ### Estágio 2 — catálogo ilustrado
 
@@ -177,7 +177,7 @@ Em 7 de setembro de 2026, o primeiro lote de cartas possui seis imagens JPEG de 
 
 Esse lote está dentro do Estágio 1. As imagens JPEG podem ser convertidas para WebP junto da futura automação de assets; não é necessário criar uma migração isolada enquanto os limites permanecerem saudáveis.
 
-Em 8 de setembro de 2026, o piloto de artes de Guerreiro, Mago e Serafim passou a conter quatro arquivos WebP, totalizando 311.128 bytes. O Serafim valida a separação entre preview quadrado e banner vertical finalizado. O precache passou de 32 entradas e 2.741,75 KiB para 36 entradas e 3.048,35 KiB: aumento medido de 306,60 KiB. O projeto continua no Estágio 1.
+Em 8 de setembro de 2026, as 13 classes dos Packs Core e Hope & Fear passaram a possuir preview quadrado e banner vertical finalizado: 26 arquivos WebP, totalizando 2.147.498 bytes. Os 13 previews integram o precache; os 13 banners usam cache de execução `CacheFirst`, com 16 entradas e expiração em 90 dias. O build contém 45 entradas e 3.106,75 KiB no precache. O projeto continua no Estágio 1 e o detalhe visitado permanece disponível offline.
 
 O processo específico, os prompts, critérios de aprovação e regras de manutenção das classes estão registrados em [Artes de classe](CLASS_ARTWORK.md).
 
@@ -186,5 +186,5 @@ O processo específico, os prompts, critérios de aprovação e regras de manute
 1. Criar o manifesto e o verificador automatizado antes de ultrapassar 40 artes.
 2. Padronizar a geração de WebP e miniaturas em um script reproduzível.
 3. Medir carregamento, memória e rolagem no iPad ao completar cada lote relevante.
-4. Implementar cache sob demanda antes de ampliar os banners de classe para todo o catálogo ou, no máximo, antes de o precache atingir 15 MiB.
+4. Medir a taxa real de reutilização do cache sob demanda dos banners antes de ampliar artes para classes de Packs adicionais.
 5. Projetar pacotes visuais opcionais somente quando a quantidade real justificar o Estágio 3.

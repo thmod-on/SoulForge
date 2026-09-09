@@ -509,6 +509,7 @@ function getClassFeatureDependencies(): ClassFeatureDependencies {
     state,
     catalog,
     escapeHtml,
+    getPackOriginName: (packId) => getPackOriginName(packId, catalog.packs),
     renderEmptyInline,
     saveCustomDefinition: async (definition) => {
       if (definition.type === "class") {

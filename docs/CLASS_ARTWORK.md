@@ -11,24 +11,35 @@ Cada classe ilustrada pode possuir duas representações finais:
 
 O navegador deve apenas enquadrar essas imagens. Máscaras, névoas, recortes e composição artística não devem ser reconstruídos em CSS. Uma classe sem uma ou ambas as representações continua plenamente utilizável por meio do fallback visual e do conteúdo textual.
 
-Este documento registra a direção artística, o processo reproduzível e o lote que validou a abordagem. As artes são originais e não oficiais, geradas com a ferramenta integrada `imagegen` em 8 de setembro de 2026.
+Este documento registra a direção artística, o processo reproduzível e o catálogo das classes Core e Hope & Fear. As artes são originais e não oficiais, geradas com a ferramenta integrada `imagegen` em 8 de setembro de 2026.
 
-| Definition | Perfil avaliado | Arquivo final | Dimensão | Tamanho |
-| --- | --- | --- | --- | --- |
-| `class.core.guerreiro` | Marcial | `public/assets/classes/generic/warrior.webp` | 768 × 768 | 65.470 bytes |
-| `class.core.mago` | Mágico | `public/assets/classes/generic/wizard.webp` | 768 × 768 | 72.178 bytes |
-| `class.core.serafim` | Preview transparente do piloto | `public/assets/classes/generic/seraph-emblem.webp` | 384 × 384 | 33.618 bytes |
-| `class.core.serafim` | Banner vertical finalizado | `public/assets/classes/generic/seraph-banner.webp` | 768 × 1152 | 139.862 bytes |
+| Definition | Classe | Preview 384 × 384 | Banner 768 × 1152 |
+| --- | --- | --- | --- |
+| `class.core.bardo` | Bardo | `bard.webp` — 28.880 bytes | `bard-banner.webp` — 132.454 bytes |
+| `class.core.druida` | Druida | `druid.webp` — 33.640 bytes | `druid-banner.webp` — 145.884 bytes |
+| `class.core.guardiao` | Guardião | `guardian.webp` — 28.810 bytes | `guardian-banner.webp` — 131.630 bytes |
+| `class.core.ranger` | Ranger | `ranger.webp` — 30.248 bytes | `ranger-banner.webp` — 131.452 bytes |
+| `class.core.ladino` | Ladino | `rogue.webp` — 25.162 bytes | `rogue-banner.webp` — 146.502 bytes |
+| `class.core.feiticeiro` | Feiticeiro | `sorcerer.webp` — 34.828 bytes | `sorcerer-banner.webp` — 150.484 bytes |
+| `class.core.guerreiro` | Guerreiro | `warrior.webp` — 23.008 bytes | `warrior-banner.webp` — 136.308 bytes |
+| `class.core.mago` | Mago | `wizard.webp` — 25.712 bytes | `wizard-banner.webp` — 145.430 bytes |
+| `class.core.serafim` | Serafim | `seraph-emblem.webp` — 33.618 bytes | `seraph-banner.webp` — 139.862 bytes |
+| `class.hope-fear.assassin` | Assassino | `assassin.webp` — 24.248 bytes | `assassin-banner.webp` — 118.310 bytes |
+| `class.hope-fear.brawler` | Brigão | `brawler.webp` — 27.846 bytes | `brawler-banner.webp` — 134.154 bytes |
+| `class.hope-fear.warlock` | Bruxo | `warlock.webp` — 26.340 bytes | `warlock-banner.webp` — 124.670 bytes |
+| `class.hope-fear.witch` | Bruxa | `witch.webp` — 27.532 bytes | `witch-banner.webp` — 140.486 bytes |
+
+Todos os caminhos da tabela são relativos a `public/assets/classes/generic/`. O catálogo possui 26 arquivos e soma 2.147.498 bytes (2.097,17 KiB).
 
 ## Impacto medido no build
 
-Os quatro arquivos publicados do lote piloto somam 311.128 bytes. No build de referência, o precache do PWA passou de 2.741,75 KiB para 3.048,35 KiB: aumento de 306,60 KiB, aproximadamente 11,2% sobre a base anterior.
+Os 26 arquivos publicados somam 2.147.498 bytes. Os 13 previews permanecem no precache por sustentarem listas e seleções; os 13 banners são excluídos do precache global e usam `CacheFirst` em tempo de execução, com limite de 16 entradas e expiração em 90 dias. Assim, cada banner é baixado somente ao abrir o detalhe e continua disponível offline depois da primeira visita. O build final contém 45 entradas e 3.106,75 KiB no precache.
 
-O total permanece no Estágio 1 definido em `docs/ASSET_POLICY.md`, com margem confortável em relação ao limite saudável de 10 MiB. O resultado confirma a viabilidade do formato para um piloto, mas a expansão para todas as classes deve continuar acompanhada por medição do build e orçamento por arquivo.
+O total permanece no Estágio 1 definido em `docs/ASSET_POLICY.md`, com margem confortável em relação aos limites de quantidade e tamanho. O build deve continuar registrando o peso do precache, mas o catálogo completo de banners já não aumenta a instalação inicial.
 
-Guerreiro, Mago e o banner do Serafim usam WebP opaco; o brasão compacto do Serafim preserva transparência alfa. A primeira geração do recorte pediu transparência, mas entregou o quadriculado incorporado à imagem; o fundo neutro foi removido tecnicamente na versão final. Os mestres permanecem na pasta de imagens geradas do Codex e não integram o build.
+As artes usam WebP opaco, exceto o brasão compacto do Serafim, que preserva transparência alfa. A primeira geração do recorte pediu transparência, mas entregou o quadriculado incorporado à imagem; o fundo neutro foi removido tecnicamente na versão final. Os mestres permanecem na pasta de imagens geradas do Codex e não integram o build.
 
-O Serafim valida a estratégia definitiva de dois derivados: `seraph-emblem.webp` é o brasão isolado para previews compactos e `seraph-banner.webp` reúne tecido, atmosfera e brasão em uma única composição vertical para o detalhe. Isso elimina a composição de camadas em CSS e torna a apresentação previsível no Safari/iPad. O recorte foi gerado com `imagegen`; como duas saídas PNG trouxeram o quadriculado incorporado, a remoção final do fundo neutro conectado às bordas foi feita de modo determinístico, sem apagar áreas internas do emblema.
+O Serafim validou a estratégia definitiva de dois derivados, depois aplicada às demais classes: um brasão legível para previews compactos e um banner que reúne tecido, atmosfera e brasão em uma única composição vertical. Isso elimina a composição de camadas em CSS e torna a apresentação previsível no Safari/iPad. O recorte do Serafim foi gerado com `imagegen`; como duas saídas PNG trouxeram o quadriculado incorporado, a remoção final do fundo neutro conectado às bordas foi feita de modo determinístico, sem apagar áreas internas do emblema.
 
 ## Quando criar uma nova arte
 
@@ -87,9 +98,9 @@ Para previews novos, preferir fundo escuro já incorporado. Transparência não 
 
 ## Entrega sob demanda
 
-O objetivo arquitetural é que o preview compacto seja carregado de maneira preguiçosa quando entrar na área visível e que o banner seja solicitado somente ao abrir o detalhe da classe. O banner não é requisito para o uso offline: se ainda não estiver no cache, o modal deve conservar todo o conteúdo e apresentar o fallback visual.
+O preview compacto integra o precache para permanecer disponível nas listas. O banner é excluído desse pacote inicial e solicitado somente quando o detalhe da classe é aberto. Depois da primeira visita, o service worker conserva o arquivo no cache de execução para uso offline.
 
-No Estágio 1 atual, os arquivos em `public/assets/` ainda podem integrar o precache geral. Antes de ampliar este piloto para todas as classes, o carregamento e cache de execução dos banners deve ser implementado conforme `ASSET_POLICY.md`. A documentação desta decisão não deve ser confundida com uma afirmação de que o carregamento sob demanda já está ativo.
+Se um banner ainda não estiver disponível, o conteúdo e as ações do modal continuam funcionais. A interface mantém o fallback abstrato até a imagem carregar ou quando houver falha de rede. O cache `class-detail-artwork` usa a estratégia `CacheFirst`, comporta 16 entradas e expira itens não renovados após 90 dias.
 
 ## Linguagem compartilhada
 
@@ -113,6 +124,26 @@ No Estágio 1 atual, os arquivos em `public/assets/` ainda podem integrar o prec
 
 > Brasão original de classe híbrida divina e marcial na mesma família: escudo simétrico, arma cerimonial vertical, duas asas abstratas ascendentes e gema radiante central. Bronze escurecido, marfim, carmesim e ametista; composição frontal quadrada, margem segura e leitura em 96 px. Sem figuras angelicais, símbolos religiosos reais, texto, logos, marcas, moldura de carta ou iconografia oficial.
 
+### Demais brasões do catálogo principal
+
+- **Bardo:** lira central, fitas de versos e ritmo visual elegante; vinho, ouro envelhecido e ametista.
+- **Druida:** galhos como chifres, cristal-semente, raízes, folhas, água e pedra; verdes florestais, madeira e bronze.
+- **Guardião:** escudo-fortaleza envolvendo um núcleo protegido e lâminas laterais; aço escuro, carmesim e ametista.
+- **Ranger:** ponta de flecha como bússola, trilhas, montanhas e marca animal; verde, madeira e cobre.
+- **Ladino:** fechadura de ametista, estiletes cruzados, capuz e correntes rompidas; índigo, prata escura e preto.
+- **Feiticeiro:** cristal primordial cercado por arcos elementais de fogo, água e tempestade; vermelho-brasa, azul elétrico e ametista.
+
+Todos seguiram a linguagem compartilhada: composição frontal simétrica, margem segura, leitura em 96 px, fundo atmosférico discreto e ausência de texto, personagens, logos, marcas d'água ou iconografia oficial.
+
+### Brasões de Hope & Fear
+
+- **Assassino:** adaga descendente atravessando uma única gema-alvo marcada, círculo de mira interrompido e lâminas contidas; prata escurecida, carmesim, marfim e ametista. O alvo marcado diferencia a classe do Ladino.
+- **Brigão:** dois punhos protegidos por manoplas e faixas, núcleo de impacto e três marcas sequenciais de combo; aço gasto, couro, cobre e ametista. Nenhuma arma integra o símbolo.
+- **Bruxo:** cristal de pacto suspenso por corrente cerimonial, crescentes opostos e mão aberta; bronze escurecido, ouro antigo, vinho e ametista. O contrato diferencia a classe da Bruxa.
+- **Bruxa:** tigela ritual com chama violeta, espinhos, crescentes, fuso de pedra lunar e sementes; bronze, madeira, verde-sálvia, marfim e ametista.
+
+Os prompts usaram as artes existentes apenas como referência de família visual. Cada pedido exigiu composição quadrada frontal, leitura em 96 px, fundo opaco preto-ameixa e proibiu texto, pessoas, marcas, iconografia oficial e estereótipos que confundissem as quatro classes.
+
 ### Tratamento de fundo
 
 > Substituir somente o quadriculado por um fundo atmosférico preto-violeta contínuo, quase preto nos cantos e com queda radial discreta atrás do símbolo. Preservar integralmente brasão, proporções, materiais, luz e enquadramento. Não adicionar objetos, texto, logo, marca d'água ou cenário.
@@ -124,6 +155,12 @@ No Estágio 1 atual, os arquivos em `public/assets/` ainda podem integrar o prec
 ### Banner vertical do Serafim
 
 > Criar um estandarte vertical 2:3 finalizado para o detalhe de classe, combinando o brasão do Serafim com tecido ameixa quase preto e uma aura contínua violeta-bordô. Preservar o brasão completo, centralizado e com margem segura; integrar atmosfera e tecido até todas as bordas, sem emendas ou camadas aparentes. Visual de fantasia sombria refinada, imersivo e discreto. Sem transparência, texto, letras, logos, personagens, marcas d'água ou símbolos adicionais.
+
+### Modelo compartilhado dos demais banners
+
+> Criar um estandarte vertical 2:3 finalizado para o detalhe de classe usando o brasão fornecido como referência exata e o banner do Serafim apenas como referência de composição. Aplicar tecido escuro refinado, textura sutil, ponta inferior, atmosfera contínua até as bordas e brasão no terço superior/médio com 60–66% da largura e margem segura. Preservar a silhueta e os símbolos essenciais do brasão. Entregar composição opaca pronta, sem limite quadrado, texto, logos, personagens, marcas d'água ou brilho excessivo.
+
+A paleta e o clima foram adaptados à classe: vinho lírico para Bardo; floresta orgânica para Druida; aço e carmesim protetor para Guardião; verde vigilante para Ranger; índigo secreto para Ladino; contraste elemental para Feiticeiro; aço e couro gastos para Guerreiro; azul-noturno, pergaminho e prata para Mago; carmesim preciso para Assassino; couro e poeira disciplinada para Brigão; vinho e ouro contratual para Bruxo; verde-floresta e névoa lunar para Bruxa.
 
 ## Integração
 

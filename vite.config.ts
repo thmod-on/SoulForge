@@ -39,6 +39,20 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,jpg,jpeg,png,svg,webp,json}"],
+        globIgnores: ["assets/classes/**/*-banner.webp"],
+        runtimeCaching: [
+          {
+            urlPattern: /\/assets\/classes\/.*-banner\.webp$/,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "class-detail-artwork",
+              expiration: {
+                maxEntries: 16,
+                maxAgeSeconds: 60 * 60 * 24 * 90
+              }
+            }
+          }
+        ],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true
