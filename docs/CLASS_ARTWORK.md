@@ -11,6 +11,12 @@ Cada classe ilustrada pode possuir duas representações finais:
 
 O navegador deve apenas enquadrar essas imagens. Máscaras, névoas, recortes e composição artística não devem ser reconstruídos em CSS. Uma classe sem uma ou ambas as representações continua plenamente utilizável por meio do fallback visual e do conteúdo textual.
 
+O banner também funciona como âncora visual na etapa de Classe da criação de
+personagem. Em telas amplas ele acompanha o seletor e o painel único de
+subclasse, controlado por abas; em telas estreitas aparece acima do conteúdo. A resolução continua centralizada
+por ID, respeita a prioridade da imagem fornecida pelo Pack e mantém fallback
+quando nenhuma arte estiver disponível.
+
 Este documento registra a direção artística, o processo reproduzível e o catálogo das classes Core e Hope & Fear. As artes são originais e não oficiais, geradas com a ferramenta integrada `imagegen` em 8 de setembro de 2026.
 
 | Definition | Classe | Preview 384 × 384 | Banner 768 × 1152 |
@@ -73,7 +79,8 @@ Para previews novos, preferir fundo escuro já incorporado. Transparência não 
 6. Comparar lado a lado preview e banner. Rejeitar o banner quando o gerador mudar a identidade do símbolo, mesmo que a imagem isolada pareça bonita.
 7. Converter os arquivos finais para WebP, nas dimensões e limites documentados, sem ampliar uma fonte de resolução inferior.
 8. Salvar em `public/assets/classes/<colecao>/` e associar ambos ao ID exato da Definition no resolvedor central.
-9. Validar listagem, detalhe, desktop, iPad horizontal e altura útil próxima de 650 px.
+9. Validar listagem, detalhe, etapa de Classe da criação, desktop, iPad
+   horizontal e altura útil próxima de 650 px.
 10. Executar testes e build; registrar tamanhos, impacto no precache, ferramenta, data, prompts e qualquer exceção.
 
 ## Critérios de aprovação

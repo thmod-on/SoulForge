@@ -37,7 +37,7 @@ export function renderCompendiumAncestryFormModal(deps: AncestryFeatureDependenc
 
 export function renderDeleteCompendiumAncestryModal(deps: AncestryFeatureDependencies): string {
   const ancestry = deps.state.deletingCompendiumAncestryId ? deps.catalog.ancestries.find((entry) => entry.id === deps.state.deletingCompendiumAncestryId) : undefined;
-  return ancestry ? `<div class="modal-backdrop" data-modal-backdrop><section class="modal confirm-modal"><h2>Excluir ancestralidade?</h2><p>"${deps.escapeHtml(ancestry.name)}" e suas duas features serao removidas deste dispositivo. Personagens que futuramente a referenciarem poderao perder essas referencias.</p><div class="modal-actions"><button class="sf-action sf-action--secondary secondary-action" type="button" data-action="cancel-delete-compendium-ancestry">Cancelar</button><button class="sf-action sf-action--danger danger-action" type="button" data-action="confirm-delete-compendium-ancestry">Excluir</button></div></section></div>` : "";
+  return ancestry ? `<div class="modal-backdrop" data-modal-backdrop><section class="modal confirm-modal"><h2>Excluir ancestralidade?</h2><p>"${deps.escapeHtml(ancestry.name)}" e suas duas features serao removidas deste dispositivo. Personagens que a referenciam poderao perder acesso a esse conteudo.</p><div class="modal-actions"><button class="sf-action sf-action--secondary secondary-action" type="button" data-action="cancel-delete-compendium-ancestry">Cancelar</button><button class="sf-action sf-action--danger danger-action" type="button" data-action="confirm-delete-compendium-ancestry">Excluir</button></div></section></div>` : "";
 }
 
 export async function saveCompendiumAncestry(deps: AncestryFeatureDependencies): Promise<void> {

@@ -4,6 +4,18 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.26.19]
+
+### Alterado
+
+- documentação reconciliada com os fluxos atuais de transferência de fichas, Compendium, progressão, marcadores, efeitos, ancestralidades, comunidades e Packs;
+- backlog canônico adicionado para concentrar pendências, prioridades, gatilhos e critérios de conclusão;
+- orientações antigas retiradas dos formulários de itens e da apresentação das regras de progressão;
+- etapa de Classe da criação de personagem passa a exibir o estandarte da classe selecionada sem invadir o conteúdo e reúne as subclasses em abas com um único painel de detalhes, preservando fallback para conteúdo sem arte.
+- seleção de personagens reformulada como galeria responsiva: cards arredondados e elevados, retrato ou fallback neutro do SoulForge, nome, classe, ancestralidade e nível; o carrossel recebe indicadores laterais sem deslocamento, as ações globais usam ícones vetoriais coerentes e a exclusão fica protegida no menu contextual da ficha.
+- troca de cartas do Vault para o Loadout reorganizada em duas escolhas visuais — carta substituída e momento da ativação — com prévia da carta de entrada, custo de Stress legível, resumo e confirmação final.
+- Loadout da ficha adaptado para telas estreitas com trilho horizontal, cartas de largura estável, resumo limitado e navegação por snap ou controles laterais.
+
 ## [0.26.18]
 
 - Todas as nove classes principais agora possuem brasão próprio nos previews e estandarte vertical finalizado no detalhe.

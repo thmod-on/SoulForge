@@ -50,24 +50,30 @@ ficha, mas a aplicação não os resolve sozinha.
 
 ## Lacunas do modelo atual
 
-O modelo atual já cobre contadores numéricos e o modificador temporário de
-Limiar por Tier. Para atender às demais classes com fidelidade, a próxima etapa
-deve adicionar, de maneira declarativa:
+O modelo atual já cobre contadores, dados de d4 a d20, quantidade por
+Proficiência ou nível, dados armazenados, modificadores temporários fixos de
+defesa e por Tier, fichas efêmeras, estados pessoais, alvos tratados como
+lembrete e términos por cena ou descanso.
 
-1. dados com faces além de d4 e d6, e quantidades que acompanhem a Proficiência;
-2. modificadores temporários simples para Evasão, Proficiência e atributos;
-3. estados pessoais com duração e lembretes;
-4. gatilhos explícitos de descanso e fim de sessão.
+Permanecem como lacunas declarativas:
 
-Qualquer automação posterior de alvos ou de rolagens deve nascer de um novo
+1. modificadores temporários de Proficiência e atributos;
+2. reinicialização genérica por qualquer descanso;
+3. quantidades com mínimo ou derivadas de conjuntos, como cartas de um Domínio;
+4. eventos explícitos de ataque e severidade de dano;
+5. estado associado a alvos externos, contagens regressivas e cooldowns
+   temporais.
+
+Qualquer automação adicional de alvos, ataques ou dano deve nascer de um novo
 contrato de dados e de uma interação visível para o jogador, nunca de análise
 de texto livre.
 
 ## Cobertura atual
 
 O **Favor** do Bruxo é um contador estruturado e o **Manto do Patrono** é a
-primeira Feature ativável: consome Favor, concede `+Tier` aos limiares Menor e
-Maior e termina por dano Severo, fim da cena ou encerramento manual.
+referência inicial de Feature ativável: consome Favor, concede `+Tier` aos
+limiares Menor e Maior e termina por dano Severo, fim da cena ou encerramento
+manual.
 
 Nesta versão, o SoulForge também estrutura os seguintes estados de uso seguro:
 
@@ -82,3 +88,8 @@ Os bônus permanentes já declarados no Core incluem a trilha **Baluarte** do
 Guardião, **Sombra Fugaz** do Ladino e **Mago de Batalha**. Os demais efeitos
 das classes seguem visíveis como Features, mas permanecem sem automação até que
 suas escolhas, alvos ou rolagens tenham um contrato explícito.
+
+Ativações com fichas efêmeras também cobrem **Misturas Tóxicas**, **Talismã
+Encantado**, **Caminhar Entre Mundos** e **Círculo de Poder**. Os **Dados do
+Matador** usam o modelo de dados armazenados, com capacidade por Proficiência e
+recuperação declarativa no fim da sessão.

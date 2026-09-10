@@ -46,6 +46,24 @@ Consulte também [UX_GUIDELINES.md](UX_GUIDELINES.md).
 - componentes densos podem reduzir espaçamento e tipografia nos breakpoints de tablet, sem sacrificar legibilidade;
 - rótulos e estados não devem depender apenas de cor.
 
+### Coleções horizontais responsivas
+
+- coleções pequenas que perdem legibilidade quando comprimidas podem mudar de grade para trilho horizontal conforme a largura real do container, não apenas do viewport;
+- cada item mantém largura e altura previsíveis, com títulos e resumos limitados; o conteúdo completo permanece acessível em detalhe ou modal;
+- uma fração do próximo item funciona como pista de continuidade, complementada por `scroll-snap` e rolagem por toque;
+- controles laterais só aparecem quando existe conteúdo naquela direção, não alteram a largura do trilho e não devem cobrir títulos ou ações;
+- em dispositivos predominantemente touch, os controles podem ser ocultados quando o gesto horizontal for suficiente;
+- a região rolável recebe nome acessível, foco por teclado e não exibe uma barra de rolagem visual pesada.
+
+O Loadout da ficha e a seleção de personagens seguem esse padrão. O Vault conserva a grade, pois sua finalidade principal é consulta e gerenciamento de uma coleção potencialmente maior.
+
+### Seleções com representação visual
+
+- a seleção de personagens prioriza retrato, nome, classe, ancestralidade e nível; dados de sessão e recursos pertencem à ficha aberta;
+- quando não houver retrato, use o símbolo neutro do SoulForge, evitando confundi-lo com brasões de classe;
+- escolhas mutuamente exclusivas, como subclasses ou o momento de ativar uma carta, usam abas ou opções visuais com estado selecionado explícito;
+- trocas entre coleções mostram o item de entrada, o item de saída, o custo e um resumo antes de liberar a confirmação.
+
 ## Primitives de interface
 
 Controles repetidos devem usar as primitives abaixo. Elas representam a intenção da ação, não a área da tela onde aparecem, para que uma alteração visual seja refletida de forma consistente em todo o SoulForge.

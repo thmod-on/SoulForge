@@ -13,7 +13,7 @@ A interface é modular por responsabilidade, mesmo sendo uma PWA sem framework:
 - `src/features/settings/`: renderização de Configurações e administração visual de dados locais;
 - `src/features/packs/`: validação, importação, remoção e diálogos dos packs locais;
 - `src/features/character-transfer/`: formato, validação, importação e exportação local de fichas;
-- `src/features/compendium/`: regras de apresentação e futuras telas do catálogo;
+- `src/features/compendium/`: índice, páginas, modais e regras de apresentação do catálogo;
 - `src/domain/`: tipos e regras do domínio de jogo;
 - `src/storage/`: acesso ao IndexedDB e persistência local.
 
@@ -41,13 +41,22 @@ O drag-and-drop do InventÃ¡rio usa `src/features/inventory/bindInventoryDrag.t
 
 A moldura da ficha do jogador — sidebar, navegaÃ§Ã£o, cabeÃ§alho de editor e recursos — Ã© renderizada por `src/features/player/renderPlayerShell.ts`.
 
-A VisÃ£o Geral, a trilha de subclasse e o Vault ficam em `src/features/player/renderPlayerOverview.ts`, preservando no orquestrador apenas a origem dos dados e os eventos das cartas.
+A VisÃ£o Geral, a trilha de subclasse e o Vault ficam em `src/features/player/renderPlayerOverview.ts`, preservando no orquestrador apenas a origem dos dados e os eventos das cartas. O comportamento responsivo das cartas ativas é isolado em `src/features/player/activeCardCarousel.ts`.
+
+A troca entre Vault e Loadout é renderizada por `src/features/player/renderCardActivation.ts`; o módulo mantém as escolhas de carta e momento, o resumo e a habilitação da confirmação sincronizados sem incorporar regras de persistência.
+
+A galeria inicial é renderizada por `src/features/character-selection/renderCharacterSelection.ts`, enquanto `src/features/character-selection/characterSelectionCarousel.ts` controla exclusivamente sua navegação horizontal e os estados dos controles.
 
 DomÃ­nios do Compendium sÃ£o encapsulados em `src/features/compendium/domains.ts`, reunindo gerenciamento, modais e persistÃªncia do CRUD dessa entidade.
 
 Cartas do Compendium estÃ£o em `src/features/compendium/cards.ts`, incluindo filtros, detalhes, imagem, formulÃ¡rio, validaÃ§Ãµes e o CRUD local. A ativaÃ§Ã£o entre Vault e Loadout permanece na ficha do jogador.
 
 O índice e os capítulos do Compendium são compostos em `src/features/compendium/renderCompendiumIndex.ts`. O orquestrador decide apenas entre índice e telas de gerenciamento; novos capítulos e cards editoriais não devem ser montados em `main.ts`.
+
+Transformações do Compendium ficam em
+`src/features/compendium/transformations.ts`, incluindo busca, detalhes e CRUD
+local. Sua aplicação ao personagem não pertence ao catálogo e depende de um
+contrato explícito de identidade e Loadout.
 
 O ciclo de gestão de packs locais fica em `src/features/packs/packManagement.ts`, incluindo leitura, validação, instalação, remoção e seus diálogos. O orquestrador fornece o catálogo atual e reage à sua atualização, sem conhecer os detalhes do armazenamento do pack.
 

@@ -227,7 +227,11 @@ A tela deve apresentar:
 - cartas e subclasses elegíveis a partir da classe do personagem;
 - histórico imutável das escolhas concluídas.
 
-O primeiro recorte pode continuar como planejamento visual. A automação só deve ser ativada quando Classes, Subclasses, Features, Domínios e Cartas estiverem modelados como Definitions e puderem ser validados.
+O assistente atual aplica a evolução de forma atômica, registra o histórico e
+valida avanços, carta de Domínio, conquistas de Tier, progressão de subclasse e
+Multiclasse. Classes, Subclasses, Features, Domínios e Cartas permanecem
+Definitions; novos efeitos só podem ser automatizados quando possuírem contrato
+de dados verificável.
 
 ## Fora do escopo inicial
 

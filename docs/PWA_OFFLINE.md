@@ -35,14 +35,30 @@ Se a interface parecer antiga após uma publicação:
 
 1. feche e abra o aplicativo novamente;
 2. atualize a página uma vez com internet;
-3. como último recurso, limpe somente os dados do site pelo navegador, após fazer backup quando esse fluxo estiver disponível.
+3. como último recurso, exporte as fichas importantes e limpe somente os dados
+   do site pelo navegador.
 
 ## Limitações atuais
 
 - não há servidor próprio;
 - não há login ou sincronização em nuvem;
-- exportação e importação de personagens ainda não foram implementadas;
-- limpar dados do navegador pode remover personagens locais.
+- a transferência é manual e feita uma ficha por vez por arquivos
+  `.soulforge-character.json`;
+- o arquivo de personagem preserva referências, mas não instala os Packs
+  necessários no dispositivo de destino;
+- limpar dados do navegador pode remover personagens, Packs importados,
+  complementos e Definitions locais que não tenham backup.
+
+## Backup e transferência
+
+Com uma ficha ativa, **Configurações** permite exportá-la para um arquivo
+`.soulforge-character.json`. A importação pode ser iniciada no seletor de
+personagens ou em Configurações, valida o conteúdo antes de persistir e cria
+uma nova identidade quando o mesmo ID já existe no dispositivo.
+
+O processo não sincroniza alterações posteriores entre dispositivos. Packs
+referenciados pela ficha precisam ser instalados separadamente para que todo o
+conteúdo volte a ser resolvido pelo catálogo.
 
 ## Critérios de validação
 

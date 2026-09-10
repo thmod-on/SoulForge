@@ -11,11 +11,19 @@ Todo Pack gerado pelo SoulForge deve seguir estas regras:
 - preservar, entre parênteses, um nome original em inglês apenas quando ele for necessário para reconhecimento ou quando a tradução não for um nome próprio consolidado;
 - manter a origem, licença e condição de distribuição nos metadados do manifesto, não no nome visível.
 
-> Atualização de importação local: o SoulForge aceita um único arquivo JSON com extensão recomendada `.soulforge-pack.json`. O arquivo usa `format: "soulforge-pack-v1"` e contém `manifest` e `definitions`. Antes da instalação, a aplicação valida formato, manifesto, IDs repetidos e o vínculo de cada Definition ao `packId` do manifesto. Depois da confirmação, o Pack e suas Definitions são persistidos somente no IndexedDB deste navegador. A remoção exige confirmação e também remove as Definitions daquele Pack, podendo deixar referências indisponíveis em personagens existentes.
+> Importação local: o SoulForge aceita um ou vários arquivos JSON com extensão
+> recomendada `.soulforge-pack.json`. Cada arquivo usa
+> `format: "soulforge-pack-v1"` e contém `manifest` e `definitions`. O lote
+> completo é validado antes da confirmação e persistido em uma única transação,
+> sem deixar uma instalação parcial quando houver arquivo ou conflito inválido.
+> A remoção também remove as Definitions daquele Pack e pode deixar referências
+> indisponíveis em personagens existentes.
 
 ## Propósito
 
-Packs são unidades versionadas de conteúdo declarativo. Eles fornecem Definitions reutilizáveis para o catálogo, como cartas, itens, classes, domínios, ancestralidades e comunidades.
+Packs são unidades versionadas de conteúdo declarativo. Eles fornecem
+Definitions reutilizáveis para o catálogo, como cartas, itens, classes,
+domínios, ancestralidades, comunidades, transformações e Features.
 
 Um Pack não contém personagens, campanhas nem estado de jogo.
 

@@ -86,7 +86,7 @@ function itemChapter(catalog: Catalog): CompendiumChapter {
 }
 
 function classChapter(catalog: Catalog): CompendiumChapter {
-  return { eyebrow: "", title: "Classes", summary: "Classes definem a identidade do personagem e os dominios que podem conceder cartas.", count: catalog.classes.length, countLabel: "Classes cadastradas", primaryAction: "Nova classe", primaryActionId: "new-compendium-class", secondaryAction: "Pesquisar e gerenciar", secondaryActionId: "manage-compendium-classes", details: ["Cada classe libera um ou mais dominios.", "Fundamento, especializacao e maestria serao conectados em seguida.", "Classes locais ficam salvas neste dispositivo."] };
+  return { eyebrow: "", title: "Classes", summary: "Classes definem a identidade do personagem e os dominios que podem conceder cartas.", count: catalog.classes.length, countLabel: "Classes cadastradas", primaryAction: "Nova classe", primaryActionId: "new-compendium-class", secondaryAction: "Pesquisar e gerenciar", secondaryActionId: "manage-compendium-classes", details: ["Cada classe libera um ou mais dominios.", "Fundamento, especializacao e maestria acompanham a progressao da subclasse.", "Classes locais ficam salvas neste dispositivo."] };
 }
 
 function ancestryChapter(catalog: Catalog): CompendiumChapter {

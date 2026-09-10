@@ -145,7 +145,8 @@ Para evitar fontes de verdade duplicadas:
 
 - HP, Stress e Evasão devem ser calculados a partir de valores-base e modificadores concedidos pelas features selecionadas;
 - a ficha deve mostrar quais features originaram cada bônus permanente;
-- recursos temporários, usos por descanso e texto livre de regras não devem ser executados automaticamente no primeiro recorte;
+- recursos temporários e usos por descanso só são executados quando a Feature
+  possui metadados declarativos compatíveis; texto livre nunca gera automação;
 - efeitos estruturados seguros podem ser aplicados por Behaviors declarativos, conforme `DOMAIN_BEHAVIORS.md`.
 
 ### Modificadores declarativos de ficha
@@ -186,7 +187,9 @@ e outras fontes ativas.
 6. escolher comunidade em uma etapa separada;
 7. apresentar uma revisão da herança, features ativas e bônus estruturados antes de confirmar a criação.
 
-No primeiro recorte da interface, o modo misto pode solicitar duas ancestralidades na seleção mecânica. O modelo, porém, deve aceitar uma lista maior para preservar linhagens narrativas futuras.
+A interface atual solicita duas ancestralidades no modo misto. O modelo, porém,
+aceita uma lista maior para preservar linhagens narrativas futuras sem aumentar
+o número de Features mecânicas selecionadas.
 
 ## Edição posterior
 
@@ -209,9 +212,11 @@ Conteúdo oficial do SRD usado apenas por uma mesa privada deve permanecer em um
 
 ## Hope & Fear
 
-Em 2 de agosto de 2026, a divulgação oficial de *Hope & Fear* anuncia seis novas cartas de ancestralidade: `Skykin`, `Tidekin`, `Earthkin`, `Emberkin`, `Gnome` e `Aetheris`.
-
-O livro final ainda não está publicamente disponível nesta data. As novas ancestralidades devem ser adicionadas por Pack quando seu texto oficial estiver disponível; não inferir suas features a partir de material promocional.
+Conteúdo de *Hope & Fear* deve entrar somente por Pack e a partir de uma fonte
+final revisada. Packs privados já podem fornecer essas ancestralidades e suas
+Features sem incorporá-las ao build público. Não inferir regras a partir de
+material promocional ou nomes; origem, versão e data da revisão pertencem ao
+manifesto do Pack.
 
 ## Fora do escopo inicial
 

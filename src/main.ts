@@ -31,6 +31,9 @@ import { handleCommunityAction, renderCompendiumCommunityFormModal, renderCompen
 import { handleTransformationAction, renderTransformationFormModal, renderCompendiumTransformationsManager as renderCompendiumTransformationsManagerView, renderCompendiumTransformationsSpread as renderCompendiumTransformationsSpreadView, type TransformationFeatureDependencies, type TransformationFeatureState } from "./features/compendium/transformations";
 import { handlePackManagementAction, readPackImportFiles, renderPackManagementDialogs, type PackManagementDependencies } from "./features/packs/packManagement";
 import { renderCharacterSelection as renderCharacterSelectionView } from "./features/character-selection/renderCharacterSelection";
+import { scrollCharacterCarousel, setupCharacterCarousel, syncCharacterCarousel } from "./features/character-selection/characterSelectionCarousel";
+import { renderCardActivationModal as renderCardActivationModalView, syncCardActivationDialog } from "./features/player/renderCardActivation";
+import { scrollActiveCardCarousel, setupActiveCardCarousel, syncActiveCardCarousel } from "./features/player/activeCardCarousel";
 import { confirmStagedCharacterImport, downloadCharacterExport, renderCharacterImportModal, stageCharacterImport } from "./features/character-transfer/characterTransfer";
 import { renderProgression as renderProgressionView, type ProgressionRenderDependencies } from "./features/progression/renderProgression";
 import { renderProgressionDialogInPlace, renderProgressionInPlace as renderProgressionSurface } from "./features/progression/renderInPlace";
@@ -716,11 +719,17 @@ function renderActivateStoredCardModal(): string {
   if (!character || definition?.type !== "card") {
     return "";
   }
-  const activeCards = getActiveCards(character);
-  const recallCost = definition.recallCost ?? 0;
-  const stress = character.resources.find((resource) => resource.id === "stress");
-  const loadoutFull = activeCards.length >= 5;
-  return `<div class="modal-backdrop" data-modal-backdrop><section class="confirm-modal card-activation-modal" role="dialog" aria-modal="true" aria-labelledby="activate-card-title"><button class="modal-close" type="button" data-modal-close aria-label="Cancelar ativação">x</button><span class="resource-modal-label">Vault para Loadout</span><h2 id="activate-card-title">Ativar ${escapeHtml(definition.name)}?</h2><div class="card-activation-frame"><p>Esta carta passará a ficar ativa no Loadout.</p>${loadoutFull ? `<label class="form-field"><span>O Loadout já possui cinco cartas. Escolha uma para guardar *</span><select data-recall-swap-card><option value="">Selecione uma carta ativa</option>${activeCards.map((card) => `<option value="${card.id}">${escapeHtml(card.name)}</option>`).join("")}</select></label>` : ""}<div class="card-activation-options"><button class="card-activation-option" type="button" data-action="activate-stored-card-free"><span><strong>Durante um descanso</strong><small>A troca é gratuita.</small></span><i aria-hidden="true">›</i></button><button class="card-activation-option card-activation-option--immediate" type="button" data-action="activate-stored-card-stress"><span><strong>Agora</strong><small>Marque ${recallCost} Stress.${stress ? ` Disponível: ${stress.value}/${stress.max}.` : ""}</small></span><i aria-hidden="true">›</i></button></div></div>${state.cardActivationError ? `<p class="form-error" data-card-activation-error>${escapeHtml(state.cardActivationError)}</p>` : ""}</section></div>`;
+  return renderCardActivationModalView({
+    incomingCard: definition,
+    activeCards: getActiveCards(character),
+    stress: character.resources.find((resource) => resource.id === "stress"),
+    error: state.cardActivationError,
+    escapeHtml,
+    getDomainInfo: (domainId) => {
+      const domain = findDomain(catalog, domainId);
+      return domain ? { name: domain.name, color: domain.color } : undefined;
+    }
+  });
 }
 
 const fallbackCharacterClass: ClassDefinition = {
@@ -932,6 +941,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
       });
     }
     shouldAnimateCharacterCreationModal = false;
+    setupCharacterCarousel(appRoot);
     return;
   }
 
@@ -1033,6 +1043,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
   injectGameMarkerAuthoringFields();
   enhanceCompendiumClassResults();
   syncScrollAffordances(appRoot);
+  setupActiveCardCarousel(appRoot);
   document.body.classList.toggle("has-modal", Boolean(appRoot.querySelector(".modal-backdrop")));
   if (state.addItemToCompartmentId && state.addItemCatalogScrollTop) requestAnimationFrame(() => { const catalog = appRoot.querySelector<HTMLElement>(".add-item-catalog"); if (catalog) catalog.scrollTop = state.addItemCatalogScrollTop ?? 0; });
   if (state.progressionCardPickerMode && state.progressionCardPickerScrollTop !== undefined) requestAnimationFrame(() => { const list = appRoot.querySelector<HTMLElement>(".progression-card-choice-list"); if (list) list.scrollTop = state.progressionCardPickerScrollTop ?? 0; });
@@ -1184,14 +1195,14 @@ function getCardFormValue(selector: string): string {
   return element?.value.trim() ?? "";
 }
 
-async function activateStoredCard(mode: "rest" | "stress"): Promise<void> {
+async function activateStoredCard(mode: "rest" | "stress", selectedSwapCardId?: string): Promise<void> {
   const character = state.character;
   const definition = state.activatingStoredCardId ? findDefinition(catalog, state.activatingStoredCardId) : undefined;
   if (!character || definition?.type !== "card") {
     return;
   }
   const activeCardIds = [...character.deck.activeCardIds];
-  const swapCardId = getCardFormValue("[data-recall-swap-card]");
+  const swapCardId = selectedSwapCardId ?? getCardFormValue("[data-recall-swap-card]:checked");
   if (activeCardIds.length >= 5 && !swapCardId) {
     state.cardActivationError = "Escolha uma carta ativa para mover ao Vault.";
     render();
@@ -1285,6 +1296,11 @@ async function createResource(): Promise<void> {
 }
 
 function bindEvents(): void {
+  window.addEventListener("resize", () => {
+    syncCharacterCarousel(appRoot);
+    syncActiveCardCarousel(appRoot);
+  });
+
   document.addEventListener("pointerdown", (event) => {
     const target = event.target;
     modalBackdropPointerDown = event.button === 0 && target instanceof HTMLElement && target.matches("[data-modal-backdrop]");
@@ -1540,6 +1556,17 @@ function bindEvents(): void {
       return;
     }
 
+    const characterCarouselButton = target.closest<HTMLElement>('[data-action="scroll-character-carousel"]');
+    if (characterCarouselButton) {
+      scrollCharacterCarousel(appRoot, Number(characterCarouselButton.dataset.carouselDirection));
+      return;
+    }
+
+    const activeCardCarouselButton = target.closest<HTMLElement>('[data-action="scroll-active-card-carousel"]');
+    if (activeCardCarouselButton) {
+      scrollActiveCardCarousel(appRoot, Number(activeCardCarouselButton.dataset.activeCardDirection));
+      return;
+    }
     if (target.closest('[data-action="choose-character-file"]')) {
       document.querySelector<HTMLInputElement>("[data-character-file]")?.click();
       return;
@@ -2337,13 +2364,10 @@ function bindEvents(): void {
       return;
     }
 
-    if (target.closest('[data-action="activate-stored-card-free"]')) {
-      void activateStoredCard("rest");
-      return;
-    }
-
-    if (target.closest('[data-action="activate-stored-card-stress"]')) {
-      void activateStoredCard("stress");
+    if (target.closest('[data-action="confirm-stored-card-activation"]')) {
+      const mode = appRoot.querySelector<HTMLInputElement>("[data-card-activation-mode]:checked")?.value;
+      const swapCardId = appRoot.querySelector<HTMLInputElement>("[data-recall-swap-card]:checked")?.value;
+      if (mode === "rest" || mode === "stress") void activateStoredCard(mode, swapCardId);
       return;
     }
 
@@ -2519,6 +2543,10 @@ function bindEvents(): void {
 
   document.addEventListener("change", (event) => {
     const target = event.target;
+    if (target instanceof HTMLInputElement && (target.matches("[data-recall-swap-card]") || target.matches("[data-card-activation-mode]"))) {
+      syncCardActivationDialog(appRoot);
+      return;
+    }
     if (target instanceof HTMLInputElement && target.matches("[data-rest-roll-index]")) {
       handleRestRollInput(target, state);
       return;

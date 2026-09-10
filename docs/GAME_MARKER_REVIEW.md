@@ -55,7 +55,7 @@ SoulForge não extrai marcadores por busca de palavras em resumos ou efeitos.
 | Livro de Ronin — Enervação Eterna | 1 uso; descanso longo | A técnica declara uma utilização por descanso longo. |
 | Onda de Desintegração | 1 uso; descanso longo | A regra limita explicitamente o uso a uma vez por descanso longo. |
 | União Transcendente | 1 uso; descanso longo | A regra limita explicitamente o uso a uma vez por descanso longo. |
-| Sigilo de Retaliação | Sem metadado nesta etapa | Armazena d8 até o nível do personagem; o modelo atual não suporta d8 nem quantidade por nível. |
+| Sigilo de Retaliação | Metadado pendente de revisão | Armazena d8 até o nível do personagem; o contrato atual já suporta d8 e quantidade por nível, mas a associação ainda precisa ser validada no Pack. |
 | Técnicas “uma vez por descanso” | Sem metadado nesta etapa | A reinicialização genérica por qualquer descanso ainda não está modelada. |
 | Demais cartas de Códice | Sem metadado | Usam recursos existentes, efeitos contínuos ou não possuem estado próprio que a ficha deva controlar. |
 

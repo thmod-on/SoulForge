@@ -33,7 +33,15 @@ Todos os custos são validados antes de qualquer consumo. Uma ativação não po
 
 ### Modificadores e duração
 
-O primeiro modificador suportado é `defense-per-tier`, que soma o Tier atual aos limiares indicados. O bônus é calculado sobre a defesa efetiva; a defesa-base persistida não é modificada.
+Os modificadores temporários suportados são:
+
+- `defense`, que aplica um valor fixo aos campos de defesa declarados;
+- `defense-per-tier`, que soma o Tier atual aos limiares declarados.
+
+Os bônus são calculados sobre a defesa efetiva; a defesa-base persistida não é
+modificada. Uma ativação também pode criar fichas efêmeras com quantidade fixa,
+rolada, ligada ao atributo de Conjuração ou informada pelo jogador. Essas
+fichas pertencem ao estado temporário do personagem, nunca à Definition.
 
 Condições suportadas de término:
 
@@ -47,6 +55,8 @@ Condições suportadas de término:
 - A faixa **Efeitos ativos** aparece acima de Recursos apenas quando houver algum efeito.
 - Ela mostra bônus, lembretes, condições de término e o botão **Encerrar**.
 - A Feature oferece seu botão de ativação somente quando declarar `activation`.
+- ativações com `target: "self-or-ally"` solicitam o alvo; um efeito destinado a
+  aliado é mantido como lembrete e não altera a defesa do personagem local.
 
 ## Exemplo atual
 

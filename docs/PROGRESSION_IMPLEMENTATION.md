@@ -2,7 +2,9 @@
 
 ## Objetivo
 
-Este documento define o plano técnico e funcional para implementar a progressão de níveis no SoulForge com base nas regras oficiais do Daggerheart Core.
+Este documento registra o contrato técnico e funcional da progressão de níveis
+do SoulForge com base nas regras do Daggerheart Core, além das etapas que ainda
+dependem de expansão declarativa.
 
 As regras de jogo e o contrato de Classes estão em [CLASS_AND_PROGRESSION.md](CLASS_AND_PROGRESSION.md). Este documento define como representá-las, validá-las e aplicá-las sem acoplar conteúdo de uma classe à interface.
 
@@ -25,11 +27,12 @@ Classes alteram elegibilidade de Domínios, subclasses e efeitos de features. El
 - O personagem armazena apenas escolhas concluídas e estado; Classes, Cartas, Domínios e Features permanecem Definitions dos Packs.
 - Valores derivados, como Evasão e limiares de dano, são calculados por funções puras e não devem ter múltiplas fontes de verdade.
 - Uma subida de nível é atômica: ou todas as escolhas válidas são gravadas, ou nenhuma alteração é persistida.
-- Efeitos textuais complexos de Features não serão interpretados automaticamente no primeiro recorte.
+- Efeitos textuais complexos de Features não são interpretados automaticamente;
+  apenas contratos declarativos conhecidos produzem alterações na ficha.
 
 ## Modelo de regras
 
-Introduzir uma Definition de regras do sistema, inicialmente `ruleset.daggerheart-core`, com:
+O modelo conceitual das regras pode ser representado por:
 
 ```ts
 interface ProgressionRuleset {
@@ -60,7 +63,13 @@ interface AdvancementDefinition {
 }
 ```
 
-O `ruleset` deve representar, entre outros, o custo de duas escolhas para Proficiência e Multiclasse, a disponibilidade de Multiclasse a partir do nível 5 e os bloqueios entre Multiclasse e carta aprimorada de Subclasse.
+Na implementação atual, os tiers, custos e limites comuns ficam em
+`src/features/progression/progressionRules.ts`; as regras de Multiclasse ficam
+em `multiclassRules.ts`; e a aplicação atômica fica em
+`progressionActions.ts`. Esse conjunto representa, entre outros, o custo de
+duas escolhas para Proficiência e Multiclasse, a disponibilidade de Multiclasse
+a partir do nível 5 e os bloqueios entre Multiclasse e carta aprimorada de
+Subclasse.
 
 Os valores de `slotCount` e a disponibilidade por tier devem ficar nos dados do ruleset. Isso permite refletir a ficha oficial e adaptar uma futura errata sem reescrever código de interface.
 
@@ -115,7 +124,8 @@ Evasão base e HP inicial permanecem vinculados à classe principal. Uma multicl
 
 ## Fluxo de subida de nível
 
-O assistente de progressão deve trabalhar somente do nível atual para o próximo nível. Não permitir pular níveis no primeiro recorte.
+O assistente de progressão trabalha somente do nível atual para o próximo nível
+e não permite pular níveis.
 
 ### Assistente por etapas
 
@@ -158,9 +168,11 @@ O SoulForge registra uma única seleção de Multiclasse em `Character.progressi
 
 O fluxo guiado só é oferecido no Tier 3 ou 4, custa os dois avanços do nível e impede a carta aprimorada de Subclasse somente no mesmo Tier. Após confirmada, nenhuma nova Multiclasse pode ser selecionada. Cartas de Domínio da Multiclasse passam a ser elegíveis na progressão até `ceil(nível de destino / 2)`.
 
-## Fases de entrega
+## Histórico das fases de entrega
 
 ### Fase 1 — fundação de domínio
+
+**Estado: concluída.**
 
 - introduzir tipos de Classe, Subclasse, Feature e Ruleset;
 - criar dados mínimos do Core para uma classe de demonstração;
@@ -169,6 +181,8 @@ O fluxo guiado só é oferecido no Tier 3 ou 4, custa os dois avanços do nível
 
 ### Fase 2 — progressão guiada sem efeitos complexos
 
+**Estado: concluída.**
+
 - substituir a tela visual atual pelo assistente de nível;
 - aplicar nível, marcos, avanços estruturados, Proficiência, Evasão, HP, Stress e cartas;
 - registrar histórico;
@@ -176,17 +190,29 @@ O fluxo guiado só é oferecido no Tier 3 ou 4, custa os dois avanços do nível
 
 ### Fase 3 — conteúdo de classe e criação de personagem
 
+**Estado: concluída.**
+
 - implementar CRUD de Classes, Subclasses e Features no Compendium;
 - criar o fluxo de seleção de classe e subclasse para novos personagens;
 - validar Domínios e cartas a partir do catálogo de Packs.
 
 ### Fase 4 — efeitos declarativos
 
+**Estado: parcial.** Modificadores permanentes, recursos próprios, marcadores,
+ativações temporárias, custos e alguns gatilhos já são declarativos. Eventos de
+ataque e dano, estado associado a alvos e modificadores temporários de
+Proficiência ou atributos permanecem no backlog.
+
 - representar efeitos de progressão de classe por `ProgressionEffect`;
 - integrar Behaviors para regras que possam ser executadas com segurança;
 - tratar recursos próprios de classe, efeitos temporários e gatilhos narrativos.
 
 ### Fase 5 — expansão Hope & Fear
+
+**Estado: parcial.** Classes, Domínios, Cartas e Transformações já podem ser
+fornecidos por Packs privados separados. Uma extensão do ruleset continua
+condicionada à existência de uma diferença oficial de progressão que não possa
+ser representada pelo contrato atual.
 
 - importar a expansão como Pack separado;
 - comparar o livro final com `ruleset.daggerheart-core`;

@@ -169,7 +169,7 @@ Salvar uma comunidade local cria/atualiza sua Definition e a Feature vinculada d
 - [ ] Confirmar comportamento ao remover/atualizar Packs usados por personagens.
 - [ ] Testar criação com Pack ausente, comunidade local, conteúdo importado e ficha legada.
 - [ ] Validar em iPad paisagem e desktop.
-- [ ] Atualizar documentação de Packs, modelo de domínio, criação de personagem e changelog da versão de entrega.
+- [x] Atualizar documentação de Packs, modelo de domínio, criação de personagem e changelog da versão de entrega.
 
 ## Fora de escopo desta entrega
 

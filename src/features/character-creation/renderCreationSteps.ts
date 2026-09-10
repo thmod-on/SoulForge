@@ -1,4 +1,5 @@
 import type { Attribute, ClassDefinition, CommunityDefinition, FeatureDefinition, SubclassDefinition } from "../../domain/types";
+import { getClassDetailArtwork } from "../../content/classArtwork";
 import { getClassDisplayName } from "../compendium/classPresentation";
 import { characterCreationAttributes, formatCreationAttributeValue, getRemainingCreationAttributeValues } from "./attributeAllocation";
 
@@ -19,6 +20,9 @@ export function renderCreationAttributesStep(values: Record<Attribute["id"], num
 
 export function renderCreationClassStep(model: { classes: ClassDefinition[]; selectedClass: ClassDefinition; subclasses: SubclassDefinition[]; selectedSubclassId?: string; features: FeatureDefinition[] }, escapeHtml: EscapeHtml): string {
   const getFeature = (id: string) => model.features.find((feature) => feature.id === id);
+  const selectedClassName = getClassDisplayName(model.selectedClass);
+  const classArtwork = getClassDetailArtwork(model.selectedClass);
+  const selectedSubclass = model.subclasses.find((subclass) => subclass.id === model.selectedSubclassId) ?? model.subclasses[0];
   const renderFeatures = (label: string, ids: string[]) => {
     const entries = ids.map((id) => {
     const feature = getFeature(id);
@@ -26,7 +30,14 @@ export function renderCreationClassStep(model: { classes: ClassDefinition[]; sel
     }).join("");
     return entries ? `<section class="character-subclass-feature-group"><span>${label}</span><div>${entries}</div></section>` : "";
   };
-  return `<section class="character-class-picker creation-step-panel" data-creation-panel="5"><div><span>Arquétipo</span><h3>Classe e subclasse</h3><p>Escolha a classe e compare todas as Features de cada subclasse antes de decidir.</p></div><label class="form-field"><span>Classe</span><select data-character-class>${model.classes.map((definition) => `<option value="${escapeHtml(definition.id)}" ${definition.id === model.selectedClass.id ? "selected" : ""}>${escapeHtml(getClassDisplayName(definition))}</option>`).join("")}</select><small>${escapeHtml(model.selectedClass.summary)}</small></label><p class="character-class-starting-stats">Evasão inicial <strong>${model.selectedClass.startingEvasion}</strong><span>·</span> PV inicial <strong>${model.selectedClass.startingHitPoints}</strong></p><div class="character-subclass-choice-grid">${model.subclasses.map((subclass) => `<label class="character-subclass-choice ${subclass.id === model.selectedSubclassId ? "is-selected" : ""}"><input type="radio" name="character-subclass" data-character-subclass-id="${escapeHtml(subclass.id)}" ${subclass.id === model.selectedSubclassId ? "checked" : ""}/><span><strong>${escapeHtml(subclass.name)}</strong><small>${escapeHtml(subclass.summary)}</small>${subclass.spellcastAttributeId ? `<em>Conjuração: ${escapeHtml(characterCreationAttributes.find((attribute) => attribute.id === subclass.spellcastAttributeId)?.label ?? "")}</em>` : ""}<div class="character-subclass-features">${renderFeatures("Fundação", subclass.foundationFeatureIds)}${renderFeatures("Especialização", subclass.specializationFeatureIds)}${renderFeatures("Maestria", subclass.masteryFeatureIds)}</div></span></label>`).join("") || `<p class="form-error">Cadastre uma subclasse no Compendium.</p>`}</div></section>`;
+  const subclassTabs = model.subclasses.map((subclass) => {
+    const selected = subclass.id === selectedSubclass?.id;
+    return `<label class="character-subclass-tab ${selected ? "is-selected" : ""}"><input type="radio" name="character-subclass" data-character-subclass-id="${escapeHtml(subclass.id)}" ${selected ? "checked" : ""}/><span>${escapeHtml(subclass.name)}</span></label>`;
+  }).join("");
+  const subclassPanel = selectedSubclass
+    ? `<article class="character-subclass-panel"><header><strong>${escapeHtml(selectedSubclass.name)}</strong><small>${escapeHtml(selectedSubclass.summary)}</small>${selectedSubclass.spellcastAttributeId ? `<em>Conjuração: ${escapeHtml(characterCreationAttributes.find((attribute) => attribute.id === selectedSubclass.spellcastAttributeId)?.label ?? "")}</em>` : ""}</header><div class="character-subclass-features">${renderFeatures("Fundação", selectedSubclass.foundationFeatureIds)}${renderFeatures("Especialização", selectedSubclass.specializationFeatureIds)}${renderFeatures("Maestria", selectedSubclass.masteryFeatureIds)}</div></article>`
+    : `<p class="form-error">Cadastre uma subclasse no Compendium.</p>`;
+  return `<section class="character-class-picker creation-step-panel" data-creation-panel="5"><div><span>Arquétipo</span><h3>Classe e subclasse</h3><p>Escolha a classe e compare todas as Features de cada subclasse antes de decidir.</p></div><div class="character-class-choice-layout"><aside class="character-class-banner ${classArtwork ? "has-image" : ""}" aria-label="Estandarte de ${escapeHtml(selectedClassName)}">${classArtwork ? `<img src="${escapeHtml(classArtwork)}" alt="" />` : '<span class="character-class-banner-placeholder" aria-hidden="true">CLASSE</span>'}<div><small>Estandarte</small><strong>${escapeHtml(selectedClassName)}</strong></div></aside><div class="character-class-choice-content"><label class="form-field"><span>Classe</span><select data-character-class>${model.classes.map((definition) => `<option value="${escapeHtml(definition.id)}" ${definition.id === model.selectedClass.id ? "selected" : ""}>${escapeHtml(getClassDisplayName(definition))}</option>`).join("")}</select><small>${escapeHtml(model.selectedClass.summary)}</small></label><p class="character-class-starting-stats">Evasão inicial <strong>${model.selectedClass.startingEvasion}</strong><span>·</span> PV inicial <strong>${model.selectedClass.startingHitPoints}</strong></p>${subclassTabs ? `<div class="character-subclass-tabs" role="radiogroup" aria-label="Subclasse">${subclassTabs}</div>` : ""}${subclassPanel}</div></div></section>`;
 }
 
 export function renderCreationCommunityStep(model: { communities: CommunityDefinition[]; features: FeatureDefinition[]; selectedId?: string; search: string; packId: string; getPackDisplayName: (packId: string) => string }, escapeHtml: EscapeHtml): string {

@@ -50,15 +50,16 @@ Modais são reservados para operações focadas:
 
 Não usar uma sequência de modais para pesquisa, listagem e edição, pois isso reduz a orientação espacial e prejudica a navegação no iPad.
 
-## Capítulos previstos
+## Capítulos atuais
 
-As aberturas iniciais do livro são:
+As aberturas atuais do livro são:
 
 | Abertura | Página esquerda | Página direita |
 | --- | --- | --- |
 | 1 | Domínios | Cartas |
 | 2 | Itens | Classes e subclasses |
-| 3 | Ancestralidades | Condições futuras |
+| 3 | Ancestralidades | Comunidades |
+| 4 | Transformações | Guia de identidade opcional |
 
 Essa organização pode crescer conforme novos Packs forem instalados, sem alterar a responsabilidade de cada Definition.
 
@@ -110,6 +111,22 @@ Reúnem as opções de identidade do personagem:
 
 Ancestralidades possuem duas features ordenadas — Top e Bottom — para suportar ancestralidade única e mista. O comportamento de criação, seleção e validação está definido em [ANCESTRY.md](ANCESTRY.md).
 
+Os dois tipos possuem página de gerenciamento, detalhes e CRUD de conteúdo
+local. Features associadas reutilizam o mesmo editor declarativo e podem
+fornecer modificadores de ficha, ativações e marcadores compatíveis com seus
+contratos.
+
+### Transformações
+
+Reúne escolhas opcionais de identidade com benefício, desvantagem, perguntas
+narrativas e marcadores declarativos opcionais. O Compendium já oferece busca,
+detalhes, CRUD local e importação por Pack.
+
+A aplicação da transformação ao personagem ainda não foi implementada. Esse
+fluxo deverá respeitar o limite de uma transformação e sua presença no Loadout
+sem consumir o limite normal de cartas; consultar
+[Transformações](TRANSFORMATIONS.md).
+
 ### Condições e características
 
 São tipos reconhecidos pelo modelo de domínio, mas podem ser introduzidos em uma etapa futura, quando houver conteúdo e fluxos de uso suficientes para justificá-los como capítulo próprio.
@@ -124,7 +141,9 @@ O Compendium não deve apagar ou alterar automaticamente os dados locais de um p
 
 ## Relação com Packs
 
-Packs fornecem Definitions para o catálogo. O Compendium consulta essas Definitions e pode, futuramente, oferecer ferramentas para cadastrar conteúdo local ou administrar Packs instalados.
+Packs fornecem Definitions para o catálogo. O Compendium consulta essas
+Definitions e oferece ferramentas para cadastrar conteúdo local. Instalação,
+atualização e remoção de Packs já são administradas em Configurações.
 
 O gerenciamento de instalação, atualização e remoção de Packs pertence às Configurações, não à navegação principal do Compendium.
 
@@ -137,17 +156,27 @@ O gerenciamento de instalação, atualização e remoção de Packs pertence às
 - A interface deve favorecer consulta rápida durante a mesa, com alvos de toque adequados ao iPad.
 - A exclusão deve respeitar as diretrizes de UX do projeto e sempre pedir confirmação.
 
-## Escopo inicial
+## Estado atual
 
-O primeiro recorte visual implementa um índice de livro com os capítulos **Domínios**, **Cartas** e **Itens**, usando o conteúdo atualmente disponível no pacote demo.
+O índice em formato de livro reúne **Domínios**, **Cartas**, **Itens**,
+**Classes e subclasses**, **Ancestralidades**, **Comunidades** e
+**Transformações**. Cada capítulo mantém a mesma separação entre índice,
+página de gerenciamento e modais focados.
 
-Os primeiros fluxos completos são Domínios, Cartas e Itens:
+Domínios, Cartas e Itens possuem fluxos completos:
 
 1. `Nova carta` abre um modal de cadastro com imagem opcional, nome, domínio, tier, custo e efeito;
 2. `Pesquisar e gerenciar` abre a página interna de Cartas;
 3. a página permite buscar por nome ou texto e filtrar por domínio e tier;
 4. cada resultado permite visualizar detalhes, editar e excluir com confirmação.
 
-Itens seguem o mesmo padrão de gerenciamento. Além disso, a ficha do personagem permite selecionar uma Definition do Compendium e adicioná-la diretamente a um container compatível, respeitando categoria, peso e capacidade.
+Itens seguem o mesmo padrão de gerenciamento. Além disso, a ficha do
+personagem permite selecionar uma Definition do Compendium e adicioná-la
+diretamente a um container compatível, respeitando categoria, peso e
+capacidade.
 
-Os capítulos seguintes devem manter a estrutura de índice, página de gerenciamento e modais focados, sem exigir uma mudança de arquitetura.
+Classes, ancestralidades e comunidades integram suas escolhas à criação e à
+ficha. Transformações permanecem limitadas ao catálogo até que o contrato de
+aplicação ao personagem seja definido. Condições e um eventual capítulo
+independente de Features continuam condicionados à existência de conteúdo e
+fluxos que os justifiquem.

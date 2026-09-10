@@ -42,7 +42,7 @@ Quando a quantidade do contador depende de uma regra declarada, use `quantity` n
 }
 ```
 
-### Dados
+### Dados rolados e armazenados
 
 ```json
 {
@@ -55,7 +55,19 @@ Quando a quantidade do contador depende de uma regra declarada, use `quantity` n
 }
 ```
 
-Inicialmente, o tipo de dado suportado e `d4`. A quantidade pode ser fixa (`{ "kind": "fixed", "value": 3 }`), ligada a um atributo (`{ "kind": "attribute", "attributeId": "con" }`), ao atributo de Conjuracao da subclasse (`spellcast-trait`) ou ao nivel atual da personagem (`character-level`). Nesse ultimo caso, a `SubclassDefinition` declara explicitamente `spellcastAttributeId`; nenhuma descricao textual e interpretada.
+Os tipos suportados são `d4`, `d6`, `d8`, `d10`, `d12` e `d20`. A quantidade
+pode ser fixa (`{ "kind": "fixed", "value": 3 }`), ligada a um atributo
+(`{ "kind": "attribute", "attributeId": "con" }`), ao atributo de Conjuração
+da subclasse (`spellcast-trait`), à Proficiência (`proficiency`) ou ao nível
+atual da personagem (`character-level`). A `SubclassDefinition` declara
+explicitamente `spellcastAttributeId`; nenhuma descrição textual é
+interpretada.
+
+Marcadores `stored-dice` representam dados conquistados durante a sessão e
+rolados somente quando gastos. Eles declaram tipo, quantidade, gatilho de ganho
+e reinicialização de sessão. A recuperação opcional no reset também é
+declarativa, como nos Dados do Matador, que recuperam Esperança pelos dados não
+gastos.
 
 Exemplo de contador que acompanha o nivel e se reinicializa a cada sessao:
 
@@ -75,11 +87,20 @@ Exemplo de contador que acompanha o nivel e se reinicializa a cada sessao:
 
 1. classe escolhida e suas caracteristicas de classe/Esperanca;
 2. features de Fundacao, Especializacao e Maestria efetivamente adquiridas da subclasse;
-3. cartas presentes em `deck.activeCardIds`.
+3. Feature da comunidade mecânica selecionada;
+4. cartas presentes em `deck.activeCardIds`.
 
 Para cada definicao ativa, cria o estado inicial apenas se ele ainda nao existir. Enquanto a fonte continuar ativa, o estado e preservado. Quando a fonte deixa de estar ativa, o marcador deixa de aparecer, mas seu estado permanece em `Character.gameMarkers`. Essa retencao e a estrategia segura atual: reativar uma carta restaura seus dados de sessao em vez de apagar algo silenciosamente. Uma futura regra explicita de limpeza podera descartar estados obsoletos por acao consciente do jogador.
 
-Na Visao Geral, contadores possuem controles `-` e `+`, respeitam os limites declarados e persistem imediatamente. Dados exibem cada unidade individualmente: o jogador registra manualmente um resultado de 1 a 4 e depois marca aquele dado como usado ou disponivel. Selecionar novamente o mesmo resultado limpa o dado. O botao `Nova sessao` aparece quando houver marcador com `reset: "session"`; os atalhos de descanso aplicam apenas a reinicializacao cujo valor de `reset` corresponda exatamente ao descanso escolhido.
+Na Visão Geral, contadores possuem controles `-` e `+`, respeitam os limites
+declarados e persistem imediatamente. Dados exibem cada unidade
+individualmente: o jogador registra manualmente um resultado compatível com as
+faces declaradas e depois marca aquele dado como usado ou disponível.
+Selecionar novamente o mesmo resultado limpa o dado. Dados armazenados podem
+ser ganhos, gastos em conjunto e rolados pela interface. O botão `Nova sessão`
+aparece quando houver marcador com `reset: "session"`; os atalhos de descanso
+aplicam apenas a reinicialização cujo valor de `reset` corresponda exatamente
+ao descanso escolhido.
 
 ## Complementos locais para cartas de packs
 

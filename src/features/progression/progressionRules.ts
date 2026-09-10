@@ -14,14 +14,14 @@ export const progressionTiers = [
     levels: "5-7",
     headline: "Ao nivel 5, ganhe uma Experiencia adicional em +2, limpe marcacoes de atributos e ganhe +1 em Proficiencia.",
     choices: 2,
-    footer: "Opcoes de subclasse e multiclasse aparecem aqui como estrutura visual."
+    footer: "Opcoes de subclasse e multiclasse aparecem conforme a elegibilidade e as escolhas deste Tier."
   },
   {
     tier: 4,
     levels: "8-10",
     headline: "Ao nivel 8, ganhe uma Experiencia adicional em +2, limpe marcacoes de atributos e ganhe +1 em Proficiencia.",
     choices: 2,
-    footer: "Esta area sera ligada futuramente as configuracoes de progressao."
+    footer: "Revise os espacos disponiveis e as escolhas ja aplicadas antes de evoluir."
   }
 ] as const;
 

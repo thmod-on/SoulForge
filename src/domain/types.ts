@@ -168,7 +168,7 @@ export type FeatureEffectEndCondition = "scene-end" | "severe-damage" | "short-r
 
 /**
  * Metadados de uma Feature ativável. A Definition descreve a regra; a ficha
- * guardará o estado temporário da ativação em uma etapa posterior.
+ * O Character guarda somente o estado temporário das ativações em uso.
  */
 export type FeatureActivationDefinition = {
   target?: "self-or-ally";
