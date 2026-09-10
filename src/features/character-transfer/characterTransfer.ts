@@ -129,6 +129,7 @@ function isExportBundle(value: unknown): value is CharacterExportBundle {
 function isCharacter(value: unknown): value is Character {
   if (!isRecord(value) || !isNonEmptyString(value.id) || !isRecord(value.identity) || !isRecord(value.defense) || !isRecord(value.deck) || !isRecord(value.inventory)) return false;
   return isNonEmptyString(value.identity.name)
+    && (value.identity.transformationId === undefined || isNonEmptyString(value.identity.transformationId))
     && isFiniteNumber(value.identity.level)
     && isFiniteNumber(value.identity.xp)
     && isFiniteNumber(value.identity.nextLevelXp)

@@ -417,6 +417,8 @@ export type Character = {
     primaryCommunityId?: string;
     /** Parâmetros estruturados solicitados pela Feature de comunidade, quando existirem. */
     communityFeatureChoiceValues?: Record<string, unknown>;
+    /** Transformação persistente da personagem; não integra nem consome o limite do deck. */
+    transformationId?: string;
     level: number;
     xp: number;
     nextLevelXp: number;

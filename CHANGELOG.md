@@ -4,6 +4,23 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.26.20]
+
+### Adicionado
+
+- personagens podem receber, substituir e remover uma única transformação persistente por meio de um fluxo dedicado na ficha;
+- transformação ativa recebe uma seção compacta entre marcadores e cartas, com detalhe completo de benefício, desvantagem, lembretes e perguntas narrativas;
+- marcadores declarados pela transformação participam da sincronização normal sem incluir a transformação no deck ou consumir o limite do Loadout.
+
+### Compatibilidade
+
+- exportação e importação preservam a referência estável da transformação;
+- referências cujo Pack está ausente permanecem salvas e são sinalizadas na ficha, sem ativar mecânicas indisponíveis.
+
+### Corrigido
+
+- selecionar uma transformação atualiza somente a opção e a confirmação dentro do modal, eliminando o piscar causado pela reconstrução completa da ficha.
+
 ## [0.26.19]
 
 ### Alterado

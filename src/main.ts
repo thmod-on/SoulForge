@@ -34,6 +34,7 @@ import { renderCharacterSelection as renderCharacterSelectionView } from "./feat
 import { scrollCharacterCarousel, setupCharacterCarousel, syncCharacterCarousel } from "./features/character-selection/characterSelectionCarousel";
 import { renderCardActivationModal as renderCardActivationModalView, syncCardActivationDialog } from "./features/player/renderCardActivation";
 import { scrollActiveCardCarousel, setupActiveCardCarousel, syncActiveCardCarousel } from "./features/player/activeCardCarousel";
+import { handleCharacterTransformationAction, handleCharacterTransformationEscape, renderCharacterTransformationDialogs, renderCharacterTransformationPanel, type CharacterTransformationDependencies, type CharacterTransformationUiState } from "./features/transformations/characterTransformations";
 import { confirmStagedCharacterImport, downloadCharacterExport, renderCharacterImportModal, stageCharacterImport } from "./features/character-transfer/characterTransfer";
 import { renderProgression as renderProgressionView, type ProgressionRenderDependencies } from "./features/progression/renderProgression";
 import { renderProgressionDialogInPlace, renderProgressionInPlace as renderProgressionSurface } from "./features/progression/renderInPlace";
@@ -156,7 +157,6 @@ import { editorNavigation as sideNavItems, isEditorPage, playerNavigation as top
 import "./styles.css";
 function getAppRoot(): HTMLDivElement {
   const element = document.querySelector<HTMLDivElement>("#app");
-
   if (!element) {
     throw new Error("App root not found.");
   }
@@ -195,7 +195,7 @@ const state: {
   compendiumAncestrySearch: string;
   compendiumCommunitySearch: string;
   compendiumCommunityPackId: string;
-  transformationState: TransformationFeatureState;
+  transformationState: TransformationFeatureState & CharacterTransformationUiState;
   lastPlayerPage: Page;
   selectedItemId?: string;
   selectedCardId: string;
@@ -312,7 +312,7 @@ const state: {
   compendiumAncestrySearch: "",
   compendiumCommunitySearch: "",
   compendiumCommunityPackId: "todos",
-  transformationState: { compendiumTransformationSearch: "", transformationModalOpen: false },
+  transformationState: { compendiumTransformationSearch: "", transformationModalOpen: false, characterTransformationPickerOpen: false, characterTransformationDetailOpen: false, characterTransformationRemoveOpen: false },
   lastPlayerPage: "overview",
   selectedCardId: "card.demo.dread-veil",
   progressionStep: "advances",
@@ -451,7 +451,7 @@ function getPlayerOverviewDependencies(): PlayerOverviewDependencies {
     escapeHtml,
     renderResources: (character) => renderResourcesView(character, getPlayerShellDependencies()),
     renderEmptyInline,
-    getActiveCards, getInactiveCardCount, getStoredCards,
+    getActiveCards, getInactiveCardCount, getStoredCards, renderTransformation: (character) => renderCharacterTransformationPanel(character, catalog, escapeHtml),
     getDomainInfo: (domainId) => {
       const domain = findDomain(catalog, domainId);
       return domain ? { name: domain.name, color: domain.color } : undefined;
@@ -545,7 +545,7 @@ function getAncestryFeatureDependencies(): AncestryFeatureDependencies {
 }
 
 function getTransformationFeatureDependencies(): TransformationFeatureDependencies { return { state: state.transformationState, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render: () => render({ preserveMainScroll: true }) }; }
-
+function getCharacterTransformationDependencies(): CharacterTransformationDependencies { return { state: state.transformationState, character: state.character!, catalog, escapeHtml, saveCharacter: async (character) => { state.character = character; await saveCharacter(character); }, render: () => render({ preserveMainScroll: true }) }; }
 function renderSettings(character: Character): string {
   return renderSettingsPage({
     character,
@@ -996,7 +996,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
   appRoot.innerHTML = `
     ${shell}
     ${renderCardModalView(state.modalCardId, getCardFeatureDependencies())}
-    ${renderActivateStoredCardModal()}
+    ${renderActivateStoredCardModal()}${renderCharacterTransformationDialogs(getCharacterTransformationDependencies())}
     ${renderItemModalView(getInventoryRenderDependencies())}
     ${renderDeleteItemModalView(getInventoryRenderDependencies())}
     ${renderAddResourceModal()}
@@ -1319,7 +1319,7 @@ function bindEvents(): void {
 
     if (handleAncestryAction(target, getAncestryFeatureDependencies())) return;
     if (handleCommunityAction(target, { state, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render })) return;
-    if (handleTransformationAction(target, getTransformationFeatureDependencies())) return;
+    if (handleTransformationAction(target, getTransformationFeatureDependencies())) return; if (state.character && handleCharacterTransformationAction(target, getCharacterTransformationDependencies())) return;
 
     const attributeAllocation = target.closest<HTMLElement>("[data-character-attribute-allocation]");
     if (attributeAllocation) {
@@ -2384,11 +2384,11 @@ function bindEvents(): void {
   });
 
   document.addEventListener("keydown", (event) => {
+    if (state.character && handleCharacterTransformationEscape(event, getCharacterTransformationDependencies())) return;
     if (event.key === "Escape" && state.modalCardId) {
       state.modalCardId = undefined;
       render({ preserveMainScroll: true });
     }
-
     if (event.key === "Escape" && state.selectedItemId) {
       state.selectedItemId = undefined;
       render({ preserveMainScroll: true });

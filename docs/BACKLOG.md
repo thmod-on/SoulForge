@@ -44,7 +44,6 @@ Estados:
 | COM-001 | P1 | A definir | Comunidades e Packs | Confirmar o comportamento ao remover ou atualizar um Pack cuja comunidade é usada por personagens. | Regra de domínio documentada, interface coerente, dados antigos preservados ou migrados explicitamente e testes cobrindo remoção e atualização. |
 | COM-002 | P1 | Pronto | Comunidades | Completar a matriz de compatibilidade: Pack ausente, comunidade local, comunidade importada e ficha legada. | Cenários automatizados ou justificados como validação manual, todos com resultado esperado registrado. |
 | COM-003 | P2 | Pronto | Comunidades | Validar o fluxo de criação e a ficha em desktop e iPad horizontal. | Criação, consulta e reabertura verificadas nas duas disposições sem corte, perda de contexto ou alvo de toque inadequado. |
-| TRN-001 | P2 | A definir | Transformações | Integrar Transformações ao personagem: seleção ou concessão, limite de uma, presença no Loadout sem consumir seu limite e remoção segura. | Contrato do `Character` documentado, compatibilidade definida, fluxo implementado e regra de limite coberta por testes. |
 | TRN-002 | P2 | A definir | Transformações | Aplicar marcadores e comportamentos declarativos compatíveis com cada transformação, sem interpretar texto livre. | Apenas comportamentos representáveis pelo contrato são automatizados; os demais aparecem como lembretes explícitos e possuem testes. |
 | EFF-001 | P1 | Pronto | Efeitos | Atualizar a auditoria de classes e efeitos para distinguir lacunas resolvidas das ainda abertas. | A cobertura descrita coincide com os tipos, Packs locais e testes atuais. |
 | EFF-002 | P2 | A definir | Efeitos | Suportar modificadores temporários simples de Proficiência e atributos. | Novo contrato declarativo documentado e interpretado genericamente, sem conhecimento de classe na Engine. |
@@ -85,6 +84,7 @@ rastreabilidade. O changelog continua sendo o histórico definitivo das entregas
 | --- | --- | --- |
 | DOC-001 | 10/09/2026 · `0.26.19` | README, PWA, Packs, Compendium, progressão, ancestralidades, comunidades, marcadores e auditoria de efeitos reconciliados com o código e o changelog. Orientações antigas da interface também foram corrigidas. |
 | UI-002 | 10/09/2026 · `0.26.19` | Criação por classe ganhou estandarte e abas de subclasse; seleção de personagens virou galeria responsiva; troca Vault→Loadout recebeu confirmação em duas etapas; e cartas ativas passaram a usar trilho horizontal em containers estreitos. Padrões e testes correspondentes foram registrados. |
+| TRN-001 | 10/09/2026 · `0.26.20` | Personagens passaram a referenciar uma única transformação persistente, com concessão, substituição, remoção, estado de Pack ausente, apresentação fora do limite do Loadout e marcadores declarativos cobertos por testes. |
 
 ## Referências
 

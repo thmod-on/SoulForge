@@ -1,10 +1,10 @@
 import type { Catalog } from "../../domain/catalog";
 import { getSpellcastAttributeId } from "../../content/spellcastAttributes";
 import { getCharacterCommunity, getCharacterCommunityFeature } from "../communities/communityRules";
-import type { CardDefinition, Character, CharacterGameMarkerState, ClassDefinition, FeatureDefinition, GameMarkerDefinition, GameMarkerQuantity } from "../../domain/types";
+import type { CardDefinition, Character, CharacterGameMarkerState, ClassDefinition, FeatureDefinition, GameMarkerDefinition, GameMarkerQuantity, TransformationDefinition } from "../../domain/types";
 
 export type ActiveGameMarker = { key: string; sourceDefinitionId: string; sourceLabel: string; definition: GameMarkerDefinition; state: CharacterGameMarkerState };
-type MarkerSource = { definition: CardDefinition | ClassDefinition | FeatureDefinition; label: string };
+type MarkerSource = { definition: CardDefinition | ClassDefinition | FeatureDefinition | TransformationDefinition; label: string };
 
 /** Sincroniza presenca e estado inicial. Fontes inativas permanecem persistidas, mas nao sao exibidas. */
 export function synchronizeGameMarkers(character: Character, catalog: Catalog): Character {
@@ -81,6 +81,8 @@ function getActiveMarkerSources(character: Character, catalog: Catalog): MarkerS
   const community = getCharacterCommunity(character, catalog);
   const communityFeature = getCharacterCommunityFeature(character, catalog);
   if (community && communityFeature) sources.push({ definition: communityFeature, label: `${community.name} — ${communityFeature.name}` });
+  const transformation = catalog.transformations.find((entry) => entry.id === character.identity.transformationId);
+  if (transformation) sources.push({ definition: transformation, label: transformation.name });
   for (const cardId of character.deck.activeCardIds) { const card = catalog.cards.find((entry) => entry.id === cardId); if (card) sources.push({ definition: card, label: card.name }); }
   return sources;
 }

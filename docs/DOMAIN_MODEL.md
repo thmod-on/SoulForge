@@ -335,6 +335,7 @@ Ao longo da campanha:
 - adquire equipamentos;
 - altera seu estado;
 - modifica seu Deck;
+- pode receber ou perder uma transformação persistente por referência;
 - registra novas Experiences.
 
 Ao ser salvo, apenas seu estado é persistido.

@@ -55,8 +55,11 @@ O índice e os capítulos do Compendium são compostos em `src/features/compendi
 
 Transformações do Compendium ficam em
 `src/features/compendium/transformations.ts`, incluindo busca, detalhes e CRUD
-local. Sua aplicação ao personagem não pertence ao catálogo e depende de um
-contrato explícito de identidade e Loadout.
+local. A aplicação ao personagem fica em
+`src/features/transformations/characterTransformations.ts`: o módulo resolve a
+referência de identidade, renderiza painel e diálogos e coordena concessão,
+substituição e remoção. A sincronização de marcadores continua genérica e apenas
+considera a transformação referenciada entre as fontes ativas.
 
 O ciclo de gestão de packs locais fica em `src/features/packs/packManagement.ts`, incluindo leitura, validação, instalação, remoção e seus diálogos. O orquestrador fornece o catálogo atual e reage à sua atualização, sem conhecer os detalhes do armazenamento do pack.
 

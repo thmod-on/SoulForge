@@ -1,10 +1,22 @@
 import { describe, expect, it } from "vitest";
 import { createCatalog } from "../../domain/catalog";
 import { demoCharacter } from "../../domain/demoCharacter";
-import type { CardDefinition, ClassDefinition, FeatureDefinition, SubclassDefinition } from "../../domain/types";
+import type { CardDefinition, ClassDefinition, FeatureDefinition, SubclassDefinition, TransformationDefinition } from "../../domain/types";
 import { getActiveGameMarkers, resetGameMarkers, synchronizeGameMarkers } from "./gameMarkerSync";
 
 describe("marcadores de jogo", () => {
+  it("ativa marcadores da transformação sem adicioná-la ao deck", () => {
+    const transformation: TransformationDefinition = { id: "transformation.test.vampire", type: "transformation", packId: "test", name: "Vampiro", summary: "", benefit: "", drawback: "", narrativeQuestions: ["Quem?"], gameMarkers: [{ id: "blood", kind: "counter", label: "Sangue", initialValue: 2, max: 4 }] };
+    const catalog = createCatalog([], [transformation]);
+    const character = { ...demoCharacter, identity: { ...demoCharacter.identity, transformationId: transformation.id }, gameMarkers: undefined };
+    const synchronized = synchronizeGameMarkers(character, catalog);
+    expect(synchronized.deck).toEqual(demoCharacter.deck);
+    expect(getActiveGameMarkers(synchronized, catalog)).toEqual([expect.objectContaining({ sourceDefinitionId: transformation.id, sourceLabel: "Vampiro" })]);
+    const removed = { ...synchronized, identity: { ...synchronized.identity, transformationId: undefined } };
+    expect(getActiveGameMarkers(removed, catalog)).toHaveLength(0);
+    expect(removed.gameMarkers).toHaveLength(1);
+  });
+
   it("cria contador para carta ativa e preserva estado quando a carta fica inativa", () => {
     const card: CardDefinition = { id: "card.test.charges", type: "card", packId: "test", name: "Carta de cargas", summary: "", domainId: "domain.test", tier: 1, cardType: "acao", effect: "", gameMarkers: [{ id: "charges", kind: "counter", label: "Cargas", initialValue: 3, max: 3, reset: "long-rest" }] };
     const catalog = createCatalog([], [card]);

@@ -48,9 +48,33 @@ Exemplo reduzido:
 }
 ```
 
-## Estado atual da aplicação
+## Aplicação ao personagem
 
-Esta etapa cobre catálogo, importação de Pack e visualização no Compendium. A ficha ainda não permite escolher, equipar ou aplicar uma transformação. Quando essa etapa for implementada, deverá garantir o limite de uma transformação, a presença fora do limite normal do Loadout e os comportamentos específicos de cada regra.
+O `Character` mantém no máximo uma referência em `identity.transformationId`.
+Esse ID aponta para a `TransformationDefinition`; benefício, desvantagem e demais
+textos nunca são copiados para a ficha.
+
+Na Visão Geral, a transformação aparece em uma seção própria depois dos recursos
+e marcadores e antes das cartas ativas. Ela é tratada como herança persistente,
+não como uma carta: não integra `deck.activeCardIds`, não pode ir ao Vault e não
+consome o limite de cinco cartas.
+
+A ficha permite conceder, substituir e remover a transformação. A substituição
+mantém apenas uma referência e a remoção desativa suas mecânicas. Estados de
+marcadores já registrados permanecem persistidos, mas deixam de aparecer enquanto
+a Definition não for a transformação ativa.
+
+Se o Pack estiver ausente, o ID é preservado e a ficha sinaliza a Definition
+indisponível. Nenhuma regra é inferida do nome ou dos textos armazenados.
+
+## Automação atual
+
+- `gameMarkers` declarados pela transformação são sincronizados e exibidos pelos
+  mesmos interpretadores usados pelas demais Definitions;
+- `rulesNotes` permanecem lembretes explícitos;
+- benefício e desvantagem são apresentados juntos, sem interpretação de texto livre;
+- estados internos temporários, como uma forma alternativa, ainda exigem um
+  contrato declarativo próprio antes de serem automatizados.
 
 ## Fontes e revisão
 

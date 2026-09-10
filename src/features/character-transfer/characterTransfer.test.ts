@@ -14,6 +14,12 @@ describe("transferência de personagem", () => {
     expect(result.identity.name).toBe(demoCharacter.identity.name);
   });
 
+  it("preserva a transformação referenciada na exportação", () => {
+    const transformed = { ...demoCharacter, identity: { ...demoCharacter.identity, transformationId: "transformation.test.vampire" } };
+    const result = parseCharacterImport(JSON.stringify({ format: characterExportFormat, exportedAt: "2026-09-10T00:00:00.000Z", character: transformed }), new Set());
+    expect(result.identity.transformationId).toBe("transformation.test.vampire");
+  });
+
   it("rejeita arquivos que não representam uma ficha", () => {
     expect(() => parseCharacterImport(JSON.stringify({ format: characterExportFormat, character: { name: "incompleto" } }), new Set())).toThrow("ficha compatível");
   });

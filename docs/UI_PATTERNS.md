@@ -57,6 +57,14 @@ Consulte também [UX_GUIDELINES.md](UX_GUIDELINES.md).
 
 O Loadout da ficha e a seleção de personagens seguem esse padrão. O Vault conserva a grade, pois sua finalidade principal é consulta e gerenciamento de uma coleção potencialmente maior.
 
+### Transformações na ficha
+
+- a transformação é uma herança ativa do personagem e nunca deve parecer uma carta ou ocupar espaço no Loadout;
+- seu resumo compacto aparece depois de Recursos especiais e Marcadores de jogo, antes das Cartas ativas;
+- benefício, desvantagem e notas de regra ficam em um modal de detalhes, evitando aumentar permanentemente a altura da ficha;
+- escolher, substituir e remover uma transformação são ações explícitas. A remoção exige confirmação e preserva o estado de marcadores já registrado, deixando-os apenas inativos;
+- quando a definição não estiver disponível no Pack atual, a referência permanece preservada e a interface explica por que seus efeitos não estão sendo aplicados.
+
 ### Seleções com representação visual
 
 - a seleção de personagens prioriza retrato, nome, classe, ancestralidade e nível; dados de sessão e recursos pertencem à ficha aberta;
