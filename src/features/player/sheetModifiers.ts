@@ -1,5 +1,6 @@
 import type { Catalog } from "../../domain/catalog";
 import type { Attribute, CardDefinition, Character, CharacterSheetModifier, Defense, FeatureDefinition, SheetModifierCondition } from "../../domain/types";
+import { isCardUnavailable } from "./cardAvailability";
 
 /** Um bônus condicional que está valendo agora e merece ser explicado na ficha. */
 export type ActiveSheetModifierEffect = {
@@ -88,6 +89,7 @@ export function isSheetModifierConditionMet(character: Character, catalog: Catal
 
 function getActiveCards(character: Character, catalog: Catalog): CardDefinition[] {
   return character.deck.activeCardIds
+    .filter((id) => !isCardUnavailable(character, id))
     .flatMap((id) => [catalog.cards.find((card) => card.id === id)])
     .filter((card): card is CardDefinition => Boolean(card));
 }

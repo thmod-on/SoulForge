@@ -31,6 +31,8 @@ describe("marcadores de jogo", () => {
     const inactive = { ...preserved, deck: { activeCardIds: [], learnedCardIds: [card.id] } };
     expect(getActiveGameMarkers(inactive, catalog)).toHaveLength(0);
     expect(inactive.gameMarkers).toHaveLength(1);
+    const unavailable = { ...preserved, deck: { activeCardIds: [card.id], learnedCardIds: [card.id], unavailableCards: [{ cardId: card.id, reactivation: "rest" as const, deactivatedAt: "2026-09-13T12:00:00.000Z" }] } };
+    expect(getActiveGameMarkers(unavailable, catalog)).toHaveLength(0);
   });
 
   it("resolve contador declarativo pelo atributo e o repoe no descanso", () => {

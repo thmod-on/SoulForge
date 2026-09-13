@@ -723,7 +723,8 @@ Opcionalmente, informações sobre:
 - preparação;
 - organização;
 - posição;
-- seleção.
+- seleção;
+- indisponibilidade temporária e o evento de reativação de uma carta do Loadout.
 
 Essas decisões dependem da implementação.
 
@@ -756,7 +757,8 @@ Cartas podem ser:
 - adicionadas;
 - removidas;
 - substituídas;
-- reorganizadas.
+- reorganizadas;
+- desativadas até o próximo descanso, descanso longo, sessão ou reativação manual.
 
 Essas alterações nunca modificam as Definitions originais.
 

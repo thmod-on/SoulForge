@@ -301,6 +301,14 @@ Sempre seguir esta ordem.
 
 6. Validar.
 
+## Fechamento de entrega com `versione`
+
+Alterações comuns não incrementam a versão automaticamente. Quando o usuário solicitar **`versione`**, seguir integralmente o fluxo canônico de [RELEASES.md](RELEASES.md): revisar o escopo, executar o preflight antes do incremento, determinar a versão semântica do lote, reconciliar a documentação, atualizar versão e changelog, validar novamente, criar o commit e executar o push autorizado.
+
+O repositório canônico `https://github.com/thmod-on/SoulForge.git` foi identificado pelo usuário como sendo de sua propriedade. O comando `versione` ou outro pedido explícito de push autoriza o envio de uma entrega validada; essa autorização não permite pushes espontâneos.
+
+Se qualquer validação falhar, se houver alterações de origem incerta ou se a versão correta for ambígua, interromper antes do commit e do push e apresentar o bloqueio. Nunca descartar mudanças do usuário para limpar uma tentativa de release.
+
 ---
 
 # Papel da IA

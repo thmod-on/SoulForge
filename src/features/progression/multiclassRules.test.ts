@@ -14,9 +14,31 @@ describe("regras de multiclasse", () => {
     expect(canChooseMulticlass({ ...character, progression: { ...character.progression!, multiclass: { classId: "class.seraph" } as never } }, 3, [])).toBe(false);
   });
 
-  it("bloqueia subclasse e multiclasse no mesmo Tier", () => {
+  it("bloqueia subclasse e multiclasse no rascunho do mesmo Tier", () => {
     expect(canChooseMulticlass(character, 3, [{ kind: "subclass", tier: 3, label: "Especialização" }])).toBe(false);
-    expect(isSubclassAdvanceBlockedByMulticlass(3, [{ kind: "multiclass", tier: 3, label: "Serafim" }])).toBe(true);
+    expect(isSubclassAdvanceBlockedByMulticlass(character, 3, [{ kind: "multiclass", tier: 3, label: "Serafim" }])).toBe(true);
+  });
+
+  it("mantém o bloqueio após salvar e reabrir em outro nível do mesmo Tier", () => {
+    const withStoredSubclass = {
+      ...character,
+      progression: {
+        ...character.progression!,
+        advancementSelections: [{ kind: "subclass" as const, tier: 3, level: 5 }]
+      }
+    };
+    const withStoredMulticlass = {
+      ...character,
+      progression: {
+        ...character.progression!,
+        advancementSelections: [{ kind: "multiclass" as const, tier: 3, level: 5 }]
+      }
+    };
+
+    expect(canChooseMulticlass(withStoredSubclass, 3, [])).toBe(false);
+    expect(canChooseMulticlass(withStoredSubclass, 4, [])).toBe(true);
+    expect(isSubclassAdvanceBlockedByMulticlass(withStoredMulticlass, 3, [])).toBe(true);
+    expect(isSubclassAdvanceBlockedByMulticlass(withStoredMulticlass, 4, [])).toBe(false);
   });
 
   it("limita cartas do domínio secundário à metade do próximo nível", () => {

@@ -2976,8 +2976,8 @@ textarea:disabled {
 
 .topbar-utility {
   display: grid;
-  width: 2.35rem;
-  height: 2.35rem;
+  width: 2.75rem;
+  height: 2.75rem;
   place-items: center;
   border: 1px solid transparent;
   color: var(--color-muted);
@@ -3966,6 +3966,62 @@ textarea:disabled {
   transform: translateY(-1px);
 }
 
+.ability-card.is-unavailable {
+  padding: 0;
+  border-color: rgba(195, 155, 255, 0.5);
+  background: linear-gradient(145deg, #171020, #08050e);
+}
+
+.ability-card.is-unavailable::after {
+  inset: 0;
+  height: auto;
+  opacity: 0.32;
+  background: repeating-linear-gradient(135deg, transparent 0 0.75rem, rgba(195, 155, 255, 0.08) 0.75rem 0.82rem);
+}
+
+.unavailable-card-back {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1rem 0.9rem 1.15rem;
+  text-align: center;
+  isolation: isolate;
+}
+
+.unavailable-card-watermark {
+  position: absolute;
+  z-index: -1;
+  top: 50%;
+  left: 50%;
+  width: 132%;
+  max-width: none;
+  opacity: 0.3;
+  filter: saturate(0.65) contrast(1.08) drop-shadow(0 0 1.8rem rgba(195, 155, 255, 0.28));
+  transform: translate(-50%, -50%);
+}
+
+.unavailable-card-name {
+  position: relative;
+  color: var(--color-text);
+  font-size: 1rem;
+  line-height: 1.2;
+  text-shadow: 0 2px 8px #08050e, 0 0 1rem #08050e;
+}
+
+.unavailable-card-status {
+  display: grid;
+  gap: 0.35rem;
+  padding-top: 2.25rem;
+  background: linear-gradient(180deg, transparent, rgba(8, 5, 14, 0.9) 42%);
+  text-shadow: 0 2px 8px #08050e;
+}
+
+.unavailable-card-status strong { color: var(--color-text); }
+.unavailable-card-status small { color: var(--color-muted); line-height: 1.35; }
+
 .card-art {
   position: absolute;
   inset: 0 0 auto;
@@ -4125,26 +4181,55 @@ textarea:disabled {
   background: rgba(195, 155, 255, 0.14);
 }
 
-.stored-card-row {
+.card-row.stored-card-row {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+  align-items: start;
   margin-top: 0.25rem;
 }
 
 .stored-card {
   display: grid;
+  grid-template-rows: auto minmax(2.75rem, auto);
   gap: 0.55rem;
   min-width: 0;
 }
 
 .stored-card .ability-card {
   width: 100%;
+  height: 20.5rem;
+  min-height: 20.5rem;
+}
+
+.stored-card .ability-card h3 {
+  display: -webkit-box;
+  min-height: 3.6em;
+  overflow: hidden;
+  line-height: 1.2;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.stored-card .ability-card p {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
 }
 
 .stored-card-action {
-  justify-self: end;
-  min-height: 2.4rem;
+  display: inline-flex;
+  width: 100%;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
   border: 1px solid rgba(195, 155, 255, 0.48);
   color: var(--color-gold);
   background: rgba(195, 155, 255, 0.08);
+}
+
+.stored-card-action > span:first-child {
+  font-size: 1.05rem;
 }
 
 .stored-card-action:hover {
@@ -5232,18 +5317,25 @@ textarea:disabled {
   font-size: 0.86rem;
 }
 
-.progression-option span {
+.progression-option-body {
   display: grid;
   gap: 0.24rem;
   line-height: 1.35;
 }
 
-.progression-option span strong {
+.progression-option-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.45rem;
+}
+
+.progression-option-heading > strong {
   color: var(--color-text);
   font-size: 0.84rem;
 }
 
-.progression-option span em {
+.progression-option-body > em {
   display: -webkit-box;
   overflow: hidden;
   color: var(--color-muted);
@@ -5252,18 +5344,55 @@ textarea:disabled {
   -webkit-line-clamp: 2;
 }
 
-.progression-option span small {
+.progression-option-body > small {
   color: var(--color-muted);
   font-size: 0.7rem;
 }
 
-.progression-option span small b {
+.progression-option-body > small b {
   color: var(--color-gold);
+}
+
+.progression-option-cost {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid rgba(244, 234, 219, 0.18);
+  border-radius: 999px;
+  padding: 0.18rem 0.38rem;
+  color: var(--color-muted);
+  background: rgba(255, 255, 255, 0.035);
+  white-space: nowrap;
+}
+
+.progression-option-cost b {
+  color: var(--color-gold);
+  font-size: 0.55rem;
+  letter-spacing: -0.08em;
+}
+
+.progression-option-cost em {
+  color: inherit;
+  font-size: 0.63rem;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.progression-option.is-full-level-cost .progression-option-cost {
+  border-color: rgba(195, 155, 255, 0.5);
+  color: var(--color-action-hover);
+  background: rgba(195, 155, 255, 0.12);
+}
+
+.progression-option-body > .progression-option-requirement {
+  color: #ffb2bc;
+  font-weight: 700;
 }
 
 .progression-option:disabled {
   cursor: not-allowed;
-  opacity: 0.42;
+  opacity: 0.62;
 }
 
 .progression-option:hover {
@@ -6739,10 +6868,10 @@ body:has(.modal-backdrop) {
 }
 
 .topbar-utility.sf-action--icon {
-  width: 2.35rem;
-  min-width: 2.35rem;
-  min-height: 2.35rem;
-  height: 2.35rem;
+  width: 2.75rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  height: 2.75rem;
 }
 
 .modal-backdrop {
@@ -9279,6 +9408,61 @@ body:has(.modal-backdrop) {
   line-height: 1.55;
 }
 
+.card-availability-picker,
+.card-availability-status {
+  margin-top: 0.35rem;
+  border: 1px solid rgba(195, 155, 255, 0.32);
+  border-radius: var(--radius-control);
+  background: rgba(195, 155, 255, 0.06);
+}
+
+.card-availability-picker > summary {
+  width: 100%;
+  list-style: none;
+  cursor: pointer;
+}
+
+.card-availability-picker > summary::-webkit-details-marker { display: none; }
+.card-availability-picker > div { display: grid; gap: 0.75rem; padding: 0 0.85rem 0.85rem; }
+
+.card-availability-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.card-availability-options button {
+  display: grid;
+  gap: 0.25rem;
+  min-height: 4rem;
+  padding: 0.7rem;
+  border: 1px solid rgba(195, 155, 255, 0.28);
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  text-align: left;
+  background: rgba(8, 5, 17, 0.7);
+}
+
+.card-availability-options button:hover,
+.card-availability-options button:focus-visible { border-color: var(--color-action); outline: none; }
+.card-availability-options small { color: var(--color-muted); line-height: 1.3; }
+
+.card-availability-status {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.9rem;
+}
+
+.card-availability-status > span {
+  color: var(--color-fear);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.card-availability-status .sf-action { margin-top: 0.35rem; }
+
 @media (max-width: 1180px) {
   .app-shell {
     grid-template-columns: 16.5rem minmax(0, 1fr);
@@ -9629,6 +9813,10 @@ body:has(.modal-backdrop) {
   .progression-option-list,
   .compendium-spread,
   .equipped-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .card-row.stored-card-row {
     grid-template-columns: 1fr;
   }
 

@@ -4,6 +4,31 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.27.0]
+
+### Adicionado
+
+- cartas do Loadout podem ser desativadas até o próximo descanso, descanso longo, nova sessão ou reativação manual;
+- o verso de uma carta indisponível mantém seu nome, usa o símbolo do SoulForge como fundo e continua acessível para consulta;
+- progressão informa antecipadamente o custo de cada escolha, com destaque e aviso de saldo para avanços que custam dois pontos.
+
+### Alterado
+
+- Vault apresenta cartas de altura uniforme, conteúdo resumido e ação integrada para mover ao Loadout em layouts responsivos;
+- toda a nomenclatura visível de `Downtime` passa a usar `Descanso`, preservando os contratos internos e a compatibilidade das fichas;
+- o detalhe de uma carta mostra somente seu efeito completo, usando o resumo apenas como fallback para conteúdo antigo;
+- o carrossel do Loadout preserva posição e foco ao abrir e fechar os detalhes de uma carta.
+
+### Corrigido
+
+- Compendium e Configurações reconhecem cliques em toda a área de seus botões, inclusive ícones SVG internos;
+- Multiclasse e aprimoramento da subclasse se bloqueiam mutuamente quando escolhidos no mesmo Tier, inclusive após reabrir a progressão.
+
+### Compatibilidade
+
+- indisponibilidade de cartas pertence à ficha, é preservada na importação, exportação, progressão e troca com o Vault e suspende bônus passivos e marcadores enquanto estiver ativa;
+- fichas anteriores continuam válidas sem migração obrigatória.
+
 ## [0.26.20]
 
 ### Adicionado
@@ -209,7 +234,7 @@ O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e 
 ### Adicionado
 
 - catálogo de Transformações, com conteúdo local privado, detalhes completos e ilustrações originais incorporadas ao Pack;
-- movimento de downtime Preparação em grupo, que recupera 2 Esperanças.
+- movimento de descanso Preparação em grupo, que recupera 2 Esperanças.
 
 ### Alterado
 
@@ -385,7 +410,7 @@ O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e 
 
 ### Adicionado
 
-- downtime guiado para descansos breve e longo, com movimentos e recuperação declarada;
+- descanso guiado nas modalidades breve e longa, com movimentos e recuperação declarada;
 - modificadores declarativos de ficha em Features de ancestralidade, para recursos e defesa;
 - suporte a bônus de Estresse do Humano, PV do Gigante, defesa do Galapa e Simiah, e Armadura do Terrano;
 - edição local de ancestralidades com bônus máximo de recurso;

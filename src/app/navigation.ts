@@ -12,6 +12,15 @@ export const editorNavigation: Array<{ page: Page; label: string; icon: string }
   { page: "settings", label: "Configuracoes", icon: '<svg class="sf-navigation-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.09A1.7 1.7 0 0 0 8.55 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.09A1.7 1.7 0 0 0 4.6 8.55a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.09A1.7 1.7 0 0 0 15.45 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.12.37.34.7.65.94.3.24.68.37 1.06.37H21v4h-.09A1.7 1.7 0 0 0 19.4 15z"/></svg>' }
 ];
 
+const pages = new Set<Page>(["overview", "skills", "inventory", "progression", "notes", "compendium", "settings", "storedCards"]);
+
+/** Resolve a navegação delegada mesmo quando o clique nasce dentro de um SVG. */
+export function getPageFromEventTarget(target: EventTarget | null): Page | undefined {
+  if (!target || typeof (target as Element).closest !== "function") return undefined;
+  const page = (target as Element).closest("[data-page]")?.getAttribute("data-page");
+  return page && pages.has(page as Page) ? page as Page : undefined;
+}
+
 export function isEditorPage(page: Page): boolean {
   return page === "compendium" || page === "settings";
 }

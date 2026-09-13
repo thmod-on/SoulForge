@@ -41,7 +41,7 @@ export function renderProgression(character: Character, dependencies: Progressio
 function renderProgressionStep(step: ProgressionFlowStep, character: Character, dependencies: ProgressionRenderDependencies): string {
   switch (step) {
     case "advances":
-      return `<p class="progression-stage-copy">Escolha como o personagem evolui. Alguns avanços ocupam os dois espaços desta passagem de nível.</p><div class="progression-elective-panel">${dependencies.renderProgressionOptions(character)}</div>${dependencies.renderProgressionAdvanceSummary()}`;
+      return `<p class="progression-stage-copy">Escolha como o personagem evolui. Cada nível oferece dois avanços; algumas opções usam os dois.</p><div class="progression-elective-panel">${dependencies.renderProgressionOptions(character)}</div>${dependencies.renderProgressionAdvanceSummary()}`;
     case "domain-card":
       return `<p class="progression-stage-copy">A carta aprendida será guardada no Vault. Você decide depois quando ativá-la no Loadout.</p>${dependencies.renderProgressionDomainStep(character)}`;
     case "tier-experience":

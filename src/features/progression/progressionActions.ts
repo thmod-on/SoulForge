@@ -1,7 +1,7 @@
 import type { Catalog } from "../../domain/catalog";
 import type { CardDefinition, Character, CharacterProgression, CharacterProgressionEntry, ProgressionAdvanceKind } from "../../domain/types";
 import type { ProgressionDraftChoice, ProgressionFlowStep, ProgressionTierNumber } from "../../app/types";
-import { canLearnMulticlassDomainCard, isSubclassAdvanceBlockedByMulticlass } from "./multiclassRules";
+import { canLearnMulticlassDomainCard, isMulticlassBlockedBySubclass, isSubclassAdvanceBlockedByMulticlass } from "./multiclassRules";
 import { getProgressionChoiceCost as getProgressionChoiceCostForKind } from "./progressionRules";
 
 export type ProgressionActionState = {
@@ -33,7 +33,7 @@ export function getAdvanceSlotsUsed(character: Character, tier: ProgressionTierN
 }
 
 export function getNextSubclassAdvance(character: Character, tier: ProgressionTierNumber, draft: ProgressionDraftChoice[]): "specialized" | "mastery" | undefined {
-  if (isSubclassAdvanceBlockedByMulticlass(tier, draft)) return undefined;
+  if (isSubclassAdvanceBlockedByMulticlass(character, tier, draft)) return undefined;
   const acquired = getProgression(character).acquiredSubclassTiers;
   if (!acquired.includes("specialized") && tier >= 3) return "specialized";
   if (acquired.includes("specialized") && !acquired.includes("mastery") && tier >= 4) return "mastery";
@@ -95,7 +95,8 @@ export async function applyProgression(deps: ApplyProgressionDependencies): Prom
   const tierAchievement = tierExperience ? `Experiencia +2: ${tierExperience.name}; Proficiencia +1` : undefined;
   const chosenCard = catalog.cards.find((card) => card.id === state.progressionCardId);
   if (!chosenCard || !getProgressionCardCandidates(character, catalog, state, true).some((card) => card.id === chosenCard.id)) return undefined;
-  if (multiclassChoice && !multiclassChoice.multiclass) return undefined;
+  if (subclassChoice && !subclassAdvance) return undefined;
+  if (multiclassChoice && (!multiclassChoice.multiclass || progression.multiclass || isMulticlassBlockedBySubclass(character, multiclassChoice.tier, choices))) return undefined;
 
   const historyEntry: CharacterProgressionEntry = {
     level: nextLevel,
@@ -126,7 +127,7 @@ export async function applyProgression(deps: ApplyProgressionDependencies): Prom
     defense: { ...character.defense, evasion: character.defense.evasion + evasionBonus },
     proficiency: character.proficiency + proficiencyBonus + (isTierAchievement ? 1 : 0),
     resources,
-    deck: { activeCardIds: character.deck.activeCardIds, learnedCardIds: [...character.deck.learnedCardIds, chosenCard.id, ...additionalCardIds] },
+    deck: { ...character.deck, activeCardIds: character.deck.activeCardIds, learnedCardIds: [...character.deck.learnedCardIds, chosenCard.id, ...additionalCardIds] },
     experiences: character.experiences.map((experience) => experienceIds.includes(experience.id) ? { ...experience, value: experience.value + 1 } : experience).concat(tierExperience ? [{ id: `experience.tier.${nextLevel}.${deps.createId?.() ?? crypto.randomUUID()}`, name: tierExperience.name, value: 2, description: tierExperience.description }] : []),
     progression: {
       attributeMarks,

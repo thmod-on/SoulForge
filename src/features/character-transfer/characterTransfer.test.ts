@@ -20,6 +20,13 @@ describe("transferência de personagem", () => {
     expect(result.identity.transformationId).toBe("transformation.test.vampire");
   });
 
+  it("preserva cartas indisponíveis e sua forma de reativação", () => {
+    const character = { ...demoCharacter, deck: { ...demoCharacter.deck, unavailableCards: [{ cardId: demoCharacter.deck.activeCardIds[0], reactivation: "manual" as const, deactivatedAt: "2026-09-13T12:00:00.000Z" }] } };
+    const result = parseCharacterImport(JSON.stringify(character), new Set());
+
+    expect(result.deck.unavailableCards).toEqual(character.deck.unavailableCards);
+  });
+
   it("rejeita arquivos que não representam uma ficha", () => {
     expect(() => parseCharacterImport(JSON.stringify({ format: characterExportFormat, character: { name: "incompleto" } }), new Set())).toThrow("ficha compatível");
   });

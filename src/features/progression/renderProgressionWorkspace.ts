@@ -34,8 +34,8 @@ export function renderProgressionOptions(character: Character, dependencies: Pro
     { kind: "domain", description: "Escolha uma carta adicional de Domínio." },
     { kind: "evasion", description: "Ganhe permanentemente +1 em Evasão." },
     { kind: "subclass", description: subclassAdvance ? `Receba ${subclassAdvance === "specialized" ? "a Especialização" : "a Maestria"} da subclasse.` : "A próxima feature da subclasse não está disponível neste Tier.", disabled: !subclassAdvance },
-    { kind: "proficiency", description: "Ganhe +1 em Proficiência. Consome as duas escolhas.", disabled: usedChoices > 0 },
-    { kind: "multiclass", description: "Escolha outra classe, um Domínio, uma característica e uma Fundação. Consome as duas escolhas.", disabled: hasSubclassDraft || !canChooseMulticlass(character, tier) || usedChoices > 0 }
+    { kind: "proficiency", description: "Ganhe +1 em Proficiência. Usa todos os avanços deste nível.", disabled: usedChoices > 0 },
+    { kind: "multiclass", description: "Escolha outra classe, um Domínio, uma característica e uma Fundação. Usa todos os avanços deste nível.", disabled: hasSubclassDraft || !canChooseMulticlass(character, tier) || usedChoices > 0 }
   ];
   return `<section class="progression-tier-options"><h3>Avanços disponíveis</h3><div class="progression-option-list">${options.filter((option) => progressionAdvanceRules[option.kind].slotCount[tier] > 0).map((option) => renderProgressionOption(option, character, tier, usedChoices, dependencies)).join("")}</div></section>`;
 }
@@ -46,7 +46,7 @@ export function renderProgressionAdvanceSummary(dependencies: ProgressionWorkspa
   const choices = state.progressionDraft.length
     ? `<ul>${state.progressionDraft.map((choice, index) => `<li><span>${escapeHtml(choice.label)}</span><button type="button" data-action="remove-progression-choice" data-progression-choice-index="${index}" aria-label="Remover ${escapeHtml(choice.label)}">x</button></li>`).join("")}</ul>`
     : "";
-  return `<section class="progression-advance-summary"><div><strong>Avanços preparados</strong><span><b>${choiceCount} / 2</b> escolhas</span></div>${choices}</section>`;
+  return `<section class="progression-advance-summary"><div><strong>Avanços preparados</strong><span><b>${choiceCount} / 2</b> avanços</span></div>${choices}</section>`;
 }
 
 export function renderProgressionDomainStep(character: Character, dependencies: ProgressionWorkspaceDependencies): string {
@@ -79,6 +79,12 @@ function renderProgressionOption(option: { kind: ProgressionAdvanceKind; descrip
   const slots = rule.slotCount[tier];
   const slotsUsed = getAdvanceSlotsUsed(character, tier, option.kind);
   const cost = option.kind === "proficiency" || option.kind === "multiclass" ? 2 : 1;
-  const disabled = Boolean(option.disabled) || tier < rule.minimumTier || slotsUsed >= slots || usedChoices + cost > 2;
-  return `<button class="progression-option" type="button" data-action="select-progression-advance" data-progression-advance="${option.kind}" data-progression-tier="${tier}" ${disabled ? "disabled" : ""}><i aria-hidden="true"></i><span><strong>${escapeHtml(progressionAdvanceLabels[option.kind])}</strong><em>${escapeHtml(option.description)}</em><small><b>${slotsUsed} / ${slots}</b> disponíveis</small></span></button>`;
+  const availableChoices = Math.max(0, 2 - usedChoices);
+  const lacksChoices = availableChoices < cost;
+  const disabled = Boolean(option.disabled) || tier < rule.minimumTier || slotsUsed >= slots || lacksChoices;
+  const costLabel = `${cost} ${cost === 1 ? "avanço" : "avanços"}`;
+  const unavailableReason = lacksChoices
+    ? `<small class="progression-option-requirement">Requer ${costLabel} ${cost === 1 ? "disponível" : "disponíveis"}; ${availableChoices === 1 ? "resta 1" : `restam ${availableChoices}`}.</small>`
+    : "";
+  return `<button class="progression-option ${cost === 2 ? "is-full-level-cost" : ""}" type="button" data-action="select-progression-advance" data-progression-advance="${option.kind}" data-progression-tier="${tier}" ${disabled ? "disabled" : ""}><i aria-hidden="true"></i><span class="progression-option-body"><span class="progression-option-heading"><strong>${escapeHtml(progressionAdvanceLabels[option.kind])}</strong><span class="progression-option-cost" aria-label="Custo: ${costLabel}"><b aria-hidden="true">${"◆".repeat(cost)}</b><em>Custo: ${costLabel}</em></span></span><em>${escapeHtml(option.description)}</em><small><b>${slotsUsed} / ${slots}</b> disponíveis neste Tier</small>${unavailableReason}</span></button>`;
 }

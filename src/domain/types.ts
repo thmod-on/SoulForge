@@ -244,6 +244,15 @@ export type CharacterProgression = {
   history: CharacterProgressionEntry[];
 };
 
+export type CardReactivationTiming = "rest" | "long-rest" | "session" | "manual";
+
+/** Estado de uso da carta pertence à ficha; a Definition compartilhada permanece imutável. */
+export type CharacterUnavailableCard = {
+  cardId: string;
+  reactivation: CardReactivationTiming;
+  deactivatedAt: string;
+};
+
 export type PackManifest = {
   id: string;
   name: string;
@@ -442,6 +451,7 @@ export type Character = {
   deck: {
     activeCardIds: string[];
     learnedCardIds: string[];
+    unavailableCards?: CharacterUnavailableCard[];
   };
   inventory: {
     capacity: number;

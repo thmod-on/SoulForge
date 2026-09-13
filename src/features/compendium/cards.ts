@@ -2,6 +2,7 @@ import type { Catalog } from "../../domain/catalog";
 import type { CardDefinition, Character, GameMarkerDefinition } from "../../domain/types";
 import { readLocalImage } from "../../app/media";
 import { readGameMarker, renderGameMarkerFields } from "./gameMarkerForm";
+import { cardReactivationLabels, getUnavailableCard } from "../player/cardAvailability";
 
 export type CardFeatureState = {
   compendiumCardSearch: string;
@@ -57,7 +58,27 @@ export function renderCardModal(cardId: string | undefined, dependencies: CardFe
   const card = cardId ? catalog.cards.find((entry) => entry.id === cardId) : undefined;
   if (!card) return "";
   const domain = catalog.domains.find((entry) => entry.id === card.domainId);
-  return `<div class="modal-backdrop" data-modal-backdrop><section class="card-modal" role="dialog" aria-modal="true" aria-labelledby="card-modal-title"><button class="modal-close" data-modal-close aria-label="Fechar carta">x</button><div class="modal-card-art ${card.image ? "has-image" : ""}" ${card.image ? `style="background-image: url('${escapeHtml(card.image)}')"` : ""}></div><div class="modal-card-body"><div class="modal-card-kicker"><span>${escapeHtml(domain?.name ?? "Sem dominio")}</span><span>Nível ${card.tier}</span></div><h2 id="card-modal-title">${escapeHtml(card.name)}</h2><div class="modal-card-meta"><span>${escapeHtml(card.cardType)}</span><span>${escapeHtml(card.cost ?? "Sem custo")}</span><span>⚡ Recall: ${card.recallCost ?? 0} Stress</span></div><p>${escapeHtml(card.summary)}</p><h3>Efeito</h3><p>${escapeHtml(card.effect)}</p></div></section></div>`;
+  const effect = card.effect?.trim();
+  const detailHeading = effect ? "Efeito" : "Descrição";
+  const detail = effect || card.summary?.trim() || "Nenhuma descrição disponível.";
+  return `<div class="modal-backdrop" data-modal-backdrop><section class="card-modal" role="dialog" aria-modal="true" aria-labelledby="card-modal-title"><button class="modal-close" data-modal-close aria-label="Fechar carta">x</button><div class="modal-card-art ${card.image ? "has-image" : ""}" ${card.image ? `style="background-image: url('${escapeHtml(card.image)}')"` : ""}></div><div class="modal-card-body"><div class="modal-card-kicker"><span>${escapeHtml(domain?.name ?? "Sem dominio")}</span><span>Nível ${card.tier}</span></div><h2 id="card-modal-title">${escapeHtml(card.name)}</h2><div class="modal-card-meta"><span>${escapeHtml(card.cardType)}</span><span>${escapeHtml(card.cost ?? "Sem custo")}</span><span>⚡ Recall: ${card.recallCost ?? 0} Stress</span></div><h3>${detailHeading}</h3><p>${escapeHtml(detail)}</p>${renderCardAvailabilityControls(card, dependencies)}</div></section></div>`;
+}
+
+function renderCardAvailabilityControls(card: CardDefinition, dependencies: CardFeatureDependencies): string {
+  const character = dependencies.state.character;
+  if (!character?.deck.activeCardIds.includes(card.id)) return "";
+  const unavailable = getUnavailableCard(character, card.id);
+  if (unavailable) {
+    const manualAction = unavailable.reactivation === "manual" ? `<button class="sf-action sf-action--primary" type="button" data-action="reactivate-loadout-card" data-card-id="${dependencies.escapeHtml(card.id)}">Reativar carta</button>` : "";
+    return `<aside class="card-availability-status" role="status"><span>Indisponível</span><strong>Reativa ${cardReactivationLabels[unavailable.reactivation]}</strong>${manualAction}</aside>`;
+  }
+  const choices = ([
+    ["rest", "Próximo descanso", "Breve ou longo"],
+    ["long-rest", "Próximo descanso longo", "Permanece indisponível no descanso breve"],
+    ["session", "Nova sessão", "Reativa ao iniciar a próxima sessão"],
+    ["manual", "Reativação manual", "Permanece assim até você reativá-la"]
+  ] as const).map(([value, label, description]) => `<button type="button" data-action="deactivate-loadout-card" data-card-id="${dependencies.escapeHtml(card.id)}" data-reactivation="${value}"><strong>${label}</strong><small>${description}</small></button>`).join("");
+  return `<details class="card-availability-picker"><summary class="sf-action sf-action--secondary">Desativar carta</summary><div><p>Quando esta carta deve ser reativada?</p><div class="card-availability-options">${choices}</div></div></details>`;
 }
 
 export async function saveCompendiumCard(dependencies: CardFeatureDependencies): Promise<void> {

@@ -73,8 +73,10 @@ describe("modificadores declarativos de ancestralidade", () => {
     const base = { ...character(), attributes: [{ id: "dex" as const, label: "AGI", value: 3 }] };
     const active = synchronizeCharacterSheetModifiers({ ...base, deck: { activeCardIds: [untouchable.id], learnedCardIds: [untouchable.id] } }, cardCatalog);
     const stored = synchronizeCharacterSheetModifiers({ ...base, deck: { activeCardIds: [], learnedCardIds: [untouchable.id] } }, cardCatalog);
+    const unavailable = synchronizeCharacterSheetModifiers({ ...base, deck: { activeCardIds: [untouchable.id], learnedCardIds: [untouchable.id], unavailableCards: [{ cardId: untouchable.id, reactivation: "rest", deactivatedAt: "2026-09-13T12:00:00.000Z" }] } }, cardCatalog);
     expect(active.defense.evasion).toBe(12);
     expect(stored.defense.evasion).toBe(10);
+    expect(unavailable.defense.evasion).toBe(10);
   });
 
   it("recalcula atributos de cartas ativas a partir do valor-base, sem duplicar o bônus", () => {

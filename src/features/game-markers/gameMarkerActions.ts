@@ -2,6 +2,7 @@ import type { Catalog } from "../../domain/catalog";
 import type { Character } from "../../domain/types";
 import type { GameMarkerDiceDialogState } from "./renderDiceDialog";
 import { getActiveGameMarkers, resetGameMarkers } from "./gameMarkerSync";
+import { reactivateCardsForEvent } from "../player/cardAvailability";
 
 export type GameMarkerActionDependencies = {
   state: { character?: Character; gameMarkerDieDialog?: GameMarkerDiceDialogState };
@@ -49,7 +50,7 @@ export function handleGameMarkerAction(target: HTMLElement, deps: GameMarkerActi
   }
 
   if (target.closest('[data-action="reset-game-markers-session"]')) {
-    void persistMarkerChange(deps, (character) => resetGameMarkers(character, deps.catalog, "session"));
+    void persistMarkerChange(deps, (character) => resetGameMarkers(reactivateCardsForEvent(character, "session"), deps.catalog, "session"));
     return true;
   }
 

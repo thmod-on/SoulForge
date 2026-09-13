@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getActiveCardCarouselState } from "./activeCardCarousel";
+import { getActiveCardCarouselRestoreLeft, getActiveCardCarouselState } from "./activeCardCarousel";
 
 describe("getActiveCardCarouselState", () => {
   it("mantém os controles ocultos quando todas as cartas cabem", () => {
@@ -12,5 +12,11 @@ describe("getActiveCardCarouselState", () => {
 
   it("troca o controle disponível ao alcançar o final", () => {
     expect(getActiveCardCarouselState(500, 1200, 700)).toEqual({ hasOverflow: true, hasPrevious: true, hasNext: false });
+  });
+
+  it("restaura o deslocamento salvo dentro dos novos limites do trilho", () => {
+    expect(getActiveCardCarouselRestoreLeft(320, 1200, 700)).toBe(320);
+    expect(getActiveCardCarouselRestoreLeft(800, 1200, 700)).toBe(500);
+    expect(getActiveCardCarouselRestoreLeft(-20, 1200, 700)).toBe(0);
   });
 });

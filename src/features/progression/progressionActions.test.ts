@@ -45,4 +45,58 @@ describe("aplicação da progressão", () => {
     expect(state.progressionDraft).toEqual([]);
     expect(state.progressionCompletionLevel).toBe(2);
   });
+
+  it("rejeita Multiclasse após uma melhoria de subclasse salva no mesmo Tier", async () => {
+    const base = createCharacter();
+    const progressed = {
+      ...base,
+      identity: { ...base.identity, level: 5 },
+      progression: {
+        ...base.progression!,
+        advancementSelections: [{ kind: "subclass" as const, tier: 3, level: 5 }]
+      }
+    };
+    const state: ProgressionActionState = {
+      character: progressed,
+      progressionDraft: [{ kind: "multiclass", tier: 3, label: "Multiclasse", multiclass: { classId: "class.other" } as never }],
+      progressionCardId: card.id,
+      progressionStep: "review"
+    };
+    let saved = false;
+
+    const result = await applyProgression({ state, catalog, saveCharacter: async () => { saved = true; } });
+
+    expect(result).toBeUndefined();
+    expect(saved).toBe(false);
+    expect(state.character).toBe(progressed);
+  });
+
+  it("rejeita melhoria de subclasse após uma Multiclasse salva no mesmo Tier", async () => {
+    const base = createCharacter();
+    const progressed = {
+      ...base,
+      identity: { ...base.identity, level: 5 },
+      progression: {
+        ...base.progression!,
+        multiclass: { classId: "class.other" } as never,
+        advancementSelections: [{ kind: "multiclass" as const, tier: 3, level: 5 }]
+      }
+    };
+    const state: ProgressionActionState = {
+      character: progressed,
+      progressionDraft: [
+        { kind: "subclass", tier: 3, label: "Especialização" },
+        { kind: "hp", tier: 3, label: "PV" }
+      ],
+      progressionCardId: card.id,
+      progressionStep: "review"
+    };
+    let saved = false;
+
+    const result = await applyProgression({ state, catalog, saveCharacter: async () => { saved = true; } });
+
+    expect(result).toBeUndefined();
+    expect(saved).toBe(false);
+    expect(state.character).toBe(progressed);
+  });
 });

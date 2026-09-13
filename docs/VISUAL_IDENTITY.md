@@ -117,7 +117,7 @@ Geração, formatos, dimensões, orçamento de cache e gatilhos para evolução 
 2. Revisar a ficha do jogador como tela-piloto. **Concluído.**
 3. Migrar o Compendium por área funcional. **Concluído para índices, buscas, filtros, ações e modais.**
 4. Migrar Configurações por seção, preservando as escolhas e a persistência atuais. **Concluído para ações, importação e confirmação de remoção.**
-5. Aplicar as primitives aos fluxos guiados. **Concluído para criação de personagem, progressão e downtime; etapas, ações e rolagem usam os mesmos contratos.**
+5. Aplicar as primitives aos fluxos guiados. **Concluído para criação de personagem, progressão e descanso; etapas, ações e rolagem usam os mesmos contratos.**
 6. Migrar a ficha e as superfícies de apoio restantes. **Concluído para seleção de personagem, Traços, Inventário, Anotações e modais genéricos.**
 7. Padronizar estados de vazio, bloqueio, indisponibilidade, erro e carregamento. **Concluído para os componentes-base e mensagens reutilizáveis.**
 8. Auditar o comportamento de modais em iPad. **Concluído para margem segura, altura responsiva, rolagem interna e alvos de toque.**

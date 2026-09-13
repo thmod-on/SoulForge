@@ -145,9 +145,17 @@ function isCharacter(value: unknown): value is Character {
     && Array.isArray(value.notes)
     && isStringArray(value.deck.activeCardIds)
     && isStringArray(value.deck.learnedCardIds)
+    && (value.deck.unavailableCards === undefined || isUnavailableCards(value.deck.unavailableCards))
     && isFiniteNumber(value.inventory.capacity)
     && Array.isArray(value.inventory.compartments)
     && Array.isArray(value.inventory.entries);
+}
+
+function isUnavailableCards(value: unknown): boolean {
+  return Array.isArray(value) && value.every((entry) => isRecord(entry)
+    && isNonEmptyString(entry.cardId)
+    && isNonEmptyString(entry.deactivatedAt)
+    && ["rest", "long-rest", "session", "manual"].includes(String(entry.reactivation)));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

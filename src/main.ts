@@ -33,7 +33,8 @@ import { handlePackManagementAction, readPackImportFiles, renderPackManagementDi
 import { renderCharacterSelection as renderCharacterSelectionView } from "./features/character-selection/renderCharacterSelection";
 import { scrollCharacterCarousel, setupCharacterCarousel, syncCharacterCarousel } from "./features/character-selection/characterSelectionCarousel";
 import { renderCardActivationModal as renderCardActivationModalView, syncCardActivationDialog } from "./features/player/renderCardActivation";
-import { scrollActiveCardCarousel, setupActiveCardCarousel, syncActiveCardCarousel } from "./features/player/activeCardCarousel";
+import { isRememberedActiveCard, rememberActiveCardCarousel, scrollActiveCardCarousel, setupRememberedActiveCardCarousel, syncActiveCardCarousel } from "./features/player/activeCardCarousel";
+import { handleCardAvailabilityAction, pruneUnavailableCards } from "./features/player/cardAvailability";
 import { handleCharacterTransformationAction, handleCharacterTransformationEscape, renderCharacterTransformationDialogs, renderCharacterTransformationPanel, type CharacterTransformationDependencies, type CharacterTransformationUiState } from "./features/transformations/characterTransformations";
 import { confirmStagedCharacterImport, downloadCharacterExport, renderCharacterImportModal, stageCharacterImport } from "./features/character-transfer/characterTransfer";
 import { renderProgression as renderProgressionView, type ProgressionRenderDependencies } from "./features/progression/renderProgression";
@@ -153,7 +154,7 @@ import {
   type AncestryFeatureDependencies
 } from "./features/compendium/ancestries";
 import type { CompendiumSpread, CompendiumView, InventoryFilter, Page, ProgressionDraftChoice, ProgressionFlowStep, ProgressionMulticlassDraft, ProgressionPicker, ProgressionTierNumber, SettingsSection } from "./app/types";
-import { editorNavigation as sideNavItems, isEditorPage, playerNavigation as topNavItems } from "./app/navigation";
+import { editorNavigation as sideNavItems, getPageFromEventTarget, isEditorPage, playerNavigation as topNavItems } from "./app/navigation";
 import "./styles.css";
 function getAppRoot(): HTMLDivElement {
   const element = document.querySelector<HTMLDivElement>("#app");
@@ -908,8 +909,8 @@ function updateGameMarkerAuthoringForm(target: HTMLSelectElement): void {
   if (!form) return;
   configureGameMarkerAuthoringForm(form);
 }
-
-function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: boolean } = {}): void {
+function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: boolean; restoreActiveCardFocus?: boolean } = {}): void {
+  if (state.character) rememberActiveCardCarousel(appRoot, state.character.id);
   const previousCharacterCreationScrollTop = !options.resetCreationScroll && state.characterSelectionOpen && state.characterCreationOpen
     ? appRoot.querySelector<HTMLElement>(".character-creation-scroll")?.scrollTop
     : undefined;
@@ -1043,7 +1044,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
   injectGameMarkerAuthoringFields();
   enhanceCompendiumClassResults();
   syncScrollAffordances(appRoot);
-  setupActiveCardCarousel(appRoot);
+  setupRememberedActiveCardCarousel(appRoot, character.id, options.restoreActiveCardFocus);
   document.body.classList.toggle("has-modal", Boolean(appRoot.querySelector(".modal-backdrop")));
   if (state.addItemToCompartmentId && state.addItemCatalogScrollTop) requestAnimationFrame(() => { const catalog = appRoot.querySelector<HTMLElement>(".add-item-catalog"); if (catalog) catalog.scrollTop = state.addItemCatalogScrollTop ?? 0; });
   if (state.progressionCardPickerMode && state.progressionCardPickerScrollTop !== undefined) requestAnimationFrame(() => { const list = appRoot.querySelector<HTMLElement>(".progression-card-choice-list"); if (list) list.scrollTop = state.progressionCardPickerScrollTop ?? 0; });
@@ -1229,7 +1230,7 @@ async function activateStoredCard(mode: "rest" | "stress", selectedSwapCardId?: 
   const resources = mode === "stress" && stress
     ? character.resources.map((resource) => resource.id === stress.id ? { ...resource, value: resource.value + recallCost } : resource)
     : character.resources;
-  const updatedCharacter: Character = { ...character, resources, deck: { ...character.deck, activeCardIds } };
+  const updatedCharacter = pruneUnavailableCards({ ...character, resources, deck: { ...character.deck, activeCardIds } });
   state.character = updatedCharacter;
   await saveCharacter(updatedCharacter);
   state.activatingStoredCardId = undefined;
@@ -1307,6 +1308,17 @@ function bindEvents(): void {
   });
 
   document.addEventListener("click", (event) => {
+    const nextPage = getPageFromEventTarget(event.target);
+    if (nextPage) {
+      if (state.page === "progression" && nextPage !== "progression") state.progressionCompletionLevel = undefined;
+      if (!isEditorPage(state.page)) state.lastPlayerPage = state.page;
+      state.page = nextPage;
+      state.selectedItemId = undefined;
+      state.deletingItemId = undefined;
+      render();
+      return;
+    }
+
     const target = event.target;
     if (!(target instanceof HTMLElement)) {
       return;
@@ -1385,6 +1397,7 @@ function bindEvents(): void {
     }
 
     if (target.closest("[data-modal-close]")) {
+      const restoreActiveCardFocus = isRememberedActiveCard(state.character?.id, state.modalCardId);
       state.modalCardId = undefined;
       state.featureActivationError = undefined;
       state.featureTokenActivation = undefined;
@@ -1450,11 +1463,12 @@ function bindEvents(): void {
       state.restDialogKind = undefined;
       state.restChoices = [];
       state.restError = undefined;
-      render({ preserveMainScroll: true });
+      render({ preserveMainScroll: true, restoreActiveCardFocus });
       return;
     }
 
     if (target.matches("[data-modal-backdrop]") && modalBackdropPointerDown && !state.characterCreationOpen) {
+      const restoreActiveCardFocus = isRememberedActiveCard(state.character?.id, state.modalCardId);
       modalBackdropPointerDown = false;
       state.characterCreationOpen = false;
       state.characterCreationError = undefined;
@@ -1522,7 +1536,7 @@ function bindEvents(): void {
       state.restDialogKind = undefined;
       state.restChoices = [];
       state.restError = undefined;
-      render({ preserveMainScroll: true });
+      render({ preserveMainScroll: true, restoreActiveCardFocus });
       return;
     }
 
@@ -2005,23 +2019,6 @@ function bindEvents(): void {
       return;
     }
 
-    const pageButton = target.closest<HTMLElement>("[data-page]");
-    if (pageButton) {
-      const nextPage = pageButton.dataset.page as Page;
-      if (state.page === "progression" && nextPage !== "progression") state.progressionCompletionLevel = undefined;
-      if (!isEditorPage(state.page) && !isEditorPage(nextPage)) {
-        state.lastPlayerPage = state.page;
-      }
-      if (!isEditorPage(state.page) && isEditorPage(nextPage)) {
-        state.lastPlayerPage = state.page;
-      }
-      state.page = nextPage;
-      state.selectedItemId = undefined;
-      state.deletingItemId = undefined;
-      render();
-      return;
-    }
-
     const storedCardsButton = target.closest<HTMLElement>('[data-action="open-stored-cards"]');
     if (storedCardsButton) {
       if (state.page === "progression") state.progressionCompletionLevel = undefined;
@@ -2346,11 +2343,13 @@ function bindEvents(): void {
       return;
     }
 
-    if (handleFeatureEffectAction(target, { state, catalog, saveCharacter, render: () => render({ preserveMainScroll: true }) })) return;
-
+    if (handleFeatureEffectAction(target, { state, catalog, saveCharacter, render: () => render({ preserveMainScroll: true }) }) || handleCardAvailabilityAction(target, { state, saveCharacter, render: () => render({ preserveMainScroll: true }) })) return;
     const cardModalButton = target.closest<HTMLElement>("[data-card-modal-id]");
     if (cardModalButton) {
       state.modalCardId = cardModalButton.dataset.cardModalId;
+      if (cardModalButton.closest("[data-active-card-carousel]") && state.character) {
+        rememberActiveCardCarousel(appRoot, state.character.id, state.modalCardId);
+      }
       state.featureActivationError = undefined;
       render({ preserveMainScroll: true });
       return;
@@ -2386,8 +2385,9 @@ function bindEvents(): void {
   document.addEventListener("keydown", (event) => {
     if (state.character && handleCharacterTransformationEscape(event, getCharacterTransformationDependencies())) return;
     if (event.key === "Escape" && state.modalCardId) {
+      const restoreActiveCardFocus = isRememberedActiveCard(state.character?.id, state.modalCardId);
       state.modalCardId = undefined;
-      render({ preserveMainScroll: true });
+      render({ preserveMainScroll: true, restoreActiveCardFocus });
     }
     if (event.key === "Escape" && state.selectedItemId) {
       state.selectedItemId = undefined;

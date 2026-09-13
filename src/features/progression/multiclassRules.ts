@@ -11,11 +11,17 @@ export function canChooseMulticlass(character: Character, tier: ProgressionTierN
   return tier >= 3
     && !character.progression?.multiclass
     && !draft.some((choice) => choice.kind === "multiclass")
-    && !draft.some((choice) => choice.kind === "subclass" && choice.tier === tier);
+    && !isMulticlassBlockedBySubclass(character, tier, draft);
 }
 
-export function isSubclassAdvanceBlockedByMulticlass(tier: ProgressionTierNumber, draft: ProgressionDraftChoice[]): boolean {
-  return draft.some((choice) => choice.kind === "multiclass" && choice.tier === tier);
+export function isMulticlassBlockedBySubclass(character: Character, tier: ProgressionTierNumber, draft: ProgressionDraftChoice[]): boolean {
+  return hasStoredTierSelection(character, tier, "subclass")
+    || draft.some((choice) => choice.kind === "subclass" && choice.tier === tier);
+}
+
+export function isSubclassAdvanceBlockedByMulticlass(character: Character, tier: ProgressionTierNumber, draft: ProgressionDraftChoice[]): boolean {
+  return hasStoredTierSelection(character, tier, "multiclass")
+    || draft.some((choice) => choice.kind === "multiclass" && choice.tier === tier);
 }
 
 export function getEligibleMulticlassClasses(character: Character, catalog: MulticlassCatalog): ClassDefinition[] {
@@ -53,4 +59,8 @@ export function buildMulticlassChoice(
 export function canLearnMulticlassDomainCard(card: CardDefinition, character: Character): boolean {
   const multiclass = character.progression?.multiclass;
   return Boolean(multiclass && card.domainId === multiclass.domainId && card.tier <= Math.ceil((character.identity.level + 1) / 2));
+}
+
+function hasStoredTierSelection(character: Character, tier: ProgressionTierNumber, kind: "subclass" | "multiclass"): boolean {
+  return (character.progression?.advancementSelections ?? []).some((selection) => selection.kind === kind && selection.tier === tier);
 }

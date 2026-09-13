@@ -126,7 +126,7 @@ As classes históricas `primary-action`, `secondary-action`, `danger-action` e `
 
 ## Fluxos guiados
 
-Criação de personagem, progressão e downtime apresentam uma decisão por vez e compartilham o mesmo contrato visual: indicador de etapa no topo, título estável, corpo rolável sem deslocar o cabeçalho e ações previsíveis no rodapé. Áreas internas que possam exceder a altura disponível usam `sf-scroll-region`, preservando uma pista de rolagem visível no tema escuro.
+Criação de personagem, progressão e descanso apresentam uma decisão por vez e compartilham o mesmo contrato visual: indicador de etapa no topo, título estável, corpo rolável sem deslocar o cabeçalho e ações previsíveis no rodapé. Áreas internas que possam exceder a altura disponível usam `sf-scroll-region`, preservando uma pista de rolagem visível no tema escuro.
 
 ## Compendium
 
