@@ -64,6 +64,18 @@ O Loadout da ficha e a seleção de personagens seguem esse padrão. O Vault con
 - benefício, desvantagem e notas de regra ficam em um modal de detalhes, evitando aumentar permanentemente a altura da ficha;
 - escolher, substituir e remover uma transformação são ações explícitas. A remoção exige confirmação e preserva o estado de marcadores já registrado, deixando-os apenas inativos;
 - quando a definição não estiver disponível no Pack atual, a referência permanece preservada e a interface explica por que seus efeitos não estão sendo aplicados.
+- escolhas de conteúdo da transformação aparecem em modo somente leitura na ficha; alterações que custem um movimento pertencem ao fluxo de descanso, sem botão redundante na seção da transformação;
+- ações contextuais de descanso permanecem visíveis quando indisponíveis, usando `aria-disabled` e uma explicação acessível sobre o requisito, para antecipar capacidades sem simular uma ação funcional;
+- escolhas dentro do descanso atualizam somente o próprio diálogo, preservando a ficha ao fundo e evitando flashes causados por uma remontagem completa.
+- a prévia de importação diferencia Packs novos de atualizações e mostra a transição de versão antes da confirmação.
+- na ficha, a forma assumida usa o selo contextual da transformação; no detalhe, ancestralidade e Feature formam um painel próprio, visualmente separado das regras gerais.
+
+### Cicatrizes e Esperança
+
+- a entrada compacta exibe somente “Cicatrizes” junto ao recurso Esperança; quando houver alguma, seu nome acessível informa quantidade e redução do limite;
+- o painel apresenta a equação entre limite sem Cicatrizes, quantidade e limite atual antes do formulário narrativo;
+- a perda do último espaço recebe alerta explícito, sem bloquear a decisão; quando o limite chega a zero, novas Cicatrizes ficam indisponíveis;
+- remover uma Cicatriz é uma decisão atribuída ao mestre e exige confirmação que informa a restauração de um slot.
 
 ### Seleções com representação visual
 

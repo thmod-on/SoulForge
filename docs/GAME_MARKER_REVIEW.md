@@ -4,6 +4,12 @@ Este registro separa decisões editoriais de implementação. Uma carta recebe
 metadados somente depois de sua regra publicada ser conferida manualmente. O
 SoulForge não extrai marcadores por busca de palavras em resumos ou efeitos.
 
+Além de `reset`, contadores podem declarar `eventChanges` para incrementos ou
+decrementos determinísticos em `session`, `short-rest` ou `long-rest`. O valor é
+limitado por `minimum`, `maximum` e pelo máximo persistido do marcador. Para
+evitar ordem ambígua, um marcador não pode combinar `reset` e `eventChanges` no
+mesmo evento. O Sangue do Vampiro é o primeiro uso desse contrato reutilizável.
+
 ## Core - Graça
 
 | Carta | Decisão | Motivo |

@@ -37,6 +37,15 @@ Regras para migrações:
 - testar a abertura de um personagem salvo antes da mudança;
 - incrementar a versão do banco quando a estrutura do IndexedDB exigir uma alteração.
 
+A categoria legada `item` das anotações é normalizada para `lore` ao listar ou
+abrir fichas locais e ao importar uma ficha. A migração preserva identificador,
+título, conteúdo e datas, e é persistida novamente sem exigir ação manual.
+
+Cicatrizes pertencem à ficha e guardam identificador, lembrete narrativo e data.
+Elas não sobrescrevem o máximo de Esperança: o limite efetivo é derivado durante
+a sincronização, de modo que exportar, importar ou remover uma Cicatriz preserve
+o limite-base e quaisquer bônus de recurso ativos.
+
 ## Backup e portabilidade
 
 O SoulForge exporta uma ficha por vez em um arquivo `.soulforge-character.json`. O arquivo contém um envelope com a versão de formato, a data da exportação e todo o estado da ficha.

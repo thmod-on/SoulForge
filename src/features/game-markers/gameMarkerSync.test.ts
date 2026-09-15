@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createCatalog } from "../../domain/catalog";
 import { demoCharacter } from "../../domain/demoCharacter";
 import type { CardDefinition, ClassDefinition, FeatureDefinition, SubclassDefinition, TransformationDefinition } from "../../domain/types";
-import { getActiveGameMarkers, resetGameMarkers, synchronizeGameMarkers } from "./gameMarkerSync";
+import { applyGameMarkerEvent, getActiveGameMarkers, resetGameMarkers, synchronizeGameMarkers } from "./gameMarkerSync";
 
 describe("marcadores de jogo", () => {
   it("ativa marcadores da transformação sem adicioná-la ao deck", () => {
@@ -15,6 +15,17 @@ describe("marcadores de jogo", () => {
     const removed = { ...synchronized, identity: { ...synchronized.identity, transformationId: undefined } };
     expect(getActiveGameMarkers(removed, catalog)).toHaveLength(0);
     expect(removed.gameMarkers).toHaveLength(1);
+  });
+
+  it("aplica alteração incremental declarada por evento sem afetar o reset existente", () => {
+    const transformation: TransformationDefinition = { id: "transformation.test.vampire-event", type: "transformation", packId: "test", name: "Vampiro", summary: "", benefit: "", drawback: "", narrativeQuestions: ["Quem?"], gameMarkers: [{ id: "blood", kind: "counter", label: "Sangue", initialValue: 0, max: 6, eventChanges: [{ event: "long-rest", operation: "decrement", amount: 1, minimum: 0 }] }] };
+    const catalog = createCatalog([], [transformation]);
+    const character = { ...demoCharacter, identity: { ...demoCharacter.identity, transformationId: transformation.id }, gameMarkers: undefined };
+    const synchronized = synchronizeGameMarkers(character, catalog);
+    const filled = { ...synchronized, gameMarkers: synchronized.gameMarkers?.map((marker) => marker.kind === "counter" ? { ...marker, value: 3 } : marker) };
+
+    expect(applyGameMarkerEvent(filled, catalog, "long-rest").gameMarkers?.[0]).toMatchObject({ value: 2, max: 6 });
+    expect(applyGameMarkerEvent(synchronized, catalog, "long-rest").gameMarkers?.[0]).toMatchObject({ value: 0, max: 6 });
   });
 
   it("cria contador para carta ativa e preserva estado quando a carta fica inativa", () => {

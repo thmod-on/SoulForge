@@ -36,7 +36,8 @@ Uma definição de transformação usa `type: "transformation"` e exige:
 - `benefit`;
 - `drawback`;
 - `narrativeQuestions` com uma ou mais perguntas;
-- opcionalmente, `gameMarkers` quando a regra possuir um contador compatível com o modelo de marcadores.
+- opcionalmente, `gameMarkers` quando a regra possuir um contador compatível com o modelo de marcadores;
+- opcionalmente, `choices` e `restActions` para escolhas estruturadas realizadas como movimentos de descanso.
 
 Exemplo reduzido:
 
@@ -69,6 +70,12 @@ mantém apenas uma referência e a remoção desativa suas mecânicas. Estados d
 marcadores já registrados permanecem persistidos, mas deixam de aparecer enquanto
 a Definition não for a transformação ativa.
 
+Escolhas declarativas ficam em `Character.definitionSelections`, agrupadas pelo
+`sourceDefinitionId`. Uma escolha com `application: "reference"` registra e
+apresenta a Definition selecionada sem conceder automaticamente seus marcadores,
+modificadores ou ativações. Assim, conteúdo pode representar uma escolha útil
+antes que toda a sua mecânica seja automatizável.
+
 Se o Pack estiver ausente, o ID é preservado e a ficha sinaliza a Definition
 indisponível. Nenhuma regra é inferida do nome ou dos textos armazenados.
 
@@ -76,10 +83,24 @@ indisponível. Nenhuma regra é inferida do nome ou dos textos armazenados.
 
 - `gameMarkers` declarados pela transformação são sincronizados e exibidos pelos
   mesmos interpretadores usados pelas demais Definitions;
+- contadores podem declarar `eventChanges` incrementais. O Sangue do Vampiro usa
+  `decrement` de 1 em `long-rest`, respeitando o mínimo zero. Esse contrato é
+  genérico e pode ser reutilizado por qualquer fonte de marcador;
+- o Metamorfo declara uma ação `any-rest` que escolhe uma ancestralidade e, de
+  forma dependente, uma de suas Features. A escolha ocupa um movimento, aparece
+  na ficha apenas como referência e só pode ser alterada no fluxo de descanso;
+- “Mudar de forma” continua visível, porém explicativa e indisponível, quando a
+  personagem não possui uma transformação que ofereça essa ação;
+- Packs de transformação já instalados podem ser reimportados como atualização;
+  suas Definitions são substituídas de forma transacional sem remover a
+  transformação das fichas existentes;
+- Packs de transformação já instalados podem ser reimportados como atualização;
+  suas Definitions são substituídas de forma transacional sem remover a
+  transformação das fichas existentes;
 - `rulesNotes` permanecem lembretes explícitos;
 - benefício e desvantagem são apresentados juntos, sem interpretação de texto livre;
-- estados internos temporários, como uma forma alternativa, ainda exigem um
-  contrato declarativo próprio antes de serem automatizados.
+- bônus e efeitos da Feature assumida não são aplicados automaticamente enquanto
+  a escolha declarar `application: "reference"`.
 
 ## Fontes e revisão
 

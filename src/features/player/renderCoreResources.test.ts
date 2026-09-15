@@ -44,4 +44,12 @@ describe("compact core resources", () => {
     }
     expect(isCoreResource("custom")).toBe(false);
   });
+
+  it("links Cicatrizes to Hope and summarizes their permanent penalty", () => {
+    const character = { ...structuredClone(demoCharacter), scars: [{ id: "scar.1", narrative: "Teme correntes.", createdAt: "2026-09-15T12:00:00.000Z" }] };
+    const html = renderCoreResources(character);
+    expect(html).toContain('data-character-scar-action="open"');
+    expect(html).toContain("<strong>Cicatrizes</strong>");
+    expect(html).not.toContain("Registrar</small>");
+  });
 });

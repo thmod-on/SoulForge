@@ -1,4 +1,5 @@
 import type { Character } from "../../domain/types";
+import { migrateLegacyCharacterNotes } from "../../domain/characterMigrations";
 
 export const characterExportFormat = "soulforge-character-v1" as const;
 
@@ -115,7 +116,7 @@ export function parseCharacterImport(serialized: string, existingCharacterIds: R
     throw new Error("Este arquivo não contém uma ficha compatível com o SoulForge.");
   }
 
-  const character = structuredClone(candidate);
+  const character = migrateLegacyCharacterNotes(structuredClone(candidate));
   if (existingCharacterIds.has(character.id)) {
     character.id = createImportedCharacterId();
   }
@@ -140,6 +141,8 @@ function isCharacter(value: unknown): value is Character {
     && isFiniteNumber(value.proficiency)
     && Array.isArray(value.attributes)
     && Array.isArray(value.resources)
+    && (value.scars === undefined || isCharacterScars(value.scars))
+    && (value.definitionSelections === undefined || isDefinitionSelections(value.definitionSelections))
     && Array.isArray(value.skills)
     && Array.isArray(value.experiences)
     && Array.isArray(value.notes)
@@ -149,6 +152,17 @@ function isCharacter(value: unknown): value is Character {
     && isFiniteNumber(value.inventory.capacity)
     && Array.isArray(value.inventory.compartments)
     && Array.isArray(value.inventory.entries);
+}
+
+function isCharacterScars(value: unknown): boolean {
+  return Array.isArray(value) && value.every((entry) => isRecord(entry) && isNonEmptyString(entry.id) && isNonEmptyString(entry.narrative) && isNonEmptyString(entry.createdAt));
+}
+
+function isDefinitionSelections(value: unknown): boolean {
+  return Array.isArray(value) && value.every((entry) => isRecord(entry)
+    && isNonEmptyString(entry.sourceDefinitionId)
+    && isRecord(entry.values)
+    && Object.values(entry.values).every(isNonEmptyString));
 }
 
 function isUnavailableCards(value: unknown): boolean {

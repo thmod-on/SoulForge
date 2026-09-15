@@ -25,7 +25,7 @@ As regras estÃ¡veis de ProgressÃ£o — tiers, custos, nomes e limites de esc
 
 A preparação e a aplicação de uma evolução ficam em `src/features/progression/progressionActions.ts`: contagem de escolhas, disponibilidade de cartas, avanço de subclasse e atualização atômica da ficha. `main.ts` fornece catálogo e persistência, mas não calcula os resultados da passagem de nível.
 
-Anotações mantém sua renderização em `src/features/notes/renderNotes.ts`, as categorias compartilhadas em `noteCategories.ts` e criação, edição, visualização e exclusão em `noteActions.ts`. O orquestrador fornece somente estado, persistência e atualização visual.
+Anotações mantém sua renderização em `src/features/notes/renderNotes.ts`, as categorias compartilhadas em `noteCategories.ts` e criação, edição, visualização e exclusão em `noteActions.ts`. Migrações compatíveis com fichas antigas ficam no domínio, em `characterMigrations.ts`, e são aplicadas pelos limites de armazenamento e importação. O orquestrador fornece somente estado, persistência e atualização visual.
 
 Os modais de ProgressÃ£o sÃ£o renderizados por `src/features/progression/renderProgressionDialogs.ts`; o orquestrador conserva as validaÃ§Ãµes e a gravaÃ§Ã£o da evoluÃ§Ã£o.
 
@@ -40,6 +40,8 @@ Os diálogos de criação e exclusão de containers ficam em `src/features/inven
 O drag-and-drop do InventÃ¡rio usa `src/features/inventory/bindInventoryDrag.ts`, encapsulando Pointer Events, feedback visual e validaÃ§Ã£o do destino antes de solicitar a movimentaÃ§Ã£o do item.
 
 A moldura da ficha do jogador — sidebar, navegaÃ§Ã£o, cabeÃ§alho de editor e recursos — Ã© renderizada por `src/features/player/renderPlayerShell.ts`.
+
+Cicatrizes são persistidas como registros narrativos da personagem e gerenciadas por `src/features/player/characterScars.ts`. A perda de Esperança não é gravada como mutação cumulativa: `sheetModifiers.ts` deriva o limite efetivo a partir do limite-base, bônus ativos e quantidade de Cicatrizes, permitindo reversão exata.
 
 A VisÃ£o Geral, a trilha de subclasse e o Vault ficam em `src/features/player/renderPlayerOverview.ts`, preservando no orquestrador apenas a origem dos dados e os eventos das cartas. O comportamento responsivo das cartas ativas é isolado em `src/features/player/activeCardCarousel.ts`.
 

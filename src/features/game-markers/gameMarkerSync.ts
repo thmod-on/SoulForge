@@ -28,24 +28,42 @@ export function getActiveGameMarkers(character: Character, catalog: Catalog): Ac
   }));
 }
 
-/** Aplica somente a reinicializacao declarada para o evento recebido. */
-export function resetGameMarkers(character: Character, catalog: Catalog, reset: "session" | "short-rest" | "long-rest"): Character {
+/**
+ * Aplica resets e alterações incrementais declaradas para um evento. Definitions
+ * antigas, que possuem apenas `reset`, mantêm exatamente o comportamento atual.
+ */
+export function applyGameMarkerEvent(character: Character, catalog: Catalog, reset: "session" | "short-rest" | "long-rest"): Character {
   const markerByKey = new Map(getActiveGameMarkers(character, catalog).map((marker) => [marker.key, marker]));
   let changed = false;
   const recoveredResources = new Map<string, number>();
   const gameMarkers = (character.gameMarkers ?? []).map((state) => {
     const active = markerByKey.get(state.key);
-    if (!active || active.definition.reset !== reset) return state;
-    changed = true;
-    if (state.kind === "counter" && active.definition.kind === "counter") {
-      const value = getCounterResetValue(active.definition, character, catalog, active.sourceDefinitionId);
-      return { ...state, value: state.max === undefined ? value : Math.min(value, state.max) };
+    if (!active) return state;
+    if (active.definition.reset === reset) {
+      changed = true;
+      if (state.kind === "counter" && active.definition.kind === "counter") {
+        const value = getCounterResetValue(active.definition, character, catalog, active.sourceDefinitionId);
+        return { ...state, value: state.max === undefined ? value : Math.min(value, state.max) };
+      }
+      if (state.kind === "dice") return { ...state, results: state.results.map((die) => ({ ...die, value: 0, used: false })) };
+      if (state.kind === "stored-dice" && active.definition.kind === "stored-dice") {
+        const recovery = active.definition.resetRecovery;
+        if (recovery && state.available) recoveredResources.set(recovery.resourceId, (recoveredResources.get(recovery.resourceId) ?? 0) + state.available * recovery.amountPerDie);
+        return { ...state, available: 0 };
+      }
+      return state;
     }
-    if (state.kind === "dice") return { ...state, results: state.results.map((die) => ({ ...die, value: 0, used: false })) };
-    if (state.kind === "stored-dice" && active.definition.kind === "stored-dice") {
-      const recovery = active.definition.resetRecovery;
-      if (recovery && state.available) recoveredResources.set(recovery.resourceId, (recoveredResources.get(recovery.resourceId) ?? 0) + state.available * recovery.amountPerDie);
-      return { ...state, available: 0 };
+    if (state.kind === "counter" && active.definition.kind === "counter") {
+      const changes = active.definition.eventChanges?.filter((entry) => entry.event === reset) ?? [];
+      if (!changes.length) return state;
+      changed = true;
+      const value = changes.reduce((current, entry) => {
+        const delta = entry.operation === "increment" ? entry.amount : -entry.amount;
+        const minimum = entry.minimum ?? 0;
+        const maximum = entry.maximum ?? state.max ?? Number.POSITIVE_INFINITY;
+        return Math.min(maximum, Math.max(minimum, current + delta));
+      }, state.value);
+      return { ...state, value };
     }
     return state;
   });
@@ -56,6 +74,11 @@ export function resetGameMarkers(character: Character, catalog: Catalog, reset: 
     ? character.resources.map((resource) => ({ ...resource, value: Math.max(0, resource.value - (recoveredResources.get(resource.id) ?? 0)) }))
     : character.resources;
   return { ...character, gameMarkers, resources };
+}
+
+/** Compatibilidade nominal para consumidores existentes do contrato de reset. */
+export function resetGameMarkers(character: Character, catalog: Catalog, reset: "session" | "short-rest" | "long-rest"): Character {
+  return applyGameMarkerEvent(character, catalog, reset);
 }
 
 export function getGameMarkerKey(sourceDefinitionId: string, markerId: string): string { return `${sourceDefinitionId}:${markerId}`; }

@@ -66,10 +66,21 @@ describe("validação de Packs", () => {
     const transformation = {
       id: "transformation.test.vampiro", type: "transformation" as const, packId: manifest.id, name: "Vampiro de teste", summary: "Identidade sobrenatural.",
       benefit: "Pode se alimentar.", drawback: "Sofre sem alimento.", narrativeQuestions: ["Quem o transformou?"],
-      gameMarkers: [{ id: "sangue", kind: "counter", label: "Sangue", initialValue: 0, max: 6 }]
+      gameMarkers: [{ id: "sangue", kind: "counter", label: "Sangue", initialValue: 0, max: 6, eventChanges: [{ event: "long-rest", operation: "decrement", amount: 1, minimum: 0 }] }],
+      choices: [{ id: "ancestry", kind: "definition", label: "Ancestralidade", definitionType: "ancestry" }, { id: "feature", kind: "feature-from-definition", label: "Feature", sourceChoiceId: "ancestry", application: "reference" }],
+      restActions: [{ id: "change-form", label: "Mudar de forma", description: "Escolha uma forma.", timing: "any-rest", choiceIds: ["ancestry", "feature"] }]
     };
     const pack = validatePackBundle({ format: "soulforge-pack-v1", manifest: { ...manifest, source: { name: "Fonte oficial", url: "https://www.daggerheart.com/srd/", version: "2.0", reviewedAt: "2026-08-30" } }, definitions: [transformation] });
     expect(pack.definitions[0]?.type).toBe("transformation");
+  });
+
+  it("rejeita reset e alteração incremental para o mesmo evento", () => {
+    const transformation = {
+      id: "transformation.test.invalid-marker", type: "transformation" as const, packId: manifest.id, name: "Transformação inválida", summary: "Teste.",
+      benefit: "Benefício.", drawback: "Desvantagem.", narrativeQuestions: ["Pergunta?"],
+      gameMarkers: [{ id: "uses", kind: "counter", label: "Usos", initialValue: 1, reset: "long-rest", eventChanges: [{ event: "long-rest", operation: "decrement", amount: 1 }] }]
+    };
+    expect(() => validatePackBundle({ format: "soulforge-pack-v1", manifest, definitions: [transformation] })).toThrow("marcadores de jogo inválidos");
   });
 
   it("aceita uma condição declarativa com efeito e encerramento", () => {

@@ -12,6 +12,14 @@ export type ResourceTrack = {
 
 export type GameMarkerReset = "session" | "short-rest" | "long-rest";
 
+export type GameMarkerEventChange = {
+  event: GameMarkerReset;
+  operation: "increment" | "decrement";
+  amount: number;
+  minimum?: number;
+  maximum?: number;
+};
+
 export type GameMarkerQuantity =
   | { kind: "fixed"; value: number }
   | { kind: "attribute"; attributeId: Attribute["id"] }
@@ -35,6 +43,8 @@ export type CounterGameMarkerDefinition = {
   initialValue?: number;
   max?: number;
   reset?: GameMarkerReset;
+  /** Alterações incrementais disparadas por eventos, sem substituir o reset existente. */
+  eventChanges?: GameMarkerEventChange[];
 };
 
 export type DiceGameMarkerDefinition = {
@@ -199,7 +209,7 @@ export type CharacterExperience = {
   description?: string;
 };
 
-export type CharacterNoteCategory = "session" | "npc" | "place" | "quest" | "item" | "free";
+export type CharacterNoteCategory = "session" | "npc" | "place" | "quest" | "lore" | "free";
 
 export type CharacterNote = {
   id: string;
@@ -362,6 +372,30 @@ export type CommunityDefinition = BaseDefinition & {
   image?: string;
 };
 
+export type DefinitionChoiceDefinition =
+  | {
+      id: string;
+      kind: "definition";
+      label: string;
+      definitionType: "ancestry";
+    }
+  | {
+      id: string;
+      kind: "feature-from-definition";
+      label: string;
+      sourceChoiceId: string;
+      /** A referência é exibida, mas não concede automaticamente suas mecânicas. */
+      application: "reference";
+    };
+
+export type DefinitionRestAction = {
+  id: string;
+  label: string;
+  description: string;
+  timing: "any-rest";
+  choiceIds: string[];
+};
+
 /** Escolha opcional de identidade; a aplicação na ficha será tratada em uma etapa posterior. */
 export type TransformationDefinition = BaseDefinition & {
   type: "transformation";
@@ -371,8 +405,16 @@ export type TransformationDefinition = BaseDefinition & {
   drawback: string;
   narrativeQuestions: string[];
   gameMarkers?: GameMarkerDefinition[];
+  choices?: DefinitionChoiceDefinition[];
+  restActions?: DefinitionRestAction[];
   /** Observações mecânicas que não cabem nos controles atuais da ficha. */
   rulesNotes?: string[];
+};
+
+/** Escolhas persistidas por uma Definition ativa; continuam inertes se a fonte sair da ficha. */
+export type CharacterDefinitionSelection = {
+  sourceDefinitionId: string;
+  values: Record<string, string>;
 };
 
 /** Efeito de estado reutilizável. A aplicação em personagens pertence ao estado da ficha. */
@@ -415,6 +457,12 @@ export type InventoryCompartment = {
   source?: "character" | "item" | "custom";
 };
 
+export type CharacterScar = {
+  id: string;
+  narrative: string;
+  createdAt: string;
+};
+
 export type Character = {
   id: string;
   identity: {
@@ -451,8 +499,12 @@ export type Character = {
   proficiency: number;
   progression?: CharacterProgression;
   resources: ResourceTrack[];
+  /** Cicatrizes narrativas reduzem permanentemente o limite derivado de Esperança enquanto existirem. */
+  scars?: CharacterScar[];
   /** Estado de marcadores de jogo, separado das definicoes do Compendium. */
   gameMarkers?: CharacterGameMarkerState[];
+  /** Referências escolhidas por conteúdo declarativo, sem conceder mecânicas implicitamente. */
+  definitionSelections?: CharacterDefinitionSelection[];
   /** Effects temporários ativados a partir de Features declaradas pelo Compendium. */
   activeFeatureEffects?: CharacterActiveFeatureEffect[];
   skills: CharacterSkill[];

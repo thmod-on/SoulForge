@@ -4,6 +4,32 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.29.0]
+
+### Adicionado
+
+- personagens podem registrar Cicatrizes com lembrete narrativo e data; cada Cicatriz reduz em um o limite derivado de Esperança e pode ser removida por decisão do mestre, restaurando o slot correspondente;
+- transformações podem declarar ações contextuais de descanso e escolhas estruturadas reutilizáveis; o Metamorfo permite escolher uma ancestralidade e uma de suas Features como referências da forma assumida;
+- marcadores podem reagir declarativamente a eventos de sessão e descanso; Sangue do Vampiro passa a diminuir automaticamente no descanso longo.
+
+### Alterado
+
+- a ficha apresenta Cicatrizes junto à Esperança em um modal alinhado aos demais formulários, com equação do limite atual e alerta antes da perda do último espaço;
+- a forma assumida pelo Metamorfo recebe destaque próprio na ficha e nos detalhes da transformação;
+- a ação contextual “Mudar de forma” permanece visível no descanso quando indisponível, explicando o requisito, e as escolhas do descanso são atualizadas sem remontar toda a ficha;
+- novas anotações usam a categoria Lore no lugar de Item.
+
+### Corrigido
+
+- transformações com ações de descanso são reconhecidas pela referência ativa da ficha, habilitando corretamente a mudança de forma do Metamorfo;
+- interações com opções de descanso deixam de provocar o piscar da tela.
+
+### Compatibilidade
+
+- anotações antigas da categoria `item` são migradas para `lore` sem perda de conteúdo ou datas;
+- fichas sem Cicatrizes continuam válidas, e o limite de Esperança preserva bônus ativos sem aplicar perdas cumulativas;
+- escolhas de transformação são apenas referências persistidas e não concedem automaticamente mecânicas de ancestralidade.
+
 ## [0.28.0]
 
 ### Adicionado

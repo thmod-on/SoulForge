@@ -1,5 +1,6 @@
 import { demoCharacter } from "../domain/demoCharacter";
 import { demoKaelII } from "../domain/demoKaelII";
+import { migrateLegacyCharacterNotes } from "../domain/characterMigrations";
 import type { Character } from "../domain/types";
 
 const databaseName = "soulforge";
@@ -56,7 +57,10 @@ export async function loadCharacter(characterId: string): Promise<Character | un
   });
 
   database.close();
-  return character;
+  if (!character) return undefined;
+  const migrated = migrateLegacyCharacterNotes(character);
+  if (migrated !== character) await saveCharacter(migrated);
+  return migrated;
 }
 
 export async function listCharacters(): Promise<Character[]> {
@@ -71,7 +75,9 @@ export async function listCharacters(): Promise<Character[]> {
   });
 
   database.close();
-  return characters;
+  const migrated = characters.map(migrateLegacyCharacterNotes);
+  await Promise.all(migrated.map((character, index) => character === characters[index] ? Promise.resolve() : saveCharacter(character)));
+  return migrated;
 }
 
 /** Remove uma ficha local e todo o estado salvo associado a ela. */

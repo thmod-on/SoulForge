@@ -87,13 +87,14 @@ import {
 } from "./features/inventory/bindInventoryDrag";
 import { getEffectiveDefense, synchronizeArmorResource } from "./features/inventory/combatModifiers";
 import { getActiveSheetModifierEffects, synchronizeCharacterSheetModifiers } from "./features/player/sheetModifiers";
+import { handleCharacterScarAction, handleCharacterScarEscape, renderCharacterScarDialogs, type CharacterScarDependencies } from "./features/player/characterScars";
 import { getActiveFeatureEffectDefenseModifiers, getActiveFeatureEffects, getFeatureActivationForCharacter } from "./features/feature-effects/featureEffects";
 import { handleFeatureEffectAction, renderFeatureTokenActivationDialog, type FeatureTokenActivationDialogState } from "./features/feature-effects/featureTokenActivation";
 import { renderCharacterIdentityModal as renderCharacterIdentityModalView } from "./features/character-identity/renderCharacterIdentityModal";
 import { getSubclassStageSkills } from "./features/player/subclassTrack";
 import type { RestKind, RestMoveChoice } from "./features/rest/restRules";
-import { renderRestModal as renderRestModalView } from "./features/rest/renderRest";
-import { handleRestAction, handleRestRollInput } from "./features/rest/restActions";
+import { renderRestModal as renderRestModalView, renderRestModalInPlace } from "./features/rest/renderRest";
+import { handleRestAction, handleRestDefinitionChoiceInput, handleRestRollInput } from "./features/rest/restActions";
 import {
   renderEditorHeader as renderEditorHeaderView,
   renderResourceIndicator as renderResourceIndicatorView,
@@ -156,8 +157,7 @@ import {
 } from "./features/compendium/ancestries";
 import type { CompendiumSpread, CompendiumView, InventoryFilter, Page, ProgressionDraftChoice, ProgressionFlowStep, ProgressionMulticlassDraft, ProgressionPicker, ProgressionTierNumber, SettingsSection } from "./app/types";
 import { editorNavigation as sideNavItems, getPageFromEventTarget, isEditorPage, playerNavigation as topNavItems } from "./app/navigation";
-import "./styles.css";
-function getAppRoot(): HTMLDivElement {
+import "./styles.css"; function getAppRoot(): HTMLDivElement {
   const element = document.querySelector<HTMLDivElement>("#app");
   if (!element) {
     throw new Error("App root not found.");
@@ -299,7 +299,7 @@ const state: {
   characterImportError?: string;
   deletingInstalledPackId?: string;
   openSettingsSections: Record<SettingsSection, boolean>;
-  character?: Character;
+  character?: Character; characterScarsOpen: boolean; deletingCharacterScarId?: string;
 } = {
   page: "overview",
   inventoryFilter: "todos",
@@ -355,7 +355,7 @@ const state: {
   installedPacks: [],
   packImportOpen: false,
   removeAllInstalledPacksOpen: false,
-  characterImportOpen: false,
+  characterImportOpen: false, characterScarsOpen: false,
   openSettingsSections: {
     general: true,
     localData: false,
@@ -547,7 +547,7 @@ function getAncestryFeatureDependencies(): AncestryFeatureDependencies {
 }
 
 function getTransformationFeatureDependencies(): TransformationFeatureDependencies { return { state: state.transformationState, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render: () => render({ preserveMainScroll: true }) }; } function getConditionFeatureDependencies(): ConditionFeatureDependencies { return { state: state.conditionState, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render: () => render({ preserveMainScroll: true }) }; }
-function getCharacterTransformationDependencies(): CharacterTransformationDependencies { return { state: state.transformationState, character: state.character!, catalog, escapeHtml, saveCharacter: async (character) => { state.character = character; await saveCharacter(character); }, render: () => render({ preserveMainScroll: true }) }; } function renderSettings(character: Character): string {
+function getCharacterTransformationDependencies(): CharacterTransformationDependencies { return { state: state.transformationState, character: state.character!, catalog, escapeHtml, saveCharacter: async (character) => { state.character = character; await saveCharacter(character); }, render: () => render({ preserveMainScroll: true }) }; } function getCharacterScarDependencies(): CharacterScarDependencies { return { state, escapeHtml, saveCharacter, render: () => render({ preserveMainScroll: true }) }; } function renderSettings(character: Character): string {
   return renderSettingsPage({
     character,
     appVersion,
@@ -996,7 +996,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
   appRoot.innerHTML = `
     ${shell}
     ${renderCardModalView(state.modalCardId, getCardFeatureDependencies())}
-    ${renderActivateStoredCardModal()}${renderCharacterTransformationDialogs(getCharacterTransformationDependencies())}
+    ${renderActivateStoredCardModal()}${renderCharacterTransformationDialogs(getCharacterTransformationDependencies())}${renderCharacterScarDialogs(getCharacterScarDependencies())}
     ${renderItemModalView(getInventoryRenderDependencies())}
     ${renderDeleteItemModalView(getInventoryRenderDependencies())}
     ${renderAddResourceModal()}
@@ -1036,7 +1036,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
     ${renderGameMarkerDiceDialog(state.gameMarkerDieDialog, state.character, catalog, escapeHtml)}
     ${renderStoredDiceDialog({ state, catalog, escapeHtml })}
     ${renderFeatureTokenActivationDialog({ state, catalog, escapeHtml })}
-    ${renderRestModalView(character, state.restDialogKind, state.restChoices, state.restError, { escapeHtml })}
+    ${renderRestModalView(character, state.restDialogKind, state.restChoices, state.restError, { escapeHtml, catalog })}
       ${renderPackManagementDialogs(getPackManagementDependencies())}
     ${renderCharacterImportModal({ isOpen: state.characterImportOpen, character: state.pendingCharacterImport, error: state.characterImportError, escapeHtml })}
   `;
@@ -1071,7 +1071,7 @@ const renderCharacterCreationInPlace = (options: { resetScroll?: boolean } = {})
     render({ resetCreationScroll: options.resetScroll });
   }
 };
-
+const renderRestInPlace = (): void => { if (!renderRestModalInPlace(appRoot, state.character, state.restDialogKind, state.restChoices, state.restError, { escapeHtml, catalog })) render({ preserveMainScroll: true }); };
 function exportCharacter(): void {
   const character = state.character;
   if (character) downloadCharacterExport(character);
@@ -1328,7 +1328,7 @@ function bindEvents(): void {
       return;
     }
 
-    if (handleAncestryAction(target, getAncestryFeatureDependencies())) return;
+    if (handleCharacterScarAction(target, getCharacterScarDependencies())) { event.preventDefault(); return; } if (handleAncestryAction(target, getAncestryFeatureDependencies())) return;
     if (handleCommunityAction(target, { state, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render })) return;
     if (handleTransformationAction(target, getTransformationFeatureDependencies())) return; if (handleConditionAction(target, getConditionFeatureDependencies())) return; if (state.character && handleCharacterTransformationAction(target, getCharacterTransformationDependencies())) return;
 
@@ -1552,7 +1552,7 @@ function bindEvents(): void {
 
     if (handleStoredDiceAction(target, { state, catalog, saveCharacter, render: () => render({ preserveMainScroll: true }), escapeHtml })) return;
 
-    if (handleRestAction(target, state, { catalog, saveCharacter, render: () => render({ preserveMainScroll: true }) })) {
+    if (handleRestAction(target, state, { catalog, saveCharacter, render: renderRestInPlace })) {
       return;
     }
 
@@ -2381,7 +2381,7 @@ function bindEvents(): void {
   });
 
   document.addEventListener("keydown", (event) => {
-    if (state.character && handleCharacterTransformationEscape(event, getCharacterTransformationDependencies())) return;
+    if (handleCharacterScarEscape(event, getCharacterScarDependencies())) return; if (state.character && handleCharacterTransformationEscape(event, getCharacterTransformationDependencies())) return;
     if (event.key === "Escape" && state.modalCardId) {
       const restoreActiveCardFocus = isRememberedActiveCard(state.character?.id, state.modalCardId);
       state.modalCardId = undefined;
@@ -2550,6 +2550,7 @@ function bindEvents(): void {
       handleRestRollInput(target, state);
       return;
     }
+    if (target instanceof HTMLSelectElement && target.matches("[data-rest-definition-choice-index]")) { handleRestDefinitionChoiceInput(target, state, catalog); renderRestInPlace(); return; }
     if (target instanceof HTMLSelectElement && target.matches("[data-compendium-community-pack-filter]")) {
       state.compendiumCommunityPackId = target.value;
       render({ preserveMainScroll: true });

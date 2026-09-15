@@ -23,7 +23,8 @@ export function synchronizeCharacterSheetModifiers(character: Character, catalog
   const defense = getModifiedDefense(character, attributes, modifiers);
   const resources = character.resources.map((resource) => {
     const baseMax = getProgressionResourceBaseMax(character, catalog, resource.id, resource.baseMax ?? resource.max);
-    const max = Math.max(0, baseMax + (resourceBonuses.get(resource.id) ?? 0));
+    const scarPenalty = resource.id === "hope" ? character.scars?.length ?? 0 : 0;
+    const max = Math.max(0, baseMax + (resourceBonuses.get(resource.id) ?? 0) - scarPenalty);
     return resource.baseMax === baseMax && resource.max === max && resource.value <= max
       ? resource
       : { ...resource, baseMax, max, value: Math.min(resource.value, max) };

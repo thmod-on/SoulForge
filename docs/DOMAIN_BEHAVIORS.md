@@ -235,6 +235,7 @@ Novos Behaviors devem ser adicionados somente quando um novo conceito do domíni
 - SpendHope
 - GrantStress
 - RemoveStress
+- ChangeGameMarkerOnEvent
 
 ---
 
@@ -267,6 +268,18 @@ Novos Behaviors devem ser adicionados somente quando um novo conceito do domíni
 - GrantFeature
 - RemoveFeature
 - GrantExperience
+- SelectDefinitionReference
+- SelectFeatureFromDefinition
+
+## Descanso
+
+- Definitions ativas podem declarar ações contextuais com `timing: "any-rest"`.
+- Cada ação ocupa um movimento de descanso e referencia escolhas estruturadas da
+  própria fonte.
+- A Engine resolve os tipos e relações declarados; ela não conhece nomes como
+  “Metamorfo” ou IDs de conteúdo oficial.
+- Referências com aplicação `reference` são persistidas e exibidas, mas não
+  concedem comportamento mecânico implicitamente.
 
 ---
 

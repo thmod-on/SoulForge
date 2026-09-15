@@ -63,21 +63,25 @@ export async function readPackImportFiles(files: File[], deps: Pick<PackManageme
   const errors = results.flatMap((result) => result.error ? [`${result.file.name}: ${result.error}`] : []);
   const bundles = results.flatMap((result) => result.bundle ? [result.bundle] : []);
   const catalog = deps.getCatalog();
+  const installedPackIds = new Set(deps.state.installedPacks.map((pack) => pack.id));
 
   const selectedPackIds = new Set<string>();
   const selectedDefinitionIds = new Set<string>();
   for (const bundle of bundles) {
     if (selectedPackIds.has(bundle.manifest.id)) errors.push(`O Pack “${bundle.manifest.name}” foi selecionado mais de uma vez.`);
     selectedPackIds.add(bundle.manifest.id);
-    if (catalog.packs.some((pack) => pack.id === bundle.manifest.id)) errors.push(`O Pack “${bundle.manifest.name}” já está instalado neste dispositivo.`);
+    if (catalog.packs.some((pack) => pack.id === bundle.manifest.id) && !installedPackIds.has(bundle.manifest.id)) errors.push(`O Pack “${bundle.manifest.name}” já faz parte desta versão do SoulForge e não pode ser substituído.`);
     for (const definition of bundle.definitions) {
       if (selectedDefinitionIds.has(definition.id)) errors.push(`A Definition “${definition.name}” aparece em mais de um arquivo selecionado.`);
       selectedDefinitionIds.add(definition.id);
     }
   }
 
-  const existingDefinitionIds = new Set(catalog.definitions.map((definition) => definition.id));
-  if (bundles.some((bundle) => bundle.definitions.some((definition) => existingDefinitionIds.has(definition.id)))) {
+  const existingDefinitions = new Map(catalog.definitions.map((definition) => [definition.id, definition]));
+  if (bundles.some((bundle) => bundle.definitions.some((definition) => {
+    const existing = existingDefinitions.get(definition.id);
+    return existing && (!installedPackIds.has(bundle.manifest.id) || existing.packId !== bundle.manifest.id);
+  }))) {
     errors.push("Um dos Packs possui uma Definition que já existe neste dispositivo.");
   }
 
@@ -134,6 +138,9 @@ function renderPackImportModal(deps: Pick<PackManagementDependencies, "state" | 
   if (!state.packImportOpen) return "";
   const bundles = state.pendingPackBundles ?? [];
   const packCount = bundles.length;
+  const updateCount = bundles.filter((bundle) => state.installedPacks.some((pack) => pack.id === bundle.manifest.id)).length;
+  const installCount = packCount - updateCount;
+  const actionLabel = updateCount && !installCount ? `Atualizar ${packCount === 1 ? "Pack" : `${packCount} Packs`}` : updateCount ? "Aplicar lote" : `Instalar ${packCount === 1 ? "Pack" : `${packCount} Packs`}`;
   return `
     <div class="modal-backdrop" data-modal-backdrop>
       <section class="modal pack-import-modal" role="dialog" aria-modal="true" aria-labelledby="pack-import-title">
@@ -141,10 +148,10 @@ function renderPackImportModal(deps: Pick<PackManagementDependencies, "state" | 
         <span class="resource-modal-label">Dados locais</span>
         <h2 id="pack-import-title">Importar Pack local</h2>
         ${packCount ? `
-          <p class="settings-panel-copy"><strong>${packCount} ${packCount === 1 ? "Pack pronto" : "Packs prontos"} para instalar.</strong> Confira o conteúdo do lote:</p>
-          <div class="pack-import-preview-list">${bundles.map((bundle) => `<article class="pack-import-preview"><span>Pronto para instalar</span><h3>${escapeHtml(bundle.manifest.name)}</h3><p>v${escapeHtml(bundle.manifest.version)} · ${escapeHtml(bundle.manifest.description)}</p><strong>${escapeHtml(getPackDefinitionSummary(bundle.definitions))}</strong></article>`).join("")}</div>
-          <p class="settings-panel-copy">O lote inteiro será salvo somente neste navegador. Se ocorrer um erro, nenhum Pack será instalado.</p>
-          <div class="modal-actions"><button class="sf-action sf-action--secondary secondary-action" type="button" data-action="choose-pack-file">Escolher outros arquivos</button><button class="sf-action sf-action--primary primary-action" type="button" data-action="confirm-pack-import">Instalar ${packCount === 1 ? "Pack" : `${packCount} Packs`}</button></div>
+          <p class="settings-panel-copy"><strong>${packCount} ${packCount === 1 ? "Pack pronto" : "Packs prontos"}.</strong> Confira o conteúdo do lote:</p>
+          <div class="pack-import-preview-list">${bundles.map((bundle) => { const installed = state.installedPacks.find((pack) => pack.id === bundle.manifest.id); return `<article class="pack-import-preview"><span>${installed ? "Pronto para atualizar" : "Pronto para instalar"}</span><h3>${escapeHtml(bundle.manifest.name)}</h3><p>${installed ? `v${escapeHtml(installed.version)} → ` : ""}v${escapeHtml(bundle.manifest.version)} · ${escapeHtml(bundle.manifest.description)}</p><strong>${escapeHtml(getPackDefinitionSummary(bundle.definitions))}</strong></article>`; }).join("")}</div>
+          <p class="settings-panel-copy">O lote inteiro será salvo somente neste navegador. Atualizações substituem apenas as Definitions do mesmo Pack e preservam as fichas. Se ocorrer um erro, nenhuma alteração será concluída.</p>
+          <div class="modal-actions"><button class="sf-action sf-action--secondary secondary-action" type="button" data-action="choose-pack-file">Escolher outros arquivos</button><button class="sf-action sf-action--primary primary-action" type="button" data-action="confirm-pack-import">${actionLabel}</button></div>
         ` : `<p>Selecione um ou vários arquivos <strong>.soulforge-pack.json</strong>. O SoulForge exibirá uma prévia do lote antes de instalar.</p><button class="sf-action sf-action--primary primary-action" type="button" data-action="choose-pack-file">Selecionar Packs</button>`}
         <input type="file" accept="application/json,.json,.soulforge-pack.json" data-pack-file multiple hidden>
         ${state.packImportError ? `<p class="form-error pack-import-error" data-pack-import-error role="alert">${escapeHtml(state.packImportError)}</p>` : ""}

@@ -69,6 +69,22 @@ describe("gestão visual de packs", () => {
     expect(state.packImportError).toContain("selecionado mais de uma vez");
   });
 
+  it("aceita atualizar um Pack instalado e identifica a substituição na prévia", async () => {
+    const state = createState();
+    state.packImportOpen = true;
+    const previous = createBundle("pack.first", "Primeiro");
+    state.installedPacks = [previous.manifest];
+    const update = { ...createBundle("pack.first", "Primeiro"), manifest: { ...previous.manifest, version: "1.1.0" } };
+
+    await readPackImportFiles([createFile("primeiro.soulforge-pack.json", update)], { state, getCatalog: () => createCatalog([previous.manifest], previous.definitions) });
+
+    expect(state.pendingPackBundles).toEqual([update]);
+    const html = renderPackManagementDialogs({ state, escapeHtml });
+    expect(html).toContain("Pronto para atualizar");
+    expect(html).toContain("v1.0.0 → v1.1.0");
+    expect(html).toContain("Atualizar Pack");
+  });
+
   it("escapa o nome do pack no diálogo de remoção", () => {
     const state = createState();
     state.installedPacks = [{ id: "pack.test", name: "Pack <Teste>", version: "1.0.0", description: "" }];

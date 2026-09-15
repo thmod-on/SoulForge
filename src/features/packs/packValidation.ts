@@ -32,12 +32,13 @@ export function validatePackBundle(value: unknown): PackBundle {
     if (!Array.isArray(value)) return false;
     return value.every((marker) => {
       if (!marker || typeof marker !== "object") return false;
-      const candidate = marker as { id?: unknown; kind?: unknown; label?: unknown; die?: unknown; quantity?: unknown; initialValue?: unknown; max?: unknown; reset?: unknown; gainTrigger?: unknown; resetRecovery?: unknown };
+      const candidate = marker as { id?: unknown; kind?: unknown; label?: unknown; die?: unknown; quantity?: unknown; initialValue?: unknown; max?: unknown; reset?: unknown; eventChanges?: unknown; gainTrigger?: unknown; resetRecovery?: unknown };
       if (typeof candidate.id !== "string" || !candidate.id || typeof candidate.label !== "string" || !candidate.label) return false;
       if (candidate.reset !== undefined && !["session", "short-rest", "long-rest"].includes(String(candidate.reset))) return false;
       if (candidate.kind === "counter") {
         if (candidate.initialValue !== undefined && (!Number.isInteger(candidate.initialValue) || Number(candidate.initialValue) < 0)) return false;
         if (candidate.max !== undefined && (!Number.isInteger(candidate.max) || Number(candidate.max) < 0)) return false;
+        if (!isGameMarkerEventChangesValid(candidate.eventChanges, candidate.reset)) return false;
         return candidate.quantity === undefined || isGameMarkerQuantityValid(candidate.quantity);
       }
       if (candidate.kind === "stored-dice") {
@@ -74,6 +75,7 @@ export function validatePackBundle(value: unknown): PackBundle {
       throw new Error(`A transformação “${transformation.name}” precisa declarar benefício, desvantagem e perguntas narrativas.`);
     }
     if (!isGameMarkerListValid(transformation.gameMarkers)) throw new Error(`A transformação “${transformation.name}” possui marcadores de jogo inválidos.`);
+    if (!isDefinitionChoicesValid(transformation.choices) || !isDefinitionRestActionsValid(transformation.restActions, transformation.choices)) throw new Error(`A transformação “${transformation.name}” possui escolhas ou ações de descanso inválidas.`);
   }
   for (const condition of definitions.filter((definition) => definition.type === "condition")) {
     if (!["standard", "special"].includes(condition.category) || typeof condition.effect !== "string" || !condition.effect.trim() || typeof condition.clearing !== "string" || !condition.clearing.trim() || (condition.image !== undefined && (typeof condition.image !== "string" || !condition.image.trim())) || (condition.rulesNotes !== undefined && (!Array.isArray(condition.rulesNotes) || condition.rulesNotes.some((note) => typeof note !== "string" || !note.trim())))) {
@@ -152,5 +154,51 @@ export function validatePackBundle(value: unknown): PackBundle {
     if (initial.kind === "spellcast-trait") return true;
     if (initial.kind === "roll") return ["d4", "d6", "d8", "d10", "d12", "d20"].includes(String(initial.die)) && (initial.bonus === undefined || Number.isInteger(initial.bonus));
     return initial.kind === "manual" && (initial.min === undefined || Number.isInteger(initial.min) && Number(initial.min) >= 0) && (initial.maximumResourceId === undefined || typeof initial.maximumResourceId === "string" && Boolean(initial.maximumResourceId));
+  }
+
+  function isGameMarkerEventChangesValid(value: unknown, reset: unknown): boolean {
+    if (value === undefined) return true;
+    if (!Array.isArray(value) || !value.length) return false;
+    return value.every((change) => {
+      if (!change || typeof change !== "object") return false;
+      const entry = change as { event?: unknown; operation?: unknown; amount?: unknown; minimum?: unknown; maximum?: unknown };
+      if (!["session", "short-rest", "long-rest"].includes(String(entry.event)) || entry.event === reset) return false;
+      if (!["increment", "decrement"].includes(String(entry.operation)) || !Number.isInteger(entry.amount) || Number(entry.amount) < 1) return false;
+      if (entry.minimum !== undefined && (!Number.isInteger(entry.minimum) || Number(entry.minimum) < 0)) return false;
+      if (entry.maximum !== undefined && (!Number.isInteger(entry.maximum) || Number(entry.maximum) < 0)) return false;
+      return entry.minimum === undefined || entry.maximum === undefined || Number(entry.minimum) <= Number(entry.maximum);
+    });
+  }
+
+  function isDefinitionChoicesValid(value: unknown): boolean {
+    if (value === undefined) return true;
+    if (!Array.isArray(value) || !value.length) return false;
+    const ids = new Set<string>();
+    return value.every((choice) => {
+      if (!choice || typeof choice !== "object") return false;
+      const entry = choice as { id?: unknown; kind?: unknown; label?: unknown; definitionType?: unknown; sourceChoiceId?: unknown; application?: unknown };
+      if (typeof entry.id !== "string" || !entry.id || ids.has(entry.id) || typeof entry.label !== "string" || !entry.label) return false;
+      ids.add(entry.id);
+      if (entry.kind === "definition") return entry.definitionType === "ancestry";
+      return entry.kind === "feature-from-definition" && typeof entry.sourceChoiceId === "string" && ids.has(entry.sourceChoiceId) && entry.application === "reference";
+    });
+  }
+
+  function isDefinitionRestActionsValid(value: unknown, choices: unknown): boolean {
+    if (value === undefined) return true;
+    if (!Array.isArray(value) || !value.length || !Array.isArray(choices)) return false;
+    const choiceIds = new Set(choices.flatMap((choice) => choice && typeof choice === "object" && typeof (choice as { id?: unknown }).id === "string" ? [(choice as { id: string }).id] : []));
+    const actionIds = new Set<string>();
+    return value.every((action) => {
+      if (!action || typeof action !== "object") return false;
+      const entry = action as { id?: unknown; label?: unknown; description?: unknown; timing?: unknown; choiceIds?: unknown };
+      if (typeof entry.id !== "string" || !entry.id || actionIds.has(entry.id)) return false;
+      actionIds.add(entry.id);
+      return typeof entry.label === "string" && Boolean(entry.label.trim())
+        && typeof entry.description === "string" && Boolean(entry.description.trim())
+        && entry.timing === "any-rest"
+        && Array.isArray(entry.choiceIds) && entry.choiceIds.length > 0
+        && entry.choiceIds.every((choiceId) => typeof choiceId === "string" && choiceIds.has(choiceId));
+    });
   }
 }

@@ -4,8 +4,8 @@ import { removeCharacterNote, upsertCharacterNote } from "./noteActions";
 
 describe("ações de anotações", () => {
   it("cria uma anotação no início da lista", () => {
-    const updated = upsertCharacterNote(demoCharacter, { title: "Pista", content: "Uma pista importante", category: "quest" }, undefined, "2026-09-07T10:00:00.000Z", "note.new");
-    expect(updated.notes[0]).toMatchObject({ id: "note.new", title: "Pista", category: "quest", createdAt: "2026-09-07T10:00:00.000Z" });
+    const updated = upsertCharacterNote(demoCharacter, { title: "Pista", content: "Uma pista importante", category: "lore" }, undefined, "2026-09-07T10:00:00.000Z", "note.new");
+    expect(updated.notes[0]).toMatchObject({ id: "note.new", title: "Pista", category: "lore", createdAt: "2026-09-07T10:00:00.000Z" });
   });
 
   it("edita preservando a data de criação", () => {

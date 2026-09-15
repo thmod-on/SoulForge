@@ -5,7 +5,7 @@ export const noteCategoryLabels: Record<CharacterNoteCategory, string> = {
   npc: "NPC",
   place: "Local",
   quest: "Missao",
-  item: "Item",
+  lore: "Lore",
   free: "Livre"
 };
 

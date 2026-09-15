@@ -37,6 +37,16 @@ describe("modificadores declarativos de ancestralidade", () => {
     expect(updated.resources.find((entry) => entry.id === "hp")).toMatchObject({ value: 5, max: 7, baseMax: 6 });
   });
 
+  it("deriva a redução de Esperança das Cicatrizes e a reverte sem acumular perdas", () => {
+    const base = { ...character(), resources: [...character().resources, { id: "hope", label: "Esperança", value: 6, max: 6, tone: "hope" as const }] };
+    const scarred = synchronizeCharacterSheetModifiers({ ...base, scars: [{ id: "scar.1", narrative: "Marca", createdAt: "2026-09-15T12:00:00.000Z" }] }, catalog);
+    const twice = synchronizeCharacterSheetModifiers(scarred, catalog);
+    const restored = synchronizeCharacterSheetModifiers({ ...twice, scars: [] }, catalog);
+    expect(scarred.resources.find((entry) => entry.id === "hope")).toMatchObject({ baseMax: 6, max: 5, value: 5 });
+    expect(twice.resources.find((entry) => entry.id === "hope")?.max).toBe(5);
+    expect(restored.resources.find((entry) => entry.id === "hope")?.max).toBe(6);
+  });
+
   it("reconstrói os máximos de uma personagem humana a partir dos avanços já registrados", () => {
     const progressed = {
       ...character("feature.human.top"),

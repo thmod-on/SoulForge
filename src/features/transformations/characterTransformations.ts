@@ -1,5 +1,6 @@
 import type { Catalog } from "../../domain/catalog";
 import type { Character, TransformationDefinition } from "../../domain/types";
+import { getSelectedTransformationFeature, getTransformationSelection } from "./transformationChoices";
 
 export type CharacterTransformationUiState = {
   characterTransformationPickerOpen: boolean;
@@ -42,7 +43,8 @@ export function renderCharacterTransformationPanel(character: Character, catalog
   const artwork = transformation.image
     ? `<span class="character-transformation-art has-image" style="background-image: url('${escapeHtml(transformation.image)}')" aria-hidden="true"></span>`
     : '<span class="character-transformation-art" aria-hidden="true">✦</span>';
-  return `<section class="band character-transformation-band"><div class="section-heading"><h2>Transformação</h2><span>Ativa</span></div><article class="character-transformation-card">${artwork}<div class="character-transformation-copy"><small>Transformação ativa</small><h3>${escapeHtml(transformation.name)}</h3><p>${escapeHtml(transformation.summary)}</p><em>Herança · não ocupa o Loadout</em></div><button class="character-transformation-detail-action" type="button" data-action="view-character-transformation">Ver detalhes <span aria-hidden="true">›</span></button></article></section>`;
+  const choiceSummary = renderTransformationChoiceSummary(character, transformation, catalog, escapeHtml);
+  return `<section class="band character-transformation-band"><div class="section-heading"><h2>Transformação</h2><span>Ativa</span></div><article class="character-transformation-card">${artwork}<div class="character-transformation-copy"><small>Transformação ativa</small><h3>${escapeHtml(transformation.name)}</h3><p>${escapeHtml(transformation.summary)}</p>${choiceSummary}</div><button class="character-transformation-detail-action" type="button" data-action="view-character-transformation">Ver detalhes <span aria-hidden="true">›</span></button></article></section>`;
 }
 
 export function renderCharacterTransformationDialogs(deps: CharacterTransformationDependencies): string {
@@ -122,7 +124,26 @@ function renderDetail(deps: CharacterTransformationDependencies): string {
   const entry = getCharacterTransformation(deps.character, deps.catalog);
   if (!entry) return "";
   const artwork = entry.image ? `<div class="compendium-entry-detail-art has-image" style="background-image: url('${deps.escapeHtml(entry.image)}')" aria-hidden="true"></div>` : '<div class="compendium-entry-detail-art transformation-glyph" aria-hidden="true">✦</div>';
-  return `<div class="modal-backdrop" data-modal-backdrop><section class="compendium-entry-detail-modal transformation-detail-modal character-transformation-detail-modal" role="dialog" aria-modal="true" aria-labelledby="character-transformation-detail-title"><button class="modal-close" type="button" data-action="close-character-transformation-detail" aria-label="Fechar detalhes">×</button>${artwork}<div class="compendium-entry-detail-body"><span class="resource-modal-label">Transformação ativa</span><h2 id="character-transformation-detail-title">${deps.escapeHtml(entry.name)}</h2><p class="compendium-entry-detail-summary">${deps.escapeHtml(entry.summary)}</p><p class="transformation-single-rule">Herança da personagem · não ocupa um espaço do Loadout.</p><section class="compendium-entry-detail-section"><h3>Benefício</h3><p>${deps.escapeHtml(entry.benefit)}</p></section><section class="compendium-entry-detail-section"><h3>Desvantagem</h3><p>${deps.escapeHtml(entry.drawback)}</p></section>${entry.rulesNotes?.length ? `<section class="compendium-entry-detail-section"><h3>Lembretes de regra</h3><ul class="transformation-question-list">${entry.rulesNotes.map((note) => `<li>${deps.escapeHtml(note)}</li>`).join("")}</ul></section>` : ""}<section class="compendium-entry-detail-section"><h3>Perguntas narrativas</h3><ul class="transformation-question-list">${entry.narrativeQuestions.map((question) => `<li>${deps.escapeHtml(question)}</li>`).join("")}</ul></section><footer class="character-transformation-detail-actions"><button class="sf-action sf-action--danger" type="button" data-action="request-remove-character-transformation">Remover</button><button class="sf-action sf-action--secondary" type="button" data-action="replace-character-transformation">Substituir</button><button class="sf-action sf-action--primary" type="button" data-action="close-character-transformation-detail">Concluir</button></footer></div></section></div>`;
+  const choices = renderTransformationChoiceDetail(deps.character, entry, deps.catalog, deps.escapeHtml);
+  return `<div class="modal-backdrop" data-modal-backdrop><section class="compendium-entry-detail-modal transformation-detail-modal character-transformation-detail-modal" role="dialog" aria-modal="true" aria-labelledby="character-transformation-detail-title"><button class="modal-close" type="button" data-action="close-character-transformation-detail" aria-label="Fechar detalhes">×</button>${artwork}<div class="compendium-entry-detail-body"><span class="resource-modal-label">Transformação ativa</span><h2 id="character-transformation-detail-title">${deps.escapeHtml(entry.name)}</h2><p class="compendium-entry-detail-summary">${deps.escapeHtml(entry.summary)}</p>${choices}<section class="compendium-entry-detail-section"><h3>Benefício</h3><p>${deps.escapeHtml(entry.benefit)}</p></section><section class="compendium-entry-detail-section"><h3>Desvantagem</h3><p>${deps.escapeHtml(entry.drawback)}</p></section>${entry.rulesNotes?.length ? `<section class="compendium-entry-detail-section"><h3>Lembretes de regra</h3><ul class="transformation-question-list">${entry.rulesNotes.map((note) => `<li>${deps.escapeHtml(note)}</li>`).join("")}</ul></section>` : ""}<section class="compendium-entry-detail-section"><h3>Perguntas narrativas</h3><ul class="transformation-question-list">${entry.narrativeQuestions.map((question) => `<li>${deps.escapeHtml(question)}</li>`).join("")}</ul></section><footer class="character-transformation-detail-actions"><button class="sf-action sf-action--danger" type="button" data-action="request-remove-character-transformation">Remover</button><button class="sf-action sf-action--secondary" type="button" data-action="replace-character-transformation">Substituir</button><button class="sf-action sf-action--primary" type="button" data-action="close-character-transformation-detail">Concluir</button></footer></div></section></div>`;
+}
+
+function renderTransformationChoiceSummary(character: Character, transformation: TransformationDefinition, catalog: Catalog, escapeHtml: (value: string) => string): string {
+  if (!transformation.restActions?.length) return "";
+  const values = getTransformationSelection(character, transformation);
+  const definitionChoice = transformation.choices?.find((entry) => entry.kind === "definition");
+  const ancestry = definitionChoice ? catalog.ancestries.find((entry) => entry.id === values[definitionChoice.id]) : undefined;
+  const feature = getSelectedTransformationFeature(character, transformation, catalog);
+  return `<span class="character-transformation-selection">${ancestry && feature ? `Forma: <strong>${escapeHtml(ancestry.name)}</strong> · ${escapeHtml(feature.name)}` : "Forma ainda não definida"}</span>`;
+}
+
+function renderTransformationChoiceDetail(character: Character, transformation: TransformationDefinition, catalog: Catalog, escapeHtml: (value: string) => string): string {
+  if (!transformation.restActions?.length) return "";
+  const values = getTransformationSelection(character, transformation);
+  const definitionChoice = transformation.choices?.find((entry) => entry.kind === "definition");
+  const ancestry = definitionChoice ? catalog.ancestries.find((entry) => entry.id === values[definitionChoice.id]) : undefined;
+  const feature = getSelectedTransformationFeature(character, transformation, catalog);
+  return `<section class="transformation-choice-detail"><header><span>Forma assumida</span><h3>${ancestry ? escapeHtml(ancestry.name) : "Ainda não definida"}</h3></header>${ancestry && feature ? `<div class="transformation-choice-feature"><span>Feature assumida</span><strong>${escapeHtml(feature.name)}</strong><p>${escapeHtml(feature.summary)}</p></div>` : "<p>A ancestralidade e sua Feature ainda não foram escolhidas.</p>"}<small><span aria-hidden="true">✦</span> Esta forma pode ser alterada durante um descanso.</small></section>`;
 }
 
 function renderRemoveConfirmation(deps: CharacterTransformationDependencies): string {

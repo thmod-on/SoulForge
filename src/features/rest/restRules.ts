@@ -2,7 +2,14 @@ import type { Character, ResourceTrack } from "../../domain/types";
 
 export type RestKind = "short" | "long";
 export type RestMoveId = "tend-wounds" | "clear-stress" | "repair-armor" | "prepare" | "group-prepare" | "work-project";
-export type RestMoveChoice = { id: RestMoveId; roll?: number };
+export type StandardRestMoveChoice = { id: RestMoveId; roll?: number };
+export type DefinitionRestMoveChoice = {
+  id: "definition-action";
+  sourceDefinitionId: string;
+  actionId: string;
+  values: Record<string, string>;
+};
+export type RestMoveChoice = StandardRestMoveChoice | DefinitionRestMoveChoice;
 
 export const restMoveLabels: Record<RestMoveId, string> = { "tend-wounds": "Tratar ferimentos", "clear-stress": "Limpar estresse", "repair-armor": "Reparar armadura", prepare: "Preparar", "group-prepare": "Preparação em grupo", "work-project": "Trabalhar em projeto" };
 
@@ -13,7 +20,7 @@ export function requiresRestRoll(kind: RestKind, move: RestMoveId): boolean { re
 export function applyRestMoves(character: Character, kind: RestKind, moves: RestMoveChoice[]): Character {
   const tier = getCharacterTier(character.identity.level); let resources = character.resources;
   for (const move of moves) {
-    if (move.id === "work-project") continue;
+    if (move.id === "definition-action" || move.id === "work-project") continue;
     const resource = getRestResource(resources, move.id); if (!resource) continue;
     const amount = move.id === "prepare" ? 1 : move.id === "group-prepare" ? 2 : kind === "long" ? resource.max : Math.max(0, Math.min(4, move.roll ?? 0)) + tier;
     resources = resources.map((entry) => entry.id === resource.id ? { ...entry, value: Math.max(0, entry.value - amount) } : entry);

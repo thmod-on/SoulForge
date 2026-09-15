@@ -27,6 +27,21 @@ describe("transferência de personagem", () => {
     expect(result.deck.unavailableCards).toEqual(character.deck.unavailableCards);
   });
 
+  it("preserva Cicatrizes narrativas na portabilidade da ficha", () => {
+    const scars = [{ id: "scar.1", narrative: "Teme o som de correntes.", createdAt: "2026-09-15T12:00:00.000Z" }];
+    const result = parseCharacterImport(JSON.stringify({ ...demoCharacter, scars }), new Set());
+    expect(result.scars).toEqual(scars);
+  });
+
+  it("migra anotações Item de arquivos antigos para Lore", () => {
+    const legacy = JSON.parse(JSON.stringify(demoCharacter));
+    legacy.notes = [{ id: "note.legacy", title: "Relíquia", content: "Texto preservado", category: "item", createdAt: "2026-08-01T10:00:00.000Z", updatedAt: "2026-09-01T12:00:00.000Z" }];
+
+    const result = parseCharacterImport(JSON.stringify(legacy), new Set());
+
+    expect(result.notes[0]).toEqual({ ...legacy.notes[0], category: "lore" });
+  });
+
   it("rejeita arquivos que não representam uma ficha", () => {
     expect(() => parseCharacterImport(JSON.stringify({ format: characterExportFormat, character: { name: "incompleto" } }), new Set())).toThrow("ficha compatível");
   });

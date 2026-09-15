@@ -41,12 +41,12 @@ describe("transformação do personagem", () => {
     expect(removed.identity.transformationId).toBeUndefined();
   });
 
-  it("apresenta a transformação fora do Loadout", () => {
+  it("apresenta a transformação sem tratá-la como uma carta", () => {
     const character = { ...demoCharacter, identity: { ...demoCharacter.identity, transformationId: transformation.id } };
     const html = renderCharacterTransformationPanel(character, catalog, escapeHtml);
     expect(html).toContain("Transformação ativa");
     expect(html).toContain("Vampiro");
-    expect(html).toContain("não ocupa o Loadout");
+    expect(html).not.toContain("não ocupa o Loadout");
     expect(html).not.toContain("data-card-modal-id");
   });
 
