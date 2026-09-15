@@ -29,6 +29,7 @@ import { renderCharacterCreationInPlace as renderCharacterCreationSurface } from
 import { createEmptyCreationAttributeValues, handleCreationAttributeAllocation } from "./features/character-creation/attributeAllocation";
 import { handleCommunityAction, renderCompendiumCommunityFormModal, renderCompendiumCommunitiesManager as renderCompendiumCommunitiesManagerView } from "./features/compendium/communities";
 import { handleTransformationAction, renderTransformationFormModal, renderCompendiumTransformationsManager as renderCompendiumTransformationsManagerView, renderCompendiumTransformationsSpread as renderCompendiumTransformationsSpreadView, type TransformationFeatureDependencies, type TransformationFeatureState } from "./features/compendium/transformations";
+import { handleConditionAction, renderConditionFormModal, renderCompendiumConditionsManager as renderCompendiumConditionsManagerView, renderCompendiumConditionsSpread as renderCompendiumConditionsSpreadView, type ConditionFeatureDependencies, type ConditionFeatureState } from "./features/compendium/conditions";
 import { handlePackManagementAction, readPackImportFiles, renderPackManagementDialogs, type PackManagementDependencies } from "./features/packs/packManagement";
 import { renderCharacterSelection as renderCharacterSelectionView } from "./features/character-selection/renderCharacterSelection";
 import { scrollCharacterCarousel, setupCharacterCarousel, syncCharacterCarousel } from "./features/character-selection/characterSelectionCarousel";
@@ -196,7 +197,7 @@ const state: {
   compendiumAncestrySearch: string;
   compendiumCommunitySearch: string;
   compendiumCommunityPackId: string;
-  transformationState: TransformationFeatureState & CharacterTransformationUiState;
+  transformationState: TransformationFeatureState & CharacterTransformationUiState; conditionState: ConditionFeatureState;
   lastPlayerPage: Page;
   selectedItemId?: string;
   selectedCardId: string;
@@ -313,7 +314,7 @@ const state: {
   compendiumAncestrySearch: "",
   compendiumCommunitySearch: "",
   compendiumCommunityPackId: "todos",
-  transformationState: { compendiumTransformationSearch: "", transformationModalOpen: false, characterTransformationPickerOpen: false, characterTransformationDetailOpen: false, characterTransformationRemoveOpen: false },
+  transformationState: { compendiumTransformationSearch: "", transformationModalOpen: false, characterTransformationPickerOpen: false, characterTransformationDetailOpen: false, characterTransformationRemoveOpen: false }, conditionState: { compendiumConditionSearch: "", conditionModalOpen: false },
   lastPlayerPage: "overview",
   selectedCardId: "card.demo.dread-veil",
   progressionStep: "advances",
@@ -545,9 +546,8 @@ function getAncestryFeatureDependencies(): AncestryFeatureDependencies {
   };
 }
 
-function getTransformationFeatureDependencies(): TransformationFeatureDependencies { return { state: state.transformationState, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render: () => render({ preserveMainScroll: true }) }; }
-function getCharacterTransformationDependencies(): CharacterTransformationDependencies { return { state: state.transformationState, character: state.character!, catalog, escapeHtml, saveCharacter: async (character) => { state.character = character; await saveCharacter(character); }, render: () => render({ preserveMainScroll: true }) }; }
-function renderSettings(character: Character): string {
+function getTransformationFeatureDependencies(): TransformationFeatureDependencies { return { state: state.transformationState, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render: () => render({ preserveMainScroll: true }) }; } function getConditionFeatureDependencies(): ConditionFeatureDependencies { return { state: state.conditionState, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render: () => render({ preserveMainScroll: true }) }; }
+function getCharacterTransformationDependencies(): CharacterTransformationDependencies { return { state: state.transformationState, character: state.character!, catalog, escapeHtml, saveCharacter: async (character) => { state.character = character; await saveCharacter(character); }, render: () => render({ preserveMainScroll: true }) }; } function renderSettings(character: Character): string {
   return renderSettingsPage({
     character,
     appVersion,
@@ -704,14 +704,13 @@ function renderCompendium(): string {
     return renderCompendiumAncestriesManagerView(getAncestryFeatureDependencies());
   }
   if (state.compendiumView === "communities") return renderCompendiumCommunitiesManagerView({ state, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render });
-  if (state.compendiumView === "transformations") return renderCompendiumTransformationsManagerView(getTransformationFeatureDependencies());
-
+  if (state.compendiumView === "transformations") return renderCompendiumTransformationsManagerView(getTransformationFeatureDependencies()); if (state.compendiumView === "conditions") return renderCompendiumConditionsManagerView(getConditionFeatureDependencies());
   return renderCompendiumIndexView({
     spread: state.compendiumSpread,
     catalog,
     escapeHtml,
-    renderTransformationsSpread: (renderChapterCard) => renderCompendiumTransformationsSpreadView(getTransformationFeatureDependencies(), renderChapterCard)
-  }) + renderCompendiumCommunityFormModal({ state, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render }) + renderTransformationFormModal(getTransformationFeatureDependencies());
+    renderTransformationsSpread: (renderChapterCard) => renderCompendiumTransformationsSpreadView(getTransformationFeatureDependencies(), renderChapterCard), renderConditionsSpread: (renderChapterCard) => renderCompendiumConditionsSpreadView(getConditionFeatureDependencies(), renderChapterCard)
+  }) + renderCompendiumCommunityFormModal({ state, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render }) + renderTransformationFormModal(getTransformationFeatureDependencies()) + renderConditionFormModal(getConditionFeatureDependencies());
 }
 
 function renderActivateStoredCardModal(): string {
@@ -927,7 +926,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
     const editorContextCharacter = currentCharacter ?? state.characters[0] ?? demoCharacter;
     const editorScreen = state.page === "compendium" ? renderCompendium() : renderSettings(editorContextCharacter);
     appRoot.innerHTML = `<div class="editor-shell">${renderEditorHeaderView(getPlayerShellDependencies())}${editorScreen}</div>${renderPackManagementDialogs(getPackManagementDependencies())}${renderCharacterImportModal({ isOpen: state.characterImportOpen, character: state.pendingCharacterImport, error: state.characterImportError, escapeHtml })}${renderCardModalView(state.modalCardId, getCardFeatureDependencies())}${renderDomainModalView(getDomainFeatureDependencies())}${renderDeleteDomainModalView(getDomainFeatureDependencies())}${renderCompendiumCardFormModalView(getCardFeatureDependencies())}${renderDeleteCompendiumCardModalView(getCardFeatureDependencies())}${renderCompendiumItemFormModalView(getItemFeatureDependencies())}${renderDeleteCompendiumItemModalView(getItemFeatureDependencies())}${renderCompendiumItemPreviewModalView(getItemFeatureDependencies())}${renderCompendiumClassPreviewModalView(getClassFeatureDependencies())}${renderCompendiumClassFormModalView(getClassFeatureDependencies())}${renderDeleteCompendiumClassModalView(getClassFeatureDependencies())}${renderCompendiumAncestryFormModalView(getAncestryFeatureDependencies())}${renderDeleteCompendiumAncestryModalView(getAncestryFeatureDependencies())}`;
-    document.body.classList.toggle("has-modal", state.packImportOpen || state.removeAllInstalledPacksOpen || state.characterImportOpen || Boolean(state.deletingInstalledPackId) || Boolean(state.modalCardId) || state.domainModalOpen || Boolean(state.deletingDomainId) || state.cardModalOpen || Boolean(state.deletingCompendiumCardId) || state.itemDefinitionModalOpen || Boolean(state.deletingCompendiumItemId) || Boolean(state.compendiumItemPreviewId) || state.classModalOpen || Boolean(state.deletingCompendiumClassId) || Boolean(state.compendiumClassPreviewId) || state.ancestryModalOpen || Boolean(state.deletingCompendiumAncestryId) || Boolean(state.compendiumAncestryPreviewId) || Boolean(state.compendiumCommunityPreviewId) || state.transformationState.transformationModalOpen || Boolean(state.transformationState.deletingCompendiumTransformationId) || Boolean(state.transformationState.compendiumTransformationPreviewId));
+    document.body.classList.toggle("has-modal", state.packImportOpen || state.removeAllInstalledPacksOpen || state.characterImportOpen || Boolean(state.deletingInstalledPackId) || Boolean(state.modalCardId) || state.domainModalOpen || Boolean(state.deletingDomainId) || state.cardModalOpen || Boolean(state.deletingCompendiumCardId) || state.itemDefinitionModalOpen || Boolean(state.deletingCompendiumItemId) || Boolean(state.compendiumItemPreviewId) || state.classModalOpen || Boolean(state.deletingCompendiumClassId) || Boolean(state.compendiumClassPreviewId) || state.ancestryModalOpen || Boolean(state.deletingCompendiumAncestryId) || Boolean(state.compendiumAncestryPreviewId) || Boolean(state.compendiumCommunityPreviewId) || state.transformationState.transformationModalOpen || Boolean(state.transformationState.deletingCompendiumTransformationId) || Boolean(state.transformationState.compendiumTransformationPreviewId) || state.conditionState.conditionModalOpen || Boolean(state.conditionState.deletingCompendiumConditionId) || Boolean(state.conditionState.compendiumConditionPreviewId));
     if (options.preserveMainScroll) requestAnimationFrame(() => { const content = appRoot.querySelector<HTMLElement>(".content"); if (content && previousContentScrollTop !== undefined) content.scrollTop = previousContentScrollTop; if (previousDocumentScrollTop !== undefined) window.scrollTo({ top: previousDocumentScrollTop, behavior: "auto" }); });
     return;
   }
@@ -1331,7 +1330,7 @@ function bindEvents(): void {
 
     if (handleAncestryAction(target, getAncestryFeatureDependencies())) return;
     if (handleCommunityAction(target, { state, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render })) return;
-    if (handleTransformationAction(target, getTransformationFeatureDependencies())) return; if (state.character && handleCharacterTransformationAction(target, getCharacterTransformationDependencies())) return;
+    if (handleTransformationAction(target, getTransformationFeatureDependencies())) return; if (handleConditionAction(target, getConditionFeatureDependencies())) return; if (state.character && handleCharacterTransformationAction(target, getCharacterTransformationDependencies())) return;
 
     const attributeAllocation = target.closest<HTMLElement>("[data-character-attribute-allocation]");
     if (attributeAllocation) {
@@ -1444,7 +1443,7 @@ function bindEvents(): void {
       state.editingCompendiumAncestryId = undefined;
       state.deletingCompendiumAncestryId = undefined;
       state.compendiumAncestryPreviewId = undefined;
-      state.compendiumCommunityPreviewId = undefined; state.communityModalOpen = false; state.editingCompendiumCommunityId = undefined; state.deletingCompendiumCommunityId = undefined; state.transformationState.transformationModalOpen = false; state.transformationState.editingCompendiumTransformationId = undefined; state.transformationState.deletingCompendiumTransformationId = undefined; state.transformationState.compendiumTransformationPreviewId = undefined;
+      state.compendiumCommunityPreviewId = undefined; state.communityModalOpen = false; state.editingCompendiumCommunityId = undefined; state.deletingCompendiumCommunityId = undefined; state.transformationState.transformationModalOpen = false; state.transformationState.editingCompendiumTransformationId = undefined; state.transformationState.deletingCompendiumTransformationId = undefined; state.transformationState.compendiumTransformationPreviewId = undefined; state.conditionState.conditionModalOpen = false; state.conditionState.editingCompendiumConditionId = undefined; state.conditionState.deletingCompendiumConditionId = undefined; state.conditionState.compendiumConditionPreviewId = undefined;
       state.packImportOpen = false;
       state.pendingPackBundles = undefined;
       state.packImportError = undefined;
@@ -1517,7 +1516,7 @@ function bindEvents(): void {
       state.editingCompendiumAncestryId = undefined;
       state.deletingCompendiumAncestryId = undefined;
       state.compendiumAncestryPreviewId = undefined;
-      state.compendiumCommunityPreviewId = undefined; state.communityModalOpen = false; state.editingCompendiumCommunityId = undefined; state.deletingCompendiumCommunityId = undefined; state.transformationState.transformationModalOpen = false; state.transformationState.editingCompendiumTransformationId = undefined; state.transformationState.deletingCompendiumTransformationId = undefined; state.transformationState.compendiumTransformationPreviewId = undefined;
+      state.compendiumCommunityPreviewId = undefined; state.communityModalOpen = false; state.editingCompendiumCommunityId = undefined; state.deletingCompendiumCommunityId = undefined; state.transformationState.transformationModalOpen = false; state.transformationState.editingCompendiumTransformationId = undefined; state.transformationState.deletingCompendiumTransformationId = undefined; state.transformationState.compendiumTransformationPreviewId = undefined; state.conditionState.conditionModalOpen = false; state.conditionState.editingCompendiumConditionId = undefined; state.conditionState.deletingCompendiumConditionId = undefined; state.conditionState.compendiumConditionPreviewId = undefined;
       state.packImportOpen = false;
       state.pendingPackBundles = undefined;
       state.packImportError = undefined;
@@ -1769,8 +1768,7 @@ function bindEvents(): void {
     }
 
     if (target.closest('[data-action="manage-compendium-communities"]')) { state.compendiumView = "communities"; render(); return; }
-    if (target.closest('[data-action="manage-compendium-transformations"]')) { state.compendiumView = "transformations"; render(); return; }
-
+    if (target.closest('[data-action="manage-compendium-transformations"]')) { state.compendiumView = "transformations"; render(); return; } if (target.closest('[data-action="manage-compendium-conditions"]')) { state.compendiumView = "conditions"; render(); return; }
     if (target.closest('[data-action="new-compendium-domain"]')) {
       state.domainModalOpen = true;
       state.editingDomainId = undefined;
@@ -2473,7 +2471,7 @@ function bindEvents(): void {
       render({ preserveMainScroll: true });
     }
 
-    if (event.key === "Escape" && (state.ancestryModalOpen || state.deletingCompendiumAncestryId || state.compendiumAncestryPreviewId || state.communityModalOpen || state.deletingCompendiumCommunityId || state.compendiumCommunityPreviewId || state.transformationState.transformationModalOpen || state.transformationState.deletingCompendiumTransformationId || state.transformationState.compendiumTransformationPreviewId)) { state.ancestryModalOpen = false; state.editingCompendiumAncestryId = undefined; state.deletingCompendiumAncestryId = undefined; state.compendiumAncestryPreviewId = undefined; state.communityModalOpen = false; state.editingCompendiumCommunityId = undefined; state.deletingCompendiumCommunityId = undefined; state.compendiumCommunityPreviewId = undefined; state.transformationState.transformationModalOpen = false; state.transformationState.editingCompendiumTransformationId = undefined; state.transformationState.deletingCompendiumTransformationId = undefined; state.transformationState.compendiumTransformationPreviewId = undefined; render({ preserveMainScroll: true }); }
+    if (event.key === "Escape" && (state.ancestryModalOpen || state.deletingCompendiumAncestryId || state.compendiumAncestryPreviewId || state.communityModalOpen || state.deletingCompendiumCommunityId || state.compendiumCommunityPreviewId || state.transformationState.transformationModalOpen || state.transformationState.deletingCompendiumTransformationId || state.transformationState.compendiumTransformationPreviewId || state.conditionState.conditionModalOpen || state.conditionState.deletingCompendiumConditionId || state.conditionState.compendiumConditionPreviewId)) { state.ancestryModalOpen = false; state.editingCompendiumAncestryId = undefined; state.deletingCompendiumAncestryId = undefined; state.compendiumAncestryPreviewId = undefined; state.communityModalOpen = false; state.editingCompendiumCommunityId = undefined; state.deletingCompendiumCommunityId = undefined; state.compendiumCommunityPreviewId = undefined; state.transformationState.transformationModalOpen = false; state.transformationState.editingCompendiumTransformationId = undefined; state.transformationState.deletingCompendiumTransformationId = undefined; state.transformationState.compendiumTransformationPreviewId = undefined; state.conditionState.conditionModalOpen = false; state.conditionState.editingCompendiumConditionId = undefined; state.conditionState.deletingCompendiumConditionId = undefined; state.conditionState.compendiumConditionPreviewId = undefined; render({ preserveMainScroll: true }); }
 
     if (event.key === "Escape" && state.activatingStoredCardId) {
       state.activatingStoredCardId = undefined;
@@ -2527,6 +2525,7 @@ function bindEvents(): void {
 
     if (target.matches("[data-compendium-community-search]")) { state.compendiumCommunitySearch = target.value; render({ preserveMainScroll: true }); requestAnimationFrame(() => { const search = document.querySelector<HTMLInputElement>("[data-compendium-community-search]"); search?.focus({ preventScroll: true }); search?.setSelectionRange(search.value.length, search.value.length); }); }
     if (target.matches("[data-compendium-transformation-search]")) { state.transformationState.compendiumTransformationSearch = target.value; render({ preserveMainScroll: true }); requestAnimationFrame(() => { const search = document.querySelector<HTMLInputElement>("[data-compendium-transformation-search]"); search?.focus({ preventScroll: true }); search?.setSelectionRange(search.value.length, search.value.length); }); }
+    if (target.matches("[data-compendium-condition-search]")) { state.conditionState.compendiumConditionSearch = target.value; render({ preserveMainScroll: true }); requestAnimationFrame(() => { const search = document.querySelector<HTMLInputElement>("[data-compendium-condition-search]"); search?.focus({ preventScroll: true }); search?.setSelectionRange(search.value.length, search.value.length); }); }
 
     if (target.matches("[data-character-ancestry-search]")) {
       state.characterCreationAncestrySearch = target.value;

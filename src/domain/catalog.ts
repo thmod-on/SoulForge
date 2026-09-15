@@ -1,6 +1,7 @@
 import type {
   AncestryDefinition,
   CommunityDefinition,
+  ConditionDefinition,
   CardDefinition,
   ClassDefinition,
   Definition,
@@ -24,6 +25,7 @@ export type Catalog = {
   features: FeatureDefinition[];
   items: ItemDefinition[];
   transformations: TransformationDefinition[];
+  conditions: ConditionDefinition[];
 };
 
 export function createCatalog(packs: PackManifest[], definitions: Definition[]): Catalog {
@@ -38,7 +40,8 @@ export function createCatalog(packs: PackManifest[], definitions: Definition[]):
     subclasses: definitions.filter((definition): definition is SubclassDefinition => definition.type === "subclass"),
     features: definitions.filter((definition): definition is FeatureDefinition => definition.type === "feature"),
     items: definitions.filter((definition): definition is ItemDefinition => definition.type === "item"),
-    transformations: definitions.filter((definition): definition is TransformationDefinition => definition.type === "transformation")
+    transformations: definitions.filter((definition): definition is TransformationDefinition => definition.type === "transformation"),
+    conditions: definitions.filter((definition): definition is ConditionDefinition => definition.type === "condition")
   };
 }
 

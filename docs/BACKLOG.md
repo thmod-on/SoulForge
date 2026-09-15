@@ -1,6 +1,6 @@
 # Backlog do SoulForge
 
-Última revisão: 13 de setembro de 2026.
+Última revisão: 14 de setembro de 2026.
 
 ## Objetivo
 
@@ -39,17 +39,19 @@ Estados:
 
 ## Pendências ativas
 
-Os novos itens desta revisão tiveram origem no teste de mesa de 12 de setembro
-de 2026 e na revisão de produto realizada no dia seguinte.
+Os novos itens desta revisão tiveram origem nos testes de mesa de 12 de setembro
+de 2026 e nas revisões de produto realizadas nos dias 13 e 14.
 
 | ID | Prioridade | Estado | Área | Pendência | Critério de conclusão |
 | --- | --- | --- | --- | --- | --- |
 | CLS-001 | P1 | Pronto | Classes e Aptidões | Registrar escolhas persistentes solicitadas por Features e apresentá-las em Aptidões como escolhas da fonte, começando pelo nome do Patrono e pela esfera de influência do Bruxo. | Contrato reutilizável associa campos à Definition de origem sem transformá-los em Experiências; criação e edição preservam os valores na ficha; Aptidões identifica claramente a origem de classe; Bruxo registra Patrono e esfera; ao menos uma segunda Feature comprova a reutilização do mecanismo em teste. |
-| CLS-002 | P2 | Pronto | Classes e Ficha | Exibir Evasão inicial e PV inicial no detalhe da classe aberto pela ficha. | O detalhe da classe na ficha apresenta os dois valores declarados pela classe principal, distingue valores iniciais dos valores atuais e mantém o comportamento legível quando o Pack da classe estiver ausente. |
 | NOT-001 | P2 | Pronto | Anotações | Adicionar a categoria Lore e remover Item das novas anotações. | Novas anotações oferecem Lore e não oferecem Item; fichas existentes e importadas migram notas `item` para `lore` sem perda de título, conteúdo ou datas; filtros e detalhes usam o novo rótulo. |
-| TRN-003 | P1 | Pronto | Transformações e Packs | Auditar integralmente as seis transformações de Hope & Fear contra o SRD 2.0 e restaurar conteúdo omitido. | Semideus, Fantasma, Reanimado, Metamorfo, Vampiro e Lobisomem preservam regras, valores, gatilhos, encerramentos e perguntas narrativas relevantes; o Pack importável é regenerado; Compendium e ficha exibem o conteúdo completo sem depender de resumo vago. |
 | ITM-001 | P3 | A definir | Itens e Packs | Confirmar se Ração e Cantil pertencem ao conteúdo Core antes de adicioná-los ao catálogo. | Fonte e classificação confirmadas; se oficiais, entram no Pack correspondente com referência revisada; se forem apenas equipamento mundano desejado pelo SoulForge, entram em conteúdo local ou compartilhado sem atribuição oficial indevida. |
+| ITM-002 | P2 | Pronto | Itens e Packs | Auditar as traduções dos itens, começando por `Gambeson` → `Gibão`, e aplicar um vocabulário consistente em todo o catálogo. | Nomes, resumos, propriedades e termos recorrentes são comparados à fonte e ao glossário adotado pelo projeto; traduções inadequadas são corrigidas sem alterar IDs nem quebrar inventários existentes; termos originais permanecem rastreáveis quando ajudarem na busca ou na revisão. |
 | CHR-001 | P1 | Pronto | Ficha e Esperança | Registrar Cicatrizes com lembrete narrativo e aplicar sua perda permanente de um slot de Esperança. | Cada Cicatriz possui texto narrativo próprio, reduz em um o máximo derivado de Esperança, pode ser removida por decisão do GM restaurando exatamente um slot e alerta quando a última posição for perdida; bônus de recurso e fichas existentes permanecem coerentes. |
+| CND-001 | P1 | Pronto | Ficha e Condições | Permitir que a personagem receba, consulte e remova Condições por meio de indicadores visuais compactos. | A ficha persiste referências às Condições e mostra um token acessível com nome e arte ou placeholder; clicar ou tocar abre o detalhe; aplicação e remoção manual são possíveis; origens e encerramentos independentes não duplicam o token nem removem prematuramente uma Condição ainda ativa; Pack ausente preserva a referência. Ao marcar o último Estresse, Vulnerável é aplicada automaticamente pela origem `stress` e, ao limpar ao menos 1 Estresse, somente essa origem é encerrada. |
+| ATR-001 | P2 | Pronto | Atributos e Ficha | Recuperar na ficha a explicação do que cada atributo representa, hoje visível apenas durante a criação. | Clique, toque e teclado abrem uma explicação curta para cada atributo, incluindo seus verbos de referência — como Força para Erguer, Esmagar e Agarrar — sem alterar valores nem perder o contexto da ficha; o padrão funciona em desktop, celular e iPad. |
+| RSC-001 | P2 | Pronto | Ficha e Recursos | Permitir remover recursos customizados da personagem. | Somente recursos criados pela pessoa usuária podem ser removidos; recursos essenciais ou derivados permanecem protegidos; a interface identifica claramente o recurso, pede confirmação, persiste a exclusão e trata referências associadas sem deixar estado órfão. |
 | COM-001 | P1 | A definir | Comunidades e Packs | Confirmar o comportamento ao remover ou atualizar um Pack cuja comunidade é usada por personagens. | Regra de domínio documentada, interface coerente, dados antigos preservados ou migrados explicitamente e testes cobrindo remoção e atualização. |
 | COM-002 | P1 | Pronto | Comunidades | Completar a matriz de compatibilidade: Pack ausente, comunidade local, comunidade importada e ficha legada. | Cenários automatizados ou justificados como validação manual, todos com resultado esperado registrado. |
 | COM-003 | P2 | Pronto | Comunidades | Validar o fluxo de criação e a ficha em desktop e iPad horizontal. | Criação, consulta e reabertura verificadas nas duas disposições sem corte, perda de contexto ou alvo de toque inadequado. |
@@ -62,7 +64,7 @@ de 2026 e na revisão de produto realizada no dia seguinte.
 | MRK-002 | P2 | A definir | Marcadores | Permitir quantidades dinâmicas com mínimo ou derivadas de conjuntos conhecidos, como cartas de um Domínio no Loadout e Vault. | Fórmulas necessárias são declarativas, determinísticas e testadas sem consultas a texto descritivo. |
 | MRK-003 | P3 | A definir | Marcadores | Avaliar contagem regressiva, cooldown temporal e outros controles ainda não modelados. | Cada novo tipo possui caso real, regra de persistência e interação definida antes de alterar o domínio. |
 | RST-001 | P3 | A definir | Descanso | Criar acompanhamento de Projetos para o movimento de descanso longo “Trabalhar em projeto”. | Modelo, progresso, persistência e interface documentados; a ação deixa de ser apenas narrativa. |
-| CMP-001 | P3 | Condicional | Compendium | Avaliar capítulos próprios para Condições e Features. | Implementar somente quando existirem conteúdo e fluxos suficientes para justificar capítulos separados. |
+| CMP-002 | P3 | Condicional | Compendium | Avaliar um capítulo próprio para Features. | Implementar somente quando existirem conteúdo e fluxos suficientes para justificar o capítulo separado. |
 | ART-001 | P1 | Condicional | Artes | Criar manifesto de artes e verificador automatizado antes de ultrapassar 40 imagens incorporadas. | Build valida ID, caminho, dimensões, formato, peso e associação de cada arte. Gatilho: lote que levaria o projeto além de 40 imagens. |
 | ART-002 | P2 | Pronto | Artes | Padronizar geração de WebP e miniaturas em script reproduzível. | Um comando documentado gera os formatos de entrega sem edição manual obrigatória. |
 | ART-003 | P2 | Condicional | Artes e PWA | Medir memória, carregamento, rolagem no iPad e reutilização do cache sob demanda após lotes relevantes. | Resultados registrados e limites da política revistos quando necessário. Gatilho: conclusão de um lote relevante. |
@@ -102,6 +104,9 @@ rastreabilidade. O changelog continua sendo o histórico definitivo das entregas
 | RST-002 | 13/09/2026 · `0.27.0` | Toda a nomenclatura visível do fluxo passou a usar “Descanso” e “movimento de descanso” no atalho da ficha, modal, textos acessíveis, histórico e documentação de uso. IDs, tipos e contratos internos de `rest` foram preservados sem migração de fichas. |
 | CRD-002 | 13/09/2026 · `0.27.0` | Cartas do Loadout podem ser desativadas até o próximo descanso, descanso longo, nova sessão ou reativação manual. O estado pertence ao `Character.deck`; a carta permanece clicável como verso identificado pelo nome e pelo símbolo ampliado do SoulForge, deixa de fornecer marcadores e bônus passivos e retorna somente no evento escolhido. Importação, progressão e trocas com o Vault preservam a consistência desse estado. |
 | TRN-001 | 10/09/2026 · `0.26.20` | Personagens passaram a referenciar uma única transformação persistente, com concessão, substituição, remoção, estado de Pack ausente, apresentação fora do limite do Loadout e marcadores declarativos cobertos por testes. |
+| TRN-003 | 14/09/2026 · `0.28.0` | As seis transformações de Hope & Fear foram auditadas contra as páginas 41–44 do SRD 2.0. O Pack local `1.1.0-local` restaura Features completas, valores, alcances, custos, gatilhos, encerramentos e as seis perguntas narrativas de cada entrada; seu gerador valida essas invariantes e Compendium e ficha têm cobertura para a exibição integral. |
+| CLS-002 | 14/09/2026 · `0.28.0` | O detalhe da classe aberto pela ficha passou a mostrar Evasão inicial e PV inicial declarados pela classe, sem misturá-los com os valores atuais da personagem. Fichas legadas localizam a Definition pelo nome e a ausência do Pack recebe uma explicação explícita. |
+| CMP-001 | 14/09/2026 · `0.28.0` | O Compendium ganhou um capítulo próprio e pesquisável para Condições, com criação, edição e exclusão local, detalhe de efeito e encerramento, identificação da fonte e estado vazio para Pack ausente. O contrato `ConditionDefinition` e a validação de Packs cobrem condições padrão e especiais; o Pack local `Core - Condições` reúne Oculto, Restringido e Vulnerável conforme o SRD 2.0. Artes autorais são resolvidas pelos IDs exatos dessas três condições na miniatura e no detalhe, sem antecipar os tokens da ficha. |
 
 ## Referências
 
@@ -111,6 +116,7 @@ rastreabilidade. O changelog continua sendo o histórico definitivo das entregas
 - [Behaviors](DOMAIN_BEHAVIORS.md)
 - [Comunidades](COMMUNITIES.md)
 - [Transformações](TRANSFORMATIONS.md)
+- [Condições](CONDITIONS.md)
 - [Auditoria de classes e efeitos](CLASS_EFFECTS_AUDIT.md)
 - [Revisão de marcadores de cartas](GAME_MARKER_REVIEW.md)
 - [Política de artes e assets visuais](ASSET_POLICY.md)

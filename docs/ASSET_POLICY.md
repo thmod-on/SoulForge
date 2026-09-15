@@ -181,6 +181,12 @@ Em 8 de setembro de 2026, as 13 classes dos Packs Core e Hope & Fear passaram a 
 
 O processo específico, os prompts, critérios de aprovação e regras de manutenção das classes estão registrados em [Artes de classe](CLASS_ARTWORK.md).
 
+Em 14 de setembro de 2026, Oculto, Restringido e Vulnerável receberam três
+artes quadradas JPEG de 960 × 960, totalizando 409.611 bytes. O precache do
+build `0.28.0` passou a 3.576,92 KiB com 48 entradas, ainda dentro da faixa
+saudável do Estágio 1. As composições foram verificadas também no recorte de
+token de 48 px; a integração dos tokens permanece planejada separadamente.
+
 ## Pendências planejadas
 
 1. Criar o manifesto e o verificador automatizado antes de ultrapassar 40 artes.

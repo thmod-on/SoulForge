@@ -71,4 +71,14 @@ describe("validação de Packs", () => {
     const pack = validatePackBundle({ format: "soulforge-pack-v1", manifest: { ...manifest, source: { name: "Fonte oficial", url: "https://www.daggerheart.com/srd/", version: "2.0", reviewedAt: "2026-08-30" } }, definitions: [transformation] });
     expect(pack.definitions[0]?.type).toBe("transformation");
   });
+
+  it("aceita uma condição declarativa com efeito e encerramento", () => {
+    const condition = { id: "condition.test.vulnerable", type: "condition" as const, packId: manifest.id, name: "Vulnerável", summary: "Defesas expostas.", category: "standard" as const, effect: "Rolagens contra a criatura têm vantagem.", clearing: "Termina quando a fonte indicar." };
+    expect(validatePackBundle({ format: "soulforge-pack-v1", manifest, definitions: [condition] }).definitions[0]).toMatchObject({ type: "condition", category: "standard" });
+  });
+
+  it("rejeita uma condição sem orientação de encerramento", () => {
+    const condition = { id: "condition.test.invalid", type: "condition" as const, packId: manifest.id, name: "Inválida", summary: "Sem encerramento.", category: "standard" as const, effect: "Um efeito.", clearing: "" };
+    expect(() => validatePackBundle({ format: "soulforge-pack-v1", manifest, definitions: [condition] })).toThrow("efeito e encerramento válidos");
+  });
 });

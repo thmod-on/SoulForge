@@ -3059,6 +3059,63 @@ textarea:disabled {
   font-weight: 700;
 }
 
+.character-identity-class-stats {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 1rem;
+  border: 1px solid rgba(195, 155, 255, 0.3);
+  border-radius: var(--radius-surface);
+  padding: 0.75rem;
+  background: rgba(195, 155, 255, 0.06);
+}
+
+.character-identity-class-stats > h3,
+.character-identity-class-stats > p {
+  margin: 0;
+}
+
+.character-identity-class-stats > h3 {
+  color: var(--color-muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.character-identity-class-stats > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.character-identity-class-stats > div > span {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-left: 2px solid rgba(195, 155, 255, 0.62);
+  padding: 0.35rem 0.55rem;
+}
+
+.character-identity-class-stats small {
+  color: var(--color-muted);
+}
+
+.character-identity-class-stats strong {
+  color: var(--color-gold);
+  font-size: 1.15rem;
+}
+
+.character-identity-class-stats.is-unavailable {
+  border-style: dashed;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.character-identity-class-stats.is-unavailable > p {
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
 .character-identity-facts,
 .character-identity-feature-grid {
   display: grid;
@@ -3733,12 +3790,19 @@ textarea:disabled {
 .character-transformation-missing > span { color: #ef7791; background: rgba(207, 50, 74, 0.13); }
 
 .character-transformation-picker-modal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   width: min(62rem, calc(100vw - 2rem));
-  max-height: min(48rem, calc(100dvh - 2rem));
-  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  height: min(48rem, var(--sf-modal-available-height, calc(100dvh - 2rem)));
+  max-height: var(--sf-modal-available-height, calc(100dvh - 2rem));
   gap: 0.85rem;
+  border: 1px solid rgba(195, 155, 255, 0.62);
   border-radius: var(--radius-surface);
+  padding: 1.1rem;
   overflow: hidden;
+  background: var(--color-panel);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.56);
 }
 
 .character-transformation-picker-modal > header { padding-right: 3rem; }
@@ -3747,7 +3811,7 @@ textarea:disabled {
 .character-transformation-picker-modal > header h2 { margin-top: 0.35rem; }
 .character-transformation-picker-modal > header p { margin-top: 0.3rem; color: var(--color-muted); }
 .character-transformation-current { margin: 0; border-left: 2px solid #ef476f; padding: 0.45rem 0.65rem; color: var(--color-muted); background: rgba(207, 50, 74, 0.06); }
-.character-transformation-picker-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; gap: 0.65rem; min-height: 0; padding: 0.15rem 0.25rem 0.15rem 0; overflow-y: auto; }
+.character-transformation-picker-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; flex: 1 1 auto; gap: 0.65rem; min-height: 0; padding: 0.15rem 0.25rem 0.15rem 0; overflow-y: auto; overscroll-behavior: contain; }
 
 .character-transformation-option {
   position: relative;
@@ -10555,4 +10619,25 @@ body:has(.modal-backdrop) {
   .sidebar .portrait-art { height: 5rem; }
   .sidebar .sidebar-section { padding: 0.5rem; }
   .sidebar .sidebar-section-title { margin-bottom: 0.4rem; }
+}
+
+/* Conditions chapter */
+.condition-results { align-items: stretch; }
+.compendium-condition-result { border-color: rgba(83, 190, 197, 0.28); }
+.condition-glyph {
+  color: #91e0df;
+  background: radial-gradient(circle at center, rgba(83, 190, 197, 0.24), transparent 48%), linear-gradient(145deg, rgba(17, 33, 43, 0.98), rgba(12, 7, 18, 0.98));
+  font-size: 2rem;
+}
+.condition-art { background-position: center; background-size: cover; }
+.condition-result-rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.45rem; margin-top: 0.45rem; }
+.condition-result-rules > span { display: grid; gap: 0.12rem; border-left: 2px solid rgba(83, 190, 197, 0.5); padding-left: 0.5rem; }
+.condition-result-rules > span:last-child { border-color: rgba(195, 155, 255, 0.55); }
+.condition-result-rules b { color: var(--color-gold); font-size: 0.65rem; text-transform: uppercase; }
+.condition-result-rules small { color: var(--color-muted); line-height: 1.4; }
+.condition-detail-source { margin-top: 1rem; color: var(--color-muted); font-size: 0.75rem; }
+.condition-form-modal textarea { min-height: 6rem; }
+
+@media (max-width: 680px) {
+  .condition-result-rules { grid-template-columns: 1fr; }
 }

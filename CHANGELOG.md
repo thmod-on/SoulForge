@@ -4,6 +4,27 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.28.0]
+
+### Adicionado
+
+- o Compendium recebe um capítulo próprio para Condições, com pesquisa, detalhes de efeito e encerramento e criação, edição e exclusão de conteúdo local;
+- Packs podem declarar condições padrão ou especiais por meio de `ConditionDefinition`, com validação de categoria, efeito, encerramento e observações;
+- Oculto, Restringido e Vulnerável recebem artes autorais associadas por ID estável na miniatura e no detalhe, preservando imagens fornecidas pelos Packs.
+
+### Alterado
+
+- o detalhe da classe aberto pela ficha passa a exibir a Evasão e os PV iniciais declarados pela classe, sem confundi-los com os valores atuais da personagem;
+- o seletor de transformação passa a ter rolagem própria para acomodar descrições maiores;
+- a apresentação de transformações esclarece que elas integram a identidade da personagem sem ocupar o limite do Loadout;
+- a auditoria do Pack local de transformações de Hope & Fear passa a preservar regras e perguntas narrativas completas do SRD 2.0.
+
+### Compatibilidade
+
+- condições importadas e locais permanecem Definitions compartilhadas; esta versão ainda não aplica condições nem tokens à ficha;
+- fichas sem o Pack de classe continuam exibindo um aviso no lugar dos valores iniciais, sem alterar seus dados atuais;
+- conteúdo oficial de condições e transformações continua restrito aos Packs locais privados e não integra o build público.
+
 ## [0.27.0]
 
 ### Adicionado

@@ -1056,19 +1056,20 @@ Pode conceder Features.
 
 ## Descrição
 
-Representa uma condição oficial do sistema.
+Representa uma condição padrão, especial ou local do sistema.
 
 ---
 
 ## Responsabilidade
 
-Descrever efeitos aplicáveis ao Character.
+Descrever seu efeito e a orientação de encerramento sem guardar estado de uma
+partida.
 
 ---
 
 ## Relações
 
-É referenciada pelo State.
+É pesquisável no Compendium e pode ser referenciada pelo State.
 
 ---
 

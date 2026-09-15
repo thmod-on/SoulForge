@@ -21,6 +21,11 @@ O Pack local `Hope & Fear - Transformações` contém:
 - Vampiro;
 - Lobisomem.
 
+Na versão local `1.1.0-local`, as seis entradas preservam as duas Features,
+valores, alcances, custos, gatilhos, encerramentos e as seis perguntas narrativas
+relevantes do SRD 2.0. As regras completas ficam nos campos `benefit`,
+`drawback` e `rulesNotes`; o `summary` serve apenas como apresentação breve.
+
 O texto do Lobisomem segue a errata oficial de 25 de agosto de 2026: em Forma de Lobo, ao **rolar com Esperança**, a personagem deve marcar 1 Estresse.
 
 ## Modelo declarativo
@@ -78,4 +83,7 @@ indisponível. Nenhuma regra é inferida do nome ou dos textos armazenados.
 
 ## Fontes e revisão
 
-Precedência adotada: errata oficial, SRD vigente e materiais finais oficiais. A revisão atual usa o [Daggerheart SRD 2.0](https://www.daggerheart.com/srd/) e a [errata de Hope & Fear de 25 de agosto de 2026](https://www.daggerheart.com/wp-content/uploads/2026/08/Daggerheart-Hope-and-Fear-08-25-2026.pdf).
+Precedência adotada: errata oficial, SRD vigente e materiais finais oficiais. A
+auditoria integral mais recente foi concluída em 14 de setembro de 2026, usando
+as páginas 41–44 do [Daggerheart SRD 2.0](https://www.daggerheart.com/wp-content/uploads/2026/08/DH_SRD_2_2026_08_25.pdf)
+e a [errata de Hope & Fear de 25 de agosto de 2026](https://www.daggerheart.com/wp-content/uploads/2026/08/Daggerheart-Hope-and-Fear-08-25-2026.pdf).

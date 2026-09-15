@@ -23,7 +23,7 @@ Todo Pack gerado pelo SoulForge deve seguir estas regras:
 
 Packs são unidades versionadas de conteúdo declarativo. Eles fornecem
 Definitions reutilizáveis para o catálogo, como cartas, itens, classes,
-domínios, ancestralidades, comunidades, transformações e Features.
+domínios, ancestralidades, comunidades, transformações, condições e Features.
 
 Um Pack não contém personagens, campanhas nem estado de jogo.
 
@@ -40,6 +40,7 @@ packs/<pack-id>/
   classes/
   ancestries/
   communities/
+  conditions/
 ```
 
 Pastas sem conteúdo não precisam existir. Cada arquivo JSON representa uma única Definition independente.

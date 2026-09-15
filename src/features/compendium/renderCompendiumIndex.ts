@@ -20,6 +20,7 @@ export type CompendiumIndexDependencies = {
   catalog: Catalog;
   escapeHtml(value: string): string;
   renderTransformationsSpread(renderChapterCard: (chapter: CompendiumChapter) => string): string;
+  renderConditionsSpread(renderChapterCard: (chapter: CompendiumChapter) => string): string;
 };
 
 export function renderCompendiumIndex(deps: CompendiumIndexDependencies): string {
@@ -34,6 +35,7 @@ export function renderCompendiumIndex(deps: CompendiumIndexDependencies): string
         ${renderBookmark(2, "Itens | Classes", spread)}
         ${renderBookmark(3, "Ancestralidades | Comunidades", spread)}
         ${renderBookmark(4, "Transformações", spread)}
+        ${renderBookmark(5, "Condições", spread)}
       </nav>
       ${spread === 1
         ? renderSpread("Dominios e cartas do Compendium", domainChapter(catalog), cardChapter(catalog), renderChapterCard)
@@ -41,7 +43,9 @@ export function renderCompendiumIndex(deps: CompendiumIndexDependencies): string
           ? renderSpread("Itens e classes do Compendium", itemChapter(catalog), classChapter(catalog), renderChapterCard)
           : spread === 3
             ? renderSpread("Ancestralidades e comunidades do Compendium", ancestryChapter(catalog), communityChapter(catalog), renderChapterCard)
-            : deps.renderTransformationsSpread(renderChapterCard)}
+            : spread === 4
+              ? deps.renderTransformationsSpread(renderChapterCard)
+              : deps.renderConditionsSpread(renderChapterCard)}
     </main>
   `;
 }

@@ -20,7 +20,7 @@ export function renderSettings(options: RenderSettingsOptions): string {
 export function getPackDefinitionSummary(definitions: Definition[]): string {
   const counts = new Map<string, number>();
   definitions.forEach((definition) => counts.set(definition.type, (counts.get(definition.type) ?? 0) + 1));
-  const labels: Record<string, string> = { ancestry: "ancestralidades", feature: "caracteristicas", card: "cartas", item: "itens", class: "classes", subclass: "subclasses", domain: "dominios" };
+  const labels: Record<string, string> = { ancestry: "ancestralidades", feature: "caracteristicas", card: "cartas", item: "itens", class: "classes", subclass: "subclasses", domain: "dominios", community: "comunidades", transformation: "transformações", condition: "condições" };
   return [...counts.entries()].map(([type, count]) => `${count} ${labels[type] ?? type}`).join(" · ");
 }
 

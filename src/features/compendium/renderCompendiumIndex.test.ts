@@ -6,7 +6,7 @@ const escapeHtml = (value: string) => value.replaceAll("&", "&amp;").replaceAll(
 
 describe("índice do Compendium", () => {
   it("marca o capítulo atual e mostra as ações da abertura", () => {
-    const html = renderCompendiumIndex({ spread: 1, catalog: createCatalog([], []), escapeHtml, renderTransformationsSpread: () => "" });
+    const html = renderCompendiumIndex({ spread: 1, catalog: createCatalog([], []), escapeHtml, renderTransformationsSpread: () => "", renderConditionsSpread: () => "" });
 
     expect(html).toContain('data-compendium-spread="1" aria-current="page"');
     expect(html).toContain('data-action="new-compendium-domain"');
@@ -14,9 +14,16 @@ describe("índice do Compendium", () => {
   });
 
   it("delega a composição do capítulo de transformações", () => {
-    const html = renderCompendiumIndex({ spread: 4, catalog: createCatalog([], []), escapeHtml, renderTransformationsSpread: (renderCard) => renderCard({ eyebrow: "", title: "Transformações", summary: "Resumo", count: 0, countLabel: "Cadastradas", primaryAction: "Nova", secondaryAction: "Pesquisar", details: [] }) });
+    const html = renderCompendiumIndex({ spread: 4, catalog: createCatalog([], []), escapeHtml, renderTransformationsSpread: (renderCard) => renderCard({ eyebrow: "", title: "Transformações", summary: "Resumo", count: 0, countLabel: "Cadastradas", primaryAction: "Nova", secondaryAction: "Pesquisar", details: [] }), renderConditionsSpread: () => "" });
 
     expect(html).toContain("Transformações");
     expect(html).toContain('data-compendium-spread="4" aria-current="page"');
+  });
+
+  it("delega a composição do capítulo de condições", () => {
+    const html = renderCompendiumIndex({ spread: 5, catalog: createCatalog([], []), escapeHtml, renderTransformationsSpread: () => "", renderConditionsSpread: (renderCard) => renderCard({ eyebrow: "", title: "Condições", summary: "Resumo", count: 0, countLabel: "Cadastradas", primaryAction: "Nova", secondaryAction: "Pesquisar", details: [] }) });
+
+    expect(html).toContain("Condições");
+    expect(html).toContain('data-compendium-spread="5" aria-current="page"');
   });
 });

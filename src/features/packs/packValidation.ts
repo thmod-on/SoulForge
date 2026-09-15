@@ -12,7 +12,7 @@ export function validatePackBundle(value: unknown): PackBundle {
   if (manifest.source !== undefined && (!manifest.source || typeof manifest.source !== "object" || !hasSourceMetadata(manifest.source))) throw new Error("A fonte declarada no manifesto do Pack é inválida.");
   if (!bundle.definitions.length) throw new Error("O Pack não possui Definitions para importar.");
 
-  const knownTypes = new Set(["domain", "card", "item", "class", "subclass", "feature", "ancestry", "community", "transformation"]);
+  const knownTypes = new Set(["domain", "card", "item", "class", "subclass", "feature", "ancestry", "community", "transformation", "condition"]);
   const ids = new Set<string>();
   for (const definition of bundle.definitions) {
     if (!isDefinitionShapeValid(definition, manifest)) throw new Error("Uma Definition é inválida ou não pertence ao Pack informado.");
@@ -74,6 +74,11 @@ export function validatePackBundle(value: unknown): PackBundle {
       throw new Error(`A transformação “${transformation.name}” precisa declarar benefício, desvantagem e perguntas narrativas.`);
     }
     if (!isGameMarkerListValid(transformation.gameMarkers)) throw new Error(`A transformação “${transformation.name}” possui marcadores de jogo inválidos.`);
+  }
+  for (const condition of definitions.filter((definition) => definition.type === "condition")) {
+    if (!["standard", "special"].includes(condition.category) || typeof condition.effect !== "string" || !condition.effect.trim() || typeof condition.clearing !== "string" || !condition.clearing.trim() || (condition.image !== undefined && (typeof condition.image !== "string" || !condition.image.trim())) || (condition.rulesNotes !== undefined && (!Array.isArray(condition.rulesNotes) || condition.rulesNotes.some((note) => typeof note !== "string" || !note.trim())))) {
+      throw new Error(`A condição “${condition.name}” precisa declarar categoria, efeito e encerramento válidos.`);
+    }
   }
   return { format: "soulforge-pack-v1", manifest: manifest as PackManifest, definitions };
 

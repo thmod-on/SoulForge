@@ -1,7 +1,15 @@
 import type { Catalog } from "../../domain/catalog";
-import type { AncestryDefinition, Character, CharacterSkill, FeatureActivationDefinition, FeatureDefinition } from "../../domain/types";
+import type { AncestryDefinition, Character, CharacterSkill, ClassDefinition, FeatureActivationDefinition, FeatureDefinition } from "../../domain/types";
 
 type CharacterIdentitySection = "character" | "class" | "ancestry" | "community";
+
+function renderClassStartingStats(classDefinition: ClassDefinition | undefined): string {
+  if (!classDefinition) {
+    return `<section class="character-identity-class-stats is-unavailable" aria-labelledby="character-class-starting-stats-title"><h3 id="character-class-starting-stats-title">Valores iniciais da classe</h3><p>Evasão e PV iniciais indisponíveis porque a Definition da classe não foi encontrada no Compendium instalado.</p></section>`;
+  }
+  const startingEvasion = classDefinition.startingEvasion ?? (classDefinition as ClassDefinition & { baseEvasion?: number }).baseEvasion ?? 0;
+  return `<section class="character-identity-class-stats" aria-labelledby="character-class-starting-stats-title"><h3 id="character-class-starting-stats-title">Valores iniciais da classe</h3><div><span><small>Evasão inicial</small><strong>${startingEvasion}</strong></span><span><small>PV inicial</small><strong>${classDefinition.startingHitPoints}</strong></span></div></section>`;
+}
 
 export type CharacterIdentityModalDependencies = {
   character?: Character;
@@ -76,7 +84,7 @@ export function renderCharacterIdentityModal(deps: CharacterIdentityModalDepende
       label: "Classe",
       title: identity.className,
       summary: identity.subclassName ? `Subclasse: ${identity.subclassName}` : "Subclasse não definida",
-      body: `${classDefinition?.summary ? `<p>${escapeHtml(classDefinition.summary)}</p>` : ""}<section class="character-identity-detail-section"><h3>Características de classe</h3><div class="character-identity-feature-grid">${classFeatures.map((feature) => featureCard(feature, "")).join("") || "<p>Não há características de classe disponíveis.</p>"}</div></section><section class="character-identity-detail-section"><h3>${escapeHtml(subclass?.name ?? "Subclasse")}</h3><div class="character-identity-feature-grid">${subclassFeatures.map(({ feature, label, locked }) => featureCard(feature, label, undefined, locked)).join("") || "<p>Nenhuma característica de subclasse foi encontrada.</p>"}</div></section>${deps.featureActivationError ? `<p class="form-error">${escapeHtml(deps.featureActivationError)}</p>` : ""}`
+      body: `${classDefinition?.summary ? `<p>${escapeHtml(classDefinition.summary)}</p>` : ""}${renderClassStartingStats(classDefinition)}<section class="character-identity-detail-section"><h3>Características de classe</h3><div class="character-identity-feature-grid">${classFeatures.map((feature) => featureCard(feature, "")).join("") || "<p>Não há características de classe disponíveis.</p>"}</div></section><section class="character-identity-detail-section"><h3>${escapeHtml(subclass?.name ?? "Subclasse")}</h3><div class="character-identity-feature-grid">${subclassFeatures.map(({ feature, label, locked }) => featureCard(feature, label, undefined, locked)).join("") || "<p>Nenhuma característica de subclasse foi encontrada.</p>"}</div></section>${deps.featureActivationError ? `<p class="form-error">${escapeHtml(deps.featureActivationError)}</p>` : ""}`
     },
     ancestry: {
       label: "Ancestralidade",

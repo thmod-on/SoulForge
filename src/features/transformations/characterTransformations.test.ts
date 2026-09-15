@@ -2,9 +2,26 @@ import { describe, expect, it, vi } from "vitest";
 import { createCatalog } from "../../domain/catalog";
 import { demoCharacter } from "../../domain/demoCharacter";
 import type { TransformationDefinition } from "../../domain/types";
-import { assignCharacterTransformation, getCharacterTransformation, handleCharacterTransformationAction, removeCharacterTransformation, renderCharacterTransformationPanel } from "./characterTransformations";
+import { assignCharacterTransformation, getCharacterTransformation, handleCharacterTransformationAction, removeCharacterTransformation, renderCharacterTransformationDialogs, renderCharacterTransformationPanel } from "./characterTransformations";
 
-const transformation: TransformationDefinition = { id: "transformation.test.vampire", type: "transformation", packId: "test", name: "Vampiro", summary: "Uma fome ancestral.", benefit: "Sentidos sobrenaturais.", drawback: "Fome constante.", narrativeQuestions: ["Quem transformou você?"] };
+const transformation: TransformationDefinition = {
+  id: "transformation.test.vampire",
+  type: "transformation",
+  packId: "test",
+  name: "Vampiro",
+  summary: "Uma fome ancestral.",
+  benefit: "Presas causam d6 de dano físico usando sua Proficiência.",
+  drawback: "Sem Sangue, rolagens de ação e reação têm desvantagem.",
+  narrativeQuestions: [
+    "Quem transformou você?",
+    "Como sua fome altera suas escolhas?",
+    "Que lembrança mortal você preserva?",
+    "Quem conhece sua natureza?",
+    "Que regra limita como se alimenta?",
+    "O que seu criador ainda exige?"
+  ],
+  rulesNotes: ["Você pode manter até 6 marcadores de Sangue."]
+};
 const catalog = createCatalog([], [transformation]);
 const escapeHtml = (value: string) => value;
 
@@ -31,6 +48,33 @@ describe("transformação do personagem", () => {
     expect(html).toContain("Vampiro");
     expect(html).toContain("não ocupa o Loadout");
     expect(html).not.toContain("data-card-modal-id");
+  });
+
+  it("mostra no detalhe da ficha as regras e todas as perguntas da Definition", () => {
+    const character = { ...demoCharacter, identity: { ...demoCharacter.identity, transformationId: transformation.id } };
+    const html = renderCharacterTransformationDialogs({
+      state: { characterTransformationPickerOpen: false, characterTransformationDetailOpen: true, characterTransformationRemoveOpen: false },
+      character,
+      catalog,
+      escapeHtml,
+      saveCharacter: vi.fn(),
+      render: vi.fn()
+    });
+    expect(html).toContain("Presas causam d6");
+    expect(html).toContain("até 6 marcadores de Sangue");
+    for (const question of transformation.narrativeQuestions) expect(html).toContain(question);
+  });
+
+  it("mantém a lista de escolha em uma região de rolagem própria", () => {
+    const html = renderCharacterTransformationDialogs({
+      state: { characterTransformationPickerOpen: true, characterTransformationDetailOpen: false, characterTransformationRemoveOpen: false },
+      character: demoCharacter,
+      catalog,
+      escapeHtml,
+      saveCharacter: vi.fn(),
+      render: vi.fn()
+    });
+    expect(html).toContain('class="character-transformation-picker-list sf-scroll-region"');
   });
 
   it("preserva e sinaliza uma referência cujo Pack está ausente", () => {

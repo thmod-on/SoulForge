@@ -1,4 +1,4 @@
-export type DefinitionType = "domain" | "card" | "item" | "class" | "subclass" | "feature" | "ancestry" | "community" | "transformation";
+export type DefinitionType = "domain" | "card" | "item" | "class" | "subclass" | "feature" | "ancestry" | "community" | "transformation" | "condition";
 
 export type ResourceTrack = {
   id: string;
@@ -375,6 +375,16 @@ export type TransformationDefinition = BaseDefinition & {
   rulesNotes?: string[];
 };
 
+/** Efeito de estado reutilizável. A aplicação em personagens pertence ao estado da ficha. */
+export type ConditionDefinition = BaseDefinition & {
+  type: "condition";
+  category: "standard" | "special";
+  effect: string;
+  clearing: string;
+  image?: string;
+  rulesNotes?: string[];
+};
+
 export type FeatureDefinition = BaseDefinition & {
   type: "feature";
   sourceType: "class" | "subclass" | "ancestry" | "community";
@@ -386,7 +396,7 @@ export type FeatureDefinition = BaseDefinition & {
   activation?: FeatureActivationDefinition;
 };
 
-export type Definition = DomainDefinition | CardDefinition | ItemDefinition | ClassDefinition | SubclassDefinition | AncestryDefinition | CommunityDefinition | TransformationDefinition | FeatureDefinition;
+export type Definition = DomainDefinition | CardDefinition | ItemDefinition | ClassDefinition | SubclassDefinition | AncestryDefinition | CommunityDefinition | TransformationDefinition | ConditionDefinition | FeatureDefinition;
 
 export type InventoryEntry = {
   /** Identificador da pilha no inventário. Ausente em fichas antigas e atribuído na próxima alteração. */
