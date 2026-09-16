@@ -1,12 +1,12 @@
 import type { Attribute } from "../../domain/types";
 
-export const characterCreationAttributes: Array<{ id: Attribute["id"]; label: string; description: string }> = [
-  { id: "dex", label: "Agilidade", description: "Correr, saltar e manobrar." },
-  { id: "for", label: "Força", description: "Erguer, esmagar e agarrar." },
-  { id: "cha", label: "Finesse", description: "Controlar, esconder e operar." },
-  { id: "wil", label: "Instinto", description: "Perceber, sentir e navegar." },
-  { id: "con", label: "Presença", description: "Encantar, performar e enganar." },
-  { id: "int", label: "Conhecimento", description: "Recordar, analisar e compreender." }
+export const characterCreationAttributes: Array<{ id: Attribute["id"]; label: string; description: string; verbs: readonly [string, string, string] }> = [
+  { id: "dex", label: "Agilidade", description: "Correr, saltar e manobrar.", verbs: ["Correr", "Saltar", "Manobrar"] },
+  { id: "for", label: "Força", description: "Erguer, esmagar e agarrar.", verbs: ["Erguer", "Esmagar", "Agarrar"] },
+  { id: "cha", label: "Finesse", description: "Controlar, esconder e operar.", verbs: ["Controlar", "Esconder", "Operar"] },
+  { id: "wil", label: "Instinto", description: "Perceber, sentir e navegar.", verbs: ["Perceber", "Sentir", "Navegar"] },
+  { id: "con", label: "Presença", description: "Encantar, performar e enganar.", verbs: ["Encantar", "Performar", "Enganar"] },
+  { id: "int", label: "Conhecimento", description: "Recordar, analisar e compreender.", verbs: ["Recordar", "Analisar", "Compreender"] }
 ];
 
 const allocation = [-1, 0, 0, 1, 1, 2] as const;

@@ -4,6 +4,27 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.30.0]
+
+### Adicionado
+
+- os seis atributos da ficha agora abrem um detalhe acessível por clique, toque e teclado, apresentando valor atual, verbos de referência e os estados Aprimorado ou Atributo de Conjuração sem permitir alterações acidentais;
+- os verbos usados no detalhe compartilham a mesma fonte de conteúdo da criação de personagem, mantendo as explicações consistentes entre os dois fluxos.
+
+### Alterado
+
+- confirmações destrutivas de personagem, transformação, Packs, Cicatrizes e conteúdos locais do Compendium passaram a usar o mesmo padrão visual, com fechamento explícito, consequência destacada e ações consistentes;
+- a sidebar recebeu espaçamentos mais compactos sem reduzir os alvos de toque dos recursos.
+
+### Corrigido
+
+- o botão de Cicatrizes deixa de deslocar verticalmente o recurso Armadura e a sidebar não exibe mais uma rolagem residual nas alturas de tela suportadas;
+- confirmações de remoção e exclusão que dependiam apenas da classe legada `confirm-modal` voltaram a apresentar superfície, hierarquia e bordas completas.
+
+### Compatibilidade
+
+- atributos, recursos, Cicatrizes e Definitions existentes não exigem migração; as mudanças desta versão afetam somente interação e apresentação.
+
 ## [0.29.0]
 
 ### Adicionado

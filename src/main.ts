@@ -88,6 +88,7 @@ import {
 import { getEffectiveDefense, synchronizeArmorResource } from "./features/inventory/combatModifiers";
 import { getActiveSheetModifierEffects, synchronizeCharacterSheetModifiers } from "./features/player/sheetModifiers";
 import { handleCharacterScarAction, handleCharacterScarEscape, renderCharacterScarDialogs, type CharacterScarDependencies } from "./features/player/characterScars";
+import { getAttributeLabel, handleAttributeDetailAction, handleAttributeDetailEscape, renderAttributeDetailModal } from "./features/player/attributeDetails";
 import { getActiveFeatureEffectDefenseModifiers, getActiveFeatureEffects, getFeatureActivationForCharacter } from "./features/feature-effects/featureEffects";
 import { handleFeatureEffectAction, renderFeatureTokenActivationDialog, type FeatureTokenActivationDialogState } from "./features/feature-effects/featureTokenActivation";
 import { renderCharacterIdentityModal as renderCharacterIdentityModalView } from "./features/character-identity/renderCharacterIdentityModal";
@@ -260,6 +261,7 @@ const state: {
   deletingCharacterId?: string;
   characterPortraitModalOpen: boolean;
   characterPortraitPreviewOpen: boolean;
+  attributeDetailId?: Attribute["id"];
   characterIdentityModalSection?: "character" | "class" | "ancestry" | "community";
   gameMarkerDieDialog?: { markerKey: string; dieId: string; mode: "result" | "consume" };
   storedDiceDialog?: StoredDiceDialogState;
@@ -389,19 +391,6 @@ function progressPercent(value: number, max: number): number {
   return Math.min(100, Math.round((value / max) * 100));
 }
 
-function attributeTitle(label: string): string {
-  const labels: Record<string, string> = {
-    AGI: "Agilidade",
-    FOR: "Forca",
-    FIN: "Finesse",
-    INS: "Instinto",
-    PRE: "Presenca",
-    CON: "Conhecimento"
-  };
-
-  return labels[label] ?? label;
-}
-
 function getItemDefinition(definitionId: string): ItemDefinition | undefined {
   const definition = findDefinition(catalog, definitionId);
   return definition?.type === "item" ? definition : undefined;
@@ -437,7 +426,7 @@ function getPlayerShellDependencies(): PlayerShellDependencies {
     topNavigation: topNavItems,
     editorNavigation: sideNavItems,
     escapeHtml,
-    attributeTitle,
+    attributeTitle: getAttributeLabel,
     progressPercent,
     getSpellcastAttributeId: (character) => getSpellcastAttributeId(character.identity.primarySubclassId, catalog.subclasses.find((subclass) => subclass.id === character.identity.primarySubclassId)),
     getCommunityName: (character) => catalog.communities.find((community) => community.id === character.identity.primaryCommunityId)?.name ?? (character.identity.community || "Não definida"),
@@ -598,7 +587,7 @@ function getProgressionDialogDependencies(): ProgressionDialogDependencies {
   return {
     state,
     escapeHtml,
-    attributeTitle,
+    attributeTitle: getAttributeLabel,
     getTierForLevel,
     getProgression,
     getProgressionCardCandidates: (character) => getProgressionCardCandidates(character, catalog, state),
@@ -770,7 +759,7 @@ function renderDeleteCharacterModal(): string {
   const character = state.characters.find((entry) => entry.id === state.deletingCharacterId);
   if (!character) return "";
 
-  return `<div class="modal-backdrop" data-modal-backdrop><section class="confirm-modal danger-modal" role="dialog" aria-modal="true" aria-labelledby="delete-character-title"><h2 id="delete-character-title">Excluir personagem?</h2><p>A ficha de <strong>${escapeHtml(character.identity.name)}</strong>, incluindo inventário, anotações e progresso, será removida deste dispositivo.</p><div class="danger-summary"><strong>!</strong><span>Esta ação não pode ser desfeita.</span></div><div class="confirmation-actions"><button class="sf-action sf-action--secondary secondary-action" type="button" data-action="cancel-delete-character">Cancelar</button><button class="sf-action sf-action--danger danger-action" type="button" data-action="confirm-delete-character">Excluir personagem</button></div></section></div>`;
+  return `<div class="modal-backdrop" data-modal-backdrop><section class="container-modal danger-modal" role="dialog" aria-modal="true" aria-labelledby="delete-character-title"><button class="modal-close" type="button" data-action="cancel-delete-character" aria-label="Cancelar exclusão">×</button><span class="resource-modal-label">Excluir personagem</span><h2 id="delete-character-title">Excluir personagem?</h2><p>A ficha de <strong>${escapeHtml(character.identity.name)}</strong>, incluindo inventário, anotações e progresso, será removida deste dispositivo.</p><div class="danger-summary"><strong>!</strong><span>Esta ação não pode ser desfeita.</span></div><div class="confirmation-actions"><button class="sf-action sf-action--secondary secondary-action" type="button" data-action="cancel-delete-character">Cancelar</button><button class="sf-action sf-action--danger danger-action" type="button" data-action="confirm-delete-character">Excluir personagem</button></div></section></div>`;
 }
 
 function renderAddResourceModal(): string {
@@ -1024,6 +1013,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
     ${renderDeleteCompendiumAncestryModalView(getAncestryFeatureDependencies())}
     ${renderCharacterPortraitModal()}
     ${renderCharacterPortraitPreviewModal()}
+    ${renderAttributeDetailModal(character, state.attributeDetailId, getSpellcastAttributeId(character.identity.primarySubclassId, catalog.subclasses.find((subclass) => subclass.id === character.identity.primarySubclassId)), escapeHtml)}
     ${renderCharacterIdentityModalView({
       character: state.character,
       section: state.characterIdentityModalSection,
@@ -1456,6 +1446,7 @@ function bindEvents(): void {
       state.deletingCharacterId = undefined;
       state.characterPortraitModalOpen = false;
       state.characterPortraitPreviewOpen = false;
+      state.attributeDetailId = undefined;
       state.characterIdentityModalSection = undefined;
       state.gameMarkerDieDialog = undefined;
       state.storedDiceDialog = undefined;
@@ -1529,6 +1520,7 @@ function bindEvents(): void {
       state.deletingCharacterId = undefined;
       state.characterPortraitModalOpen = false;
       state.characterPortraitPreviewOpen = false;
+      state.attributeDetailId = undefined;
       state.characterIdentityModalSection = undefined;
       state.gameMarkerDieDialog = undefined;
       state.storedDiceDialog = undefined;
@@ -1610,6 +1602,8 @@ function bindEvents(): void {
       render({ preserveMainScroll: true });
       return;
     }
+
+    if (handleAttributeDetailAction(target, state, () => render({ preserveMainScroll: true }))) return;
 
     const identityButton = target.closest<HTMLElement>('[data-action="open-character-identity"]');
     if (identityButton) {
@@ -2144,7 +2138,7 @@ function bindEvents(): void {
       if (picker && state.progressionPickerIds.length === 2) {
         const character = state.character;
         const selected = picker === "attributes"
-          ? character?.attributes.filter((attribute) => state.progressionPickerIds.includes(attribute.id)).map((attribute) => attributeTitle(attribute.label)).join(" e ")
+          ? character?.attributes.filter((attribute) => state.progressionPickerIds.includes(attribute.id)).map((attribute) => getAttributeLabel(attribute.label)).join(" e ")
           : character?.experiences.filter((experience) => state.progressionPickerIds.includes(experience.id)).map((experience) => experience.name).join(" e ");
         addProgressionChoice(state, {
           kind: picker,
@@ -2382,6 +2376,7 @@ function bindEvents(): void {
 
   document.addEventListener("keydown", (event) => {
     if (handleCharacterScarEscape(event, getCharacterScarDependencies())) return; if (state.character && handleCharacterTransformationEscape(event, getCharacterTransformationDependencies())) return;
+    if (handleAttributeDetailEscape(event, state, () => render({ preserveMainScroll: true }))) return;
     if (event.key === "Escape" && state.modalCardId) {
       const restoreActiveCardFocus = isRememberedActiveCard(state.character?.id, state.modalCardId);
       state.modalCardId = undefined;

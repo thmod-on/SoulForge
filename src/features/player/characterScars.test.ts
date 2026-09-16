@@ -30,7 +30,10 @@ describe("character scars", () => {
   it("asks for confirmation before restoring Hope and closes one layer at a time with Escape", () => {
     const deps = dependencies({ ...structuredClone(demoCharacter), scars: [scar] });
     deps.state.deletingCharacterScarId = scar.id;
-    expect(renderCharacterScarDialogs(deps)).toContain("Remover esta Cicatriz?");
+    const html = renderCharacterScarDialogs(deps);
+    expect(html).toContain("Remover esta Cicatriz?");
+    expect(html).toContain('class="container-modal danger-modal character-scar-confirm"');
+    expect(html).toContain('class="danger-summary"');
     expect(handleCharacterScarEscape({ key: "Escape" } as KeyboardEvent, deps)).toBe(true);
     expect(deps.state.deletingCharacterScarId).toBeUndefined();
     expect(deps.state.characterScarsOpen).toBe(true);
