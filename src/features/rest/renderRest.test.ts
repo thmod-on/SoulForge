@@ -37,6 +37,23 @@ describe("renderRestModal", () => {
     expect(html).toContain("Feature Top");
   });
 
+  it("apresenta e exige o limite ampliado por uma Feature de ancestralidade", () => {
+    const trance: FeatureDefinition = { id: "feature.test.elf.bottom", type: "feature", packId: "test", name: "Transe Celestial", summary: "Um movimento adicional.", sourceType: "ancestry", sourceId: "ancestry.test.elf", tier: "bottom", sheetModifiers: [{ kind: "rest-move-bonus", amount: 1 }] };
+    const catalog = createCatalog([], [trance]);
+    const character = { ...demoCharacter, identity: { ...demoCharacter.identity, ancestryFeatureIds: { bottom: trance.id } } };
+    const twoChoices = [{ id: "prepare" as const }, { id: "clear-stress" as const }];
+    const threeChoices = [...twoChoices, { id: "repair-armor" as const }];
+
+    const incomplete = renderRestModal(character, "long", twoChoices, undefined, { escapeHtml: (value) => value, catalog });
+    const complete = renderRestModal(character, "long", threeChoices, undefined, { escapeHtml: (value) => value, catalog });
+
+    expect(incomplete).toContain("Escolha 3 movimentos.");
+    expect(incomplete).toContain("2/3");
+    expect(incomplete).toContain('data-action="confirm-rest" disabled');
+    expect(complete).toContain("3/3");
+    expect(complete).not.toContain('data-action="confirm-rest" disabled');
+  });
+
   it("orienta atualizar o Pack quando a transformação ativa ainda não declara a ação", () => {
     const transformation: TransformationDefinition = { id: "transformation.legacy", type: "transformation", packId: "legacy", name: "Transformação antiga", summary: "Resumo.", benefit: "Benefício.", drawback: "Desvantagem.", narrativeQuestions: ["Quem?"] };
     const catalog = createCatalog([{ id: "legacy", name: "Transformações", version: "1.0.0", description: "Pack antigo." }], [transformation]);

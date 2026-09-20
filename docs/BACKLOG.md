@@ -1,6 +1,6 @@
 # Backlog do SoulForge
 
-Última revisão: 15 de setembro de 2026.
+Última revisão: 19 de setembro de 2026.
 
 ## Objetivo
 
@@ -39,8 +39,8 @@ Estados:
 
 ## Pendências ativas
 
-Os novos itens desta revisão tiveram origem nos testes de mesa de 12 de setembro
-de 2026 e nas revisões de produto realizadas nos dias 13 e 14.
+Os itens desta revisão tiveram origem nos testes de mesa de 12 de setembro, nas
+revisões de produto dos dias 13 e 14 e na revisão do descanso de 19 de setembro.
 
 | ID | Prioridade | Estado | Área | Pendência | Critério de conclusão |
 | --- | --- | --- | --- | --- | --- |
@@ -60,6 +60,7 @@ de 2026 e nas revisões de produto realizadas nos dias 13 e 14.
 | MRK-002 | P2 | A definir | Marcadores | Permitir quantidades dinâmicas com mínimo ou derivadas de conjuntos conhecidos, como cartas de um Domínio no Loadout e Vault. | Fórmulas necessárias são declarativas, determinísticas e testadas sem consultas a texto descritivo. |
 | MRK-003 | P3 | A definir | Marcadores | Avaliar contagem regressiva, cooldown temporal e outros controles ainda não modelados. | Cada novo tipo possui caso real, regra de persistência e interação definida antes de alterar o domínio. |
 | RST-001 | P3 | A definir | Descanso | Criar acompanhamento de Projetos para o movimento de descanso longo “Trabalhar em projeto”. | Modelo, progresso, persistência e interface documentados; a ação deixa de ser apenas narrativa. |
+| TRN-004 | P2 | A definir | Transformações e Efeitos | Definir como Features assumidas pelo Metamorfo podem conceder efeitos mecânicos, mantendo `application: "reference"` apenas informativo. O Transe Celestial é o primeiro caso conhecido: atualmente concede movimento adicional somente quando pertence à ancestralidade real da personagem. | Um modo de aplicação mecânica explícito distingue referência de Feature ativa; define quais modificadores, marcadores, custos e ativações podem ser herdados com segurança; aplica e remove os efeitos ao trocar de forma sem duplicar estado; cobre Transe Celestial e ao menos um segundo tipo de efeito em testes; documentação e compatibilidade com Packs ausentes são atualizadas. |
 | CMP-002 | P3 | Condicional | Compendium | Avaliar um capítulo próprio para Features. | Implementar somente quando existirem conteúdo e fluxos suficientes para justificar o capítulo separado. |
 | ART-001 | P1 | Condicional | Artes | Criar manifesto de artes e verificador automatizado antes de ultrapassar 40 imagens incorporadas. | Build valida ID, caminho, dimensões, formato, peso e associação de cada arte. Gatilho: lote que levaria o projeto além de 40 imagens. |
 | ART-002 | P2 | Pronto | Artes | Padronizar geração de WebP e miniaturas em script reproduzível. | Um comando documentado gera os formatos de entrega sem edição manual obrigatória. |

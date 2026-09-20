@@ -3,13 +3,38 @@ import type { AncestryDefinition, FeatureDefinition } from "../../domain/types";
 import { readLocalImage } from "../../app/media";
 import { readFeatureAuthoringFields, renderFeatureAuthoringFields } from "./featureAuthoring";
 
-export type AncestryFeatureState = { compendiumAncestrySearch: string; ancestryModalOpen: boolean; editingCompendiumAncestryId?: string; deletingCompendiumAncestryId?: string; compendiumAncestryPreviewId?: string };
+export type AncestrySourceFilter = "todos" | "core" | "hope-fear" | "customizado";
+export type AncestryFeatureState = { compendiumAncestrySearch: string; compendiumAncestrySource: AncestrySourceFilter; ancestryModalOpen: boolean; editingCompendiumAncestryId?: string; deletingCompendiumAncestryId?: string; compendiumAncestryPreviewId?: string };
 export type AncestryFeatureDependencies = { state: AncestryFeatureState; catalog: Catalog; escapeHtml: (value: string) => string; renderEmptyInline: (message: string) => string; getPackDisplayName: (packId: string) => string; saveCustomDefinition: (definition: AncestryDefinition | FeatureDefinition) => Promise<void>; deleteCustomDefinition: (definitionId: string) => Promise<void>; refreshCatalog: () => Promise<void>; render: (options?: { preserveMainScroll?: boolean }) => void };
 
+const ancestrySources: Array<{ value: AncestrySourceFilter; label: string }> = [
+  { value: "todos", label: "Tudo" },
+  { value: "core", label: "Core" },
+  { value: "hope-fear", label: "Hope & Fear" },
+  { value: "customizado", label: "Customizado" }
+];
+
+const ancestryPackIds: Record<Exclude<AncestrySourceFilter, "todos" | "customizado">, string> = {
+  core: "daggerheart-core-ancestries-local",
+  "hope-fear": "daggerheart-hope-and-fear-ancestries-local"
+};
+
 export function renderCompendiumAncestriesManager(deps: AncestryFeatureDependencies): string {
-  const search = deps.state.compendiumAncestrySearch.trim().toLocaleLowerCase("pt-BR");
-  const entries = [...deps.catalog.ancestries].filter((entry) => !search || `${entry.name} ${entry.summary}`.toLocaleLowerCase("pt-BR").includes(search)).sort((left, right) => left.name.localeCompare(right.name, "pt-BR"));
-  return `<main class="content compendium-content"><div class="screen-title compendium-index-heading"><div><div class="compendium-index-title-row"><h1>Ancestralidades</h1><span class="compendium-index-count">${deps.catalog.ancestries.length} ${deps.catalog.ancestries.length === 1 ? "ancestralidade" : "ancestralidades"}</span></div><p>Defina linhagens reutilizaveis e as duas features que cada uma concede.</p></div><div class="compendium-index-heading-actions"><button class="sf-action sf-action--primary primary-action" type="button" data-action="new-compendium-ancestry">Nova ancestralidade</button><button class="sf-action sf-action--secondary secondary-action screen-title-action" type="button" data-action="back-compendium-index">Voltar ao indice</button></div></div><section class="compendium-book-index compendium-ancestry-index"><label class="sf-search-field search-box compendium-index-search"><span aria-hidden="true">⌕</span><input type="search" data-compendium-ancestry-search value="${deps.escapeHtml(deps.state.compendiumAncestrySearch)}" placeholder="Pesquisar ancestralidade" aria-label="Pesquisar ancestralidade" /></label>${entries.length ? `<div class="compendium-ancestry-results">${entries.map((entry) => renderAncestryResult(entry, deps)).join("")}</div>` : deps.renderEmptyInline(search ? "Nenhuma ancestralidade corresponde a esta pesquisa." : "Nenhuma ancestralidade cadastrada. Crie a primeira para disponibilizar suas Top e Bottom Features na criacao de personagens.")}</section></main>${renderCompendiumAncestryPreviewModal(deps)}`;
+  const entries = filterAncestries(deps.catalog.ancestries, deps.state.compendiumAncestrySearch, deps.state.compendiumAncestrySource);
+  return `<main class="content compendium-content"><div class="screen-title compendium-index-heading"><div><div class="compendium-index-title-row"><h1>Ancestralidades</h1><span class="compendium-index-count">${deps.catalog.ancestries.length} ${deps.catalog.ancestries.length === 1 ? "ancestralidade" : "ancestralidades"}</span></div><p>Defina linhagens reutilizaveis e as duas features que cada uma concede.</p></div><div class="compendium-index-heading-actions"><button class="sf-action sf-action--primary primary-action" type="button" data-action="new-compendium-ancestry">Nova ancestralidade</button><button class="sf-action sf-action--secondary secondary-action screen-title-action" type="button" data-action="back-compendium-index">Voltar ao indice</button></div></div><section class="compendium-book-index compendium-ancestry-index"><label class="sf-search-field search-box compendium-index-search"><span aria-hidden="true">⌕</span><input type="search" data-compendium-ancestry-search value="${deps.escapeHtml(deps.state.compendiumAncestrySearch)}" placeholder="Pesquisar ancestralidade" aria-label="Pesquisar ancestralidade" /></label><div class="compendium-filter-block"><span>Origem</span><div class="filter-row compendium-filter-row" role="group" aria-label="Filtrar ancestralidades por origem">${ancestrySources.map((source) => `<button class="chip sf-filter-option ${deps.state.compendiumAncestrySource === source.value ? "is-active" : ""}" type="button" data-compendium-ancestry-source="${source.value}" aria-pressed="${deps.state.compendiumAncestrySource === source.value}">${source.label}</button>`).join("")}</div></div><div class="compendium-results-heading"><strong>${entries.length}</strong><span>${entries.length === 1 ? "ancestralidade encontrada" : "ancestralidades encontradas"}</span></div>${entries.length ? `<div class="compendium-ancestry-results">${entries.map((entry) => renderAncestryResult(entry, deps)).join("")}</div>` : deps.renderEmptyInline(deps.catalog.ancestries.length ? "Nenhuma ancestralidade encontrada com a busca e a origem selecionadas." : "Nenhuma ancestralidade cadastrada. Crie a primeira para disponibilizar suas Top e Bottom Features na criacao de personagens.")}</section></main>${renderCompendiumAncestryPreviewModal(deps)}`;
+}
+
+export function filterAncestries(ancestries: AncestryDefinition[], query: string, source: AncestrySourceFilter): AncestryDefinition[] {
+  const search = query.trim().toLocaleLowerCase("pt-BR");
+  return [...ancestries]
+    .filter((ancestry) => matchesAncestrySource(ancestry, source) && (!search || `${ancestry.name} ${ancestry.summary}`.toLocaleLowerCase("pt-BR").includes(search)))
+    .sort((left, right) => left.name.localeCompare(right.name, "pt-BR"));
+}
+
+function matchesAncestrySource(ancestry: AncestryDefinition, source: AncestrySourceFilter): boolean {
+  if (source === "todos") return true;
+  if (source === "customizado") return ancestry.packId === "local";
+  return ancestry.packId === ancestryPackIds[source];
 }
 
 export function renderCompendiumAncestryPreviewModal(deps: AncestryFeatureDependencies): string {
@@ -20,6 +45,12 @@ export function renderCompendiumAncestryPreviewModal(deps: AncestryFeatureDepend
 }
 
 export function handleAncestryAction(target: HTMLElement, deps: AncestryFeatureDependencies): boolean {
+  const sourceFilter = target.closest<HTMLElement>("[data-compendium-ancestry-source]");
+  if (sourceFilter) {
+    deps.state.compendiumAncestrySource = (sourceFilter.dataset.compendiumAncestrySource ?? "todos") as AncestrySourceFilter;
+    deps.render({ preserveMainScroll: true });
+    return true;
+  }
   const preview = target.closest<HTMLElement>("[data-ancestry-preview-id]");
   if (!preview) return false;
   deps.state.compendiumAncestryPreviewId = preview.dataset.ancestryPreviewId;
@@ -46,8 +77,8 @@ export async function saveCompendiumAncestry(deps: AncestryFeatureDependencies):
   const error = document.querySelector<HTMLElement>("[data-ancestry-error]");
   const existing = deps.state.editingCompendiumAncestryId ? deps.catalog.ancestries.find((entry) => entry.id === deps.state.editingCompendiumAncestryId) : undefined;
   const duplicate = deps.catalog.ancestries.some((entry) => entry.name.toLocaleLowerCase("pt-BR") === name.toLocaleLowerCase("pt-BR") && entry.id !== existing?.id);
-  const top = readFeatureAuthoringFields({ key: "ancestry-top", feature: existing ? feature(existing, "top", deps.catalog) : undefined, sourceType: "ancestry", tier: "top", includeResourceModifier: true });
-  const bottom = readFeatureAuthoringFields({ key: "ancestry-bottom", feature: existing ? feature(existing, "bottom", deps.catalog) : undefined, sourceType: "ancestry", tier: "bottom", includeResourceModifier: true });
+  const top = readFeatureAuthoringFields({ key: "ancestry-top", feature: existing ? feature(existing, "top", deps.catalog) : undefined, sourceType: "ancestry", tier: "top", includeResourceModifier: true, includeRestMoveModifier: true });
+  const bottom = readFeatureAuthoringFields({ key: "ancestry-bottom", feature: existing ? feature(existing, "bottom", deps.catalog) : undefined, sourceType: "ancestry", tier: "bottom", includeResourceModifier: true, includeRestMoveModifier: true });
   const featureError = top instanceof Error ? top : bottom instanceof Error ? bottom : undefined;
   if (!name || !summary || !top || !bottom || featureError || duplicate) { if (error) { error.hidden = false; error.textContent = featureError?.message ?? (duplicate ? "Ja existe uma ancestralidade com este nome." : "Preencha a ancestralidade e as duas features."); } return; }
   if (existing && existing.packId !== "local") return;
@@ -76,6 +107,6 @@ function renderAncestryFeatureDetail(label: string, definition: FeatureDefinitio
 
 function feature(ancestry: AncestryDefinition, position: "top" | "bottom", catalog: Catalog): FeatureDefinition | undefined { return catalog.features.find((entry) => entry.id === (position === "top" ? ancestry.topFeatureId : ancestry.bottomFeatureId)); }
 function featureFields(label: string, definition: FeatureDefinition | undefined, key: "top" | "bottom", deps: AncestryFeatureDependencies): string {
-  return renderFeatureAuthoringFields({ key: `ancestry-${key}`, title: `${label} Feature`, feature: definition, required: true, escapeHtml: deps.escapeHtml, includeResourceModifier: true });
+  return renderFeatureAuthoringFields({ key: `ancestry-${key}`, title: `${label} Feature`, feature: definition, required: true, escapeHtml: deps.escapeHtml, includeResourceModifier: true, includeRestMoveModifier: true });
 }
 function readImage(selector: string): Promise<string | undefined> { return readLocalImage(document.querySelector<HTMLInputElement>(selector)?.files?.[0]); }

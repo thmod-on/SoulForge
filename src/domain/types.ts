@@ -149,6 +149,7 @@ type ConditionalSheetModifier = { condition?: SheetModifierCondition };
 
 export type CharacterSheetModifier =
   | ({ kind: "resource-max"; resourceId: string; amount: number } & ConditionalSheetModifier)
+  | ({ kind: "rest-move-bonus"; amount: number } & ConditionalSheetModifier)
   | ({ kind: "attribute"; attributeId: Attribute["id"]; amount: number } & ConditionalSheetModifier)
   | ({ kind: "defense"; field: keyof Defense; amount: number } & ConditionalSheetModifier)
   | ({ kind: "defense-per-attribute"; field: keyof Defense; attributeId: Attribute["id"]; multiplier?: number; divisor?: number } & ConditionalSheetModifier)

@@ -103,6 +103,7 @@ export function validatePackBundle(value: unknown): PackBundle {
       const candidate = modifier as { kind?: string; resourceId?: unknown; attributeId?: unknown; field?: unknown; amount?: unknown; multiplier?: unknown; divisor?: unknown; condition?: unknown };
       if (!isSheetModifierConditionValid(candidate.condition)) return false;
       if (candidate.kind === "resource-max") return typeof candidate.resourceId === "string" && Boolean(candidate.resourceId) && Number.isFinite(candidate.amount);
+      if (candidate.kind === "rest-move-bonus") return Number.isInteger(candidate.amount) && Number(candidate.amount) > 0;
       if (candidate.kind === "attribute") return ["for", "dex", "con", "int", "wil", "cha"].includes(String(candidate.attributeId)) && Number.isFinite(candidate.amount);
       if (candidate.kind === "defense-per-attribute") return ["evasion", "armor", "minor", "major"].includes(String(candidate.field)) && ["for", "dex", "con", "int", "wil", "cha"].includes(String(candidate.attributeId)) && (candidate.multiplier === undefined || Number.isFinite(candidate.multiplier)) && (candidate.divisor === undefined || Number.isFinite(candidate.divisor) && Number(candidate.divisor) > 0);
       if (!Number.isFinite(candidate.amount)) return false;

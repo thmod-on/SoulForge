@@ -187,6 +187,12 @@ build `0.28.0` passou a 3.576,92 KiB com 48 entradas, ainda dentro da faixa
 saudável do Estágio 1. As composições foram verificadas também no recorte de
 token de 48 px; a integração dos tokens permanece planejada separadamente.
 
+Em 19 de setembro de 2026, corda e adaga genérica receberam duas artes WebP de
+512 × 512, qualidade 82, totalizando 43.420 bytes. A vinculação usa IDs estáveis
+e preserva imagens próprias. O build passou a 50 entradas e 3.651,07 KiB no
+precache, ainda dentro da faixa saudável do Estágio 1. Os prompts e critérios
+do lote estão registrados em [Artes genéricas de itens](ITEM_ARTWORK.md).
+
 ## Pendências planejadas
 
 1. Criar o manifesto e o verificador automatizado antes de ultrapassar 40 artes.

@@ -20,6 +20,8 @@ Em uma entrega, atualizar:
 
 - `package.json`, fonte única da versão exibida pela aplicação;
 - `CHANGELOG.md`, com uma seção correspondente à nova versão;
+- `README.md` da raiz, que funciona como apresentação pública do projeto na
+  página inicial do repositório no GitHub;
 - referências documentais que exibam explicitamente a versão corrente.
 
 Não deve existir uma segunda constante de versão no código.
@@ -63,7 +65,10 @@ pnpm run build
 ### 4. Reconciliar a documentação
 
 - atualizar o changelog com mudanças relevantes para usuários e mantenedores;
-- atualizar README, contratos de domínio, arquitetura, persistência, Packs e guias afetados;
+- revisar e atualizar obrigatoriamente o `README.md` da raiz para que a versão,
+  descrição das funcionalidades, instruções, estrutura e links apresentados na
+  página inicial do GitHub correspondam ao estado da entrega;
+- atualizar contratos de domínio, arquitetura, persistência, Packs e guias afetados;
 - fechar no backlog somente itens efetivamente concluídos;
 - registrar novas pendências encontradas sem tentar resolvê-las fora do escopo da entrega;
 - não alterar documentos sem relação com o lote apenas para fazê-los parecer atuais.
@@ -74,6 +79,7 @@ Documentos que funcionam como contrato arquitetural ou de domínio devem prefere
 
 - alterar a versão em `package.json`;
 - criar a seção correspondente em `CHANGELOG.md`;
+- atualizar a versão corrente exibida no `README.md` da raiz;
 - atualizar as demais referências explícitas à versão corrente.
 
 ### 6. Executar a validação final

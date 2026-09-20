@@ -41,6 +41,12 @@ describe("validação de Packs", () => {
     expect(validatePackBundle({ format: "soulforge-pack-v1", manifest, definitions: [card] }).definitions).toHaveLength(1);
   });
 
+  it("aceita bônus inteiro e positivo de movimentos de descanso", () => {
+    const trance = { ...feature, id: "feature.test.trance", sheetModifiers: [{ kind: "rest-move-bonus", amount: 1 }] };
+    expect(validatePackBundle({ format: "soulforge-pack-v1", manifest, definitions: [trance] }).definitions).toHaveLength(1);
+    expect(() => validatePackBundle({ format: "soulforge-pack-v1", manifest, definitions: [{ ...trance, sheetModifiers: [{ kind: "rest-move-bonus", amount: 0 }] }] })).toThrow("modificadores de ficha inválidos");
+  });
+
   it("aceita condições declarativas de armadura equipada e cartas de domínio", () => {
     const card = {
       id: "card.test.condicional", type: "card" as const, packId: manifest.id, name: "Bônus condicionado", summary: "Bônus conforme o Loadout.",

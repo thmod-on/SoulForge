@@ -44,6 +44,7 @@ function describeSheetModifiers(modifiers: CharacterSheetModifier[]): string {
     if (modifier.kind === "attribute") return `+${modifier.amount} em ${describeAttribute(modifier.attributeId)}`;
     if (modifier.kind === "defense") return `+${modifier.amount} em ${describeDefenseField(modifier.field)}`;
     if (modifier.kind === "resource-max") return `+${modifier.amount} no máximo de ${modifier.resourceId}`;
+    if (modifier.kind === "rest-move-bonus") return `+${modifier.amount} ${modifier.amount === 1 ? "movimento" : "movimentos"} de descanso`;
     if (modifier.kind === "defense-per-proficiency") return `+${modifier.amount} × Proficiência em ${describeDefenseField(modifier.field)}`;
     const multiplier = modifier.multiplier ?? 1;
     const divisor = modifier.divisor ?? 1;

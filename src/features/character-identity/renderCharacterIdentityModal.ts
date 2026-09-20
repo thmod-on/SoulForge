@@ -63,6 +63,7 @@ export function renderCharacterIdentityModal(deps: CharacterIdentityModalDepende
     if (!feature) return `<article class="character-identity-feature"><span>${escapeHtml(label)}</span><h3>Indisponível</h3><p>O conteúdo desta escolha não foi encontrado no Compendium instalado.</p></article>`;
     const modifiers = "sheetModifiers" in feature ? feature.sheetModifiers?.map((modifier) => {
       if (modifier.kind === "resource-max") return `+${modifier.amount} máximo de ${modifier.resourceId}`;
+      if (modifier.kind === "rest-move-bonus") return `+${modifier.amount} ${modifier.amount === 1 ? "movimento" : "movimentos"} de descanso`;
       if (modifier.kind === "attribute") return `+${modifier.amount} em ${modifier.attributeId}`;
       if (modifier.kind === "defense-per-attribute") return `${modifier.field} por ${modifier.attributeId}`;
       return `+${modifier.amount} em ${modifier.field}`;

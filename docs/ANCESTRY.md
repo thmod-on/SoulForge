@@ -158,6 +158,7 @@ ou de outro texto livre.
 ```ts
 sheetModifiers: [
   { kind: "resource-max", resourceId: "stress", amount: 1 },
+  { kind: "rest-move-bonus", amount: 1 },
   { kind: "defense", field: "evasion", amount: 1 },
   { kind: "defense-per-proficiency", field: "minor", amount: 1 }
 ]
@@ -165,6 +166,8 @@ sheetModifiers: [
 
 - `resource-max` aumenta o máximo do recurso indicado e preserva o valor já
   marcado, limitado ao novo máximo;
+- `rest-move-bonus` acrescenta movimentos ao limite normal de dois em qualquer
+  descanso; o Transe Celestial do Elfo declara um movimento adicional;
 - `defense` aplica um bônus fixo à defesa indicada;
 - `defense-per-proficiency` aplica um bônus que acompanha a Proficiência.
 
@@ -204,7 +207,7 @@ Por isso, a edição deve:
 
 ## Compendium e Packs
 
-O Compendium deve oferecer um capítulo de Ancestralidades para consultar, criar, editar e excluir Definitions. O formulário de uma ancestralidade deve exigir nome, descrição, imagem opcional, Top Feature e Bottom Feature.
+O Compendium deve oferecer um capítulo de Ancestralidades para consultar, criar, editar e excluir Definitions. A listagem permite combinar a pesquisa textual com filtros de origem para Tudo, Core, Hope & Fear e conteúdo Customizado criado localmente. O formulário de uma ancestralidade deve exigir nome, descrição, imagem opcional, Top Feature e Bottom Feature.
 
 Antes de excluir uma ancestralidade ou feature usada por personagens locais, o aplicativo deve avisar que as referências podem ficar indisponíveis e pedir confirmação. A remoção deve seguir `UX_GUIDELINES.md` e a política de compatibilidade de `PACKS.md`.
 

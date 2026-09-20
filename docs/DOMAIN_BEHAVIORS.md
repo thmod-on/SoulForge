@@ -273,6 +273,10 @@ Novos Behaviors devem ser adicionados somente quando um novo conceito do domíni
 
 ## Descanso
 
+- O limite normal é de dois movimentos e pode receber bônus inteiros positivos
+  por meio do modificador declarativo `rest-move-bonus` de uma fonte ativa.
+- Interface, seleção e confirmação consultam o mesmo limite derivado; textos de
+  Feature não alteram essa capacidade implicitamente.
 - Definitions ativas podem declarar ações contextuais com `timing: "any-rest"`.
 - Cada ação ocupa um movimento de descanso e referencia escolhas estruturadas da
   própria fonte.

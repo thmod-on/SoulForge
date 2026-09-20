@@ -154,7 +154,8 @@ import {
   renderCompendiumAncestryFormModal as renderCompendiumAncestryFormModalView,
   renderDeleteCompendiumAncestryModal as renderDeleteCompendiumAncestryModalView,
   saveCompendiumAncestry as saveCompendiumAncestryAction,
-  type AncestryFeatureDependencies
+  type AncestryFeatureDependencies,
+  type AncestrySourceFilter
 } from "./features/compendium/ancestries";
 import type { CompendiumSpread, CompendiumView, InventoryFilter, Page, ProgressionDraftChoice, ProgressionFlowStep, ProgressionMulticlassDraft, ProgressionPicker, ProgressionTierNumber, SettingsSection } from "./app/types";
 import { editorNavigation as sideNavItems, getPageFromEventTarget, isEditorPage, playerNavigation as topNavItems } from "./app/navigation";
@@ -196,6 +197,7 @@ const state: {
   compendiumItemSearch: string;
   compendiumItemFilter: InventoryFilter; compendiumItemTierFilter: string;
   compendiumAncestrySearch: string;
+  compendiumAncestrySource: AncestrySourceFilter;
   compendiumCommunitySearch: string;
   compendiumCommunityPackId: string;
   transformationState: TransformationFeatureState & CharacterTransformationUiState; conditionState: ConditionFeatureState;
@@ -314,6 +316,7 @@ const state: {
   compendiumItemSearch: "",
   compendiumItemFilter: "todos", compendiumItemTierFilter: "todos",
   compendiumAncestrySearch: "",
+  compendiumAncestrySource: "todos",
   compendiumCommunitySearch: "",
   compendiumCommunityPackId: "todos",
   transformationState: { compendiumTransformationSearch: "", transformationModalOpen: false, characterTransformationPickerOpen: false, characterTransformationDetailOpen: false, characterTransformationRemoveOpen: false }, conditionState: { compendiumConditionSearch: "", conditionModalOpen: false },

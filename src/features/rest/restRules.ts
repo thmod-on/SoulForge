@@ -1,4 +1,6 @@
+import type { Catalog } from "../../domain/catalog";
 import type { Character, ResourceTrack } from "../../domain/types";
+import { getActiveSheetModifiers } from "../player/sheetModifiers";
 
 export type RestKind = "short" | "long";
 export type RestMoveId = "tend-wounds" | "clear-stress" | "repair-armor" | "prepare" | "group-prepare" | "work-project";
@@ -12,6 +14,10 @@ export type DefinitionRestMoveChoice = {
 export type RestMoveChoice = StandardRestMoveChoice | DefinitionRestMoveChoice;
 
 export const restMoveLabels: Record<RestMoveId, string> = { "tend-wounds": "Tratar ferimentos", "clear-stress": "Limpar estresse", "repair-armor": "Reparar armadura", prepare: "Preparar", "group-prepare": "Preparação em grupo", "work-project": "Trabalhar em projeto" };
+
+export function getRestMoveLimit(character: Character, catalog: Catalog): number {
+  return getActiveSheetModifiers(character, catalog).reduce((limit, modifier) => modifier.kind === "rest-move-bonus" ? limit + modifier.amount : limit, 2);
+}
 
 export function getRestMoves(kind: RestKind): RestMoveId[] { return kind === "short" ? ["tend-wounds", "clear-stress", "repair-armor", "prepare", "group-prepare"] : ["tend-wounds", "clear-stress", "repair-armor", "prepare", "group-prepare", "work-project"]; }
 export function restMoveDescription(kind: RestKind, move: RestMoveId): string { if (move === "prepare") return "Recupere 1 Esperança."; if (move === "group-prepare") return "Preparação em grupo: recupere 2 Esperanças."; if (move === "work-project") return "Ação narrativa. Projetos terão acompanhamento em uma etapa futura."; const name = move === "tend-wounds" ? "PV" : move === "clear-stress" ? "Estresse" : "Armadura"; return kind === "short" ? `Limpe 1d4 + Tier de ${name}.` : `Limpe todo ${name}.`; }

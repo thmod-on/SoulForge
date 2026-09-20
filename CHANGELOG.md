@@ -4,6 +4,27 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.31.0]
+
+### Adicionado
+
+- Features de ancestralidade podem declarar `rest-move-bonus`, concedendo movimentos adicionais sem interpretar texto livre; o limite derivado é compartilhado pela interface, seleção e confirmação do descanso;
+- o formulário de ancestralidades permite configurar esse bônus, e a importação de Packs valida somente quantidades inteiras positivas;
+- o capítulo de Ancestralidades recebeu filtros combináveis de origem para Tudo, Core, Hope & Fear e conteúdo Customizado;
+- Corda e as famílias conhecidas de adagas sem imagem própria receberam artes genéricas leves em WebP, preservando imagens declaradas pelo usuário ou Pack.
+
+### Alterado
+
+- detalhes de identidade e efeitos ativos descrevem explicitamente bônus de movimentos de descanso;
+- o fluxo `versione` passa a exigir a revisão do README público apresentado na página inicial do GitHub;
+- documentação de ancestralidades, descanso, arquitetura, artes e backlog foi reconciliada com o estado atual.
+
+### Compatibilidade
+
+- fichas e Packs anteriores continuam válidos sem migração; o movimento adicional só é aplicado quando uma Feature ativa declara o novo modificador;
+- Features escolhidas apenas como referência pelo Metamorfo continuam informativas e não herdam modificadores mecânicos;
+- associações de corda e adaga usam IDs estáveis e não afetam itens apenas semelhantes por nome.
+
 ## [0.30.0]
 
 ### Adicionado

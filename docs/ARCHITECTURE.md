@@ -47,7 +47,7 @@ A VisÃ£o Geral, a trilha de subclasse e o Vault ficam em `src/features/player/
 
 A troca entre Vault e Loadout é renderizada por `src/features/player/renderCardActivation.ts`; o módulo mantém as escolhas de carta e momento, o resumo e a habilitação da confirmação sincronizados sem incorporar regras de persistência.
 
-A indisponibilidade temporária de cartas do Loadout é controlada por `src/features/player/cardAvailability.ts`. O estado pertence ao `Character.deck`, nunca à Definition, e é encerrado somente pelo descanso, descanso longo, nova sessão ou comando manual escolhido. Cartas indisponíveis deixam de fornecer marcadores e modificadores passivos até a reativação.
+A indisponibilidade temporária de cartas do Loadout é controlada por `src/features/player/cardAvailability.ts`. O estado pertence ao `Character.deck`, nunca à Definition, e é encerrado somente pelo descanso, descanso longo, nova sessão ou comando manual escolhido. Cartas indisponíveis deixam de fornecer marcadores e modificadores passivos até a reativação. O fluxo de descanso deriva sua capacidade em `restRules.ts`: parte de dois movimentos e soma modificadores ativos `rest-move-bonus`, evitando limites divergentes entre renderização, seleção e confirmação.
 
 A galeria inicial é renderizada por `src/features/character-selection/renderCharacterSelection.ts`, enquanto `src/features/character-selection/characterSelectionCarousel.ts` controla exclusivamente sua navegação horizontal e os estados dos controles.
 

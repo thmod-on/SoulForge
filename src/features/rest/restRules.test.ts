@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { applyRestMoves, getCharacterTier } from "./restRules";
-import type { Character } from "../../domain/types";
+import { createCatalog } from "../../domain/catalog";
+import { applyRestMoves, getCharacterTier, getRestMoveLimit } from "./restRules";
+import type { Character, FeatureDefinition } from "../../domain/types";
 const character = (): Character => ({ id: "c", identity: { name: "Teste", ancestry: "Humano", className: "Guardião", community: "", level: 2, xp: 0, nextLevelXp: 10, quote: "" }, attributes: [], defense: { evasion: 10, armor: 0, minor: 10, major: 20 }, proficiency: 1, resources: [{ id: "hp", label: "PV", value: 5, max: 6, tone: "hp" }, { id: "stress", label: "Estresse", value: 5, max: 6, tone: "stress" }, { id: "armor", label: "Armadura", value: 2, max: 3, tone: "focus" }, { id: "hope", label: "Esperança", value: 3, max: 6, tone: "hope" }], skills: [], experiences: [], notes: [], deck: { activeCardIds: [], learnedCardIds: [] }, inventory: { capacity: 0, compartments: [], entries: [] } });
-describe("rest rules", () => { it("limpa 1d4 + Tier de marcas no descanso breve", () => expect(applyRestMoves(character(), "short", [{ id: "tend-wounds", roll: 3 }]).resources[0].value).toBe(0)); it("limpa todas as marcas no descanso longo", () => expect(applyRestMoves(character(), "long", [{ id: "clear-stress" }]).resources[1].value).toBe(0)); it("recupera Esperança removendo marcas", () => expect(applyRestMoves(character(), "short", [{ id: "prepare" }]).resources[3].value).toBe(2)); it("mantém a recuperação de uma Esperança no descanso longo", () => expect(applyRestMoves(character(), "long", [{ id: "prepare" }]).resources[3].value).toBe(2)); it("recupera duas Esperanças na preparação em grupo", () => expect(applyRestMoves(character(), "short", [{ id: "group-prepare" }]).resources[3].value).toBe(1)); it("calcula o Tier corretamente", () => { expect(getCharacterTier(1)).toBe(1); expect(getCharacterTier(5)).toBe(3); expect(getCharacterTier(8)).toBe(4); }); });
+describe("rest rules", () => { it("limpa 1d4 + Tier de marcas no descanso breve", () => expect(applyRestMoves(character(), "short", [{ id: "tend-wounds", roll: 3 }]).resources[0].value).toBe(0)); it("limpa todas as marcas no descanso longo", () => expect(applyRestMoves(character(), "long", [{ id: "clear-stress" }]).resources[1].value).toBe(0)); it("recupera Esperança removendo marcas", () => expect(applyRestMoves(character(), "short", [{ id: "prepare" }]).resources[3].value).toBe(2)); it("mantém a recuperação de uma Esperança no descanso longo", () => expect(applyRestMoves(character(), "long", [{ id: "prepare" }]).resources[3].value).toBe(2)); it("recupera duas Esperanças na preparação em grupo", () => expect(applyRestMoves(character(), "short", [{ id: "group-prepare" }]).resources[3].value).toBe(1)); it("calcula o Tier corretamente", () => { expect(getCharacterTier(1)).toBe(1); expect(getCharacterTier(5)).toBe(3); expect(getCharacterTier(8)).toBe(4); });
+
+  it("soma movimentos adicionais declarados por uma Feature ativa", () => {
+    const trance: FeatureDefinition = { id: "feature.test.elf.bottom", type: "feature", packId: "test", name: "Transe Celestial", summary: "Escolha um movimento adicional.", sourceType: "ancestry", sourceId: "ancestry.test.elf", tier: "bottom", sheetModifiers: [{ kind: "rest-move-bonus", amount: 1 }] };
+    const catalog = createCatalog([], [trance]);
+    const elf = { ...character(), identity: { ...character().identity, ancestryFeatureIds: { bottom: trance.id } } };
+
+    expect(getRestMoveLimit(character(), catalog)).toBe(2);
+    expect(getRestMoveLimit(elf, catalog)).toBe(3);
+  });
+});
