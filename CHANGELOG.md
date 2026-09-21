@@ -4,6 +4,27 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.32.0]
+
+### Adicionado
+
+- Features podem declarar campos persistentes de texto livre ou seleção, validados pelo Pack e armazenados na ficha sem criar regras específicas por classe;
+- a criação de personagem coleta essas escolhas na etapa de classe, exige os campos obrigatórios e apresenta os valores na revisão;
+- Aptidões recebeu a seção “Escolhas de classe”, separada das Experiências e com edição posterior dos valores;
+- o mecanismo estreia nos Packs locais com Patrono e esfera de influência do Bruxo, elemento da Origem Elemental e número de Padrões Estranhos do Mago.
+
+### Alterado
+
+- mensagens de validação da criação recebem foco e são reveladas automaticamente pela rolagem do modal;
+- a esfera de influência do Bruxo é um campo de texto livre, e a interface evita repetir a classe já evidente no contexto;
+- os Packs locais de itens foram auditados contra o SRD 2.0, com `Gambeson` traduzido como Gibão e um vocabulário documentado para termos recorrentes e qualificadores de Tier.
+
+### Compatibilidade
+
+- fichas antigas continuam válidas e podem preencher as novas escolhas posteriormente em Aptidões;
+- `Character.definitionSelections` preserva escolhas pertencentes a outras Definitions ao editar uma Feature;
+- conteúdo oficial continua restrito aos Packs locais privados; para receber os novos campos, um Pack já instalado precisa ser reimportado em sua versão atualizada.
+
 ## [0.31.0]
 
 ### Adicionado

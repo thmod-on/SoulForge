@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ClassDefinition, SubclassDefinition } from "../../domain/types";
+import type { ClassDefinition, FeatureDefinition, SubclassDefinition } from "../../domain/types";
 import { renderCreationClassStep } from "./renderCreationSteps";
 
 const escapeHtml = (value: string) => value;
@@ -49,5 +49,15 @@ describe("renderCreationClassStep", () => {
     expect(html).toContain('class="character-class-banner "');
     expect(html).toContain("character-class-banner-placeholder");
     expect(html).not.toContain("<img");
+  });
+
+  it("renderiza os campos declarados pela Feature sem conhecer a classe", () => {
+    const feature: FeatureDefinition = { id: "feature.test.class", type: "feature", packId: "core", name: "Pacto", summary: "", sourceType: "class", sourceId: characterClass.id, tier: "class", characterFields: [{ id: "sphere", kind: "text", label: "Esfera", required: true, suggestions: ["Caos"] }] };
+    const html = renderCreationClassStep({ classes: [characterClass], selectedClass: characterClass, subclasses: [subclass], selectedSubclassId: subclass.id, features: [feature], characterFieldSources: [{ feature, originLabel: "Classe · Guerreiro" }], definitionSelections: { [feature.id]: { sphere: "Caos" } } }, escapeHtml);
+
+    expect(html).toContain("Escolhas da classe");
+    expect(html).not.toContain("Classe · Guerreiro");
+    expect(html).toContain('data-character-field-id="sphere"');
+    expect(html).toContain('value="Caos"');
   });
 });

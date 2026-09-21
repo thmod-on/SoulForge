@@ -25,6 +25,7 @@ export function validatePackBundle(value: unknown): PackBundle {
     if (!isGameMarkerListValid(feature.gameMarkers)) throw new Error(`A Feature “${feature.name}” possui marcadores de jogo inválidos.`);
     if (!isSheetModifierListValid(feature.sheetModifiers)) throw new Error(`A ${feature.type === "card" ? "carta" : "Feature"} “${feature.name}” possui modificadores de ficha inválidos.`);
     if (feature.type === "feature" && !isFeatureActivationValid(feature.activation)) throw new Error(`A Feature “${feature.name}” possui metadados de ativação inválidos.`);
+    if (feature.type === "feature" && !isFeatureCharacterFieldsValid(feature.characterFields)) throw new Error(`A Feature “${feature.name}” possui campos de personagem inválidos.`);
   }
 
   function isGameMarkerListValid(value: unknown): boolean {
@@ -143,6 +144,29 @@ export function validatePackBundle(value: unknown): PackBundle {
     })) return false;
     if (candidate.reminders !== undefined && (!Array.isArray(candidate.reminders) || candidate.reminders.some((reminder) => typeof reminder !== "string" || !reminder.trim()))) return false;
     return isFeatureActivationTokensValid(candidate.tokens);
+  }
+
+  function isFeatureCharacterFieldsValid(value: unknown): boolean {
+    if (value === undefined) return true;
+    if (!Array.isArray(value) || !value.length) return false;
+    const ids = new Set<string>();
+    return value.every((field) => {
+      if (!field || typeof field !== "object") return false;
+      const entry = field as { id?: unknown; kind?: unknown; label?: unknown; required?: unknown; placeholder?: unknown; help?: unknown; suggestions?: unknown; maxLength?: unknown; options?: unknown };
+      if (typeof entry.id !== "string" || !entry.id.trim() || ids.has(entry.id) || typeof entry.label !== "string" || !entry.label.trim()) return false;
+      ids.add(entry.id);
+      if (entry.required !== undefined && typeof entry.required !== "boolean") return false;
+      if (entry.help !== undefined && (typeof entry.help !== "string" || !entry.help.trim())) return false;
+      if (entry.kind === "text") {
+        if (entry.placeholder !== undefined && (typeof entry.placeholder !== "string" || !entry.placeholder.trim())) return false;
+        if (entry.maxLength !== undefined && (!Number.isInteger(entry.maxLength) || Number(entry.maxLength) < 1)) return false;
+        return entry.suggestions === undefined || Array.isArray(entry.suggestions) && entry.suggestions.length > 0 && entry.suggestions.every((suggestion) => typeof suggestion === "string" && Boolean(suggestion.trim())) && new Set(entry.suggestions).size === entry.suggestions.length;
+      }
+      if (entry.kind !== "select" || !Array.isArray(entry.options) || !entry.options.length) return false;
+      const options = entry.options as Array<{ value?: unknown; label?: unknown }>;
+      return options.every((option) => option && typeof option.value === "string" && Boolean(option.value.trim()) && typeof option.label === "string" && Boolean(option.label.trim()))
+        && new Set(options.map((option) => option.value)).size === options.length;
+    });
   }
 
   function isFeatureActivationTokensValid(value: unknown): boolean {

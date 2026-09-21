@@ -95,7 +95,7 @@ interface FeatureDefinition {
   summary: string;
   effect: string;
   behaviorIds?: string[];
-  creationChoices?: FeatureChoiceDefinition[];
+  characterFields?: FeatureCharacterFieldDefinition[];
 }
 ```
 
@@ -116,7 +116,7 @@ interface CharacterAncestry {
   displayName: string;
   selectedTopFeatureId: string;
   selectedBottomFeatureId: string;
-  featureChoiceValues: Record<string, unknown>;
+  definitionSelections: CharacterDefinitionSelection[];
 }
 
 interface CharacterHeritage {

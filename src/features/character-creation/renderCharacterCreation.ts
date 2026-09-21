@@ -7,6 +7,7 @@ import { getCreationAncestries, getCreationClasses, getCreationSubclasses, type 
 import type { CharacterCreationState } from "./characterCreationState";
 import { renderCreationActions, renderCreationProgress, renderCreationTitle } from "./renderCreationChrome";
 import { renderCreationAttributesStep, renderCreationClassStep, renderCreationCommunityStep, renderCreationExperiencesStep, renderCreationIdentityStep, renderCreationReviewStep } from "./renderCreationSteps";
+import { getCharacterFieldDisplayValue, getCreationCharacterFieldSources } from "../feature-fields/featureFields";
 
 export type CharacterCreationRenderDependencies = {
   state: CharacterCreationState;
@@ -63,6 +64,11 @@ export function renderCharacterCreationModal(deps: CharacterCreationRenderDepend
     : selectedClass.domainIds[0];
   const visibleStartingCards = eligibleStartingCards.filter((card) => card.domainId === selectedCardDomainId);
   const selectedSubclass = subclasses.find((subclass) => subclass.id === state.characterCreationSubclassId) ?? subclasses[0];
+  const characterFieldSources = getCreationCharacterFieldSources(selectedClass, selectedSubclass, catalog);
+  const classChoices = characterFieldSources.flatMap(({ feature }) => (feature.characterFields ?? []).flatMap((field) => {
+    const value = state.characterCreationDefinitionSelections[feature.id]?.[field.id];
+    return value ? [`${field.label}: ${getCharacterFieldDisplayValue(field, value)}`] : [];
+  }));
   const spellcastAttributeId = getSpellcastAttributeId(selectedSubclass?.id, selectedSubclass);
 
   return `
@@ -88,12 +94,12 @@ export function renderCharacterCreationModal(deps: CharacterCreationRenderDepend
           </div>
         </section>
         ${renderCreationCommunityStep({ communities: catalog.communities, features: catalog.features, selectedId: state.characterCreationCommunityId, search: state.characterCreationCommunitySearch, packId: state.characterCreationCommunityPackId, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs) }, escapeHtml)}
-        ${renderCreationClassStep({ classes, selectedClass, subclasses, selectedSubclassId: selectedSubclass?.id, features: catalog.features }, escapeHtml)}
+        ${renderCreationClassStep({ classes, selectedClass, subclasses, selectedSubclassId: selectedSubclass?.id, features: catalog.features, characterFieldSources, definitionSelections: state.characterCreationDefinitionSelections }, escapeHtml)}
         ${renderCreationAttributesStep(state.characterCreationAttributeValues, state.characterCreationSelectedAttributeValue, spellcastAttributeId)}
         <section class="character-domain-card-picker creation-step-panel" data-creation-panel="7"><div><span>Loadout inicial</span><h3>Escolha 2 cartas de Domínio</h3><p>Toque em uma carta para selecioná-la e ler o efeito completo. Você pode escolher as duas do mesmo domínio.</p></div><div class="character-domain-card-toolbar"><span>${state.characterCreationCardIds.length} / 2 selecionadas</span><div>${selectedClass.domainIds.map((domainId) => { const domain = findDomain(catalog, domainId); return `<button type="button" class="chip ${selectedCardDomainId === domainId ? "is-active" : ""}" data-character-card-domain-id="${escapeHtml(domainId)}">${escapeHtml(domain?.name ?? "Domínio")}</button>`; }).join("")}</div></div>${eligibleStartingCards.length ? `<div class="character-domain-card-grid">${visibleStartingCards.map((card) => { const selected = state.characterCreationCardIds.includes(card.id); const focused = selected && state.characterCreationFocusedCardId === card.id; return `<button type="button" class="character-domain-card ${selected ? "is-selected" : ""} ${focused ? "is-focused" : ""}" data-character-starting-card-id="${escapeHtml(card.id)}" aria-pressed="${selected}"><span class="character-domain-card-art">${card.image ? `<img src="${escapeHtml(card.image)}" alt="" />` : ""}</span><strong>${escapeHtml(card.name)}</strong><small>${escapeHtml(findDomain(catalog, card.domainId)?.name ?? "Domínio")} · Nível ${card.tier}</small>${selected ? '<b class="character-domain-card-selected">Selecionada</b>' : ""}<p>${escapeHtml(card.summary)}</p>${focused ? `<span class="character-domain-card-detail">${escapeHtml(card.effect)}</span>` : ""}</button>`; }).join("")}</div>` : `<p class="form-error">Não há cartas de nível 1 para os domínios desta classe. Importe o Pack correspondente antes de criar a ficha.</p>`}</section>
         ${renderCreationExperiencesStep(state.characterCreationExperiences, escapeHtml)}
-        ${renderCreationReviewStep({ name: state.characterCreationName, community: catalog.communities.find((entry) => entry.id === state.characterCreationCommunityId)?.name ?? state.characterCreationCommunity, ancestries: selectedAncestries.map((ancestry) => ancestry.name).join(" + "), topFeature: selectedTopFeature?.name, bottomFeature: selectedBottomFeature?.name, attributes: characterCreationAttributes.map((attribute) => ({ label: attribute.label, value: state.characterCreationAttributeValues[attribute.id] })), className: selectedClass.name, subclassName: selectedSubclass?.name, hitPoints: selectedClass.startingHitPoints, evasion: selectedClass.startingEvasion, cards: state.characterCreationCardIds.map((id) => catalog.cards.find((card) => card.id === id)?.name ?? "").filter(Boolean).join(" · "), experiences: state.characterCreationExperiences.map((experience) => experience.name).filter(Boolean).join(" · ") }, escapeHtml)}
-        ${state.characterCreationError ? `<p class="form-error">${escapeHtml(state.characterCreationError)}</p>` : ""}
+        ${renderCreationReviewStep({ name: state.characterCreationName, community: catalog.communities.find((entry) => entry.id === state.characterCreationCommunityId)?.name ?? state.characterCreationCommunity, ancestries: selectedAncestries.map((ancestry) => ancestry.name).join(" + "), topFeature: selectedTopFeature?.name, bottomFeature: selectedBottomFeature?.name, attributes: characterCreationAttributes.map((attribute) => ({ label: attribute.label, value: state.characterCreationAttributeValues[attribute.id] })), className: selectedClass.name, subclassName: selectedSubclass?.name, hitPoints: selectedClass.startingHitPoints, evasion: selectedClass.startingEvasion, cards: state.characterCreationCardIds.map((id) => catalog.cards.find((card) => card.id === id)?.name ?? "").filter(Boolean).join(" · "), experiences: state.characterCreationExperiences.map((experience) => experience.name).filter(Boolean).join(" · "), classChoices }, escapeHtml)}
+        ${state.characterCreationError ? `<p class="form-error" role="alert" tabindex="-1" data-character-creation-error>${escapeHtml(state.characterCreationError)}</p>` : ""}
         </div>
         ${renderCreationActions({ step: state.characterCreationStep, nextDisabled: needsAncestrySelection, nextDescribedBy: needsAncestrySelection ? "character-ancestry-selection-hint" : undefined })}
       </form>

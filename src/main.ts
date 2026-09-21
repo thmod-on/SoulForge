@@ -110,6 +110,7 @@ import {
   type PlayerOverviewDependencies
 } from "./features/player/renderPlayerOverview";
 import { renderTraits as renderTraitsView } from "./features/player/renderTraits";
+import { handleCharacterFieldAction } from "./features/feature-fields/characterFieldActions";
 import {
   removeCompendiumDomain as removeCompendiumDomainAction,
   renderCompendiumDomainsManager as renderCompendiumDomainsManagerView,
@@ -282,13 +283,13 @@ const state: {
   characterCreationAncestrySearch: string;
   characterCreationCardIds: string[];
   characterCreationCardDomainId?: string; characterCreationFocusedCardId?: string;
-  characterCreationExperiences: Array<{ name: string; description: string }>;
+  characterCreationExperiences: Array<{ name: string; description: string }>; characterCreationDefinitionSelections: Record<string, Record<string, string>>;
   characterCreationAttributeValues: Record<Attribute["id"], number>;
   characterCreationSelectedAttributeValue?: number;
   characterCreationPortraitImage?: string;
   characterCreationTopFeatureId?: string;
   characterCreationBottomFeatureId?: string;
-  characterCreationError?: string;
+  characterCreationError?: string; characterFieldError?: string;
   characters: Character[];
   editingCompendiumClassId?: string;
   deletingCompendiumClassId?: string;
@@ -353,7 +354,7 @@ const state: {
   characterCreationAncestryIds: [],
   characterCreationAncestrySearch: "",
   characterCreationCardIds: [],
-  characterCreationExperiences: [{ name: "", description: "" }, { name: "", description: "" }],
+  characterCreationExperiences: [{ name: "", description: "" }, { name: "", description: "" }], characterCreationDefinitionSelections: {},
   characterCreationAttributeValues: createEmptyCreationAttributeValues(),
   characterCreationSelectedAttributeValue: undefined,
   characters: [],
@@ -953,7 +954,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
   const screen = state.page === "overview"
     ? renderOverviewView(character, getPlayerOverviewDependencies())
     : state.page === "skills"
-      ? renderTraitsView(character, { escapeHtml, renderEmptyInline, catalog, featureActivationError: state.featureActivationError })
+      ? renderTraitsView(character, { escapeHtml, renderEmptyInline, catalog, featureActivationError: state.featureActivationError, characterFieldError: state.characterFieldError })
       : state.page === "storedCards"
           ? renderStoredCardsView(character, getPlayerOverviewDependencies())
           : state.page === "progression"
@@ -1059,7 +1060,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
   }
 }
 
-const renderCharacterCreationInPlace = (options: { resetScroll?: boolean } = {}): void => {
+const renderCharacterCreationInPlace = (options: { resetScroll?: boolean; revealError?: boolean } = {}): void => {
   if (!state.characterSelectionOpen || !state.characterCreationOpen || !renderCharacterCreationSurface(appRoot, renderCharacterCreationModalView(getCharacterCreationRenderDependencies()), options)) {
     render({ resetCreationScroll: options.resetScroll });
   }
@@ -1169,7 +1170,7 @@ async function createCharacter(): Promise<void> {
   const builtCharacter = buildCharacterFromDraft(getCharacterCreationDraft(state), catalog, getCharacterCreationFallback());
   if (builtCharacter instanceof Error) {
     state.characterCreationError = builtCharacter.message;
-    render();
+    renderCharacterCreationInPlace({ revealError: true });
     return;
   }
   await saveCharacter(builtCharacter);
@@ -1321,6 +1322,7 @@ function bindEvents(): void {
       return;
     }
 
+    if (handleCharacterFieldAction(target, { catalog, character: state.character, update: (character, error) => { state.character = character; state.characterFieldError = error; void (error ? Promise.resolve() : saveCharacter(character)).then(() => render({ preserveMainScroll: true })); } })) return;
     if (handleCharacterScarAction(target, getCharacterScarDependencies())) { event.preventDefault(); return; } if (handleAncestryAction(target, getAncestryFeatureDependencies())) return;
     if (handleCommunityAction(target, { state, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render })) return;
     if (handleTransformationAction(target, getTransformationFeatureDependencies())) return; if (handleConditionAction(target, getConditionFeatureDependencies())) return; if (state.character && handleCharacterTransformationAction(target, getCharacterTransformationDependencies())) return;
@@ -1685,7 +1687,7 @@ function bindEvents(): void {
 
     if (target.closest('[data-action="character-creation-next"]')) {
       if (!validateCharacterCreationStep()) {
-        renderCharacterCreationInPlace();
+        renderCharacterCreationInPlace({ revealError: true });
         return;
       }
       if (state.characterCreationStep === 5) {
@@ -2636,12 +2638,12 @@ function bindEvents(): void {
       return;
     }
     if (target instanceof HTMLSelectElement && target.matches("[data-character-class]")) {
-      selectCharacterCreationClass(state, catalog, getCharacterCreationFallback(), target.value);
+      syncCharacterCreationDraftFromForm(state); selectCharacterCreationClass(state, catalog, getCharacterCreationFallback(), target.value);
       renderCharacterCreationInPlace();
       return;
     }
     if (target instanceof HTMLInputElement && target.matches("[data-character-subclass-id]")) {
-      state.characterCreationSubclassId = target.dataset.characterSubclassId;
+      syncCharacterCreationDraftFromForm(state); state.characterCreationSubclassId = target.dataset.characterSubclassId;
       state.characterCreationError = undefined;
       renderCharacterCreationInPlace();
       return;

@@ -42,6 +42,7 @@ function createState(): CharacterCreationState {
     characterCreationAncestrySearch: "origem",
     characterCreationCardIds: ["card.one", "card.two"],
     characterCreationExperiences: [{ name: "Uma", description: "" }, { name: "Duas", description: "" }],
+    characterCreationDefinitionSelections: {},
     characterCreationAttributeValues: createEmptyCreationAttributeValues(),
     characterCreationPortraitImage: "data:image/png;base64,test",
     characterCreationError: "Erro anterior"

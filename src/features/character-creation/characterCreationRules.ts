@@ -2,6 +2,7 @@ import type { Catalog } from "../../domain/catalog";
 import type { AncestryDefinition, Attribute, Character, CharacterSkill, ClassDefinition, CommunityDefinition, FeatureDefinition, SubclassDefinition } from "../../domain/types";
 import type { CharacterCreationStep } from "./creationFlow";
 import { synchronizeCharacterSheetModifiers } from "../player/sheetModifiers";
+import { getCreationCharacterFieldSources, normalizeCharacterFieldValues, validateCharacterFieldValues } from "../feature-fields/featureFields";
 
 export type CharacterCreationDraft = {
   name: string;
@@ -16,6 +17,7 @@ export type CharacterCreationDraft = {
   attributeValues: Record<Attribute["id"], number>;
   portraitImage?: string;
   experiences: Array<{ name: string; description: string }>;
+  definitionSelections?: Record<string, Record<string, string>>;
 };
 
 export type CharacterCreationFallback = {
@@ -56,7 +58,15 @@ export function validateCreationStep(step: CharacterCreationStep, draft: Charact
     if (ancestries.length === 2 && topOrigin?.id === bottomOrigin?.id) return "Em uma ancestralidade mista, escolha a Feature Top e a Bottom de origens diferentes.";
   }
   if (step === 4 && (!draft.communityId || !catalog.communities.some((community) => community.id === draft.communityId))) return "Escolha uma comunidade.";
-  if (step === 5 && (!draft.classId || !draft.subclassId)) return "Escolha uma classe e uma subclasse.";
+  if (step === 5) {
+    if (!draft.classId || !draft.subclassId) return "Escolha uma classe e uma subclasse.";
+    const characterClass = catalog.classes.find((entry) => entry.id === draft.classId);
+    const subclass = catalog.subclasses.find((entry) => entry.id === draft.subclassId);
+    for (const { feature } of getCreationCharacterFieldSources(characterClass, subclass, catalog)) {
+      const error = validateCharacterFieldValues(feature, normalizeCharacterFieldValues(feature, draft.definitionSelections?.[feature.id] ?? {}));
+      if (error) return error;
+    }
+  }
   if (step === 6 && !hasValidCreationAttributes(draft.attributeValues)) return "Distribua uma vez cada valor: +2, +1, +1, +0, +0 e −1.";
   if (step === 7 && draft.cardIds.length !== 2) return "Escolha exatamente duas cartas de Domínio de nível 1.";
   if (step === 8 && !hasValidStartingExperiences(draft.experiences)) return "Defina duas Experiências diferentes para o personagem.";
@@ -77,7 +87,13 @@ export function buildCharacterFromDraft(draft: CharacterCreationDraft, catalog: 
   const hasValidMixedAncestryFeatures = ancestries.length !== 2 || topOrigin?.id !== bottomOrigin?.id;
   const cards = classDefinition ? draft.cardIds.filter((id) => catalog.cards.some((card) => card.id === id && card.tier === 1 && classDefinition.domainIds.includes(card.domainId))) : [];
   const experiences = draft.experiences.map((entry) => ({ ...entry, name: entry.name.trim(), description: entry.description.trim() }));
-  if (!draft.name.trim() || !community || !communityFeature || !classDefinition || !subclassDefinition || ancestries.length !== draft.ancestryIds.length || !ancestries.length || !validTop || !validBottom || !hasValidMixedAncestryFeatures || !hasValidCreationAttributes(draft.attributeValues) || cards.length !== 2 || !hasValidStartingExperiences(experiences)) {
+  const characterFieldSources = getCreationCharacterFieldSources(classDefinition, subclassDefinition, catalog);
+  const definitionSelections = characterFieldSources.map(({ feature }) => ({
+    sourceDefinitionId: feature.id,
+    values: normalizeCharacterFieldValues(feature, draft.definitionSelections?.[feature.id] ?? {})
+  }));
+  const hasInvalidCharacterFields = characterFieldSources.some(({ feature }) => validateCharacterFieldValues(feature, normalizeCharacterFieldValues(feature, draft.definitionSelections?.[feature.id] ?? {})));
+  if (!draft.name.trim() || !community || !communityFeature || !classDefinition || !subclassDefinition || ancestries.length !== draft.ancestryIds.length || !ancestries.length || !validTop || !validBottom || !hasValidMixedAncestryFeatures || !hasValidCreationAttributes(draft.attributeValues) || cards.length !== 2 || !hasValidStartingExperiences(experiences) || hasInvalidCharacterFields) {
     return new Error("Complete a ficha, escolha duas cartas de Domínio e defina duas Experiências diferentes.");
   }
   const features = catalog.features;
@@ -92,7 +108,8 @@ export function buildCharacterFromDraft(draft: CharacterCreationDraft, catalog: 
     progression: { attributeMarks: {}, acquiredSubclassTiers: ["foundation"], advancementSelections: [], history: [] },
     resources: [{ id: "hp", label: "PV", value: 0, max: hp, baseMax: hp, tone: "hp" }, { id: "stress", label: "Estresse", value: 0, max: 6, baseMax: 6, tone: "stress" }, { id: "armor-slots", label: "Armadura", value: 0, max: 0, baseMax: 0, tone: "focus" }, { id: "hope", label: "Esperanca", value: 0, max: 6, baseMax: 6, tone: "hope" }],
     skills: [...skills, { id: communityFeature.id, name: communityFeature.name, source: "community", description: communityFeature.summary }], experiences: experiences.map((entry) => ({ id: `experience.local.${crypto.randomUUID()}`, name: entry.name, value: 2, description: entry.description || undefined })), notes: [],
-    deck: { activeCardIds: cards, learnedCardIds: cards }, inventory: { capacity: 30, compartments: [{ id: "equipped", name: "Equipados", source: "character" }, { id: "backpack", name: "Mochila", capacity: 30, source: "character" }], entries: [] }
+    deck: { activeCardIds: cards, learnedCardIds: cards }, inventory: { capacity: 30, compartments: [{ id: "equipped", name: "Equipados", source: "character" }, { id: "backpack", name: "Mochila", capacity: 30, source: "character" }], entries: [] },
+    definitionSelections: definitionSelections.length ? definitionSelections : undefined
   };
   return synchronizeCharacterSheetModifiers(character, catalog);
 }

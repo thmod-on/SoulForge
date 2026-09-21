@@ -1555,6 +1555,27 @@ textarea:disabled {
 .character-subclass-features strong { display: block; font-size: 0.78rem; }
 .character-subclass-features p { margin: 0.12rem 0 0; color: var(--color-muted); font-size: 0.72rem; line-height: 1.35; }
 
+.character-class-fields {
+  display: grid;
+  gap: 0.65rem;
+  border-top: 1px solid rgba(195, 155, 255, 0.22);
+  padding-top: 0.85rem;
+}
+
+.character-class-fields > div > span,
+.character-class-field-source header small,
+.class-choice-card header small {
+  color: var(--color-gold);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.character-class-fields > div > p { margin: 0.2rem 0 0; color: var(--color-muted); font-size: 0.76rem; }
+.character-class-field-source { display: grid; gap: 0.65rem; border: 1px solid rgba(244, 234, 219, 0.13); background: rgba(8, 5, 17, 0.42); padding: 0.8rem; }
+.character-class-field-source header { display: grid; gap: 0.15rem; }
+.character-class-field-source .form-grid { grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); }
+
 @media (max-width: 40rem) {
   .character-class-choice-layout {
     grid-template-columns: 1fr;
@@ -4378,6 +4399,16 @@ button.attribute-badge:active {
   gap: 0.75rem;
   margin-bottom: 1rem;
 }
+
+.traits-class-choice-section { display: grid; gap: 0.8rem; margin-bottom: 1rem; }
+.traits-class-choice-section .section-heading { margin-bottom: 0; }
+.traits-class-choice-section .section-heading p { margin: 0.2rem 0 0; color: var(--color-muted); }
+.class-choice-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: 0.75rem; }
+.class-choice-card { display: grid; align-content: start; gap: 0.75rem; border: 1px solid rgba(195, 155, 255, 0.22); background: rgba(8, 5, 17, 0.36); padding: 0.9rem; }
+.class-choice-card header { display: grid; gap: 0.15rem; }
+.class-choice-card h3 { margin: 0; }
+.class-choice-card .form-grid { grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
+.class-choice-card > button { justify-self: end; }
 
 .traits-character-identity {
   display: grid;

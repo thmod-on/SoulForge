@@ -18,6 +18,16 @@ describe("validação de Packs", () => {
     expect(validatePackBundle({ format: "soulforge-pack-v1", manifest, definitions: [feature] }).definitions).toHaveLength(1);
   });
 
+  it("aceita campos genéricos de personagem em uma Feature", () => {
+    const configurable = { ...feature, characterFields: [{ id: "sphere", kind: "text", label: "Esfera", required: true, suggestions: ["Caos", "Justiça"], maxLength: 80 }, { id: "element", kind: "select", label: "Elemento", options: [{ value: "fire", label: "Fogo" }] }] };
+    expect(validatePackBundle({ format: "soulforge-pack-v1", manifest, definitions: [configurable] }).definitions).toHaveLength(1);
+  });
+
+  it("rejeita opções repetidas em campos de personagem", () => {
+    const configurable = { ...feature, characterFields: [{ id: "element", kind: "select", label: "Elemento", options: [{ value: "fire", label: "Fogo" }, { value: "fire", label: "Chama" }] }] };
+    expect(() => validatePackBundle({ format: "soulforge-pack-v1", manifest, definitions: [configurable] })).toThrow("campos de personagem inválidos");
+  });
+
   it("rejeita custo inválido em Feature ativável", () => {
     const invalidFeature = { ...feature, activation: { ...feature.activation, costs: [{ kind: "game-marker", sourceDefinitionId: "feature.test.favor", markerId: "favor", amount: 0 }] } };
     expect(() => validatePackBundle({ format: "soulforge-pack-v1", manifest, definitions: [invalidFeature] })).toThrow("metadados de ativação inválidos");

@@ -20,6 +20,7 @@ export type CharacterCreationState = {
   characterCreationCardDomainId?: string;
   characterCreationFocusedCardId?: string;
   characterCreationExperiences: Array<{ name: string; description: string }>;
+  characterCreationDefinitionSelections: Record<string, Record<string, string>>;
   characterCreationAttributeValues: Record<Attribute["id"], number>;
   characterCreationSelectedAttributeValue?: number;
   characterCreationPortraitImage?: string;
@@ -44,6 +45,7 @@ export function openCharacterCreation(state: CharacterCreationState, catalog: Ca
   state.characterCreationCardIds = [];
   state.characterCreationFocusedCardId = undefined;
   state.characterCreationExperiences = [{ name: "", description: "" }, { name: "", description: "" }];
+  state.characterCreationDefinitionSelections = {};
   state.characterCreationAttributeValues = createEmptyCreationAttributeValues();
   state.characterCreationSelectedAttributeValue = undefined;
   state.characterCreationPortraitImage = undefined;
@@ -60,6 +62,7 @@ export function closeCharacterCreation(state: CharacterCreationState): void {
   state.characterCreationAncestrySearch = "";
   state.characterCreationCardIds = [];
   state.characterCreationFocusedCardId = undefined;
+  state.characterCreationDefinitionSelections = {};
   state.characterCreationAttributeValues = createEmptyCreationAttributeValues();
   state.characterCreationSelectedAttributeValue = undefined;
   state.characterCreationPortraitImage = undefined;
@@ -82,7 +85,8 @@ export function getCharacterCreationDraft(state: CharacterCreationState): Charac
     cardIds: state.characterCreationCardIds,
     attributeValues: state.characterCreationAttributeValues,
     portraitImage: state.characterCreationPortraitImage,
-    experiences: state.characterCreationExperiences
+    experiences: state.characterCreationExperiences,
+    definitionSelections: state.characterCreationDefinitionSelections
   };
 }
 
@@ -96,6 +100,15 @@ export function syncCharacterCreationDraftFromForm(state: CharacterCreationState
     if (Number.isInteger(index) && state.characterCreationExperiences[index]) {
       state.characterCreationExperiences[index] = { ...state.characterCreationExperiences[index], name: input.value };
     }
+  });
+  root.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-character-feature-field]").forEach((input) => {
+    const sourceDefinitionId = input.dataset.sourceDefinitionId;
+    const fieldId = input.dataset.characterFieldId;
+    if (!sourceDefinitionId || !fieldId) return;
+    state.characterCreationDefinitionSelections[sourceDefinitionId] = {
+      ...(state.characterCreationDefinitionSelections[sourceDefinitionId] ?? {}),
+      [fieldId]: input.value
+    };
   });
 }
 

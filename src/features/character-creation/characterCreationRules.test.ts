@@ -9,11 +9,12 @@ const topFeature: FeatureDefinition = { id: "feature.ancestry.top", type: "featu
 const bottomFeature: FeatureDefinition = { id: "feature.ancestry.bottom", type: "feature", packId, name: "Persistente", summary: "", sourceType: "ancestry", sourceId: ancestry.id, tier: "bottom", sheetModifiers: [{ kind: "resource-max", resourceId: "stress", amount: 1 }] };
 const community: CommunityDefinition = { id: "community.test", type: "community", packId, name: "Vila", summary: "", adjectives: [], featureId: "feature.community" };
 const communityFeature: FeatureDefinition = { id: "feature.community", type: "feature", packId, name: "Entre vizinhos", summary: "", sourceType: "community", sourceId: community.id, tier: "community" };
-const characterClass: ClassDefinition = { id: "class.test", type: "class", packId, name: "Guardião", summary: "", domainIds: ["domain.one", "domain.two"], startingEvasion: 10, startingHitPoints: 6, featureIds: [], hopeFeatureId: "feature.hope", subclassIds: ["subclass.test", "subclass.other"] };
+const characterClass: ClassDefinition = { id: "class.test", type: "class", packId, name: "Guardião", summary: "", domainIds: ["domain.one", "domain.two"], startingEvasion: 10, startingHitPoints: 6, featureIds: ["feature.class.choice"], hopeFeatureId: "feature.hope", subclassIds: ["subclass.test", "subclass.other"] };
 const subclass: SubclassDefinition = { id: "subclass.test", type: "subclass", packId, name: "Defensor", summary: "", classId: characterClass.id, foundationFeatureIds: [], specializationFeatureIds: [], masteryFeatureIds: [] };
 const hopeFeature: FeatureDefinition = { id: "feature.hope", type: "feature", packId, name: "Esperança", summary: "", sourceType: "class", sourceId: characterClass.id, tier: "hope" };
+const classChoiceFeature: FeatureDefinition = { id: "feature.class.choice", type: "feature", packId, name: "Escolha", summary: "", sourceType: "class", sourceId: characterClass.id, tier: "class", characterFields: [{ id: "name", kind: "text", label: "Nome", required: true }] };
 const cards: CardDefinition[] = ["one", "two"].map((id) => ({ id: `card.${id}`, type: "card", packId, name: id, summary: "", domainId: "domain.one", tier: 1, cardType: "acao", effect: "" }));
-const catalog = createCatalog([], [ancestry, topFeature, bottomFeature, community, communityFeature, characterClass, subclass, hopeFeature, ...cards]);
+const catalog = createCatalog([], [ancestry, topFeature, bottomFeature, community, communityFeature, characterClass, subclass, hopeFeature, classChoiceFeature, ...cards]);
 const fallback = { classDefinition: characterClass, subclassDefinition: subclass, skills: [] };
 
 describe("criação de personagem", () => {
@@ -21,7 +22,7 @@ describe("criação de personagem", () => {
     const created = buildCharacterFromDraft({
       name: "Nova ficha", community: "", communityId: community.id, classId: characterClass.id, subclassId: subclass.id,
       ancestryIds: [ancestry.id], topFeatureId: topFeature.id, bottomFeatureId: bottomFeature.id,
-      cardIds: cards.map((card) => card.id), attributeValues: { dex: 2, for: 1, cha: 1, wil: 0, con: 0, int: -1 }, experiences: [{ name: "Exploradora", description: "" }, { name: "Diplomata", description: "" }]
+      cardIds: cards.map((card) => card.id), attributeValues: { dex: 2, for: 1, cha: 1, wil: 0, con: 0, int: -1 }, experiences: [{ name: "Exploradora", description: "" }, { name: "Diplomata", description: "" }], definitionSelections: { [classChoiceFeature.id]: { name: "A Sentinela" } }
     }, catalog, fallback);
 
     expect(created).not.toBeInstanceOf(Error);
@@ -29,5 +30,6 @@ describe("criação de personagem", () => {
     expect(created.resources.find((resource) => resource.id === "hp")).toMatchObject({ value: 0, max: 6 });
     expect(created.resources.find((resource) => resource.id === "stress")).toMatchObject({ value: 0, max: 7 });
     expect(created.resources.find((resource) => resource.id === "hope")).toMatchObject({ value: 0, max: 6 });
+    expect(created.definitionSelections).toEqual([{ sourceDefinitionId: classChoiceFeature.id, values: { name: "A Sentinela" } }]);
   });
 });

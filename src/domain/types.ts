@@ -428,6 +428,26 @@ export type ConditionDefinition = BaseDefinition & {
   rulesNotes?: string[];
 };
 
+export type FeatureCharacterFieldDefinition =
+  | {
+      id: string;
+      kind: "text";
+      label: string;
+      required?: boolean;
+      placeholder?: string;
+      help?: string;
+      suggestions?: string[];
+      maxLength?: number;
+    }
+  | {
+      id: string;
+      kind: "select";
+      label: string;
+      required?: boolean;
+      help?: string;
+      options: Array<{ value: string; label: string }>;
+    };
+
 export type FeatureDefinition = BaseDefinition & {
   type: "feature";
   sourceType: "class" | "subclass" | "ancestry" | "community";
@@ -437,6 +457,8 @@ export type FeatureDefinition = BaseDefinition & {
   gameMarkers?: GameMarkerDefinition[];
   sheetModifiers?: CharacterSheetModifier[];
   activation?: FeatureActivationDefinition;
+  /** Campos persistentes pedidos por esta Feature, sem criar propriedades específicas por classe. */
+  characterFields?: FeatureCharacterFieldDefinition[];
 };
 
 export type Definition = DomainDefinition | CardDefinition | ItemDefinition | ClassDefinition | SubclassDefinition | AncestryDefinition | CommunityDefinition | TransformationDefinition | ConditionDefinition | FeatureDefinition;

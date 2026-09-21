@@ -2,11 +2,12 @@
 
 SoulForge é uma PWA *offline-first* para acompanhar personagens de Daggerheart sem depender de servidor durante a mesa.
 
-Versão atual: `0.31.0`.
+Versão atual: `0.32.0`.
 
 ## Recursos principais
 
-- criação, seleção e acompanhamento de personagens com armazenamento local;
+- criação, seleção e acompanhamento de personagens com armazenamento local,
+  incluindo escolhas persistentes solicitadas por Features de classe;
 - ficha responsiva com atributos, recursos, inventário, Loadout, Vault,
   progressão, anotações, marcadores e transformações;
 - Compendium pesquisável para cartas, domínios, itens, classes,
@@ -71,6 +72,8 @@ pnpm run build
 - [Processo de artes de classe](docs/CLASS_ARTWORK.md)
 - [Dados locais](docs/LOCAL_DATA.md)
 - [Packs](docs/PACKS.md)
+- [Campos de personagem das Features](docs/FEATURE_FIELDS.md)
+- [Vocabulário de itens](docs/ITEM_TRANSLATIONS.md)
 - [Padrões de interface](docs/UI_PATTERNS.md)
 - [Versões e releases](docs/RELEASES.md)
 - [Uso de conteúdo Daggerheart](docs/CONTENT_POLICY.md)
