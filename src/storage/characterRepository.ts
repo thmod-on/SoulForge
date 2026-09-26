@@ -1,6 +1,6 @@
 import { demoCharacter } from "../domain/demoCharacter";
 import { demoKaelII } from "../domain/demoKaelII";
-import { migrateLegacyCharacterNotes } from "../domain/characterMigrations";
+import { migrateCharacter } from "../domain/characterMigrations";
 import type { Character } from "../domain/types";
 
 const databaseName = "soulforge";
@@ -58,7 +58,7 @@ export async function loadCharacter(characterId: string): Promise<Character | un
 
   database.close();
   if (!character) return undefined;
-  const migrated = migrateLegacyCharacterNotes(character);
+  const migrated = migrateCharacter(character);
   if (migrated !== character) await saveCharacter(migrated);
   return migrated;
 }
@@ -75,7 +75,7 @@ export async function listCharacters(): Promise<Character[]> {
   });
 
   database.close();
-  const migrated = characters.map(migrateLegacyCharacterNotes);
+  const migrated = characters.map(migrateCharacter);
   await Promise.all(migrated.map((character, index) => character === characters[index] ? Promise.resolve() : saveCharacter(character)));
   return migrated;
 }

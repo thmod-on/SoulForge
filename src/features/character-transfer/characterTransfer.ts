@@ -1,5 +1,5 @@
 import type { Character } from "../../domain/types";
-import { migrateLegacyCharacterNotes } from "../../domain/characterMigrations";
+import { migrateCharacter } from "../../domain/characterMigrations";
 
 export const characterExportFormat = "soulforge-character-v1" as const;
 
@@ -116,7 +116,7 @@ export function parseCharacterImport(serialized: string, existingCharacterIds: R
     throw new Error("Este arquivo não contém uma ficha compatível com o SoulForge.");
   }
 
-  const character = migrateLegacyCharacterNotes(structuredClone(candidate));
+  const character = migrateCharacter(structuredClone(candidate));
   if (existingCharacterIds.has(character.id)) {
     character.id = createImportedCharacterId();
   }

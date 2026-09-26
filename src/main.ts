@@ -89,6 +89,7 @@ import { getEffectiveDefense, synchronizeArmorResource } from "./features/invent
 import { getActiveSheetModifierEffects, synchronizeCharacterSheetModifiers } from "./features/player/sheetModifiers";
 import { handleCharacterScarAction, handleCharacterScarEscape, renderCharacterScarDialogs, type CharacterScarDependencies } from "./features/player/characterScars";
 import { getAttributeLabel, handleAttributeDetailAction, handleAttributeDetailEscape, renderAttributeDetailModal } from "./features/player/attributeDetails";
+import { handleCustomResourceAction, handleCustomResourceEscape, renderAddCustomResourceModal, renderRemoveCustomResourceModal } from "./features/player/customResourceActions";
 import { getActiveFeatureEffectDefenseModifiers, getActiveFeatureEffects, getFeatureActivationForCharacter } from "./features/feature-effects/featureEffects";
 import { handleFeatureEffectAction, renderFeatureTokenActivationDialog, type FeatureTokenActivationDialogState } from "./features/feature-effects/featureTokenActivation";
 import { renderCharacterIdentityModal as renderCharacterIdentityModalView } from "./features/character-identity/renderCharacterIdentityModal";
@@ -211,6 +212,7 @@ const state: {
   modalCardId?: string;
   resourceModalId?: string;
   addResourceModalOpen: boolean;
+  deletingCustomResourceId?: string;
   progressionHistoryOpen: boolean;
   progressionPicker?: ProgressionPicker;
   progressionPickerTier?: ProgressionTierNumber;
@@ -766,11 +768,6 @@ function renderDeleteCharacterModal(): string {
   return `<div class="modal-backdrop" data-modal-backdrop><section class="container-modal danger-modal" role="dialog" aria-modal="true" aria-labelledby="delete-character-title"><button class="modal-close" type="button" data-action="cancel-delete-character" aria-label="Cancelar exclusão">×</button><span class="resource-modal-label">Excluir personagem</span><h2 id="delete-character-title">Excluir personagem?</h2><p>A ficha de <strong>${escapeHtml(character.identity.name)}</strong>, incluindo inventário, anotações e progresso, será removida deste dispositivo.</p><div class="danger-summary"><strong>!</strong><span>Esta ação não pode ser desfeita.</span></div><div class="confirmation-actions"><button class="sf-action sf-action--secondary secondary-action" type="button" data-action="cancel-delete-character">Cancelar</button><button class="sf-action sf-action--danger danger-action" type="button" data-action="confirm-delete-character">Excluir personagem</button></div></section></div>`;
 }
 
-function renderAddResourceModal(): string {
-  if (!state.addResourceModalOpen) return "";
-  return `<div class="modal-backdrop" data-modal-backdrop><section class="container-modal resource-create-modal" role="dialog" aria-modal="true" aria-labelledby="add-resource-title"><div class="container-modal-heading"><h2 id="add-resource-title">Novo recurso</h2><button class="modal-close modal-close-inline" type="button" data-modal-close aria-label="Fechar">x</button></div><p>Crie um controle próprio para esta ficha. Ele ficará salvo somente neste personagem.</p><div class="resource-form-grid"><label class="form-field resource-form-wide"><span>Nome *</span><input data-add-resource-label type="text" maxlength="40" placeholder="Ex.: Cargas Arcanas" /></label><label class="form-field"><span>Valor atual *</span><input data-add-resource-value type="number" min="0" value="0" /></label><label class="form-field"><span>Valor máximo *</span><input data-add-resource-max type="number" min="1" value="1" /></label><label class="form-field resource-form-wide"><span>Cor</span><select data-add-resource-tone><option value="focus">Azul</option><option value="hope">Esperança</option><option value="stress">Estresse</option><option value="hp">PV</option><option value="shadow">Essência</option></select></label></div><p class="form-error" data-add-resource-error hidden></p><div class="modal-actions"><button class="sf-action sf-action--secondary secondary-action" type="button" data-modal-close>Cancelar</button><button class="sf-action sf-action--primary primary-action" type="button" data-action="save-resource">Criar recurso</button></div></section></div>`;
-}
-
 function renderCharacterPortraitModal(): string {
   if (!state.characterPortraitModalOpen || !state.character) return "";
   const portrait = state.character.identity.portraitImage;
@@ -992,7 +989,8 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
     ${renderActivateStoredCardModal()}${renderCharacterTransformationDialogs(getCharacterTransformationDependencies())}${renderCharacterScarDialogs(getCharacterScarDependencies())}
     ${renderItemModalView(getInventoryRenderDependencies())}
     ${renderDeleteItemModalView(getInventoryRenderDependencies())}
-    ${renderAddResourceModal()}
+    ${renderAddCustomResourceModal(state)}
+    ${renderRemoveCustomResourceModal(state, escapeHtml)}
     ${renderProgressionHistoryModalView(getProgressionDialogDependencies())}
     ${renderProgressionPickerModalView(getProgressionDialogDependencies())}
     ${renderProgressionMulticlassModalView(getProgressionDialogDependencies())}
@@ -1255,40 +1253,6 @@ async function adjustResource(resourceId: string | undefined, delta: number): Pr
   render({ preserveMainScroll: true });
 }
 
-async function createResource(): Promise<void> {
-  const character = state.character;
-  if (!character) return;
-  const labelInput = document.querySelector<HTMLInputElement>("[data-add-resource-label]");
-  const valueInput = document.querySelector<HTMLInputElement>("[data-add-resource-value]");
-  const maxInput = document.querySelector<HTMLInputElement>("[data-add-resource-max]");
-  const toneInput = document.querySelector<HTMLSelectElement>("[data-add-resource-tone]");
-  const error = document.querySelector<HTMLElement>("[data-add-resource-error]");
-  const label = labelInput?.value.trim() ?? "";
-  const value = Number(valueInput?.value);
-  const max = Number(maxInput?.value);
-  const tone = toneInput?.value as Character["resources"][number]["tone"] | undefined;
-
-  if (!label || !Number.isInteger(value) || !Number.isInteger(max) || value < 0 || max < 1 || value > max || !tone) {
-    if (error) {
-      error.textContent = "Informe um nome e valores inteiros entre 0 e o máximo definido.";
-      error.removeAttribute("hidden");
-    }
-    labelInput?.classList.toggle("is-invalid", !label);
-    valueInput?.classList.toggle("is-invalid", !Number.isInteger(value) || value < 0 || value > max);
-    maxInput?.classList.toggle("is-invalid", !Number.isInteger(max) || max < 1 || value > max);
-    return;
-  }
-
-  const updatedCharacter: Character = {
-    ...character,
-    resources: [...character.resources, { id: `resource.${crypto.randomUUID()}`, label, value, max, tone }]
-  };
-  state.character = updatedCharacter;
-  state.addResourceModalOpen = false;
-  await saveCharacter(updatedCharacter);
-  render();
-}
-
 function bindEvents(): void {
   window.addEventListener("resize", () => {
     syncCharacterCarousel(appRoot);
@@ -1390,6 +1354,8 @@ function bindEvents(): void {
       return;
     }
 
+    if (handleCustomResourceAction(target, { state, escapeHtml, saveCharacter, render: () => render({ preserveMainScroll: true }) })) return;
+
     if (target.closest("[data-modal-close]")) {
       const restoreActiveCardFocus = isRememberedActiveCard(state.character?.id, state.modalCardId);
       state.modalCardId = undefined;
@@ -1398,6 +1364,7 @@ function bindEvents(): void {
       state.selectedItemId = undefined;
       state.resourceModalId = undefined;
       state.addResourceModalOpen = false;
+      state.deletingCustomResourceId = undefined;
       state.progressionHistoryOpen = false;
       state.progressionPicker = undefined;
       state.progressionPickerIds = [];
@@ -1472,6 +1439,7 @@ function bindEvents(): void {
       state.selectedItemId = undefined;
       state.resourceModalId = undefined;
       state.addResourceModalOpen = false;
+      state.deletingCustomResourceId = undefined;
       state.progressionHistoryOpen = false;
       state.progressionPicker = undefined;
       state.progressionPickerIds = [];
@@ -2329,17 +2297,6 @@ function bindEvents(): void {
       return;
     }
 
-    if (target.closest('[data-action="add-resource"]')) {
-      state.addResourceModalOpen = true;
-      render({ preserveMainScroll: true });
-      return;
-    }
-
-    if (target.closest('[data-action="save-resource"]')) {
-      void createResource();
-      return;
-    }
-
     if (handleFeatureEffectAction(target, { state, catalog, saveCharacter, render: () => render({ preserveMainScroll: true }) }) || handleCardAvailabilityAction(target, { state, saveCharacter, render: () => render({ preserveMainScroll: true }) })) return;
     const cardModalButton = target.closest<HTMLElement>("[data-card-modal-id]");
     if (cardModalButton) {
@@ -2382,6 +2339,7 @@ function bindEvents(): void {
   document.addEventListener("keydown", (event) => {
     if (handleCharacterScarEscape(event, getCharacterScarDependencies())) return; if (state.character && handleCharacterTransformationEscape(event, getCharacterTransformationDependencies())) return;
     if (handleAttributeDetailEscape(event, state, () => render({ preserveMainScroll: true }))) return;
+    if (handleCustomResourceEscape(event, state, () => render({ preserveMainScroll: true }))) return;
     if (event.key === "Escape" && state.modalCardId) {
       const restoreActiveCardFocus = isRememberedActiveCard(state.character?.id, state.modalCardId);
       state.modalCardId = undefined;

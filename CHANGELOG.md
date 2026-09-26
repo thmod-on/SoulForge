@@ -4,6 +4,23 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.33.0]
+
+### Adicionado
+
+- recursos criados manualmente agora oferecem uma ação própria de remoção no menu do cartão, com confirmação que identifica o nome e o valor atual;
+- a origem customizada do recurso passa a ser registrada explicitamente e preservada ao salvar, exportar e importar fichas.
+
+### Alterado
+
+- a criação e a remoção de recursos customizados foram isoladas em um módulo próprio, reduzindo responsabilidades da entrada principal da aplicação;
+- o backlog passou a registrar a melhoria visual já entregue nos cartões de Escolhas de classe.
+
+### Compatibilidade
+
+- recursos criados por versões anteriores são reconhecidos pelo identificador legado e recebem a origem customizada durante a leitura ou importação;
+- recursos principais, derivados ou concedidos por regras não oferecem remoção e permanecem protegidos pelo domínio.
+
 ## [0.32.1]
 
 ### Alterado

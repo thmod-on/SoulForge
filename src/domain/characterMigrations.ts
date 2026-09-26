@@ -1,4 +1,5 @@
 import type { Character, CharacterNote, CharacterNoteCategory } from "./types";
+import { migrateLegacyCustomResources } from "./customResources";
 
 type LegacyCharacterNote = Omit<CharacterNote, "category"> & { category: CharacterNoteCategory | "item" };
 
@@ -11,4 +12,9 @@ export function migrateLegacyCharacterNotes(character: Character): Character {
     return { ...note, category: "lore" };
   });
   return changed ? { ...character, notes } : character;
+}
+
+/** Aplica em sequência todas as migrações compatíveis da ficha. */
+export function migrateCharacter(character: Character): Character {
+  return migrateLegacyCustomResources(migrateLegacyCharacterNotes(character));
 }

@@ -1,6 +1,6 @@
 # Backlog do SoulForge
 
-Última revisão: 21 de setembro de 2026.
+Última revisão: 26 de setembro de 2026.
 
 ## Objetivo
 
@@ -47,7 +47,6 @@ revisões de produto dos dias 13 e 14 e na revisão do descanso de 19 de setembr
 | CRI-001 | P2 | Pronto | Criação de personagem | Exibir as Features Top e Bottom de cada ancestralidade durante a própria escolha da ancestralidade, antes da etapa seguinte. | Cada opção permite consultar nome e descrição das duas Features sem sair da etapa; a visualização funciona por clique, toque e teclado, preserva a seleção atual e deixa clara a origem de cada Feature ao combinar duas ancestralidades, sem duplicar nem substituir a etapa posterior de definição de Top e Bottom. |
 | ITM-001 | P3 | A definir | Itens e Packs | Confirmar se Ração e Cantil pertencem ao conteúdo Core antes de adicioná-los ao catálogo. | Fonte e classificação confirmadas; se oficiais, entram no Pack correspondente com referência revisada; se forem apenas equipamento mundano desejado pelo SoulForge, entram em conteúdo local ou compartilhado sem atribuição oficial indevida. |
 | CND-001 | P1 | Pronto | Ficha e Condições | Permitir que a personagem receba, consulte e remova Condições por meio de indicadores visuais compactos. | A ficha persiste referências às Condições e mostra um token acessível com nome e arte ou placeholder; clicar ou tocar abre o detalhe; aplicação e remoção manual são possíveis; origens e encerramentos independentes não duplicam o token nem removem prematuramente uma Condição ainda ativa; Pack ausente preserva a referência. Ao marcar o último Estresse, Vulnerável é aplicada automaticamente pela origem `stress` e, ao limpar ao menos 1 Estresse, somente essa origem é encerrada. |
-| RSC-001 | P2 | Pronto | Ficha e Recursos | Permitir remover recursos customizados da personagem. | Somente recursos criados pela pessoa usuária podem ser removidos; recursos essenciais ou derivados permanecem protegidos; a interface identifica claramente o recurso, pede confirmação, persiste a exclusão e trata referências associadas sem deixar estado órfão. |
 | COM-001 | P1 | A definir | Comunidades e Packs | Confirmar o comportamento ao remover ou atualizar um Pack cuja comunidade é usada por personagens. | Regra de domínio documentada, interface coerente, dados antigos preservados ou migrados explicitamente e testes cobrindo remoção e atualização. |
 | COM-002 | P1 | Pronto | Comunidades | Completar a matriz de compatibilidade: Pack ausente, comunidade local, comunidade importada e ficha legada. | Cenários automatizados ou justificados como validação manual, todos com resultado esperado registrado. |
 | COM-003 | P2 | Pronto | Comunidades | Validar o fluxo de criação e a ficha em desktop e iPad horizontal. | Criação, consulta e reabertura verificadas nas duas disposições sem corte, perda de contexto ou alvo de toque inadequado. |
@@ -109,6 +108,8 @@ rastreabilidade. O changelog continua sendo o histórico definitivo das entregas
 | ATR-001 | 15/09/2026 · `0.30.0` | Os seis brasões de atributo da ficha passaram a ser controles acessíveis por clique, toque, Enter e Espaço. O detalhe preserva o contexto da ficha e apresenta valor atual, verbos de referência e estados como Aprimorado ou Atributo de Conjuração, sem oferecer edição. |
 | ITM-002 | 21/09/2026 · `0.32.0` | Os Packs locais de itens foram auditados contra o SRD 2.0 e receberam um vocabulário documentado. `Gambeson` virou Gibão; falsos cognatos e traduções incompletas foram corrigidos; qualificadores de Tier passaram a respeitar posição, gênero e número em português e os termos oficiais em inglês. Os 633 IDs existentes permaneceram inalterados. |
 | CLS-001 | 21/09/2026 · `0.32.0` | Features agora podem declarar campos genéricos persistentes, preenchidos na criação e editados numa seção própria de Aptidões. O contrato estreia com Patrono e esfera do Bruxo, elemento da Origem Elemental e número de Padrões Estranhos do Mago, sem regras condicionadas ao nome de uma classe. |
+| UI-005 | 26/09/2026 · `0.32.1` | Os cartões de Escolhas de classe passaram a apresentar os valores persistidos em modo de leitura e a abrir os campos somente após “Editar escolhas”. A regra da Feature permanece visível como orientação secundária, com tipografia menor e cor discreta, preservando informações mecânicas como o gasto de Favor e o Dado do Patrono sem competir visualmente com os dados da ficha. |
+| RSC-001 | 26/09/2026 · `0.33.0` | Recursos criados pela pessoa usuária agora exibem um menu próprio para remoção, com confirmação que identifica nome e valor atual. A origem customizada é persistida e migrada para registros legados, enquanto recursos principais, derivados ou concedidos por regras permanecem protegidos. |
 
 ## Referências
 

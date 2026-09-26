@@ -46,6 +46,11 @@ Elas não sobrescrevem o máximo de Esperança: o limite efetivo é derivado dur
 a sincronização, de modo que exportar, importar ou remover uma Cicatriz preserve
 o limite-base e quaisquer bônus de recurso ativos.
 
+Recursos criados manualmente guardam `source: "custom"` na ficha. Registros de
+versões anteriores, identificados pelo ID `resource.<uuid>`, recebem essa origem
+ao listar, abrir ou importar a ficha. Somente essa origem autoriza a remoção;
+recursos principais e recursos sem origem customizada permanecem protegidos.
+
 ## Backup e portabilidade
 
 O SoulForge exporta uma ficha por vez em um arquivo `.soulforge-character.json`. O arquivo contém um envelope com a versão de formato, a data da exportação e todo o estado da ficha.

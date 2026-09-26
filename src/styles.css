@@ -3448,6 +3448,13 @@ button.attribute-badge:active {
   gap: 0.75rem;
 }
 
+.resource-card-header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .resource-card-header span {
   min-width: 0;
   color: #c8c0b4;
@@ -3464,6 +3471,44 @@ button.attribute-badge:active {
   font-size: 1.05rem;
   line-height: 1;
 }
+
+.resource-card-menu { position: relative; }
+.resource-card-menu summary {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 1px solid rgba(244, 234, 219, 0.2);
+  border-radius: 50%;
+  color: var(--color-muted);
+  background: transparent;
+  cursor: pointer;
+  list-style: none;
+}
+.resource-card-menu summary::-webkit-details-marker { display: none; }
+.resource-card-menu summary:hover,
+.resource-card-menu summary:focus-visible,
+.resource-card-menu[open] summary { border-color: rgba(195, 155, 255, 0.62); color: var(--color-text); }
+.resource-card-menu > div {
+  position: absolute;
+  z-index: 8;
+  top: calc(100% + 0.3rem);
+  right: 0;
+  width: max-content;
+  padding: 0.3rem;
+  border: 1px solid rgba(244, 234, 219, 0.16);
+  border-radius: 0.55rem;
+  background: rgba(10, 7, 17, 0.98);
+  box-shadow: 0 0.8rem 1.8rem rgba(0, 0, 0, 0.48);
+}
+.resource-card-menu button {
+  border-radius: 0.35rem;
+  padding: 0.48rem 0.65rem;
+  color: #ff9ca8;
+  background: transparent;
+}
+.resource-card-menu button:hover,
+.resource-card-menu button:focus-visible { background: rgba(201, 46, 66, 0.16); }
 
 .resource-card-footer {
   display: flex;

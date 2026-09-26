@@ -5,6 +5,8 @@ export type ResourceTrack = {
   label: string;
   value: number;
   max: number;
+  /** Origem gravada para recursos criados diretamente pela pessoa usuária. */
+  source?: "custom";
   /** Máximo próprio da ficha, antes dos bônus declarados pelas suas fontes. */
   baseMax?: number;
   tone: "hope" | "stress" | "hp" | "shadow" | "focus";

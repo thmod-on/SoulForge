@@ -29,6 +29,11 @@ O modal deve ter título, ação de fechar, fechamento por `Escape` quando houve
 
 Excluir, descartar ou remover dados exige confirmação explícita. A confirmação informa o que será perdido e, quando aplicável, que a ação não pode ser desfeita.
 
+Recursos criados pela pessoa usuária usam um menu `•••` no próprio cartão para
+separar a remoção dos controles incrementais. O menu permanece acessível em
+dispositivos touch e não é exibido em recursos principais, derivados ou
+concedidos por regras. A confirmação identifica nome e valor atual do recurso.
+
 Consulte também [UX_GUIDELINES.md](UX_GUIDELINES.md).
 
 ## Inventário
