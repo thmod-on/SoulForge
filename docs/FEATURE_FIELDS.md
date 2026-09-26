@@ -16,7 +16,9 @@ Os valores pertencem à ficha e são persistidos em `Character.definitionSelecti
 - na criação, são exibidos os campos das Features de classe e de Fundação da subclasse selecionada;
 - campos obrigatórios impedem o avanço enquanto estiverem vazios ou inválidos;
 - a revisão da criação resume as escolhas preenchidas;
-- em Aptidões, “Escolhas de classe” aparece separada das Experiências, identifica a origem e permite editar os valores.
+- em Aptidões, “Escolhas de classe” aparece separada das Experiências e apresenta os valores persistidos em modo de leitura;
+- cada cartão mantém a regra da Feature como orientação visual secundária e oferece uma ação explícita para entrar no modo de edição;
+- salvar valida os campos dentro do próprio cartão; cancelar restaura os valores persistidos sem gravar alterações.
 
 ## Conteúdo inicial
 

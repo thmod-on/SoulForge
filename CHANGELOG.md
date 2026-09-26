@@ -4,6 +4,23 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.32.1]
+
+### Alterado
+
+- as escolhas de classe em Aptidões agora apresentam os dados persistidos em modo de leitura e só exibem os campos após a ação explícita “Editar escolhas”;
+- os cartões mantêm a regra da Feature como orientação secundária, em tipografia menor e cor discreta, preservando no Pacto do Patrono o gasto de Favor e a evolução do Dado do Patrono;
+- o modo de edição recebeu ações separadas para salvar e cancelar, com restauração dos valores persistidos ao desistir da alteração.
+
+### Corrigido
+
+- campos já preenchidos deixam de parecer alterações ainda não salvas;
+- erros de validação passam a aparecer e receber foco dentro do cartão que contém a escolha inválida.
+
+### Compatibilidade
+
+- fichas, Packs e valores existentes não exigem migração; a mudança afeta somente apresentação e edição das escolhas já persistidas.
+
 ## [0.32.0]
 
 ### Adicionado

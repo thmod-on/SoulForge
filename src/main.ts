@@ -289,7 +289,7 @@ const state: {
   characterCreationPortraitImage?: string;
   characterCreationTopFeatureId?: string;
   characterCreationBottomFeatureId?: string;
-  characterCreationError?: string; characterFieldError?: string;
+  characterCreationError?: string;
   characters: Character[];
   editingCompendiumClassId?: string;
   deletingCompendiumClassId?: string;
@@ -954,7 +954,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
   const screen = state.page === "overview"
     ? renderOverviewView(character, getPlayerOverviewDependencies())
     : state.page === "skills"
-      ? renderTraitsView(character, { escapeHtml, renderEmptyInline, catalog, featureActivationError: state.featureActivationError, characterFieldError: state.characterFieldError })
+      ? renderTraitsView(character, { escapeHtml, renderEmptyInline, catalog, featureActivationError: state.featureActivationError })
       : state.page === "storedCards"
           ? renderStoredCardsView(character, getPlayerOverviewDependencies())
           : state.page === "progression"
@@ -1322,7 +1322,7 @@ function bindEvents(): void {
       return;
     }
 
-    if (handleCharacterFieldAction(target, { catalog, character: state.character, update: (character, error) => { state.character = character; state.characterFieldError = error; void (error ? Promise.resolve() : saveCharacter(character)).then(() => render({ preserveMainScroll: true })); } })) return;
+    if (handleCharacterFieldAction(target, { catalog, character: state.character, update: (character) => { state.character = character; void saveCharacter(character).then(() => render({ preserveMainScroll: true })); } })) return;
     if (handleCharacterScarAction(target, getCharacterScarDependencies())) { event.preventDefault(); return; } if (handleAncestryAction(target, getAncestryFeatureDependencies())) return;
     if (handleCommunityAction(target, { state, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render })) return;
     if (handleTransformationAction(target, getTransformationFeatureDependencies())) return; if (handleConditionAction(target, getConditionFeatureDependencies())) return; if (state.character && handleCharacterTransformationAction(target, getCharacterTransformationDependencies())) return;
