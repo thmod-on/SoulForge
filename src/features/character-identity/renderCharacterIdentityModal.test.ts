@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createCatalog } from "../../domain/catalog";
 import { demoCharacter } from "../../domain/demoCharacter";
-import type { ClassDefinition } from "../../domain/types";
+import type { ClassDefinition, CommunityDefinition, FeatureDefinition } from "../../domain/types";
 import { renderCharacterIdentityModal } from "./renderCharacterIdentityModal";
 
 const characterClass: ClassDefinition = {
@@ -71,5 +71,36 @@ describe("detalhe da classe na ficha", () => {
 
     expect(html).toContain("Valores iniciais da classe");
     expect(html).toContain("Definition da classe não foi encontrada");
+  });
+
+  it("não converte a origem narrativa de uma ficha legada em comunidade mecânica", () => {
+    const community: CommunityDefinition = { id: "community.loreborne", type: "community", packId: "pack.test", name: "Loreborne", summary: "Uma comunidade mecânica.", adjectives: ["curioso"], featureId: "feature.loreborne" };
+    const feature: FeatureDefinition = { id: community.featureId, type: "feature", packId: "pack.test", name: "Erudito", summary: "Uma Feature mecânica.", sourceType: "community", sourceId: community.id, tier: "community" };
+    const html = renderCharacterIdentityModal({
+      character: { ...character, identity: { ...character.identity, community: "Loreborne", primaryCommunityId: undefined } },
+      section: "community",
+      catalog: createCatalog([], [community, feature]),
+      escapeHtml: (value) => value
+    });
+
+    expect(html).toContain("<h2 id=\"character-identity-title\">Loreborne</h2>");
+    expect(html).toContain("O conteúdo desta escolha não foi encontrado");
+    expect(html).not.toContain("Uma comunidade mecânica.");
+    expect(html).not.toContain("Erudito");
+  });
+
+  it("mantém a referência ausente visível sem apagar a comunidade da ficha", () => {
+    const missingCommunityId = "community.pack-ausente";
+    const characterWithMissingPack = { ...character, identity: { ...character.identity, community: "Vigília de Tristelo", primaryCommunityId: missingCommunityId } };
+    const html = renderCharacterIdentityModal({
+      character: characterWithMissingPack,
+      section: "community",
+      catalog: createCatalog([], []),
+      escapeHtml: (value) => value
+    });
+
+    expect(html).toContain("Vigília de Tristelo");
+    expect(html).toContain("O conteúdo desta escolha não foi encontrado");
+    expect(characterWithMissingPack.identity.primaryCommunityId).toBe(missingCommunityId);
   });
 });

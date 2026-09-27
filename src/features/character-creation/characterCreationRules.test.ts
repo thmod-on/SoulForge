@@ -32,4 +32,26 @@ describe("criação de personagem", () => {
     expect(created.resources.find((resource) => resource.id === "hope")).toMatchObject({ value: 0, max: 6 });
     expect(created.definitionSelections).toEqual([{ sourceDefinitionId: classChoiceFeature.id, values: { name: "A Sentinela" } }]);
   });
+
+  it("persiste comunidade local ou importada exclusivamente pelo ID e concede sua Feature", () => {
+    const localFeature: FeatureDefinition = { ...communityFeature, id: "feature.community.local", packId: "local", sourceId: "community.local", name: "Entre locais" };
+    const localCommunity: CommunityDefinition = { ...community, id: "community.local", packId: "local", name: "Vila local", featureId: localFeature.id };
+    const localCatalog = createCatalog([], [ancestry, topFeature, bottomFeature, localCommunity, localFeature, characterClass, subclass, hopeFeature, classChoiceFeature, ...cards]);
+    const build = (communityId: string) => buildCharacterFromDraft({
+      name: "Nova ficha", community: "Vigília de Tristelo", communityId, classId: characterClass.id, subclassId: subclass.id,
+      ancestryIds: [ancestry.id], topFeatureId: topFeature.id, bottomFeatureId: bottomFeature.id,
+      cardIds: cards.map((card) => card.id), attributeValues: { dex: 2, for: 1, cha: 1, wil: 0, con: 0, int: -1 }, experiences: [{ name: "Exploradora", description: "" }, { name: "Diplomata", description: "" }], definitionSelections: { [classChoiceFeature.id]: { name: "A Sentinela" } }
+    }, communityId === localCommunity.id ? localCatalog : catalog, fallback);
+
+    const imported = build(community.id);
+    const local = build(localCommunity.id);
+
+    expect(imported).not.toBeInstanceOf(Error);
+    expect(local).not.toBeInstanceOf(Error);
+    if (imported instanceof Error || local instanceof Error) return;
+    expect(imported.identity).toMatchObject({ primaryCommunityId: community.id, community: "Vigília de Tristelo" });
+    expect(imported.skills).toContainEqual(expect.objectContaining({ id: communityFeature.id, source: "community" }));
+    expect(local.identity).toMatchObject({ primaryCommunityId: localCommunity.id, community: "Vigília de Tristelo" });
+    expect(local.skills).toContainEqual(expect.objectContaining({ id: localFeature.id, source: "community" }));
+  });
 });

@@ -4,6 +4,18 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.34.1]
+
+### Corrigido
+
+- a matriz de compatibilidade de Comunidades agora cobre Pack ausente,
+  comunidade local, conteúdo importado e fichas legadas;
+- fichas legadas mantêm sua origem narrativa como texto livre e não passam a
+  receber uma comunidade mecânica por coincidência de nome;
+- quando o Pack de uma comunidade não está instalado, a ficha preserva a
+  referência e informa que a Feature está indisponível, sem reutilizar uma
+  cópia antiga como se estivesse ativa.
+
 ## [0.34.0]
 
 ### Adicionado

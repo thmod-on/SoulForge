@@ -46,8 +46,10 @@ export function renderCharacterIdentityModal(deps: CharacterIdentityModalDepende
   const ancestryNarrative = ancestries.length === 1
     ? ancestries[0]?.summary
     : ancestries.map((entry) => entry.summary ? `${entry.name}: ${entry.summary}` : "").filter(Boolean).join(" ");
-  const community = catalog.communities.find((entry) => entry.id === identity.primaryCommunityId)
-    ?? catalog.communities.find((entry) => entry.name.toLocaleLowerCase("pt-BR") === identity.community.toLocaleLowerCase("pt-BR"));
+  // A origem narrativa de fichas legadas é texto livre, não uma chave para
+  // conteúdo do Compendium. Só uma referência persistida pode ativar uma
+  // comunidade mecânica.
+  const community = catalog.communities.find((entry) => entry.id === identity.primaryCommunityId);
   const communityName = community?.name ?? (identity.community || "Não definida");
   const communityFeature = community ? catalog.features.find((entry) => entry.id === community.featureId) : undefined;
   const classFeatures = classDefinition
@@ -97,7 +99,7 @@ export function renderCharacterIdentityModal(deps: CharacterIdentityModalDepende
       label: "Comunidade",
       title: communityName,
       summary: "",
-      body: `${community?.summary ? `<p>${escapeHtml(community.summary)}</p>` : ""}<section class="character-identity-detail-section"><h3>Feature ativa</h3><div class="character-identity-feature-grid">${featureCard(communityFeature ?? character.skills.find((skill) => skill.source === "community"), "Comunidade")}</div></section>`
+      body: `${community?.summary ? `<p>${escapeHtml(community.summary)}</p>` : ""}<section class="character-identity-detail-section"><h3>Feature ativa</h3><div class="character-identity-feature-grid">${featureCard(communityFeature, "Comunidade")}</div></section>`
     }
   }[section];
   return `<div class="modal-backdrop" data-modal-backdrop><section class="character-identity-modal" role="dialog" aria-modal="true" aria-labelledby="character-identity-title"><header class="character-identity-modal-header"><div><span class="resource-modal-label">${escapeHtml(content.label)}</span><h2 id="character-identity-title">${escapeHtml(content.title)}</h2>${content.summary ? `<p class="character-identity-summary">${escapeHtml(content.summary)}</p>` : ""}</div><button class="modal-close modal-close-inline" type="button" data-modal-close aria-label="Fechar detalhes">x</button></header><div class="character-identity-modal-content">${content.body}${section !== "class" && deps.featureActivationError ? `<p class="form-error">${escapeHtml(deps.featureActivationError)}</p>` : ""}</div></section></div>`;

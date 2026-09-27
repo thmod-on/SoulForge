@@ -167,9 +167,18 @@ Salvar uma comunidade local cria/atualiza sua Definition e a Feature vinculada d
 ### Fase 4 — Segurança e qualidade
 
 - [ ] Confirmar comportamento ao remover/atualizar Packs usados por personagens.
-- [ ] Testar criação com Pack ausente, comunidade local, conteúdo importado e ficha legada.
+- [x] Testar criação com Pack ausente, comunidade local, conteúdo importado e ficha legada.
 - [ ] Validar em iPad paisagem e desktop.
 - [x] Atualizar documentação de Packs, modelo de domínio, criação de personagem e changelog da versão de entrega.
+
+### Matriz de compatibilidade — COM-002
+
+| Cenário | Resultado esperado | Cobertura |
+| --- | --- | --- |
+| Pack ausente | A ficha preserva `primaryCommunityId`, mas declara o conteúdo e a Feature como indisponíveis; nenhuma Feature antiga é reaproveitada. | `communityRules.test.ts` e `renderCharacterIdentityModal.test.ts` |
+| Comunidade local | A criação persiste o ID local e concede somente a Feature vinculada a ele. | `characterCreationRules.test.ts` e `renderCreationCommunityStep.test.ts` |
+| Comunidade importada | A criação persiste o ID do Pack e concede sua Feature vinculada. | `characterCreationRules.test.ts` e `renderCreationCommunityStep.test.ts` |
+| Ficha legada | A origem narrativa livre continua visível, mas não é convertida pelo nome em uma comunidade mecânica ou Feature. | `communityRules.test.ts` e `renderCharacterIdentityModal.test.ts` |
 
 ## Fora de escopo desta entrega
 
