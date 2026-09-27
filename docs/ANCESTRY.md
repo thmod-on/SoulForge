@@ -184,11 +184,12 @@ e outras fontes ativas.
 
 1. apresentar a escolha entre ancestralidade única e mista;
 2. consultar e pesquisar o catálogo de ancestralidades disponíveis nos Packs instalados;
-3. para ancestralidade única, selecionar uma Definition e conceder Top + Bottom;
-4. para ancestralidade mista, selecionar a linhagem e escolher uma Top Feature e uma Bottom Feature de ancestralidades diferentes;
-5. solicitar parâmetros exigidos por features selecionadas;
-6. escolher comunidade em uma etapa separada;
-7. apresentar uma revisão da herança, features ativas e bônus estruturados antes de confirmar a criação.
+3. consultar, no próprio card de cada ancestralidade, as Features Top e Bottom antes de selecioná-la; essa prévia expansível não altera a seleção em curso;
+4. para ancestralidade única, selecionar uma Definition e conceder Top + Bottom;
+5. para ancestralidade mista, selecionar a linhagem e escolher uma Top Feature e uma Bottom Feature de ancestralidades diferentes;
+6. solicitar parâmetros exigidos por features selecionadas;
+7. escolher comunidade em uma etapa separada;
+8. apresentar uma revisão da herança, features ativas e bônus estruturados antes de confirmar a criação.
 
 A interface atual solicita duas ancestralidades no modo misto. O modelo, porém,
 aceita uma lista maior para preservar linhagens narrativas futuras sem aumentar

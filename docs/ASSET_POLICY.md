@@ -76,6 +76,20 @@ Para uma arte de catálogo:
 - Uma exceção acima do limite precisa ser justificada no manifesto e compensada no orçamento do lote.
 - Enquanto houver poucas artes, uma única versão de detalhe pode atender miniatura e modal. A versão de miniatura torna-se obrigatória no Estágio 2.
 
+### Geração reproduzível
+
+Instale a ferramenta local uma vez com `python -m pip install -r requirements-artwork.txt`.
+Para cada arte, use o comando abaixo; ele preserva a proporção, respeita a
+orientação EXIF, não amplia a origem e gera os dois derivados WebP:
+
+```text
+pnpm run artwork:derive -- --input mestre.png --detail public/assets/items/generic/exemplo.webp --thumbnail public/assets/items/generic/exemplo.thumb.webp
+```
+
+Os limites padrão são 960 px para detalhe, 384 px para miniatura e qualidade
+WebP 82. Podem ser ajustados com `--detail-max`, `--thumbnail-max` e
+`--quality`, sempre dentro dos limites desta política.
+
 ## Estrutura e nomes
 
 Usar, quando aplicável:

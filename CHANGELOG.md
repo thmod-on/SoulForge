@@ -4,6 +4,31 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.34.0]
+
+### Adicionado
+
+- durante a escolha de ancestralidade, cada opção agora permite consultar suas
+  Features Top e Bottom sem alterar a seleção em andamento;
+- o projeto oferece `artwork:derive`, um comando reproduzível para gerar WebP
+  de detalhe e miniatura a partir de uma imagem-mestre, preservando proporção,
+  orientação e transparência quando existentes.
+
+### Alterado
+
+- as 210 cartas dos Packs locais Core e Hope & Fear foram auditadas contra o
+  SRD 2.0: Vault, Loadout e listagens usam resumos revisados, enquanto os
+  detalhes apresentam os efeitos integrais revisados;
+- a política de artes passa a documentar o fluxo de geração e suas dimensões
+  padrão, evitando conversões manuais inconsistentes.
+
+### Compatibilidade
+
+- a prévia de ancestralidade é apenas consultiva e não altera escolhas, fichas
+  ou Packs existentes;
+- os IDs e metadados das cartas auditadas permanecem estáveis; reimporte os
+  Packs locais atualizados para receber o conteúdo revisado.
+
 ## [0.33.0]
 
 ### Adicionado

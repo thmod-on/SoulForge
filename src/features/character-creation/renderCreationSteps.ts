@@ -1,10 +1,18 @@
-import type { Attribute, ClassDefinition, CommunityDefinition, FeatureDefinition, SubclassDefinition } from "../../domain/types";
+import type { AncestryDefinition, Attribute, ClassDefinition, CommunityDefinition, FeatureDefinition, SubclassDefinition } from "../../domain/types";
 import { getClassDetailArtwork } from "../../content/classArtwork";
 import { getClassDisplayName } from "../compendium/classPresentation";
 import { characterCreationAttributes, formatCreationAttributeValue, getRemainingCreationAttributeValues } from "./attributeAllocation";
 import type { CharacterFieldSource } from "../feature-fields/featureFields";
 
 type EscapeHtml = (value: string) => string;
+
+/** Prévia consultável das duas Features, usada antes de a ancestralidade ser escolhida. */
+export function renderCreationAncestryFeaturePreview(ancestry: AncestryDefinition, features: FeatureDefinition[], escapeHtml: EscapeHtml): string {
+  const top = features.find((feature) => feature.id === ancestry.topFeatureId);
+  const bottom = features.find((feature) => feature.id === ancestry.bottomFeatureId);
+  const renderFeature = (label: string, feature?: FeatureDefinition) => `<article><span>${label}</span><strong>${escapeHtml(feature?.name ?? "Feature indisponível")}</strong><p>${escapeHtml(feature?.summary ?? "Esta Feature não está disponível no Pack atual.")}</p></article>`;
+  return `<details class="character-ancestry-feature-preview"><summary aria-label="Consultar Features Top e Bottom de ${escapeHtml(ancestry.name)}"><span class="character-ancestry-feature-preview-open">Ver Features</span><span class="character-ancestry-feature-preview-close">Ocultar Features</span><span aria-hidden="true">⌄</span></summary><div>${renderFeature("Feature Top", top)}${renderFeature("Feature Bottom", bottom)}</div></details>`;
+}
 
 export function renderCreationIdentityStep(state: { name: string; community: string; portraitImage?: string }, escapeHtml: EscapeHtml): string {
   return `<div class="form-grid character-creation-identity creation-step-panel" data-creation-panel="1"><label class="form-field"><span>Nome</span><input data-character-name required maxlength="60" value="${escapeHtml(state.name)}" placeholder="Nome do personagem" /></label><label class="form-field form-field-wide"><span>Origem narrativa <small>(opcional)</small></span><input data-character-community maxlength="80" value="${escapeHtml(state.community)}" placeholder="Ex.: Vigília de Tristelo" /><small>Um local, grupo ou história particular do personagem. A comunidade mecânica será escolhida em uma etapa própria.</small></label><label class="form-field form-field-wide character-portrait-upload"><span>Foto do personagem</span><input data-character-portrait type="file" accept="image/png,image/jpeg,image/webp" /><small>${state.portraitImage ? "Foto selecionada. Você pode escolher outra para substituí-la." : "Opcional. PNG, JPG ou WebP; até 1,5 MB."}</small>${state.portraitImage ? `<img src="${escapeHtml(state.portraitImage)}" alt="Prévia do retrato" />` : ""}</label></div>`;

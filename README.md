@@ -2,20 +2,23 @@
 
 SoulForge é uma PWA *offline-first* para acompanhar personagens de Daggerheart sem depender de servidor durante a mesa.
 
-Versão atual: `0.33.0`.
+Versão atual: `0.34.0`.
 
 ## Recursos principais
 
 - criação, seleção e acompanhamento de personagens com armazenamento local,
   incluindo escolhas persistentes solicitadas por Features de classe, exibidas
-  em modo de leitura e editadas sob demanda;
+  em modo de leitura e editadas sob demanda, e prévia das Features Top e Bottom
+  durante a escolha de ancestralidade;
 - ficha responsiva com atributos, recursos, inventário, Loadout, Vault,
   progressão, anotações, marcadores e transformações; recursos criados pela
   pessoa usuária podem ser removidos por uma ação protegida por confirmação;
 - Compendium pesquisável para cartas, domínios, itens, classes,
   ancestralidades, comunidades, transformações e condições;
 - conteúdo extensível por Packs locais, preservando a origem das Definitions e
-  permitindo conteúdo customizado sem alterar o catálogo público;
+  permitindo conteúdo customizado sem alterar o catálogo público; as 210 cartas
+  Core e Hope & Fear foram revisadas com resumo para listagens e efeito integral
+  para o detalhe;
 - descansos curtos e longos com movimentos declarativos, incluindo bônus
   concedidos por Features como Transe Celestial;
 - funcionamento *offline-first* após a instalação da PWA.
@@ -36,6 +39,11 @@ Pré-requisitos:
 - Node.js 22;
 - pnpm 11.9 ou compatível;
 - Git.
+
+Para preparar artes, instale também as dependências opcionais com
+`python -m pip install -r requirements-artwork.txt`. O comando
+`pnpm run artwork:derive -- --help` documenta a geração de WebP de detalhe e
+miniatura.
 
 ```bash
 pnpm install
