@@ -68,7 +68,7 @@ Na implementação atual, os tiers, custos e limites comuns ficam em
 em `multiclassRules.ts`; e a aplicação atômica fica em
 `progressionActions.ts`. Esse conjunto representa, entre outros, o custo de
 duas escolhas para Proficiência e Multiclasse, a disponibilidade de Multiclasse
-a partir do nível 5 e os bloqueios entre Multiclasse e carta aprimorada de
+a partir do nível 5 e os bloqueios entre Multiclasse e aprimoramento de
 Subclasse.
 
 Os valores de `slotCount` e a disponibilidade por tier devem ficar nos dados do ruleset. Isso permite refletir a ficha oficial e adaptar uma futura errata sem reescrever código de interface.
@@ -95,6 +95,7 @@ interface LevelUpRecord {
   tierAchievementIds: string[];
   advancementSelections: AdvancementSelection[];
   mandatoryDomainCardAction: DomainCardAction;
+  optionalDomainCardSwap?: { fromCardId: string; toCardId: string };
   notes?: string;
 }
 ```
@@ -133,8 +134,9 @@ Para reduzir a sobrecarga visual, a interface apresenta uma etapa temática de c
 
 1. **Avanços:** escolha exatamente dois espaços de evolução, respeitando custos, pré-requisitos e exclusões.
 2. **Carta de Domínio:** escolha a carta obrigatória; ela entra no Vault, não no Loadout.
-3. **Conquista de Tier:** exibida apenas nos níveis 2, 5 e 8, para registrar a nova Experiência +2.
-4. **Revisão:** consolida as decisões e oferece a ação atômica de aplicar a evolução.
+3. **Troca opcional:** mantenha as cartas atuais ou substitua uma carta adquirida por outra elegível de nível igual ou inferior. A carta recebida entra no Vault e a substituída deixa também o Loadout, se estivesse ativa.
+4. **Conquista de Tier:** exibida apenas nos níveis 2, 5 e 8, para registrar a nova Experiência +2.
+5. **Revisão:** consolida as decisões e oferece a ação atômica de aplicar a evolução.
 
 Cada etapa bloqueia o avanço apenas quando faltar uma escolha obrigatória daquele tema. Voltar mantém o rascunho atual para que o jogador possa revisar uma decisão antes da confirmação final.
 
@@ -142,9 +144,10 @@ Cada etapa bloqueia o avanço apenas quando faltar uma escolha obrigatória daqu
 2. **Conquista de tier:** aplicar o ganho dos níveis 2, 5 e 8; quando aplicável, solicitar a nova Experiência `+2` e limpar marcações de atributos.
 3. **Dois avanços:** permitir escolher avanços elegíveis, mostrando custo, espaços disponíveis e bloqueios.
 4. **Efeitos derivados:** pré-visualizar Proficiência, Evasão, HP, Stress e limiares de dano resultantes.
-5. **Carta obrigatória:** escolher carta de Domínio elegível, definir Loadout/Vault ou realizar troca válida.
-6. **Revisão:** mostrar todas as alterações, consequências e regras de exclusividade.
-7. **Confirmação:** persistir o personagem e o `LevelUpRecord` em uma única transação.
+5. **Carta obrigatória:** escolher uma carta de Domínio elegível, que entra no Vault.
+6. **Troca opcional:** selecionar explicitamente a carta que sai e a carta elegível que entra, ou manter a coleção atual.
+7. **Revisão:** mostrar todas as alterações, consequências e regras de exclusividade.
+8. **Confirmação:** persistir o personagem e o `LevelUpRecord` em uma única transação.
 
 Cancelar ou fechar o fluxo não deve alterar o personagem.
 
@@ -157,6 +160,7 @@ Cancelar ou fechar o fluxo não deve alterar o personagem.
 - Proficiência e Multiclasse usam duas escolhas;
 - Multiclasse só está disponível no nível 5 ou superior;
 - cartas de Domínio pertencem a um Domínio acessível e respeitam o limite de nível;
+- a troca opcional só aceita uma carta nova de nível igual ou inferior ao da carta removida e nunca cria uma carta adicional;
 - carta de multiclasse usa o limite de metade do nível atual, arredondado para cima;
 - Loadout não excede cinco cartas;
 - Especialização e Maestria seguem a ordem da Subclasse;
@@ -166,7 +170,7 @@ Cancelar ou fechar o fluxo não deve alterar o personagem.
 
 O SoulForge registra uma única seleção de Multiclasse em `Character.progression.multiclass`, sem alterar a classe principal, a Evasão inicial ou o PV inicial. A seleção persistida contém a classe adicional, o Domínio escolhido, uma característica de classe e uma Feature de Fundação de uma de suas subclasses.
 
-O fluxo guiado só é oferecido no Tier 3 ou 4, custa os dois avanços do nível e impede a carta aprimorada de Subclasse somente no mesmo Tier. Após confirmada, nenhuma nova Multiclasse pode ser selecionada. Cartas de Domínio da Multiclasse passam a ser elegíveis na progressão até `ceil(nível de destino / 2)`.
+O fluxo guiado só é oferecido no Tier 3 ou 4, custa os dois avanços do nível e impede o aprimoramento de Subclasse somente no mesmo Tier. Após confirmada, nenhuma nova Multiclasse pode ser selecionada. Cartas de Domínio da Multiclasse passam a ser elegíveis na progressão até `ceil(nível de destino / 2)`.
 
 ## Histórico das fases de entrega
 

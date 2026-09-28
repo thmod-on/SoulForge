@@ -30,6 +30,13 @@ describe("detalhes dos atributos na ficha", () => {
     expect(html).not.toContain("data-attribute-adjust");
   });
 
+  it("mantém a comunidade sobre o retrato para economizar espaço na barra lateral", () => {
+    const html = renderSidebar(demoCharacter, shellDependencies());
+
+    expect(html).toContain('class="portrait-community"');
+    expect(html).toContain(demoCharacter.identity.community);
+  });
+
   it("mostra valor, verbos de referência e características do atributo", () => {
     const html = renderAttributeDetailModal(demoCharacter, "con", "con", escapeHtml);
 

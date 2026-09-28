@@ -5,12 +5,13 @@ type FlowStep = { id: ProgressionFlowStep; label: string; shortLabel: string };
 const baseSteps: FlowStep[] = [
   { id: "advances", label: "Avanços", shortLabel: "Avanços" },
   { id: "domain-card", label: "Carta de Domínio", shortLabel: "Carta" },
+  { id: "card-swap", label: "Troca opcional", shortLabel: "Troca" },
   { id: "review", label: "Revisão", shortLabel: "Revisão" }
 ];
 
 export function getProgressionFlowSteps(requiresTierExperience: boolean): FlowStep[] {
   return requiresTierExperience
-    ? [...baseSteps.slice(0, 2), { id: "tier-experience", label: "Conquista de Tier", shortLabel: "Conquista" }, baseSteps[2]]
+    ? [...baseSteps.slice(0, 3), { id: "tier-experience", label: "Conquista de Tier", shortLabel: "Conquista" }, baseSteps[3]]
     : baseSteps;
 }
 
@@ -30,6 +31,8 @@ export type ProgressionFlowAdvanceInput = {
   step: ProgressionFlowStep;
   choiceCount: number;
   cardId?: string;
+  swapFromCardId?: string;
+  swapToCardId?: string;
   requiresTierExperience: boolean;
   tierExperienceName?: string;
 };
@@ -49,6 +52,7 @@ export function goBackInProgressionFlow(step: ProgressionFlowStep, requiresTierE
 export function getProgressionStepBlocker(input: ProgressionFlowAdvanceInput): string | undefined {
   if (input.step === "advances" && input.choiceCount !== 2) return `Escolha ${2 - input.choiceCount} avanço${2 - input.choiceCount === 1 ? "" : "s"} antes de continuar.`;
   if (input.step === "domain-card" && !input.cardId) return "Escolha a carta de Domínio antes de continuar.";
+  if (input.step === "card-swap" && Boolean(input.swapFromCardId) !== Boolean(input.swapToCardId)) return "Conclua a troca de carta ou mantenha as cartas atuais.";
   if (input.step === "tier-experience" && input.requiresTierExperience && !input.tierExperienceName?.trim()) return "Defina a nova Experiência +2 recebida ao entrar no Tier.";
   return undefined;
 }

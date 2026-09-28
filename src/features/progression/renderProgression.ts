@@ -16,6 +16,7 @@ export type ProgressionRenderDependencies = {
   renderProgressionOptions: (character: Character) => string;
   renderProgressionAdvanceSummary: () => string;
   renderProgressionDomainStep: (character: Character) => string;
+  renderProgressionCardSwapStep: (character: Character) => string;
   renderTierExperienceStep: (character: Character) => string;
   renderProgressionReview: (character: Character) => string;
 };
@@ -44,6 +45,8 @@ function renderProgressionStep(step: ProgressionFlowStep, character: Character, 
       return `<p class="progression-stage-copy">Escolha como o personagem evolui. Cada nível oferece dois avanços; algumas opções usam os dois.</p><div class="progression-elective-panel">${dependencies.renderProgressionOptions(character)}</div>${dependencies.renderProgressionAdvanceSummary()}`;
     case "domain-card":
       return `<p class="progression-stage-copy">A carta aprendida será guardada no Vault. Você decide depois quando ativá-la no Loadout.</p>${dependencies.renderProgressionDomainStep(character)}`;
+    case "card-swap":
+      return `<p class="progression-stage-copy">Esta etapa é opcional. Mantenha suas cartas ou substitua uma carta adquirida por outra elegível de nível igual ou inferior.</p>${dependencies.renderProgressionCardSwapStep(character)}`;
     case "tier-experience":
       return `<p class="progression-stage-copy">Este nível inaugura um novo Tier. Registre a Experiência +2 que representa esse marco.</p>${dependencies.renderTierExperienceStep(character)}`;
     case "review":

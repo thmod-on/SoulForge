@@ -9,6 +9,8 @@ export type ProgressionActionState = {
   progressionDraft: ProgressionDraftChoice[];
   progressionError?: string;
   progressionCardId?: string;
+  progressionSwapFromCardId?: string;
+  progressionSwapToCardId?: string;
   progressionTierExperience?: { name: string; description: string };
   progressionTierExperienceError?: string;
   progressionStep: ProgressionFlowStep;
@@ -61,6 +63,17 @@ export function getProgressionCardCandidates(character: Character, catalog: Cata
   });
 }
 
+export function getProgressionSwapSourceCards(character: Character, catalog: Catalog): CardDefinition[] {
+  const learnedIds = new Set(character.deck.learnedCardIds);
+  return catalog.cards.filter((card) => learnedIds.has(card.id)).sort((left, right) => left.name.localeCompare(right.name, "pt-BR"));
+}
+
+export function getProgressionSwapCandidates(character: Character, catalog: Catalog, state: Pick<ProgressionActionState, "progressionCardId" | "progressionDraft" | "progressionSwapFromCardId">, includeReserved = false): CardDefinition[] {
+  const source = state.progressionSwapFromCardId ? catalog.cards.find((card) => card.id === state.progressionSwapFromCardId) : undefined;
+  if (!source || !character.deck.learnedCardIds.includes(source.id)) return [];
+  return getProgressionCardCandidates(character, catalog, state, includeReserved).filter((card) => card.tier <= source.tier);
+}
+
 export function requiresTierExperience(character: Character): boolean {
   return [2, 5, 8].includes(character.identity.level + 1);
 }
@@ -76,6 +89,7 @@ export async function applyProgression(deps: ApplyProgressionDependencies): Prom
   const { state, catalog } = deps;
   const character = state.character;
   if (!character || getProgressionChoiceCount(state.progressionDraft) !== 2 || !state.progressionCardId || character.identity.level >= 10 || (requiresTierExperience(character) && !state.progressionTierExperience?.name.trim())) return undefined;
+  if (Boolean(state.progressionSwapFromCardId) !== Boolean(state.progressionSwapToCardId)) return undefined;
 
   const nextLevel = character.identity.level + 1;
   const progression = getProgression(character);
@@ -95,14 +109,18 @@ export async function applyProgression(deps: ApplyProgressionDependencies): Prom
   const tierAchievement = tierExperience ? `Experiencia +2: ${tierExperience.name}; Proficiencia +1` : undefined;
   const chosenCard = catalog.cards.find((card) => card.id === state.progressionCardId);
   if (!chosenCard || !getProgressionCardCandidates(character, catalog, state, true).some((card) => card.id === chosenCard.id)) return undefined;
+  const swappedOutCard = state.progressionSwapFromCardId ? catalog.cards.find((card) => card.id === state.progressionSwapFromCardId) : undefined;
+  const swappedInCard = state.progressionSwapToCardId ? catalog.cards.find((card) => card.id === state.progressionSwapToCardId) : undefined;
+  if ((swappedOutCard || swappedInCard) && (!swappedOutCard || !swappedInCard || !getProgressionSwapCandidates(character, catalog, state).some((card) => card.id === swappedInCard.id))) return undefined;
   if (subclassChoice && !subclassAdvance) return undefined;
   if (multiclassChoice && (!multiclassChoice.multiclass || progression.multiclass || isMulticlassBlockedBySubclass(character, multiclassChoice.tier, choices))) return undefined;
 
   const historyEntry: CharacterProgressionEntry = {
     level: nextLevel,
     appliedAt: deps.now?.() ?? new Date().toISOString(),
-    choices: [...choices.map((choice) => choice.label), `Carta de Dominio: ${chosenCard.name} → Vault`, ...(tierExperience ? [`Experiencia de Tier +2: ${tierExperience.name}`] : [])],
+    choices: [...choices.map((choice) => choice.label), `Carta de Dominio: ${chosenCard.name} → Vault`, ...(swappedOutCard && swappedInCard ? [`Troca de carta: ${swappedOutCard.name} → ${swappedInCard.name}`] : []), ...(tierExperience ? [`Experiencia de Tier +2: ${tierExperience.name}`] : [])],
     advances: choices.map((choice) => ({ kind: choice.kind, label: choice.label })),
+    cardSwap: swappedOutCard && swappedInCard ? { fromCardId: swappedOutCard.id, toCardId: swappedInCard.id } : undefined,
     tierAchievement
   };
   const resources = character.resources.map((resource) => resource.id === "hp"
@@ -127,7 +145,12 @@ export async function applyProgression(deps: ApplyProgressionDependencies): Prom
     defense: { ...character.defense, evasion: character.defense.evasion + evasionBonus },
     proficiency: character.proficiency + proficiencyBonus + (isTierAchievement ? 1 : 0),
     resources,
-    deck: { ...character.deck, activeCardIds: character.deck.activeCardIds, learnedCardIds: [...character.deck.learnedCardIds, chosenCard.id, ...additionalCardIds] },
+    deck: {
+      ...character.deck,
+      activeCardIds: swappedOutCard ? character.deck.activeCardIds.filter((id) => id !== swappedOutCard.id) : character.deck.activeCardIds,
+      learnedCardIds: [...new Set([...character.deck.learnedCardIds.filter((id) => id !== swappedOutCard?.id), chosenCard.id, ...additionalCardIds, ...(swappedInCard ? [swappedInCard.id] : [])])],
+      unavailableCards: swappedOutCard ? character.deck.unavailableCards?.filter((entry) => entry.cardId !== swappedOutCard.id) : character.deck.unavailableCards
+    },
     experiences: character.experiences.map((experience) => experienceIds.includes(experience.id) ? { ...experience, value: experience.value + 1 } : experience).concat(tierExperience ? [{ id: `experience.tier.${nextLevel}.${deps.createId?.() ?? crypto.randomUUID()}`, name: tierExperience.name, value: 2, description: tierExperience.description }] : []),
     progression: {
       attributeMarks,
@@ -143,6 +166,8 @@ export async function applyProgression(deps: ApplyProgressionDependencies): Prom
   state.progressionDraft = [];
   state.progressionError = undefined;
   state.progressionCardId = undefined;
+  state.progressionSwapFromCardId = undefined;
+  state.progressionSwapToCardId = undefined;
   state.progressionTierExperience = undefined;
   state.progressionTierExperienceError = undefined;
   state.progressionStep = "advances";

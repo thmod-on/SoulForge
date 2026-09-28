@@ -94,27 +94,18 @@ export async function deleteCharacter(characterId: string): Promise<void> {
   database.close();
 }
 
-export async function ensureDemoCharacter(): Promise<Character> {
-  const existingCharacter = await loadCharacter(demoCharacter.id);
-
+/** Cria, restaura e migra a única ficha de demonstração oficial. */
+export async function ensureDemoKaelII(): Promise<Character> {
+  const existingCharacter = await loadCharacter(demoKaelII.id);
   if (existingCharacter) {
-    if (existingCharacter.progression?.demoBaselineVersion !== demoCharacter.progression?.demoBaselineVersion) {
-      await saveCharacter(demoCharacter);
-      return demoCharacter;
+    if (existingCharacter.progression?.demoBaselineVersion !== demoKaelII.progression?.demoBaselineVersion) {
+      await saveCharacter(demoKaelII);
+      return demoKaelII;
     }
     const migratedCharacter = migrateDemoCharacter(existingCharacter);
     await saveCharacter(migratedCharacter);
     return migratedCharacter;
   }
-
-  await saveCharacter(demoCharacter);
-  return demoCharacter;
-}
-
-/** Cria a segunda ficha de demonstracao apenas quando ela ainda nao existe. */
-export async function ensureDemoKaelII(): Promise<Character> {
-  const existingCharacter = await loadCharacter(demoKaelII.id);
-  if (existingCharacter) return existingCharacter;
   await saveCharacter(demoKaelII);
   return demoKaelII;
 }
@@ -140,7 +131,7 @@ function migrateDemoCharacter(character: Character): Character {
   const activeCardIds = character.deck.activeCardIds.includes(markerPreviewCardId)
     ? character.deck.activeCardIds
     : [...character.deck.activeCardIds.slice(0, 4), markerPreviewCardId];
-  const isKael = character.id === demoCharacter.id;
+  const isKael = character.id === demoCharacter.id || character.id === demoKaelII.id;
 
   return {
     ...character,
@@ -153,9 +144,9 @@ function migrateDemoCharacter(character: Character): Character {
         primarySubclassId: demoCharacter.identity.primarySubclassId,
         primaryDomainIds: demoCharacter.identity.primaryDomainIds
       } : {}),
-      primaryAncestryId: character.identity.primaryAncestryId ?? (character.id === demoCharacter.id ? demoCharacter.identity.primaryAncestryId : undefined),
-      ancestryIds: character.identity.ancestryIds ?? (character.identity.primaryAncestryId ? [character.identity.primaryAncestryId] : character.id === demoCharacter.id ? demoCharacter.identity.ancestryIds : undefined),
-      ancestryFeatureIds: character.identity.ancestryFeatureIds ?? (character.id === demoCharacter.id ? demoCharacter.identity.ancestryFeatureIds : undefined),
+      primaryAncestryId: character.identity.primaryAncestryId ?? (isKael ? demoCharacter.identity.primaryAncestryId : undefined),
+      ancestryIds: character.identity.ancestryIds ?? (character.identity.primaryAncestryId ? [character.identity.primaryAncestryId] : isKael ? demoCharacter.identity.ancestryIds : undefined),
+      ancestryFeatureIds: character.identity.ancestryFeatureIds ?? (isKael ? demoCharacter.identity.ancestryFeatureIds : undefined),
       subclassName: character.identity.subclassName ?? demoCharacter.identity.subclassName,
       primaryClassId: character.identity.primaryClassId ?? demoCharacter.identity.primaryClassId,
       primarySubclassId: character.identity.primarySubclassId ?? demoCharacter.identity.primarySubclassId,

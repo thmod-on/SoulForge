@@ -6,7 +6,10 @@ import { applyProgression, type ProgressionActionState } from "./progressionActi
 const packId = "pack.progression";
 const characterClass: ClassDefinition = { id: "class.test", type: "class", packId, name: "Classe", summary: "", domainIds: ["domain.one", "domain.two"], startingEvasion: 10, startingHitPoints: 6, featureIds: [], hopeFeatureId: "feature.hope", subclassIds: ["subclass.one", "subclass.two"] };
 const card: CardDefinition = { id: "card.new", type: "card", packId, name: "Nova carta", summary: "", effect: "", domainId: "domain.one", tier: 1, cardType: "acao" };
-const catalog = createCatalog([], [characterClass, card]);
+const oldCard: CardDefinition = { ...card, id: "card.old", name: "Carta antiga", tier: 2 };
+const replacementCard: CardDefinition = { ...card, id: "card.replacement", name: "Carta substituta", tier: 2 };
+const highCard: CardDefinition = { ...card, id: "card.high", name: "Carta superior", tier: 3 };
+const catalog = createCatalog([], [characterClass, card, oldCard, replacementCard, highCard]);
 
 function createCharacter(): Character {
   return {
@@ -98,5 +101,48 @@ describe("aplicação da progressão", () => {
     expect(result).toBeUndefined();
     expect(saved).toBe(false);
     expect(state.character).toBe(progressed);
+  });
+
+  it("troca opcionalmente uma carta adquirida e coloca a nova no Vault", async () => {
+    const character = createCharacter();
+    character.deck = { activeCardIds: [oldCard.id], learnedCardIds: [oldCard.id], unavailableCards: [{ cardId: oldCard.id, reactivation: "rest", deactivatedAt: "2026-09-28T00:00:00.000Z" }] };
+    const state: ProgressionActionState = {
+      character,
+      progressionDraft: [{ kind: "hp", tier: 2, label: "PV" }, { kind: "stress", tier: 2, label: "Estresse" }],
+      progressionCardId: card.id,
+      progressionSwapFromCardId: oldCard.id,
+      progressionSwapToCardId: replacementCard.id,
+      progressionTierExperience: { name: "Veterano", description: "" },
+      progressionStep: "review"
+    };
+
+    const result = await applyProgression({ state, catalog, saveCharacter: async () => undefined, now: () => "2026-09-28T00:00:00.000Z" });
+
+    expect(result?.deck.learnedCardIds).toEqual([card.id, replacementCard.id]);
+    expect(result?.deck.activeCardIds).not.toContain(oldCard.id);
+    expect(result?.deck.activeCardIds).not.toContain(replacementCard.id);
+    expect(result?.deck.unavailableCards).toEqual([]);
+    expect(result?.progression?.history[0].cardSwap).toEqual({ fromCardId: oldCard.id, toCardId: replacementCard.id });
+    expect(result?.progression?.history[0].choices).toContain("Troca de carta: Carta antiga → Carta substituta");
+  });
+
+  it("rejeita troca por carta de nível superior à carta removida", async () => {
+    const character = createCharacter();
+    character.identity = { ...character.identity, level: 2 };
+    character.deck = { activeCardIds: [], learnedCardIds: [oldCard.id] };
+    const state: ProgressionActionState = {
+      character,
+      progressionDraft: [{ kind: "hp", tier: 2, label: "PV" }, { kind: "stress", tier: 2, label: "Estresse" }],
+      progressionCardId: card.id,
+      progressionSwapFromCardId: oldCard.id,
+      progressionSwapToCardId: highCard.id,
+      progressionStep: "review"
+    };
+    let saved = false;
+
+    const result = await applyProgression({ state, catalog, saveCharacter: async () => { saved = true; } });
+
+    expect(result).toBeUndefined();
+    expect(saved).toBe(false);
   });
 });

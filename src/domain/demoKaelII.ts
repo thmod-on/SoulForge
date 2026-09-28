@@ -1,10 +1,8 @@
 import { demoCharacter } from "./demoCharacter";
 
-/**
- * Ficha limpa para validar packs locais atuais sem alterar a ficha-demo
- * historica do Kael. Ela e criada somente neste dispositivo, como o Kael
- * original, e pode ser removida pela tela de selecao de personagens.
- */
+export const legacyDemoCharacterId = demoCharacter.id;
+
+/** Ficha de demonstração oficial mantida e restaurada pelo SoulForge. */
 export const demoKaelII = {
   ...demoCharacter,
   id: "character.kael-ironheart-ii",

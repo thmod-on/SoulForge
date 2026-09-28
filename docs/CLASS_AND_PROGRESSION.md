@@ -155,7 +155,8 @@ O grupo sobe de nível em conjunto quando o GM define que a mesa alcançou um ma
 1. aplicar a conquista de tier, se o novo nível for 2, 5 ou 8;
 2. escolher dois avanços elegíveis do tier atual ou de tiers anteriores;
 3. aumentar todos os limiares de dano em 1;
-4. adquirir uma carta de Domínio elegível ou trocar uma carta anteriormente adquirida por outra dentro do limite permitido.
+4. adquirir uma carta de Domínio elegível;
+5. opcionalmente, trocar uma carta anteriormente adquirida por outra elegível de nível igual ou inferior ao da carta substituída.
 
 ### Conquistas de tier
 
@@ -181,7 +182,7 @@ Avanços universais do Core:
 - aumentar Proficiência em 1, consumindo as duas escolhas exigidas;
 - fazer multiclasse a partir do nível 5, consumindo as duas escolhas exigidas.
 
-Escolher uma carta aprimorada de subclasse impede a multiclasse daquele tier. Escolher multiclasse impede a opção de subclasse daquele tier e as demais opções de multiclasse da ficha.
+Escolher um aprimoramento de subclasse impede a multiclasse daquele tier. Escolher multiclasse impede a opção de aprimoramento de subclasse daquele tier e as demais opções de multiclasse da ficha.
 
 As marcações de atributos impedem que os mesmos atributos sejam escolhidos novamente até serem limpas por uma conquista de tier. O SoulForge deve guardar essas marcações por atributo e por tier, e não apenas um booleano global sem contexto.
 

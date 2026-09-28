@@ -32,7 +32,7 @@ export const progressionAdvanceLabels: Record<ProgressionAdvanceKind, string> = 
   experiences: "Duas Experiencias +1",
   domain: "Carta adicional de Dominio",
   evasion: "Evasao +1",
-  subclass: "Carta aprimorada da subclasse",
+  subclass: "Aprimoramento de subclasse",
   proficiency: "Proficiencia +1",
   multiclass: "Multiclasse"
 };

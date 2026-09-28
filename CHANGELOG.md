@@ -4,6 +4,27 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.35.0]
+
+### Adicionado
+
+- a progressão agora oferece, após a aquisição obrigatória, uma etapa opcional
+  para trocar uma carta de Domínio já adquirida por outra elegível de nível
+  igual ou inferior; a operação move a nova carta para o Vault, remove a antiga
+  também do Loadout e registra a decisão no histórico da evolução;
+- a lista de avanços usa grupos de caixinhas inspirados na ficha física para
+  tornar visíveis os usos disponíveis por Tier e o custo de cada uso.
+
+### Alterado
+
+- "Carta aprimorada da subclasse" passa a se chamar "Aprimoramento de
+  subclasse", deixando a escolha mais clara no fluxo de progressão;
+- a ficha de demonstração passa a manter somente Kael II, removendo a ficha
+  histórica incompatível ao iniciar a aplicação;
+- em telas baixas, o retrato da sidebar permanece visível em formato compacto e
+  a comunidade é exibida sobre a imagem, com contraste reforçado para fotos de
+  qualquer tonalidade.
+
 ## [0.34.1]
 
 ### Corrigido

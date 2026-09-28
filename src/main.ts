@@ -5,9 +5,9 @@ import { readLocalImage } from "./app/media";
 import { getSpellcastAttributeId } from "./content/spellcastAttributes";
 import { applyCardContentDefaults } from "./content/cardArtwork";
 import { createCatalog, findDefinition, findDomain } from "./domain/catalog";
-import { demoCharacter } from "./domain/demoCharacter";
+import { demoKaelII, legacyDemoCharacterId } from "./domain/demoKaelII";
 import type { Attribute, CardDefinition, Character, ClassDefinition, ItemDefinition, PackBundle, PackManifest, ProgressionAdvanceKind, SubclassDefinition } from "./domain/types";
-import { deleteCharacter as deleteStoredCharacter, ensureDemoCharacter, ensureDemoKaelII, listCharacters, loadCharacter, saveCharacter as persistCharacter } from "./storage/characterRepository";
+import { deleteCharacter as deleteStoredCharacter, ensureDemoKaelII, listCharacters, loadCharacter, saveCharacter as persistCharacter } from "./storage/characterRepository";
 import { getActiveGameMarkers, synchronizeGameMarkers } from "./features/game-markers/gameMarkerSync";
 import { handleGameMarkerAction } from "./features/game-markers/gameMarkerActions";
 import { renderGameMarkerDiceDialog } from "./features/game-markers/renderDiceDialog";
@@ -20,7 +20,7 @@ import { renderCompendiumIndex as renderCompendiumIndexView } from "./features/c
 import { getOriginalClassName } from "./features/compendium/classPresentation";
 import { getTierForLevel, progressionAdvanceLabels } from "./features/progression/progressionRules";
 import { buildMulticlassChoice, canChooseMulticlass, getEligibleMulticlassClasses } from "./features/progression/multiclassRules";
-import { addProgressionChoice, applyProgression, getAdvanceSlotsUsed, getNextSubclassAdvance, getPrimaryDomainIds, getProgression, getProgressionCardCandidates, getProgressionChoiceCount, requiresTierExperience } from "./features/progression/progressionActions";
+import { addProgressionChoice, applyProgression, getAdvanceSlotsUsed, getNextSubclassAdvance, getPrimaryDomainIds, getProgression, getProgressionCardCandidates, getProgressionChoiceCount, getProgressionSwapCandidates, getProgressionSwapSourceCards, requiresTierExperience } from "./features/progression/progressionActions";
 import { nextCharacterCreationStep, previousCharacterCreationStep, type CharacterCreationStep } from "./features/character-creation/creationFlow";
 import { buildCharacterFromDraft, getCreationClasses } from "./features/character-creation/characterCreationRules";
 import { closeCharacterCreation, getCharacterCreationDraft, openCharacterCreation, selectCharacterCreationClass, selectCharacterCreationTopFeature, syncCharacterCreationDraftFromForm, toggleCharacterCreationAncestry, toggleCharacterCreationCard, validateCharacterCreationState } from "./features/character-creation/characterCreationState";
@@ -43,6 +43,7 @@ import { renderProgressionDialogInPlace, renderProgressionInPlace as renderProgr
 import { renderProgressionCardPickerModal as renderProgressionCardPickerModalView, renderProgressionHistoryModal as renderProgressionHistoryModalView, renderProgressionPickerModal as renderProgressionPickerModalView, renderProgressionMulticlassModal as renderProgressionMulticlassModalView, renderTierExperienceModal as renderTierExperienceModalView, type ProgressionDialogDependencies } from "./features/progression/renderProgressionDialogs";
 import {
   renderProgressionAdvanceSummary as renderProgressionAdvanceSummaryView,
+  renderProgressionCardSwapStep as renderProgressionCardSwapStepView,
   renderProgressionDomainStep as renderProgressionDomainStepView,
   renderProgressionOptions as renderProgressionOptionsView,
   renderProgressionReview as renderProgressionReviewView,
@@ -220,10 +221,10 @@ const state: {
   progressionDraft: ProgressionDraftChoice[];
   progressionError?: string;
   progressionCompletionLevel?: number;
-  progressionCardPickerMode?: "mandatory" | "advance";
+  progressionCardPickerMode?: "mandatory" | "advance" | "swap-source" | "swap-target";
   progressionCardTierFilter: "todos" | number; progressionCardDomainFilter?: string;
   progressionCardPickerTier?: ProgressionTierNumber;
-  progressionCardId?: string; progressionCardPickerSelectionId?: string; progressionCardPickerScrollTop?: number;
+  progressionCardId?: string; progressionSwapFromCardId?: string; progressionSwapToCardId?: string; progressionCardPickerSelectionId?: string; progressionCardPickerScrollTop?: number;
   progressionTierExperienceOpen: boolean;
   progressionTierExperience?: { name: string; description: string };
   progressionTierExperienceError?: string;
@@ -562,9 +563,9 @@ function getPackManagementDependencies(): PackManagementDependencies {
     escapeHtml,
     render: () => render({ preserveMainScroll: true }),
     afterImport: async () => {
-      if (state.character?.id !== demoCharacter.id) return;
-      await ensureDemoCharacter();
-      state.character = await loadCharacter(demoCharacter.id);
+      if (state.character?.id !== demoKaelII.id) return;
+      await ensureDemoKaelII();
+      state.character = await loadCharacter(demoKaelII.id);
       state.characters = await listCharacters();
     }
   };
@@ -584,6 +585,7 @@ function getProgressionRenderDependencies(): ProgressionRenderDependencies {
     renderProgressionOptions: (character) => renderProgressionOptionsView(character, getProgressionWorkspaceDependencies()),
     renderProgressionAdvanceSummary: () => renderProgressionAdvanceSummaryView(getProgressionWorkspaceDependencies()),
     renderProgressionDomainStep: (character) => renderProgressionDomainStepView(character, getProgressionWorkspaceDependencies()),
+    renderProgressionCardSwapStep: (character) => renderProgressionCardSwapStepView(character, getProgressionWorkspaceDependencies()),
     renderTierExperienceStep: (character) => renderTierExperienceStepView(character, getProgressionWorkspaceDependencies()),
     renderProgressionReview: (character) => renderProgressionReviewView(character, getProgressionWorkspaceDependencies())
   };
@@ -597,6 +599,8 @@ function getProgressionDialogDependencies(): ProgressionDialogDependencies {
     getTierForLevel,
     getProgression,
     getProgressionCardCandidates: (character) => getProgressionCardCandidates(character, catalog, state),
+    getProgressionSwapSourceCards: (character) => getProgressionSwapSourceCards(character, catalog),
+    getProgressionSwapCandidates: (character) => getProgressionSwapCandidates(character, catalog, state),
     getPrimaryDomainIds: (character) => getPrimaryDomainIds(character, catalog),
     requiresTierExperience,
     getEligibleMulticlassClasses: (character) => getEligibleMulticlassClasses(character, catalog),
@@ -754,7 +758,7 @@ const fallbackCharacterSubclass: SubclassDefinition = {
 };
 
 function getCharacterCreationClasses(): ClassDefinition[] {
-  return getCreationClasses(catalog, { classDefinition: fallbackCharacterClass, subclassDefinition: fallbackCharacterSubclass, skills: demoCharacter.skills });
+  return getCreationClasses(catalog, { classDefinition: fallbackCharacterClass, subclassDefinition: fallbackCharacterSubclass, skills: demoKaelII.skills });
 }
 
 function getCharacterCreationRenderDependencies(): CharacterCreationRenderDependencies {
@@ -913,7 +917,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
   const previousSidebarScrollTop = options.preserveMainScroll ? appRoot.querySelector<HTMLElement>(".sidebar")?.scrollTop : undefined;
   const currentCharacter = state.character;
   if (state.characterSelectionOpen && isEditorPage(state.page)) {
-    const editorContextCharacter = currentCharacter ?? state.characters[0] ?? demoCharacter;
+    const editorContextCharacter = currentCharacter ?? state.characters[0] ?? demoKaelII;
     const editorScreen = state.page === "compendium" ? renderCompendium() : renderSettings(editorContextCharacter);
     appRoot.innerHTML = `<div class="editor-shell">${renderEditorHeaderView(getPlayerShellDependencies())}${editorScreen}</div>${renderPackManagementDialogs(getPackManagementDependencies())}${renderCharacterImportModal({ isOpen: state.characterImportOpen, character: state.pendingCharacterImport, error: state.characterImportError, escapeHtml })}${renderCardModalView(state.modalCardId, getCardFeatureDependencies())}${renderDomainModalView(getDomainFeatureDependencies())}${renderDeleteDomainModalView(getDomainFeatureDependencies())}${renderCompendiumCardFormModalView(getCardFeatureDependencies())}${renderDeleteCompendiumCardModalView(getCardFeatureDependencies())}${renderCompendiumItemFormModalView(getItemFeatureDependencies())}${renderDeleteCompendiumItemModalView(getItemFeatureDependencies())}${renderCompendiumItemPreviewModalView(getItemFeatureDependencies())}${renderCompendiumClassPreviewModalView(getClassFeatureDependencies())}${renderCompendiumClassFormModalView(getClassFeatureDependencies())}${renderDeleteCompendiumClassModalView(getClassFeatureDependencies())}${renderCompendiumAncestryFormModalView(getAncestryFeatureDependencies())}${renderDeleteCompendiumAncestryModalView(getAncestryFeatureDependencies())}`;
     document.body.classList.toggle("has-modal", state.packImportOpen || state.removeAllInstalledPacksOpen || state.characterImportOpen || Boolean(state.deletingInstalledPackId) || Boolean(state.modalCardId) || state.domainModalOpen || Boolean(state.deletingDomainId) || state.cardModalOpen || Boolean(state.deletingCompendiumCardId) || state.itemDefinitionModalOpen || Boolean(state.deletingCompendiumItemId) || Boolean(state.compendiumItemPreviewId) || state.classModalOpen || Boolean(state.deletingCompendiumClassId) || Boolean(state.compendiumClassPreviewId) || state.ancestryModalOpen || Boolean(state.deletingCompendiumAncestryId) || Boolean(state.compendiumAncestryPreviewId) || Boolean(state.compendiumCommunityPreviewId) || state.transformationState.transformationModalOpen || Boolean(state.transformationState.deletingCompendiumTransformationId) || Boolean(state.transformationState.compendiumTransformationPreviewId) || state.conditionState.conditionModalOpen || Boolean(state.conditionState.deletingCompendiumConditionId) || Boolean(state.conditionState.compendiumConditionPreviewId));
@@ -922,7 +926,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
   }
 
   if (state.characterSelectionOpen) {
-    appRoot.innerHTML = `${renderCharacterSelectionView(state.characters, demoCharacter.id, escapeHtml)}${renderCharacterCreationModalView(getCharacterCreationRenderDependencies())}${renderDeleteCharacterModal()}${renderCharacterImportModal({ isOpen: state.characterImportOpen, character: state.pendingCharacterImport, error: state.characterImportError, escapeHtml })}`;
+    appRoot.innerHTML = `${renderCharacterSelectionView(state.characters, demoKaelII.id, escapeHtml)}${renderCharacterCreationModalView(getCharacterCreationRenderDependencies())}${renderDeleteCharacterModal()}${renderCharacterImportModal({ isOpen: state.characterImportOpen, character: state.pendingCharacterImport, error: state.characterImportError, escapeHtml })}`;
     document.body.classList.toggle("has-modal", state.characterCreationOpen || state.characterImportOpen || Boolean(state.deletingCharacterId));
     if (previousCharacterCreationScrollTop !== undefined) {
       requestAnimationFrame(() => {
@@ -1111,8 +1115,8 @@ async function openCharacter(characterId: string | undefined): Promise<void> {
     return;
   }
 
-  if (characterId === demoCharacter.id) {
-    await ensureDemoCharacter();
+  if (characterId === demoKaelII.id) {
+    await ensureDemoKaelII();
   }
   const character = await loadCharacter(characterId);
   if (!character) {
@@ -1127,7 +1131,7 @@ async function openCharacter(characterId: string | undefined): Promise<void> {
 
 async function confirmDeleteCharacter(): Promise<void> {
   const characterId = state.deletingCharacterId;
-  if (!characterId || characterId === demoCharacter.id) {
+  if (!characterId || characterId === demoKaelII.id) {
     state.deletingCharacterId = undefined;
     render();
     return;
@@ -1181,7 +1185,7 @@ function validateCharacterCreationStep(): boolean {
   return validateCharacterCreationState(state, catalog, getCharacterCreationFallback());
 }
 
-function getCharacterCreationFallback() { return { classDefinition: fallbackCharacterClass, subclassDefinition: fallbackCharacterSubclass, skills: demoCharacter.skills }; }
+function getCharacterCreationFallback() { return { classDefinition: fallbackCharacterClass, subclassDefinition: fallbackCharacterSubclass, skills: demoKaelII.skills }; }
 function getCardFormValue(selector: string): string {
   const element = document.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(selector);
   return element?.value.trim() ?? "";
@@ -2015,6 +2019,8 @@ function bindEvents(): void {
           step: state.progressionStep,
           choiceCount: getProgressionChoiceCount(state.progressionDraft),
           cardId: state.progressionCardId,
+          swapFromCardId: state.progressionSwapFromCardId,
+          swapToCardId: state.progressionSwapToCardId,
           requiresTierExperience: requiresTierExperience(state.character),
           tierExperienceName: state.progressionTierExperience?.name
         });
@@ -2143,6 +2149,33 @@ function bindEvents(): void {
       state.progressionCardPickerSelectionId = state.progressionCardId;
       state.progressionCardPickerScrollTop = 0;
       render({ preserveMainScroll: true });
+      return;
+    }
+
+    if (target.closest('[data-action="open-progression-swap-source"]')) {
+      state.progressionCardPickerMode = "swap-source";
+      state.progressionCardPickerTier = undefined;
+      state.progressionCardTierFilter = "todos"; state.progressionCardDomainFilter = undefined;
+      state.progressionCardPickerSelectionId = state.progressionSwapFromCardId;
+      state.progressionCardPickerScrollTop = 0;
+      render({ preserveMainScroll: true });
+      return;
+    }
+
+    if (target.closest('[data-action="open-progression-swap-target"]') && state.progressionSwapFromCardId) {
+      state.progressionCardPickerMode = "swap-target";
+      state.progressionCardTierFilter = "todos"; state.progressionCardDomainFilter = undefined;
+      state.progressionCardPickerSelectionId = state.progressionSwapToCardId;
+      state.progressionCardPickerScrollTop = 0;
+      render({ preserveMainScroll: true });
+      return;
+    }
+
+    if (target.closest('[data-action="clear-progression-card-swap"]')) {
+      state.progressionSwapFromCardId = undefined;
+      state.progressionSwapToCardId = undefined;
+      state.progressionError = undefined;
+      renderProgressionSurface(appRoot, renderProgressionView(state.character!, getProgressionRenderDependencies()));
       return;
     }
 
@@ -2614,7 +2647,7 @@ async function boot(): Promise<void> {
   bindEvents();
   bindInventoryDragEvents(getInventoryDragDependencies());
   await refreshCatalog();
-  await ensureDemoCharacter();
+  await deleteStoredCharacter(legacyDemoCharacterId);
   await ensureDemoKaelII();
   state.characters = await listCharacters();
   // A sessão sempre começa no seletor: abrir uma ficha é uma ação consciente do jogador.

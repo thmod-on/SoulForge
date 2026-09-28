@@ -26,6 +26,17 @@ export function handleProgressionCardPickerAction(target: HTMLElement, dependenc
   if (!cardId || !state.progressionCardPickerMode) return true;
   if (state.progressionCardPickerMode === "advance") {
     dependencies.addChoice({ kind: "domain", tier: state.progressionCardPickerTier ?? 2 as ProgressionTierNumber, cardId, label: `Carta adicional: ${dependencies.findCard(cardId)?.name ?? "Carta"}` });
+  } else if (state.progressionCardPickerMode === "swap-source") {
+    state.progressionSwapFromCardId = cardId;
+    state.progressionSwapToCardId = undefined;
+    state.progressionCardPickerMode = "swap-target";
+    state.progressionCardPickerSelectionId = undefined;
+    state.progressionCardTierFilter = "todos";
+    state.progressionCardDomainFilter = undefined;
+    return true;
+  } else if (state.progressionCardPickerMode === "swap-target") {
+    state.progressionSwapToCardId = cardId;
+    state.progressionError = undefined;
   } else {
     state.progressionCardId = cardId;
     state.progressionError = undefined;

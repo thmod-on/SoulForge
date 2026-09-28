@@ -245,6 +245,7 @@ export type CharacterProgressionEntry = {
   appliedAt: string;
   choices: string[];
   advances?: Array<{ kind: ProgressionAdvanceKind; label: string }>;
+  cardSwap?: { fromCardId: string; toCardId: string };
   tierAchievement?: string;
 };
 
