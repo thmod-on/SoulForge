@@ -1,7 +1,8 @@
 import type { Definition, PackBundle, PackManifest } from "../domain/types";
+import { ensureSyncStores } from "./syncRepository";
 
 const databaseName = "soulforge";
-const databaseVersion = 4;
+const databaseVersion = 5;
 const packStoreName = "installedPacks";
 const definitionStoreName = "customDefinitions";
 
@@ -15,6 +16,7 @@ function openDatabase(): Promise<IDBDatabase> {
       if (!database.objectStoreNames.contains(definitionStoreName)) database.createObjectStore(definitionStoreName, { keyPath: "id" });
       if (!database.objectStoreNames.contains(packStoreName)) database.createObjectStore(packStoreName, { keyPath: "id" });
       if (!database.objectStoreNames.contains("definitionOverrides")) database.createObjectStore("definitionOverrides", { keyPath: "id" });
+      ensureSyncStores(database);
     };
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);

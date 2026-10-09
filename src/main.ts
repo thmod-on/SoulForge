@@ -7,12 +7,12 @@ import { applyCardContentDefaults } from "./content/cardArtwork";
 import { createCatalog, findDefinition, findDomain } from "./domain/catalog";
 import { demoKaelII, legacyDemoCharacterId } from "./domain/demoKaelII";
 import type { Attribute, CardDefinition, Character, ClassDefinition, ItemDefinition, PackBundle, PackManifest, ProgressionAdvanceKind, SubclassDefinition } from "./domain/types";
-import { deleteCharacter as deleteStoredCharacter, ensureDemoKaelII, listCharacters, loadCharacter, saveCharacter as persistCharacter } from "./storage/characterRepository";
+import { ensureDemoKaelII, listCharacters, loadCharacter } from "./storage/characterRepository";
 import { getActiveGameMarkers, synchronizeGameMarkers } from "./features/game-markers/gameMarkerSync";
 import { handleGameMarkerAction } from "./features/game-markers/gameMarkerActions";
 import { renderGameMarkerDiceDialog } from "./features/game-markers/renderDiceDialog";
 import { handleStoredDiceAction, renderStoredDiceDialog, type StoredDiceDialogState } from "./features/game-markers/storedDice";
-import { deleteCustomDefinition, loadCardMarkerOverrides, loadCustomDefinitions, saveCardMarkerOverride, saveCustomDefinition, type CardMarkerOverride } from "./storage/compendiumRepository";
+import type { CardMarkerOverride } from "./storage/compendiumRepository";
 import { loadInstalledPacks } from "./storage/packRepository";
 import { renderSettings as renderSettingsPage } from "./features/settings/renderSettings";
 import { getPackDisplayDescription, getPackDisplayName, getPackOriginName } from "./features/compendium/packPresentation";
@@ -38,6 +38,7 @@ import { isRememberedActiveCard, rememberActiveCardCarousel, scrollActiveCardCar
 import { handleCardAvailabilityAction, pruneUnavailableCards } from "./features/player/cardAvailability";
 import { handleCharacterTransformationAction, handleCharacterTransformationEscape, renderCharacterTransformationDialogs, renderCharacterTransformationPanel, type CharacterTransformationDependencies, type CharacterTransformationUiState } from "./features/transformations/characterTransformations";
 import { confirmStagedCharacterImport, downloadCharacterExport, renderCharacterImportModal, stageCharacterImport } from "./features/character-transfer/characterTransfer";
+import { handleLocalBackupAction, handleLocalBackupInput, renderLocalBackupDialogs, type ContentImportPreview, type SoulforgeBackupBundle } from "./features/local-backup/localBackup";
 import { renderProgression as renderProgressionView, type ProgressionRenderDependencies } from "./features/progression/renderProgression";
 import { renderProgressionDialogInPlace, renderProgressionInPlace as renderProgressionSurface } from "./features/progression/renderInPlace";
 import { renderProgressionCardPickerModal as renderProgressionCardPickerModalView, renderProgressionHistoryModal as renderProgressionHistoryModalView, renderProgressionPickerModal as renderProgressionPickerModalView, renderProgressionMulticlassModal as renderProgressionMulticlassModalView, renderTierExperienceModal as renderTierExperienceModalView, type ProgressionDialogDependencies } from "./features/progression/renderProgressionDialogs";
@@ -162,21 +163,19 @@ import {
 } from "./features/compendium/ancestries";
 import type { CompendiumSpread, CompendiumView, InventoryFilter, Page, ProgressionDraftChoice, ProgressionFlowStep, ProgressionMulticlassDraft, ProgressionPicker, ProgressionTierNumber, SettingsSection } from "./app/types";
 import { editorNavigation as sideNavItems, getPageFromEventTarget, isEditorPage, playerNavigation as topNavItems } from "./app/navigation";
+import { deleteLocalCharacter as deleteStoredCharacter, deleteSyncedCharacter, deleteSyncedDefinition as deleteCustomDefinition, getSyncViewModel, handleCloudAction, initializeCloudIntegration, loadCardMarkerOverrides, loadCustomDefinitions, mountGoogleSignIn, queueLocalSnapshot, refreshCloudAppliedState, saveLocalCharacter as persistCharacter, saveSyncedCardMarkerOverride as saveCardMarkerOverride, saveSyncedCharacter, saveSyncedDefinition as saveCustomDefinition } from "./features/cloud/cloudIntegration";
 import "./styles.css"; function getAppRoot(): HTMLDivElement {
   const element = document.querySelector<HTMLDivElement>("#app");
   if (!element) {
     throw new Error("App root not found.");
   }
-
   return element;
 }
-
 const appRoot = getAppRoot();
 let catalog = baseCatalog;
 let cardMarkerOverrides: CardMarkerOverride[] = [];
 let modalBackdropPointerDown = false;
 let shouldAnimateCharacterCreationModal = false;
-
 /** Centraliza a persistencia para que todo personagem salvo mantenha os marcadores sincronizados. */
 async function saveCharacter(character: Character): Promise<void> {
   const withSynchronizedArmor = synchronizeArmorResource(character, getItemDefinition);
@@ -185,9 +184,8 @@ async function saveCharacter(character: Character): Promise<void> {
   if (synchronized !== character) {
     Object.assign(character, synchronized);
   }
-  await persistCharacter(synchronized);
+  await saveSyncedCharacter(synchronized);
 }
-
 const state: {
   page: Page;
   inventoryFilter: InventoryFilter;
@@ -305,6 +303,8 @@ const state: {
   characterImportOpen: boolean;
   pendingCharacterImport?: Character;
   characterImportError?: string;
+  backupRestoreOpen: boolean; pendingBackup?: SoulforgeBackupBundle; backupError?: string;
+  contentImportOpen: boolean; pendingContentImport?: ContentImportPreview; contentImportError?: string; acceptedContentConflictIds: string[];
   deletingInstalledPackId?: string;
   openSettingsSections: Record<SettingsSection, boolean>;
   character?: Character; characterScarsOpen: boolean; deletingCharacterScarId?: string;
@@ -365,17 +365,17 @@ const state: {
   packImportOpen: false,
   removeAllInstalledPacksOpen: false,
   characterImportOpen: false, characterScarsOpen: false,
+  backupRestoreOpen: false, contentImportOpen: false, acceptedContentConflictIds: [],
   openSettingsSections: {
     general: true,
+    cloud: true,
     localData: false,
     loadRules: false,
     appearance: false,
     progression: false
   }
 };
-
 const appVersion = packageJson.version;
-
 const itemFilterLabels: Record<InventoryFilter, string> = {
   todos: "Tudo",
   arma: "Armas",
@@ -384,7 +384,6 @@ const itemFilterLabels: Record<InventoryFilter, string> = {
   equipamento: "Equipamentos",
   loot: "Loot"
 };
-
 function escapeHtml(value: string): string {
   return value
     .replaceAll("&", "&amp;")
@@ -393,7 +392,6 @@ function escapeHtml(value: string): string {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
-
 function progressPercent(value: number, max: number): number {
   return Math.min(100, Math.round((value / max) * 100));
 }
@@ -551,7 +549,8 @@ function getCharacterTransformationDependencies(): CharacterTransformationDepend
     hasActiveCharacter: Boolean(state.character),
     escapeHtml,
     getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs),
-    getPackDisplayDescription
+    getPackDisplayDescription,
+    sync: getSyncViewModel()
   });
 }
 
@@ -571,6 +570,7 @@ function getPackManagementDependencies(): PackManagementDependencies {
   };
 }
 
+function getLocalBackupDependencies() { return { state, appVersion, ensureDemo: async () => { await ensureDemoKaelII(); }, loadCharacter, listCharacters, availableDefinitions: () => catalog.definitions, refreshCatalog, render: () => render({ preserveMainScroll: true }), showError: (message: string) => window.alert(message), afterLocalDataChange: queueLocalSnapshot }; }
 function renderEmptyInline(message: string): string { return `<p class="empty-inline sf-state sf-state--empty sf-state--inline">${escapeHtml(message)}</p>`; }
 
 function getNotesRenderDependencies(): NotesRenderDependencies {
@@ -919,9 +919,10 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
   if (state.characterSelectionOpen && isEditorPage(state.page)) {
     const editorContextCharacter = currentCharacter ?? state.characters[0] ?? demoKaelII;
     const editorScreen = state.page === "compendium" ? renderCompendium() : renderSettings(editorContextCharacter);
-    appRoot.innerHTML = `<div class="editor-shell">${renderEditorHeaderView(getPlayerShellDependencies())}${editorScreen}</div>${renderPackManagementDialogs(getPackManagementDependencies())}${renderCharacterImportModal({ isOpen: state.characterImportOpen, character: state.pendingCharacterImport, error: state.characterImportError, escapeHtml })}${renderCardModalView(state.modalCardId, getCardFeatureDependencies())}${renderDomainModalView(getDomainFeatureDependencies())}${renderDeleteDomainModalView(getDomainFeatureDependencies())}${renderCompendiumCardFormModalView(getCardFeatureDependencies())}${renderDeleteCompendiumCardModalView(getCardFeatureDependencies())}${renderCompendiumItemFormModalView(getItemFeatureDependencies())}${renderDeleteCompendiumItemModalView(getItemFeatureDependencies())}${renderCompendiumItemPreviewModalView(getItemFeatureDependencies())}${renderCompendiumClassPreviewModalView(getClassFeatureDependencies())}${renderCompendiumClassFormModalView(getClassFeatureDependencies())}${renderDeleteCompendiumClassModalView(getClassFeatureDependencies())}${renderCompendiumAncestryFormModalView(getAncestryFeatureDependencies())}${renderDeleteCompendiumAncestryModalView(getAncestryFeatureDependencies())}`;
+    appRoot.innerHTML = `<div class="editor-shell">${renderEditorHeaderView(getPlayerShellDependencies())}${editorScreen}</div>${renderPackManagementDialogs(getPackManagementDependencies())}${renderLocalBackupDialogs(state, escapeHtml)}${renderCharacterImportModal({ isOpen: state.characterImportOpen, character: state.pendingCharacterImport, error: state.characterImportError, escapeHtml })}${renderCardModalView(state.modalCardId, getCardFeatureDependencies())}${renderDomainModalView(getDomainFeatureDependencies())}${renderDeleteDomainModalView(getDomainFeatureDependencies())}${renderCompendiumCardFormModalView(getCardFeatureDependencies())}${renderDeleteCompendiumCardModalView(getCardFeatureDependencies())}${renderCompendiumItemFormModalView(getItemFeatureDependencies())}${renderDeleteCompendiumItemModalView(getItemFeatureDependencies())}${renderCompendiumItemPreviewModalView(getItemFeatureDependencies())}${renderCompendiumClassPreviewModalView(getClassFeatureDependencies())}${renderCompendiumClassFormModalView(getClassFeatureDependencies())}${renderDeleteCompendiumClassModalView(getClassFeatureDependencies())}${renderCompendiumAncestryFormModalView(getAncestryFeatureDependencies())}${renderDeleteCompendiumAncestryModalView(getAncestryFeatureDependencies())}`;
     document.body.classList.toggle("has-modal", state.packImportOpen || state.removeAllInstalledPacksOpen || state.characterImportOpen || Boolean(state.deletingInstalledPackId) || Boolean(state.modalCardId) || state.domainModalOpen || Boolean(state.deletingDomainId) || state.cardModalOpen || Boolean(state.deletingCompendiumCardId) || state.itemDefinitionModalOpen || Boolean(state.deletingCompendiumItemId) || Boolean(state.compendiumItemPreviewId) || state.classModalOpen || Boolean(state.deletingCompendiumClassId) || Boolean(state.compendiumClassPreviewId) || state.ancestryModalOpen || Boolean(state.deletingCompendiumAncestryId) || Boolean(state.compendiumAncestryPreviewId) || Boolean(state.compendiumCommunityPreviewId) || state.transformationState.transformationModalOpen || Boolean(state.transformationState.deletingCompendiumTransformationId) || Boolean(state.transformationState.compendiumTransformationPreviewId) || state.conditionState.conditionModalOpen || Boolean(state.conditionState.deletingCompendiumConditionId) || Boolean(state.conditionState.compendiumConditionPreviewId));
     if (options.preserveMainScroll) requestAnimationFrame(() => { const content = appRoot.querySelector<HTMLElement>(".content"); if (content && previousContentScrollTop !== undefined) content.scrollTop = previousContentScrollTop; if (previousDocumentScrollTop !== undefined) window.scrollTo({ top: previousDocumentScrollTop, behavior: "auto" }); });
+    if (state.page === "settings") void mountGoogleSignIn();
     return;
   }
 
@@ -1034,6 +1035,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
     ${renderFeatureTokenActivationDialog({ state, catalog, escapeHtml })}
     ${renderRestModalView(character, state.restDialogKind, state.restChoices, state.restError, { escapeHtml, catalog })}
       ${renderPackManagementDialogs(getPackManagementDependencies())}
+    ${renderLocalBackupDialogs(state, escapeHtml)}
     ${renderCharacterImportModal({ isOpen: state.characterImportOpen, character: state.pendingCharacterImport, error: state.characterImportError, escapeHtml })}
   `;
   injectGameMarkerAuthoringFields();
@@ -1060,6 +1062,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
       }
     });
   }
+  if (state.page === "settings") void mountGoogleSignIn();
 }
 
 const renderCharacterCreationInPlace = (options: { resetScroll?: boolean; revealError?: boolean } = {}): void => {
@@ -1137,7 +1140,7 @@ async function confirmDeleteCharacter(): Promise<void> {
     return;
   }
 
-  await deleteStoredCharacter(characterId);
+  await deleteSyncedCharacter(characterId);
   state.characters = state.characters.filter((character) => character.id !== characterId);
   if (state.character?.id === characterId) {
     state.character = undefined;
@@ -1529,6 +1532,10 @@ function bindEvents(): void {
       exportCharacter();
       return;
     }
+
+    if (handleLocalBackupAction(target, getLocalBackupDependencies())) return;
+
+    if (handleCloudAction(target)) return;
 
     if (target.closest('[data-action="open-character-import"]')) {
       state.characterImportOpen = true;
@@ -2593,6 +2600,7 @@ function bindEvents(): void {
       if (file) void stageCharacterImport(state, file).then(() => render({ preserveMainScroll: true }));
       return;
     }
+    if (handleLocalBackupInput(target, getLocalBackupDependencies())) return;
     if (target instanceof HTMLInputElement && target.matches("[data-character-portrait]")) {
       const file = target.files?.[0];
       if (!file) return;
@@ -2653,6 +2661,7 @@ async function boot(): Promise<void> {
   // A sessão sempre começa no seletor: abrir uma ficha é uma ação consciente do jogador.
   state.character = undefined;
   state.characterSelectionOpen = true;
+  await initializeCloudIntegration({ afterRemoteChange: async () => { const applied = await refreshCloudAppliedState(state.character?.id, refreshCatalog); state.characters = applied.characters; state.character = applied.character; }, stateChanged: () => { if (state.page === "settings") render({ preserveMainScroll: true }); } });
   render();
 }
 

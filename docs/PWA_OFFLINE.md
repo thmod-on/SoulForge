@@ -25,7 +25,9 @@ Artes incorporadas devem respeitar os orçamentos e estágios definidos em [Pol�
 
 Depois de uma abertura bem-sucedida com internet, a aplicação deve iniciar novamente sem conexão. Os dados dos personagens continuam no IndexedDB do próprio navegador.
 
-Uso offline não significa sincronização entre dispositivos. Um personagem salvo no iPad não aparece automaticamente no notebook.
+Sem conta, uso offline não significa sincronização entre dispositivos. Com
+login Google opcional, alterações feitas offline entram em uma fila e são
+enviadas quando o app estiver aberto e recuperar a conexão.
 
 ## Atualizações
 
@@ -40,14 +42,14 @@ Se a interface parecer antiga após uma publicação:
 
 ## Limitações atuais
 
-- não há servidor próprio;
-- não há login ou sincronização em nuvem;
-- a transferência é manual e feita uma ficha por vez por arquivos
-  `.soulforge-character.json`;
-- o arquivo de personagem preserva referências, mas não instala os Packs
-  necessários no dispositivo de destino;
+- a sincronização exige login Google e conexão para concluir, embora editar
+  fichas continue independente da rede;
+- Packs importados não são sincronizados;
+- não há colaboração em tempo real nem compartilhamento de fichas;
+- o navegador não executa uma fila confiável com o app fechado; o envio é
+  retomado na próxima abertura;
 - limpar dados do navegador pode remover personagens, Packs importados,
-  complementos e Definitions locais que não tenham backup.
+  complementos e Definitions que ainda estejam pendentes ou sem conta.
 
 ## Backup e transferência
 
@@ -56,9 +58,13 @@ Com uma ficha ativa, **Configurações** permite exportá-la para um arquivo
 personagens ou em Configurações, valida o conteúdo antes de persistir e cria
 uma nova identidade quando o mesmo ID já existe no dispositivo.
 
-O processo não sincroniza alterações posteriores entre dispositivos. Packs
-referenciados pela ficha precisam ser instalados separadamente para que todo o
-conteúdo volte a ser resolvido pelo catálogo.
+**Criar backup completo** produz um `.soulforge-backup.json` que recupera
+fichas, Packs instalados, criações locais e complementos. A restauração baixa
+uma cópia de segurança antes de substituir o estado local. **Exportar conteúdo**
+produz um `.soulforge-content.json` para compartilhar apenas autoria local e
+complementos, sem copiar Packs de terceiros. Esses arquivos continuam sendo a
+rota de recuperação independente da conta e são obrigatórios ao migrar entre a
+origem antiga do GitHub Pages e o novo Worker.
 
 ## Critérios de validação
 
@@ -68,3 +74,4 @@ Antes de uma release, validar pelo menos:
 - reabertura do app sem rede após uma primeira carga online;
 - atualização para uma versão publicada;
 - preservação dos dados locais após atualização normal.
+- fila offline, conflito entre duas revisões e isolamento entre duas contas.

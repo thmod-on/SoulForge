@@ -59,8 +59,27 @@ Ao importar, o SoulForge valida a estrutura antes de salvar. Se já existir uma 
 
 O arquivo carrega referências a Definitions de Packs, mas não instala Packs automaticamente. Para que cartas, classes, itens ou ancestralidades apareçam corretamente, os Packs correspondentes também devem estar instalados no dispositivo de destino.
 
-Ainda é recomendável guardar a exportação fora do dispositivo: limpar os dados do navegador ou perder o aparelho apaga o IndexedDB local.
+Além da ficha, **Criar backup completo** gera um `.soulforge-backup.json` com todas as fichas, Packs instalados, Definitions locais e complementos de cartas. **Restaurar backup** valida o arquivo, baixa uma cópia de segurança automática do estado atual e substitui as quatro coleções locais em uma única transação.
+
+Para compartilhar somente criações do Compendium, **Exportar conteúdo** gera um `.soulforge-content.json`. Ele inclui apenas Definitions com origem `local` e complementos locais; não redistribui fichas nem Packs externos. Na importação, conteúdo novo é acrescentado e conflitos por ID exigem que a pessoa escolha explicitamente quais versões recebidas substituirão as locais.
+
+Ainda é recomendável guardar o backup completo fora do dispositivo: limpar os dados do navegador ou perder o aparelho apaga o IndexedDB local.
+
+## Sincronização opcional
+
+Entrar com Google habilita uma fila de sincronização, sem substituir o
+IndexedDB. Fichas, Definitions com `packId: "local"`, complementos e suas
+imagens são enviados; Packs importados e a ficha de demonstração permanecem
+somente no dispositivo.
+
+Cada registro remoto possui revisão própria. Alterações concorrentes ficam
+guardadas como conflito até a pessoa escolher a versão local, a remota ou, no
+caso de fichas, preservar ambas. Retratos e artes continuam como data URLs no
+modelo local e são convertidos em referências privadas do R2 apenas na camada
+de transporte.
 
 ## Privacidade
 
-Nesta fase, os dados não são enviados a um servidor pelo SoulForge. O GitHub Pages hospeda somente os arquivos estáticos da aplicação.
+Sem login, nenhum dado pessoal é enviado. Com login, o Worker envia somente os
+recursos sincronizáveis da conta para D1 e R2. Sair preserva os dados locais;
+**Excluir dados da nuvem** remove registros, sessões e imagens remotas.

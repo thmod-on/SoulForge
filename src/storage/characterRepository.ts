@@ -2,10 +2,11 @@ import { demoCharacter } from "../domain/demoCharacter";
 import { demoKaelII } from "../domain/demoKaelII";
 import { migrateCharacter } from "../domain/characterMigrations";
 import type { Character } from "../domain/types";
+import { ensureSyncStores } from "./syncRepository";
 
 const databaseName = "soulforge";
 const storeName = "characters";
-const databaseVersion = 4;
+const databaseVersion = 5;
 
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -25,6 +26,7 @@ function openDatabase(): Promise<IDBDatabase> {
       if (!database.objectStoreNames.contains("definitionOverrides")) {
         database.createObjectStore("definitionOverrides", { keyPath: "id" });
       }
+      ensureSyncStores(database);
     };
 
     request.onerror = () => reject(request.error);

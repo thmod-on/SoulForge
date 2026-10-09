@@ -9406,6 +9406,39 @@ body:has(.modal-backdrop) {
   color: var(--color-muted);
 }
 
+.content-import-conflicts {
+  display: grid;
+  gap: 0.55rem;
+  border: 1px solid rgba(195, 155, 255, 0.28);
+  padding: 0.8rem;
+  background: rgba(195, 155, 255, 0.05);
+}
+
+.content-import-conflicts > strong {
+  color: var(--color-gold);
+}
+
+.content-import-conflicts p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+}
+
+.content-import-conflicts label {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  color: var(--color-text);
+  font-size: 0.82rem;
+}
+
+.content-import-conflicts input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--color-gold);
+}
+
 .remove-all-packs-modal {
   position: relative;
   display: grid;
@@ -11058,3 +11091,19 @@ body:has(.modal-backdrop) {
 @media (max-width: 680px) {
   .condition-result-rules { grid-template-columns: 1fr; }
 }
+/* Conta e sincronização local-first */
+.cloud-settings { display: grid; gap: 1rem; }
+.cloud-account, .cloud-status { display: flex; align-items: center; gap: .85rem; padding: .9rem 1rem; border: 1px solid rgba(168, 145, 214, .22); border-radius: 14px; background: rgba(8, 13, 19, .45); }
+.cloud-account img { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; }
+.cloud-account div, .cloud-status div { display: grid; gap: .2rem; }
+.cloud-account span, .cloud-status span { color: var(--text-muted, #a9a4b7); font-size: .88rem; }
+.cloud-status > i { width: .7rem; height: .7rem; flex: 0 0 auto; border-radius: 50%; background: #85808f; box-shadow: 0 0 0 4px rgba(133, 128, 143, .12); }
+.cloud-status--synced > i { background: #5fcf91; box-shadow: 0 0 0 4px rgba(95, 207, 145, .12); }
+.cloud-status--pending > i, .cloud-status--syncing > i { background: #e4b85b; box-shadow: 0 0 0 4px rgba(228, 184, 91, .12); }
+.cloud-status--error > i, .cloud-status--conflict > i { background: #e06b77; box-shadow: 0 0 0 4px rgba(224, 107, 119, .12); }
+.cloud-google-button { min-height: 44px; display: flex; align-items: center; }
+.cloud-conflicts { display: grid; gap: .75rem; }
+.cloud-conflicts > h3 { margin: 0; }
+.cloud-conflicts article { display: grid; gap: .75rem; padding: 1rem; border: 1px solid rgba(224, 107, 119, .35); border-radius: 14px; background: rgba(92, 31, 43, .13); }
+.cloud-conflicts article > div:first-child { display: grid; gap: .15rem; }
+.cloud-conflicts article span { color: var(--text-muted, #a9a4b7); overflow-wrap: anywhere; }

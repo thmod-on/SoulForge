@@ -38,6 +38,8 @@ jobs:
 
       - name: Build
         run: pnpm run build
+        env:
+          SOULFORGE_LEGACY_PAGES: "true"
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

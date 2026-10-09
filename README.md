@@ -2,7 +2,7 @@
 
 SoulForge é uma PWA *offline-first* para acompanhar personagens de Daggerheart sem depender de servidor durante a mesa.
 
-Versão atual: `0.35.0`.
+Versão atual: `0.36.0`.
 
 ## Recursos principais
 
@@ -24,16 +24,21 @@ Versão atual: `0.35.0`.
   para o detalhe;
 - descansos curtos e longos com movimentos declarativos, incluindo bônus
   concedidos por Features como Transe Celestial;
-- funcionamento *offline-first* após a instalação da PWA.
+- funcionamento *offline-first* após a instalação da PWA;
+- login Google opcional para sincronizar fichas, criações locais e imagens sem
+  tornar a mesa dependente da conexão.
 
 ## Acesso e instalação
 
-A versão publicada é disponibilizada pelo GitHub Pages: <https://thmod-on.github.io/SoulForge/>.
+A versão oficial é disponibilizada pela Cloudflare:
+<https://soulforge.guitojoker-cloudflare.workers.dev/>.
 
 - No iPad/iPhone, abra o endereço no Safari, toque em **Compartilhar** e escolha **Adicionar à Tela de Início**.
 - Em navegadores de desktop compatíveis, use a opção de instalar o app exibida na barra de endereços ou no menu do navegador.
 
-Consulte [PWA e uso offline](docs/PWA_OFFLINE.md) para detalhes sobre cache, atualizações e limitações.
+Consulte [PWA e uso offline](docs/PWA_OFFLINE.md) para detalhes sobre cache,
+atualizações e limitações. O GitHub Pages permanece temporariamente disponível
+para exportação dos dados locais armazenados na origem anterior.
 
 ## Desenvolvimento local
 
@@ -81,6 +86,7 @@ pnpm run build
 - [Ancestralidades](docs/ANCESTRY.md)
 - [Compendium](docs/COMPENDIUM.md)
 - [PWA e uso offline](docs/PWA_OFFLINE.md)
+- [Nuvem e sincronização](docs/CLOUD_SYNC.md)
 - [Política de artes e assets visuais](docs/ASSET_POLICY.md)
 - [Processo de artes de classe](docs/CLASS_ARTWORK.md)
 - [Dados locais](docs/LOCAL_DATA.md)
@@ -93,4 +99,6 @@ pnpm run build
 
 ## Publicação
 
-O workflow em `.github/workflows/deploy.yml` gera o `dist/` e publica no GitHub Pages a cada *push* na branch `main`.
+O workflow `deploy-cloudflare.yml` valida, migra o D1 e publica a PWA e a API
+como um único Cloudflare Worker. Durante a transição, `deploy.yml` mantém uma
+versão estática no GitHub Pages para exportação dos dados locais existentes.

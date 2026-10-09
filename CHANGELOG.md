@@ -4,6 +4,27 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.36.0]
+
+### Adicionado
+
+- hospedagem full-stack em Cloudflare Workers com Static Assets, API, banco D1,
+  bucket R2 privado e publicação automatizada;
+- login Google opcional e sincronização local-first de fichas, criações do
+  Compendium, complementos e suas imagens;
+- controle de revisão, fila offline, tombstones e resolução explícita de
+  conflitos entre dispositivos.
+
+### Alterado
+
+- a PWA passa a usar a raiz do domínio como base, preservando IndexedDB como
+  fonte local e o funcionamento completo sem conta ou conexão.
+
+### Segurança
+
+- sessões usam cookies seguros e tokens armazenados apenas como hash; mídia e
+  registros remotos são sempre isolados pela conta autenticada.
+
 ## [0.35.0]
 
 ### Adicionado

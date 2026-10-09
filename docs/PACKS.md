@@ -99,6 +99,11 @@ Quando um Pack acrescentar Classes, Subclasses, Features ou conteúdo de progres
 
 Um Pack pode ser instalado, atualizado ou removido. A administração de Packs pertence a Configurações; o Compendium consulta o conteúdo disponibilizado por eles.
 
+O backup completo pode preservar Packs já instalados para recuperação do mesmo
+ambiente. Já o arquivo de conteúdo compartilhável nunca inclui Packs externos:
+ele compartilha somente Definitions `local` e complementos, evitando redistribuir
+conteúdo cuja origem não pertence à pessoa que exporta.
+
 Remover um Pack não deve alterar silenciosamente um personagem. Caso alguma referência deixe de estar disponível, a aplicação deve informar a situação e aplicar uma regra explícita de compatibilidade.
 
 ## Validação antes de instalar ou publicar

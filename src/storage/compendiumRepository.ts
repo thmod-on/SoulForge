@@ -1,9 +1,10 @@
 import type { Definition, GameMarkerDefinition } from "../domain/types";
+import { ensureSyncStores } from "./syncRepository";
 
 const databaseName = "soulforge";
 const storeName = "customDefinitions";
 const overrideStoreName = "definitionOverrides";
-const databaseVersion = 4;
+const databaseVersion = 5;
 
 /** Complemento local de metadados para conteudo de packs, sem alterar a fonte original. */
 export type CardMarkerOverride = {
@@ -31,6 +32,7 @@ function openDatabase(): Promise<IDBDatabase> {
       if (!database.objectStoreNames.contains(overrideStoreName)) {
         database.createObjectStore(overrideStoreName, { keyPath: "id" });
       }
+      ensureSyncStores(database);
     };
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);
@@ -49,10 +51,25 @@ export async function loadCardMarkerOverrides(): Promise<CardMarkerOverride[]> {
 }
 
 export async function saveCardMarkerOverride(definitionId: string, gameMarkers: GameMarkerDefinition[]): Promise<void> {
+  return putCardMarkerOverride({ id: `card-marker:${definitionId}`, kind: "card-marker", definitionId, gameMarkers });
+}
+
+export async function putCardMarkerOverride(override: CardMarkerOverride): Promise<void> {
   const database = await openDatabase();
   await new Promise<void>((resolve, reject) => {
     const transaction = database.transaction(overrideStoreName, "readwrite");
-    transaction.objectStore(overrideStoreName).put({ id: `card-marker:${definitionId}`, kind: "card-marker", definitionId, gameMarkers } satisfies CardMarkerOverride);
+    transaction.objectStore(overrideStoreName).put(override);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+  });
+  database.close();
+}
+
+export async function deleteCardMarkerOverride(overrideId: string): Promise<void> {
+  const database = await openDatabase();
+  await new Promise<void>((resolve, reject) => {
+    const transaction = database.transaction(overrideStoreName, "readwrite");
+    transaction.objectStore(overrideStoreName).delete(overrideId);
     transaction.oncomplete = () => resolve();
     transaction.onerror = () => reject(transaction.error);
   });

@@ -1,11 +1,13 @@
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
+import { cloudflare } from "@cloudflare/vite-plugin";
 
-const isGitHubPages = process.env.GITHUB_ACTIONS === "true";
+const legacyGitHubPages = process.env.SOULFORGE_LEGACY_PAGES === "true";
 
-export default defineConfig({
-  base: isGitHubPages ? "/SoulForge/" : "/",
+export default defineConfig(({ mode }) => ({
+  base: legacyGitHubPages ? "/SoulForge/" : "/",
   plugins: [
+    ...(mode === "test" || legacyGitHubPages ? [] : [cloudflare()]),
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg", "apple-touch-icon.png"],
@@ -62,4 +64,4 @@ export default defineConfig({
       }
     })
   ]
-});
+}));
