@@ -24,7 +24,11 @@ function changedFiles(args) {
 const workingChanges = changedFiles(["diff", "--name-only", "HEAD"]);
 const committedChanges = changedFiles(["diff", "--name-only", "HEAD^", "HEAD"]);
 const changed = new Set([...workingChanges, ...committedChanges]);
-const hasProductChange = [...changed].some((file) => file.startsWith("src/") || file.startsWith("packs/"));
+const isProductChange = (file) =>
+  (file.startsWith("src/") || file.startsWith("packs/")) &&
+  !file.startsWith("src/test/") &&
+  !/\.(?:test|spec)\.[cm]?[jt]sx?$/.test(file);
+const hasProductChange = [...changed].some(isProductChange);
 
 if (!hasProductChange) {
   console.log("Release validada: nenhuma mudança funcional pendente.");
@@ -34,7 +38,7 @@ if (!hasProductChange) {
 // Antes do commit, a versão em disco deve diferir de HEAD. Depois do commit,
 // ela deve diferir do pai do commit: assim a mesma checagem protege ambos os
 // momentos previstos no checklist de release.
-const versionBase = workingChanges.some((file) => file.startsWith("src/") || file.startsWith("packs/")) ? "HEAD" : "HEAD^";
+const versionBase = workingChanges.some(isProductChange) ? "HEAD" : "HEAD^";
 const previousPackageText = git(["show", `${versionBase}:package.json`]);
 const previousVersion = previousPackageText ? JSON.parse(previousPackageText).version : undefined;
 const changelog = readFileSync(changelogPath, "utf8");

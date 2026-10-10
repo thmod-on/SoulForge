@@ -1,6 +1,6 @@
 import type { SyncEnvelope, SyncPushChange, SyncResourceType } from "../src/sync/types";
 
-interface Env {
+export interface Env {
   ASSETS: Fetcher;
   DB: D1Database;
   MEDIA: R2Bucket;
@@ -37,7 +37,7 @@ export default {
       return json({ error: "Rota não encontrada." }, 404);
     } catch (error) {
       if (isHttpError(error)) return json({ error: error.message }, error.status);
-      console.error(error);
+      console.error({ event: "worker_error", errorName: error instanceof Error ? error.name : "UnknownError" });
       return json({ error: "Falha interna do SoulForge." }, 500);
     }
   }

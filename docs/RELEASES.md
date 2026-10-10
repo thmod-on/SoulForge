@@ -14,6 +14,11 @@ Enquanto o projeto estiver antes da versão `1.0.0`, mudanças experimentais ain
 
 Cada execução bem-sucedida de `versione` fecha uma entrega e incrementa a versão pelo menos como `PATCH`. Em caso de dúvida relevante entre níveis, a execução deve parar e pedir uma decisão ao usuário.
 
+Alterações limitadas a arquivos `*.test.*`, `*.spec.*` e à infraestrutura em
+`src/test/` não exigem, isoladamente, uma nova versão da aplicação. Alterações no
+código executado em produção continuam sujeitas à revisão de versão no fechamento
+da entrega.
+
 ## Fonte da versão
 
 Em uma entrega, atualizar:

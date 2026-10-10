@@ -1,6 +1,6 @@
 # Backlog do SoulForge
 
-Última revisão: 27 de setembro de 2026.
+Última revisão: 10 de outubro de 2026.
 
 ## Objetivo
 
@@ -39,8 +39,9 @@ Estados:
 
 ## Pendências ativas
 
-Os itens desta revisão tiveram origem nos testes de mesa de 12 de setembro, nas
-revisões de produto dos dias 13 e 14 e na revisão do descanso de 19 de setembro.
+Os itens desta revisão tiveram origem nos testes de mesa de setembro, nas
+revisões de produto e na auditoria operacional da hospedagem Cloudflare de 10
+de outubro de 2026.
 
 | ID | Prioridade | Estado | Área | Pendência | Critério de conclusão |
 | --- | --- | --- | --- | --- | --- |
@@ -61,8 +62,16 @@ revisões de produto dos dias 13 e 14 e na revisão do descanso de 19 de setembr
 | ART-001 | P1 | Condicional | Artes | Criar manifesto de artes e verificador automatizado antes de ultrapassar 40 imagens incorporadas. | Build valida ID, caminho, dimensões, formato, peso e associação de cada arte. Gatilho: lote que levaria o projeto além de 40 imagens. |
 | ART-003 | P2 | Condicional | Artes e PWA | Medir memória, carregamento, rolagem no iPad e reutilização do cache sob demanda após lotes relevantes. | Resultados registrados e limites da política revistos quando necessário. Gatilho: conclusão de um lote relevante. |
 | ART-004 | P2 | A definir | Artes e fluxo de autoria | Criar um comando de preparação de arte orientado pelo ID estável de uma Definition. A pessoa usuária solicita a arte em linguagem natural; após a imagem-mestre ser aprovada, o comando recebe somente o ID e a origem, define os caminhos adequados, gera detalhe e miniatura WebP e valida a entrega. | O fluxo não exige que a pessoa usuária informe caminhos, dimensões ou formato; o ID é validado contra o catálogo e determina tipo/coleção e destinos; a ferramenta reutiliza ART-002, impede sobrescrita acidental sem confirmação, informa os arquivos gerados e não altera a Definition, associação visual ou Pack sem ação explícita posterior. |
-| DEP-001 | P1 | Pronto | Dependências e CI | Atualizar de forma coordenada a toolchain de build e testes e as Actions do workflow. A revisão de 26/09/2026 encontrou Vite 6.4.3, Vitest 2.1.9, vite-plugin-pwa 0.21.2, TypeScript 5.9.3, pnpm 11.9.0 e Actions em linhas anteriores às atuais; a árvore registra 16 avisos de segurança e inclui uma versão depreciada de `glob`. O Node 22 ainda é LTS, mas deve ser substituído antes do fim de sua janela de suporte. | Runtime LTS, gerenciador, tipos, Vite, Vitest, integração PWA e Actions usam versões estáveis e mutuamente compatíveis; `pnpm audit` não apresenta avisos críticos ou altos solucionáveis no escopo; dependências transitivas depreciadas deixam a árvore; testes, TypeScript e build passam; o artefato, instalação, atualização e reabertura offline da PWA são validados; documentação e workflow declaram as mesmas versões. |
-| PWA-001 | P1 | Pronto | PWA | Executar a matriz manual de release: instalação no iPad, reabertura offline, atualização do Service Worker e preservação de dados locais. | Evidências da versão registradas antes da publicação ou impedimentos explicitamente aceitos. |
+| DEP-001 | P1 | Pronto | Dependências e CI | Atualizar de forma coordenada a toolchain de build e testes e as Actions do workflow. Vitest foi isoladamente atualizado para 4.1.0 em CLD-004 por exigência da integração oficial da Cloudflare; permanecem fora desse lote Vite 6.4.3, vite-plugin-pwa 0.21.2, TypeScript 5.9.3, pnpm e Actions em linhas anteriores às atuais. A árvore ainda inclui uma versão depreciada de `glob`, e o Node 22 deve ser substituído antes do fim de sua janela de suporte. | Runtime LTS, gerenciador, tipos, Vite, Vitest, integração PWA e Actions usam versões estáveis e mutuamente compatíveis; `pnpm audit` não apresenta avisos críticos ou altos solucionáveis no escopo; dependências transitivas depreciadas deixam a árvore; testes, TypeScript e build passam; o artefato, instalação, atualização e reabertura offline da PWA são validados; documentação e workflow declaram as mesmas versões. |
+| CLD-003 | P1 | Em andamento | Cloudflare e observabilidade | Tornar explícita a observabilidade da produção e os limites de custo. A configuração local está pronta; faltam deploy, baseline real e alertas manuais. | Workers Logs habilitado no `wrangler.jsonc` com amostragem inicial de 100% para o grupo restrito; métricas de Worker, D1 e R2 registradas; alertas de orçamento de US$ 1 e US$ 5 configurados; amostragem revisada antes de abrir o acesso público ou ao atingir 10 mil requisições por dia. |
+| CLD-005 | P1 | Pronto | Cloudflare e segurança | Endurecer as respostas públicas e os limites de entrada da API. | Produção envia CSP compatível com Google Identity, HSTS, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` e proteção contra framing; corpos grandes são recusados antes do parse; mutações exigem origem válida; testes impedem regressões. |
+| CLD-006 | P1 | Pronto | Cloudflare e recuperação | Formalizar recuperação e limpeza operacional sem comprometer dispositivos offline. | Runbook documenta consulta e restauração pelo D1 Time Travel; tarefa diária remove sessões expiradas e mídias sem referência há mais de 24 horas; `sync_changes` e tombstones não são podados até existir política segura de cursores. |
+| CLD-007 | P1 | Pronto | Cloudflare e migração | Concluir a mudança de origem do GitHub Pages para o Worker. | O endereço antigo exibe aviso, link oficial e instruções de backup/restauração durante 30 dias; após validação da janela, o workflow e o GitHub Pages são desativados em 9 de novembro de 2026. |
+| CLD-008 | P2 | Pronto | Cloudflare e ambientes | Criar ambiente de preview isolado da produção. | Worker, D1 e R2 próprios recebem builds de teste sem ler ou alterar dados de produção; promoção para `main` continua sendo a única rota para o deploy oficial. |
+| CLD-009 | P2 | A definir | Cloudflare e retenção | Projetar retenção e compactação do log incremental e dos tombstones. | Dispositivos e cursores possuem contrato suficiente para podar dados antigos sem perder alterações nem ressuscitar exclusões após longos períodos offline. |
+| CLD-010 | P2 | Condicional | Cloudflare e domínio | Adotar domínio próprio depois do endurecimento operacional. | Avaliar somente após CLD-003 a CLD-007; domínio, DNS, certificado, origem OAuth e migração da PWA são definidos antes de substituir `workers.dev`. |
+| CLD-011 | P1 | Condicional | Cloudflare e identidade | Preparar a abertura do login para qualquer conta Google. | Antes de sair do grupo de teste, OAuth é publicado para produção e política de privacidade, contato de suporte e eventual verificação do Google estão disponíveis. |
+| PWA-001 | P1 | Em andamento | PWA | Concluir a matriz manual de release. Criação, imagem própria e sincronização desktop→iPad já foram validadas na `0.36.0`. | Instalação e reabertura offline no iPad, atualização do Service Worker, preservação local, edição offline seguida de reconexão, conflito e isolamento entre duas contas possuem evidências registradas ou impedimentos explicitamente aceitos. |
 | ARC-001 | P2 | Condicional | Arquitetura | Continuar reduzindo as renderizações e templates legados de `main.ts` sem criar abstrações preventivas. | Cada área tocada transfere responsabilidades completas para sua feature e a barreira arquitetural não aumenta. Gatilho: alteração funcional na área correspondente. |
 | UI-001 | P3 | Condicional | Interface | Substituir aliases históricos de ações e pesquisa pelas primitives `sf-*`. | Área revisada usa somente as primitives atuais sem regressão visual. Gatilho: alteração funcional na área. |
 
@@ -71,7 +80,6 @@ revisões de produto dos dias 13 e 14 e na revisão do descanso de 19 de setembr
 Os pontos abaixo só devem entrar nas pendências ativas após uma decisão
 explícita de produto:
 
-- login, servidor próprio e sincronização em nuvem;
 - automação integral de ataques, rolagens, dano, decisões do GM e efeitos em
   criaturas ou aliados;
 - inferência de regras a partir de nomes, descrições ou outros textos livres;
@@ -115,7 +123,10 @@ rastreabilidade. O changelog continua sendo o histórico definitivo das entregas
 | ART-002 | 27/09/2026 · `0.34.0` | O comando `pnpm run artwork:derive` gera detalhe e miniatura WebP sem ampliar a origem, preservando orientação EXIF e aceitando dimensões e qualidade configuráveis. A dependência está fixada e o uso consta na política de assets. |
 | CRD-003 | 27/09/2026 · `0.34.0` | As 210 cartas de Core e Hope & Fear foram revisadas em 10 checkpoints privados contra o SRD 2.0 de 25/08/2026. Resumos e efeitos integrais foram conferidos, IDs preservados e os bundles Core (189) e Pavor (21) regenerados como `2.0.0-local`; o relatório rastreável conserva fonte, checksum e referências sem replicar texto oficial. |
 | PRG-003 | 28/09/2026 · `0.35.0` | O assistente de progressão ganhou uma etapa opcional após a carta obrigatória. A pessoa pode manter a coleção ou escolher uma carta adquirida e substituí-la por outra elegível de nível igual ou inferior; a removida sai também do Loadout e de estados de indisponibilidade, a nova entra no Vault e a troca fica registrada no histórico estruturado. |
-| BKP-001 | 29/09/2026 · próxima versão | Dados locais agora podem ser exportados em backup completo, incluindo fichas, Packs instalados, Definitions locais e complementos. A restauração valida tudo, gera uma cópia de segurança e substitui as coleções em transação única. Um segundo formato compartilha somente autoria local e complementos, com prévia e escolha explícita para conflitos. |
+| BKP-001 | 08/10/2026 · `0.36.0` | Dados locais agora podem ser exportados em backup completo, incluindo fichas, Packs instalados, Definitions locais e complementos. A restauração valida tudo, gera uma cópia de segurança e substitui as coleções em transação única. Um segundo formato compartilha somente autoria local e complementos, com prévia e escolha explícita para conflitos. |
+| CLD-001 | 08/10/2026 · `0.36.0` | A infraestrutura Cloudflare entrou em produção com Worker e Static Assets, D1, R2 privado, migração inicial, endereço `workers.dev`, secrets restritos e deploy automático validado pelo GitHub Actions. |
+| CLD-002 | 08/10/2026 · `0.36.0` | Login Google opcional e sincronização local-first foram validados com ficha importada, personagem criado do zero, imagens próprias e recuperação desktop→iPad; a ficha demonstrativa Kael II permaneceu fora da nuvem. |
+| CLD-004 | 10/10/2026 · `0.36.0` | A integração oficial do Vitest com o runtime Cloudflare cobre autenticação Google, sessões, isolamento entre contas, revisões, conflitos, tombstones, D1, R2, mídia e exclusão de conta. A suíte do sincronizador cobre fila offline, retomada, retry, conflitos, mídia, logout, exclusão da nuvem e filtros de conteúdo local. |
 
 ## Referências
 
@@ -132,4 +143,5 @@ rastreabilidade. O changelog continua sendo o histórico definitivo das entregas
 - [Vocabulário de itens](ITEM_TRANSLATIONS.md)
 - [Campos de personagem das Features](FEATURE_FIELDS.md)
 - [PWA e uso offline](PWA_OFFLINE.md)
+- [Nuvem e sincronização](CLOUD_SYNC.md)
 - [Padrões de interface](UI_PATTERNS.md)
