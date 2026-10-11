@@ -207,6 +207,21 @@ e preserva imagens próprias. O build passou a 50 entradas e 3.651,07 KiB no
 precache, ainda dentro da faixa saudável do Estágio 1. Os prompts e critérios
 do lote estão registrados em [Artes genéricas de itens](ITEM_ARTWORK.md).
 
+Em 10 de outubro de 2026, os três grimórios de nível 1 do domínio Códice
+receberam artes quadradas WebP de 960 × 960, totalizando 413.418 bytes. Cada
+composição sintetiza as três magias da carta e mantém o foco na área segura para
+o recorte de miniatura. O build contém 53 entradas e 4.117,01 KiB no precache,
+ainda dentro da faixa saudável do Estágio 1. A direção visual e os critérios do
+lote estão registrados em [Artes de cartas](CARD_ARTWORK.md).
+
+Na mesma data, as três cartas de nível 1 do domínio Esplendor receberam artes
+quadradas WebP de 960 × 960, totalizando 396.142 bytes. A paleta marfim-dourada
+identifica o domínio sem abandonar as sombras preto-ameixa da coleção. As
+composições foram verificadas no recorte central 2:3 e permanecem abaixo da meta
+de 150 KB por arquivo. O build contém 56 entradas e 4.504,00 KiB no precache,
+ainda dentro da faixa saudável do Estágio 1. A direção visual está registrada em
+[Artes de cartas](CARD_ARTWORK.md).
+
 ## Pendências planejadas
 
 1. Criar o manifesto e o verificador automatizado antes de ultrapassar 40 artes.

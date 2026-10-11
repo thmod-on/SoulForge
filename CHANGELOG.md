@@ -4,6 +4,28 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.36.1]
+
+### Adicionado
+
+- artes originais para as três cartas de nível 1 de Códice e as três cartas de
+  nível 1 de Esplendor, preservando imagens fornecidas por Packs ou usuários;
+- testes de integração do Worker no runtime local da Cloudflare e testes do
+  sincronizador com D1, R2 e IndexedDB isolados da produção.
+
+### Alterado
+
+- Workers Logs passam a registrar invocações com amostragem inicial de 100%, e
+  alertas de orçamento de US$ 1 e US$ 5 passam a acompanhar a conta;
+- validações da aplicação e do Worker passam a executar separadamente e ambas
+  bloqueiam o deploy automático quando falham.
+
+### Segurança
+
+- erros inesperados do Worker deixam de enviar detalhes internos aos logs;
+- a suíte Cloudflare cobre credenciais Google, sessões, isolamento de contas,
+  revisões, tombstones, mídia privada, cotas e exclusão de conta.
+
 ## [0.36.0]
 
 ### Adicionado

@@ -2,6 +2,12 @@ import type { CardDefinition, GameMarkerDefinition } from "../domain/types";
 import { getOfficialCardMarkers } from "./officialCardMarkers";
 
 const artworkByCardId: Readonly<Record<string, string>> = {
+  "card.core.codex.p2-1": "book-of-ava.webp",
+  "card.core.codex.p2-2": "book-of-illiat.webp",
+  "card.core.codex.p2-3": "book-of-tyfar.webp",
+  "card.core.splendor.p3-4": "bolt-beacon.webp",
+  "card.core.splendor.p3-5": "mending-touch.webp",
+  "card.core.splendor.p3-6": "reassurance.webp",
   "card.hope-fear.dread.voice-of-dread": "voice-of-dread.jpg",
   "card.core.grace.p2-6": "inspirational-words.jpg",
   "card.hope-fear.dread.siphon-essence": "siphon-essence.jpg",

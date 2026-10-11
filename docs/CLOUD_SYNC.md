@@ -8,7 +8,7 @@ Produção: <https://soulforge.guitojoker-cloudflare.workers.dev/>.
 
 ## Estado atual
 
-Estado revisado em **10 de outubro de 2026**, na versão **0.36.0**:
+Estado revisado em **11 de outubro de 2026**, na versão **0.36.1**:
 
 - o Worker `soulforge` entrega a PWA e atende às rotas `/api/*`;
 - o D1 `soulforge` está com a migração inicial aplicada;
@@ -24,9 +24,9 @@ A Cloudflare é a produção oficial. O GitHub armazena o código e executa o
 deploy, mas não hospeda o backend nem os dados da produção.
 
 CLD-004 está coberto pela suíte de integração local. CLD-003 permanece em
-andamento até o primeiro deploy com observabilidade explícita, a coleta da
-baseline real e a confirmação dos alertas de orçamento. Os demais itens
-operacionais e de segurança estão detalhados no [backlog](./BACKLOG.md).
+andamento somente até a coleta da baseline real de 24 horas; observabilidade e
+alertas de orçamento já estão ativos. Os demais itens operacionais e de
+segurança estão detalhados no [backlog](./BACKLOG.md).
 
 ## Componentes
 
@@ -101,13 +101,24 @@ teste acessa Google, D1, R2 ou credenciais de produção.
 `pnpm test` executa as duas suítes, e `pnpm run check` também verifica os tipos
 específicos da aplicação, do Worker e dos testes Cloudflare antes do deploy.
 
+CLD-004 permanece concluído. O módulo `cloudClient` é a fronteira de injeção
+dos testes do sincronizador; não deve ser criada outra abstração no runtime
+apenas para testes. Mudanças em autenticação, sessão, D1, R2, mídia ou rotas
+devem atualizar a suíte Worker. Mudanças em fila, retry, conflitos, tombstones,
+mídia ou logout devem atualizar a suíte do sincronizador. Um aumento comum de
+cobertura não reabre CLD-004; uma falha de produção não coberta ou um novo
+comportamento relevante deve originar uma pendência própria.
+
+A evidência inicial é o [workflow do commit `d6f21d4`][cld-004-workflow], com
+315 testes da aplicação e 9 testes Worker/Cloudflare aprovados antes do deploy.
+
 ## Observabilidade e custos
 
 A configuração de Workers Logs está explícita no `wrangler.jsonc`, com logs de
 invocação habilitados e `head_sampling_rate` igual a `1` (100%). A produção
-passará a usá-la no próximo deploy. Ela deve ser revisada antes da abertura ao
-público ou quando o uso atingir 10 mil requisições por dia. Consulte a
-documentação de [Workers Logs][workers-logs].
+usa essa configuração desde o commit `d6f21d4`. Ela deve ser revisada antes da
+abertura ao público ou quando o uso atingir 10 mil requisições por dia.
+Consulte a documentação de [Workers Logs][workers-logs].
 
 Somente invocações e erros técnicos são registrados. Erros inesperados emitem
 apenas o tipo do erro; tokens, cookies, e-mails, IDs de usuário, fichas e
@@ -120,28 +131,30 @@ manual da conta Cloudflare, não parte do `wrangler.jsonc` nem do deploy. Veja
 
 ### Baseline operacional de 24 horas
 
-A coleta de **10 de outubro de 2026** está pendente do deploy desta revisão e
-de acesso autenticado ao painel. Após o deploy, usar uma única janela de 24
-horas encerrada no momento da validação e registrar o commit implantado. Se um
-gráfico não possuir amostras na janela, escrever **sem dados**, nunca `0`.
+A janela iniciada no commit `d6f21d4` será substituída pela publicação da
+`0.36.1`. A baseline definitiva começará quando o deploy desta versão terminar
+e cobrirá as 24 horas seguintes, mantendo uma única versão de referência. Ao
+final, qualquer gráfico sem amostras deve ser registrado como **sem dados**,
+nunca como `0`.
 
 | Referência | Valor |
 | --- | --- |
-| Versão | `0.36.0` |
-| Commit implantado | Pendente após o deploy |
-| Janela UTC de 24 horas | Pendente após o deploy |
-| Worker: requisições, erros e CPU | Pendente de coleta |
-| D1: leituras, escritas e armazenamento | Pendente de coleta |
-| R2: operações e armazenamento | Pendente de coleta |
+| Versão | `0.36.1` |
+| Commit implantado | Pendente da publicação da versão |
+| Janela UTC de 24 horas | Pendente da conclusão do deploy |
+| Worker: requisições, sucessos, erros, taxa de erro e CPU | Pendente do encerramento da janela |
+| Workers Logs: eventos, erros e inspeção de dados pessoais | Pendente do encerramento da janela |
+| D1: consultas/linhas lidas, consultas/linhas escritas e armazenamento | Pendente do encerramento da janela |
+| R2: operações, bytes enviados/baixados e armazenamento | Pendente do encerramento da janela |
 
 ### Alertas de orçamento
 
-No painel, acesse **Manage Account > Billing > Billable Usage > Budget
-alerts**, crie limites de **US$ 1** e **US$ 5** e confirme o e-mail destinatário.
-Os alertas são informativos e não interrompem o serviço. Situação em 10 de
-outubro de 2026: **pendente de configuração manual em sessão autenticada**.
-CLD-003 só poderá ser concluído após preencher a baseline e confirmar os dois
-alertas.
+Em **10 de outubro de 2026**, foram confirmados no painel os alertas
+`SoulForge — aviso US$ 1` e `SoulForge — alerta US$ 5`, ambos com um
+destinatário. A conta também mantém o alerta automático de US$ 10 da
+Cloudflare. Os alertas são gerais para a conta, informativos e não interrompem
+o serviço. CLD-003 poderá ser concluído depois do encerramento e registro da
+baseline acima.
 
 ## Runbook de recuperação
 
@@ -223,3 +236,4 @@ suporte e concluir eventual verificação solicitada pelo Google.
 [d1-time-travel]: https://developers.cloudflare.com/d1/reference/time-travel/
 [workers-logs]: https://developers.cloudflare.com/workers/observability/logs/workers-logs/
 [budget-alerts]: https://developers.cloudflare.com/billing/manage/budget-alerts/
+[cld-004-workflow]: https://github.com/thmod-on/SoulForge/actions/runs/38077763131
