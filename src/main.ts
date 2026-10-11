@@ -5,15 +5,15 @@ import { readLocalImage } from "./app/media";
 import { getSpellcastAttributeId } from "./content/spellcastAttributes";
 import { applyCardContentDefaults } from "./content/cardArtwork";
 import { createCatalog, findDefinition, findDomain } from "./domain/catalog";
-import { demoKaelII, legacyDemoCharacterId } from "./domain/demoKaelII";
-import type { Attribute, CardDefinition, Character, ClassDefinition, ItemDefinition, PackBundle, PackManifest, ProgressionAdvanceKind, SubclassDefinition } from "./domain/types";
-import { ensureDemoKaelII, listCharacters, loadCharacter } from "./storage/characterRepository";
+import type { Attribute, CardDefinition, Character, ClassDefinition, ItemDefinition, PackBundle, PackManifest, ProgressionAdvanceKind } from "./domain/types";
+import { listCharacters, loadCharacter } from "./storage/characterRepository";
 import { getActiveGameMarkers, synchronizeGameMarkers } from "./features/game-markers/gameMarkerSync";
 import { handleGameMarkerAction } from "./features/game-markers/gameMarkerActions";
 import { renderGameMarkerDiceDialog } from "./features/game-markers/renderDiceDialog";
 import { handleStoredDiceAction, renderStoredDiceDialog, type StoredDiceDialogState } from "./features/game-markers/storedDice";
 import type { CardMarkerOverride } from "./storage/compendiumRepository";
 import { loadInstalledPacks } from "./storage/packRepository";
+import { purgeLegacyDemoContent } from "./storage/localDataRepository";
 import { renderSettings as renderSettingsPage } from "./features/settings/renderSettings";
 import { getPackDisplayDescription, getPackDisplayName, getPackOriginName } from "./features/compendium/packPresentation";
 import { renderCompendiumIndex as renderCompendiumIndexView } from "./features/compendium/renderCompendiumIndex";
@@ -325,7 +325,7 @@ const state: {
   compendiumCommunityPackId: "todos",
   transformationState: { compendiumTransformationSearch: "", transformationModalOpen: false, characterTransformationPickerOpen: false, characterTransformationDetailOpen: false, characterTransformationRemoveOpen: false }, conditionState: { compendiumConditionSearch: "", conditionModalOpen: false },
   lastPlayerPage: "overview",
-  selectedCardId: "card.demo.dread-veil",
+  selectedCardId: "",
   progressionStep: "advances",
   addResourceModalOpen: false,
   progressionHistoryOpen: false,
@@ -561,16 +561,11 @@ function getPackManagementDependencies(): PackManagementDependencies {
     refreshCatalog,
     escapeHtml,
     render: () => render({ preserveMainScroll: true }),
-    afterImport: async () => {
-      if (state.character?.id !== demoKaelII.id) return;
-      await ensureDemoKaelII();
-      state.character = await loadCharacter(demoKaelII.id);
-      state.characters = await listCharacters();
-    }
+    afterImport: async () => undefined
   };
 }
 
-function getLocalBackupDependencies() { return { state, appVersion, ensureDemo: async () => { await ensureDemoKaelII(); }, loadCharacter, listCharacters, availableDefinitions: () => catalog.definitions, refreshCatalog, render: () => render({ preserveMainScroll: true }), showError: (message: string) => window.alert(message), afterLocalDataChange: queueLocalSnapshot }; }
+function getLocalBackupDependencies() { return { state, appVersion, loadCharacter, listCharacters, availableDefinitions: () => catalog.definitions, refreshCatalog, render: () => render({ preserveMainScroll: true }), showError: (message: string) => window.alert(message), afterLocalDataChange: queueLocalSnapshot }; }
 function renderEmptyInline(message: string): string { return `<p class="empty-inline sf-state sf-state--empty sf-state--inline">${escapeHtml(message)}</p>`; }
 
 function getNotesRenderDependencies(): NotesRenderDependencies {
@@ -731,38 +726,12 @@ function renderActivateStoredCardModal(): string {
   });
 }
 
-const fallbackCharacterClass: ClassDefinition = {
-  id: "class.demo.guardian",
-  type: "class",
-  packId: "demo",
-  name: "Guardiao",
-  summary: "Defensor firme que protege seus aliados.",
-  domainIds: ["domain.core.blade", "domain.core.valor"],
-  startingEvasion: 12,
-  startingHitPoints: 28,
-  featureIds: [],
-  hopeFeatureId: "",
-  subclassIds: ["subclass.demo.vengeance", "subclass.demo.vengeance"]
-};
-
-const fallbackCharacterSubclass: SubclassDefinition = {
-  id: "subclass.demo.vengeance",
-  type: "subclass",
-  packId: "demo",
-  name: "Vengeance",
-  summary: "Transforme golpes recebidos em retribuicao.",
-  classId: fallbackCharacterClass.id,
-  foundationFeatureIds: [],
-  specializationFeatureIds: [],
-  masteryFeatureIds: []
-};
-
 function getCharacterCreationClasses(): ClassDefinition[] {
-  return getCreationClasses(catalog, { classDefinition: fallbackCharacterClass, subclassDefinition: fallbackCharacterSubclass, skills: demoKaelII.skills });
+  return getCreationClasses(catalog);
 }
 
 function getCharacterCreationRenderDependencies(): CharacterCreationRenderDependencies {
-  return { state, catalog, fallback: getCharacterCreationFallback(), animate: shouldAnimateCharacterCreationModal, escapeHtml };
+  return { state, catalog, animate: shouldAnimateCharacterCreationModal, escapeHtml };
 }
 
 function renderDeleteCharacterModal(): string {
@@ -917,8 +886,12 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
   const previousSidebarScrollTop = options.preserveMainScroll ? appRoot.querySelector<HTMLElement>(".sidebar")?.scrollTop : undefined;
   const currentCharacter = state.character;
   if (state.characterSelectionOpen && isEditorPage(state.page)) {
-    const editorContextCharacter = currentCharacter ?? state.characters[0] ?? demoKaelII;
-    const editorScreen = state.page === "compendium" ? renderCompendium() : renderSettings(editorContextCharacter);
+    const editorContextCharacter = currentCharacter ?? state.characters[0];
+    if (!editorContextCharacter && state.page === "settings") {
+      appRoot.innerHTML = renderCharacterSelectionView(state.characters, escapeHtml);
+      return;
+    }
+    const editorScreen = state.page === "compendium" ? renderCompendium() : renderSettings(editorContextCharacter as Character);
     appRoot.innerHTML = `<div class="editor-shell">${renderEditorHeaderView(getPlayerShellDependencies())}${editorScreen}</div>${renderPackManagementDialogs(getPackManagementDependencies())}${renderLocalBackupDialogs(state, escapeHtml)}${renderCharacterImportModal({ isOpen: state.characterImportOpen, character: state.pendingCharacterImport, error: state.characterImportError, escapeHtml })}${renderCardModalView(state.modalCardId, getCardFeatureDependencies())}${renderDomainModalView(getDomainFeatureDependencies())}${renderDeleteDomainModalView(getDomainFeatureDependencies())}${renderCompendiumCardFormModalView(getCardFeatureDependencies())}${renderDeleteCompendiumCardModalView(getCardFeatureDependencies())}${renderCompendiumItemFormModalView(getItemFeatureDependencies())}${renderDeleteCompendiumItemModalView(getItemFeatureDependencies())}${renderCompendiumItemPreviewModalView(getItemFeatureDependencies())}${renderCompendiumClassPreviewModalView(getClassFeatureDependencies())}${renderCompendiumClassFormModalView(getClassFeatureDependencies())}${renderDeleteCompendiumClassModalView(getClassFeatureDependencies())}${renderCompendiumAncestryFormModalView(getAncestryFeatureDependencies())}${renderDeleteCompendiumAncestryModalView(getAncestryFeatureDependencies())}`;
     document.body.classList.toggle("has-modal", state.packImportOpen || state.removeAllInstalledPacksOpen || state.characterImportOpen || Boolean(state.deletingInstalledPackId) || Boolean(state.modalCardId) || state.domainModalOpen || Boolean(state.deletingDomainId) || state.cardModalOpen || Boolean(state.deletingCompendiumCardId) || state.itemDefinitionModalOpen || Boolean(state.deletingCompendiumItemId) || Boolean(state.compendiumItemPreviewId) || state.classModalOpen || Boolean(state.deletingCompendiumClassId) || Boolean(state.compendiumClassPreviewId) || state.ancestryModalOpen || Boolean(state.deletingCompendiumAncestryId) || Boolean(state.compendiumAncestryPreviewId) || Boolean(state.compendiumCommunityPreviewId) || state.transformationState.transformationModalOpen || Boolean(state.transformationState.deletingCompendiumTransformationId) || Boolean(state.transformationState.compendiumTransformationPreviewId) || state.conditionState.conditionModalOpen || Boolean(state.conditionState.deletingCompendiumConditionId) || Boolean(state.conditionState.compendiumConditionPreviewId));
     if (options.preserveMainScroll) requestAnimationFrame(() => { const content = appRoot.querySelector<HTMLElement>(".content"); if (content && previousContentScrollTop !== undefined) content.scrollTop = previousContentScrollTop; if (previousDocumentScrollTop !== undefined) window.scrollTo({ top: previousDocumentScrollTop, behavior: "auto" }); });
@@ -927,7 +900,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
   }
 
   if (state.characterSelectionOpen) {
-    appRoot.innerHTML = `${renderCharacterSelectionView(state.characters, demoKaelII.id, escapeHtml)}${renderCharacterCreationModalView(getCharacterCreationRenderDependencies())}${renderDeleteCharacterModal()}${renderCharacterImportModal({ isOpen: state.characterImportOpen, character: state.pendingCharacterImport, error: state.characterImportError, escapeHtml })}`;
+    appRoot.innerHTML = `${renderCharacterSelectionView(state.characters, escapeHtml)}${renderCharacterCreationModalView(getCharacterCreationRenderDependencies())}${renderDeleteCharacterModal()}${renderCharacterImportModal({ isOpen: state.characterImportOpen, character: state.pendingCharacterImport, error: state.characterImportError, escapeHtml })}`;
     document.body.classList.toggle("has-modal", state.characterCreationOpen || state.characterImportOpen || Boolean(state.deletingCharacterId));
     if (previousCharacterCreationScrollTop !== undefined) {
       requestAnimationFrame(() => {
@@ -1118,9 +1091,6 @@ async function openCharacter(characterId: string | undefined): Promise<void> {
     return;
   }
 
-  if (characterId === demoKaelII.id) {
-    await ensureDemoKaelII();
-  }
   const character = await loadCharacter(characterId);
   if (!character) {
     return;
@@ -1134,7 +1104,7 @@ async function openCharacter(characterId: string | undefined): Promise<void> {
 
 async function confirmDeleteCharacter(): Promise<void> {
   const characterId = state.deletingCharacterId;
-  if (!characterId || characterId === demoKaelII.id) {
+  if (!characterId) {
     state.deletingCharacterId = undefined;
     render();
     return;
@@ -1172,7 +1142,7 @@ async function replaceCharacterPortrait(file: File): Promise<void> {
 
 async function createCharacter(): Promise<void> {
   syncCharacterCreationDraftFromForm(state);
-  const builtCharacter = buildCharacterFromDraft(getCharacterCreationDraft(state), catalog, getCharacterCreationFallback());
+  const builtCharacter = buildCharacterFromDraft(getCharacterCreationDraft(state), catalog);
   if (builtCharacter instanceof Error) {
     state.characterCreationError = builtCharacter.message;
     renderCharacterCreationInPlace({ revealError: true });
@@ -1185,10 +1155,8 @@ async function createCharacter(): Promise<void> {
 
 function validateCharacterCreationStep(): boolean {
   syncCharacterCreationDraftFromForm(state);
-  return validateCharacterCreationState(state, catalog, getCharacterCreationFallback());
+  return validateCharacterCreationState(state, catalog);
 }
-
-function getCharacterCreationFallback() { return { classDefinition: fallbackCharacterClass, subclassDefinition: fallbackCharacterSubclass, skills: demoKaelII.skills }; }
 function getCardFormValue(selector: string): string {
   const element = document.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(selector);
   return element?.value.trim() ?? "";
@@ -1644,8 +1612,12 @@ function bindEvents(): void {
     }
 
     if (target.closest('[data-action="new-character"]')) {
+      if (!catalog.classes.length) {
+        window.alert("Importe o Pack oficial de classes no Compendium antes de criar uma ficha.");
+        return;
+      }
       shouldAnimateCharacterCreationModal = true;
-      openCharacterCreation(state, catalog, getCharacterCreationFallback());
+      openCharacterCreation(state, catalog);
       render();
       return;
     }
@@ -2637,7 +2609,7 @@ function bindEvents(): void {
       return;
     }
     if (target instanceof HTMLSelectElement && target.matches("[data-character-class]")) {
-      syncCharacterCreationDraftFromForm(state); selectCharacterCreationClass(state, catalog, getCharacterCreationFallback(), target.value);
+      syncCharacterCreationDraftFromForm(state); selectCharacterCreationClass(state, catalog, target.value);
       renderCharacterCreationInPlace();
       return;
     }
@@ -2655,8 +2627,8 @@ async function boot(): Promise<void> {
   bindEvents();
   bindInventoryDragEvents(getInventoryDragDependencies());
   await refreshCatalog();
-  await deleteStoredCharacter(legacyDemoCharacterId);
-  await ensureDemoKaelII();
+  await Promise.all([deleteStoredCharacter("character.kael-ironheart"), deleteStoredCharacter("character.kael-ironheart-ii")]);
+  await purgeLegacyDemoContent();
   state.characters = await listCharacters();
   // A sessão sempre começa no seletor: abrir uma ficha é uma ação consciente do jogador.
   state.character = undefined;

@@ -45,9 +45,6 @@ const genericDaggerIds = new Set([
 /** Presentation-only fallback: never writes generated art into user definitions. */
 export function getItemArtwork(item: ItemDefinition): string | undefined {
   if (item.image?.trim()) return item.image;
-  if (item.id === "item.demo.rope") {
-    return `${import.meta.env.BASE_URL}assets/items/generic/rope.webp`;
-  }
   if (item.category === "arma" && genericDaggerIds.has(item.id)) {
     return `${import.meta.env.BASE_URL}assets/items/generic/dagger.webp`;
   }

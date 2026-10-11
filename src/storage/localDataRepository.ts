@@ -5,6 +5,8 @@ import { ensureSyncStores } from "./syncRepository";
 const databaseName = "soulforge";
 const databaseVersion = 5;
 const storeNames = ["characters", "installedPacks", "customDefinitions", "definitionOverrides"] as const;
+const legacyDemoCharacterIds = new Set(["character.kael-ironheart", "character.kael-ironheart-ii"]);
+const legacyDemoPackId = "pack.demo.soulforge";
 
 export type LocalDataSnapshot = {
   characters: Character[];
@@ -81,6 +83,43 @@ export async function mergeLocalContent(definitions: Definition[], overrides: Ca
       const transaction = database.transaction(["customDefinitions", "definitionOverrides"], "readwrite");
       definitions.forEach((definition) => transaction.objectStore("customDefinitions").put(definition));
       overrides.forEach((override) => transaction.objectStore("definitionOverrides").put(override));
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+  } finally {
+    database.close();
+  }
+}
+
+/** Remove o conteúdo fictício distribuído nas primeiras versões do SoulForge. */
+export async function purgeLegacyDemoContent(): Promise<void> {
+  const database = await openDatabase();
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const transaction = database.transaction(storeNames, "readwrite");
+      transaction.objectStore("characters").getAll().onsuccess = (event) => {
+        for (const character of (event.target as IDBRequest<Character[]>).result) {
+          if (legacyDemoCharacterIds.has(character.id)) transaction.objectStore("characters").delete(character.id);
+        }
+      };
+      transaction.objectStore("installedPacks").delete(legacyDemoPackId);
+      const definitions = transaction.objectStore("customDefinitions").openCursor();
+      definitions.onsuccess = () => {
+        const cursor = definitions.result;
+        if (!cursor) return;
+        const definition = cursor.value as Definition;
+        if (definition.packId === legacyDemoPackId || definition.id.includes(".demo.")) cursor.delete();
+        cursor.continue();
+      };
+      const overrides = transaction.objectStore("definitionOverrides").openCursor();
+      overrides.onsuccess = () => {
+        const cursor = overrides.result;
+        if (!cursor) return;
+        const override = cursor.value as CardMarkerOverride;
+        if (override.definitionId.includes(".demo.")) cursor.delete();
+        cursor.continue();
+      };
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
       transaction.onabort = () => reject(transaction.error);

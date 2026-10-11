@@ -18,7 +18,6 @@ Estado revisado em **11 de outubro de 2026**, na versão **0.36.1**:
   GitHub Actions;
 - foram validados uma ficha importada, um personagem criado do zero, imagens
   próprias e sincronização do desktop para o iPad;
-- a ficha de demonstração Kael II permaneceu local, como esperado.
 
 A Cloudflare é a produção oficial. O GitHub armazena o código e executa o
 deploy, mas não hospeda o backend nem os dados da produção.

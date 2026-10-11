@@ -15,7 +15,6 @@ const hopeFeature: FeatureDefinition = { id: "feature.hope", type: "feature", pa
 const classChoiceFeature: FeatureDefinition = { id: "feature.class.choice", type: "feature", packId, name: "Escolha", summary: "", sourceType: "class", sourceId: characterClass.id, tier: "class", characterFields: [{ id: "name", kind: "text", label: "Nome", required: true }] };
 const cards: CardDefinition[] = ["one", "two"].map((id) => ({ id: `card.${id}`, type: "card", packId, name: id, summary: "", domainId: "domain.one", tier: 1, cardType: "acao", effect: "" }));
 const catalog = createCatalog([], [ancestry, topFeature, bottomFeature, community, communityFeature, characterClass, subclass, hopeFeature, classChoiceFeature, ...cards]);
-const fallback = { classDefinition: characterClass, subclassDefinition: subclass, skills: [] };
 
 describe("criação de personagem", () => {
   it("inicia os recursos-base sem marcas, inclusive após aplicar bônus de ancestralidade", () => {
@@ -23,7 +22,7 @@ describe("criação de personagem", () => {
       name: "Nova ficha", community: "", communityId: community.id, classId: characterClass.id, subclassId: subclass.id,
       ancestryIds: [ancestry.id], topFeatureId: topFeature.id, bottomFeatureId: bottomFeature.id,
       cardIds: cards.map((card) => card.id), attributeValues: { dex: 2, for: 1, cha: 1, wil: 0, con: 0, int: -1 }, experiences: [{ name: "Exploradora", description: "" }, { name: "Diplomata", description: "" }], definitionSelections: { [classChoiceFeature.id]: { name: "A Sentinela" } }
-    }, catalog, fallback);
+    }, catalog);
 
     expect(created).not.toBeInstanceOf(Error);
     if (created instanceof Error) return;
@@ -41,7 +40,7 @@ describe("criação de personagem", () => {
       name: "Nova ficha", community: "Vigília de Tristelo", communityId, classId: characterClass.id, subclassId: subclass.id,
       ancestryIds: [ancestry.id], topFeatureId: topFeature.id, bottomFeatureId: bottomFeature.id,
       cardIds: cards.map((card) => card.id), attributeValues: { dex: 2, for: 1, cha: 1, wil: 0, con: 0, int: -1 }, experiences: [{ name: "Exploradora", description: "" }, { name: "Diplomata", description: "" }], definitionSelections: { [classChoiceFeature.id]: { name: "A Sentinela" } }
-    }, communityId === localCommunity.id ? localCatalog : catalog, fallback);
+    }, communityId === localCommunity.id ? localCatalog : catalog);
 
     const imported = build(community.id);
     const local = build(localCommunity.id);

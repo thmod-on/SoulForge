@@ -20,19 +20,12 @@ export type CharacterCreationDraft = {
   definitionSelections?: Record<string, Record<string, string>>;
 };
 
-export type CharacterCreationFallback = {
-  classDefinition: ClassDefinition;
-  subclassDefinition: SubclassDefinition;
-  skills: CharacterSkill[];
-};
-
-export function getCreationClasses(catalog: Catalog, fallback: CharacterCreationFallback): ClassDefinition[] {
-  return catalog.classes.length ? catalog.classes : [fallback.classDefinition];
+export function getCreationClasses(catalog: Catalog): ClassDefinition[] {
+  return catalog.classes;
 }
 
-export function getCreationSubclasses(catalog: Catalog, classId: string, fallback: CharacterCreationFallback): SubclassDefinition[] {
-  const subclasses = catalog.subclasses.filter((subclass) => subclass.classId === classId);
-  return subclasses.length ? subclasses : classId === fallback.classDefinition.id ? [fallback.subclassDefinition] : [];
+export function getCreationSubclasses(catalog: Catalog, classId: string): SubclassDefinition[] {
+  return catalog.subclasses.filter((subclass) => subclass.classId === classId);
 }
 
 export function getCreationAncestries(catalog: Catalog): AncestryDefinition[] {
@@ -47,7 +40,7 @@ export function hasValidCreationAttributes(values: Record<Attribute["id"], numbe
   return Object.values(values).sort((left, right) => left - right).join(",") === "-1,0,0,1,1,2";
 }
 
-export function validateCreationStep(step: CharacterCreationStep, draft: CharacterCreationDraft, catalog: Catalog, _fallback: CharacterCreationFallback): string | undefined {
+export function validateCreationStep(step: CharacterCreationStep, draft: CharacterCreationDraft, catalog: Catalog): string | undefined {
   if (step === 1 && !draft.name.trim()) return "Informe o nome do personagem.";
   if (step === 2 && (draft.ancestryIds.length < 1 || draft.ancestryIds.length > 2)) return "Escolha uma ou duas ancestralidades.";
   if (step === 3) {
@@ -73,10 +66,10 @@ export function validateCreationStep(step: CharacterCreationStep, draft: Charact
   return undefined;
 }
 
-export function buildCharacterFromDraft(draft: CharacterCreationDraft, catalog: Catalog, fallback: CharacterCreationFallback): Character | Error {
-  const classes = getCreationClasses(catalog, fallback);
+export function buildCharacterFromDraft(draft: CharacterCreationDraft, catalog: Catalog): Character | Error {
+  const classes = getCreationClasses(catalog);
   const classDefinition = classes.find((entry) => entry.id === draft.classId);
-  const subclassDefinition = classDefinition ? getCreationSubclasses(catalog, classDefinition.id, fallback).find((entry) => entry.id === draft.subclassId) : undefined;
+  const subclassDefinition = classDefinition ? getCreationSubclasses(catalog, classDefinition.id).find((entry) => entry.id === draft.subclassId) : undefined;
   const ancestries = draft.ancestryIds.slice(0, 2).map((id) => catalog.ancestries.find((entry) => entry.id === id)).filter((entry): entry is AncestryDefinition => Boolean(entry));
   const community = catalog.communities.find((entry) => entry.id === draft.communityId);
   const communityFeature = community ? catalog.features.find((entry) => entry.id === community.featureId && entry.sourceType === "community" && entry.sourceId === community.id) : undefined;
@@ -98,7 +91,7 @@ export function buildCharacterFromDraft(draft: CharacterCreationDraft, catalog: 
   }
   const features = catalog.features;
   const subclassSkills = getSubclassSkills(subclassDefinition, features);
-  const skills = subclassSkills.length ? subclassSkills : subclassDefinition.id === fallback.subclassDefinition.id ? fallback.skills.filter((skill) => skill.source === "class") : [];
+  const skills = subclassSkills;
   const hp = classDefinition.startingHitPoints;
   const character: Character = {
     id: `character.local.${crypto.randomUUID()}`,

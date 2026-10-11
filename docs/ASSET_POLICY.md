@@ -208,19 +208,28 @@ precache, ainda dentro da faixa saudável do Estágio 1. Os prompts e critérios
 do lote estão registrados em [Artes genéricas de itens](ITEM_ARTWORK.md).
 
 Em 10 de outubro de 2026, os três grimórios de nível 1 do domínio Códice
-receberam artes quadradas WebP de 960 × 960, totalizando 413.418 bytes. Cada
-composição sintetiza as três magias da carta e mantém o foco na área segura para
-o recorte de miniatura. O build contém 53 entradas e 4.117,01 KiB no precache,
-ainda dentro da faixa saudável do Estágio 1. A direção visual e os critérios do
-lote estão registrados em [Artes de cartas](CARD_ARTWORK.md).
+receberam artes quadradas WebP de 960 × 960. Em 11 de outubro, Ava, Illiat e
+Tyfar foram refeitos como trípticos horizontais, com uma magia por faixa; o lote
+passou a totalizar 369.612 bytes. As composições mantêm o foco na área segura
+para o recorte de miniatura. Após essa revisão, o build contém 56 entradas e
+4.461,22 KiB no precache, ainda dentro da faixa saudável do Estágio 1. A direção
+visual e os critérios do lote estão registrados em
+[Artes de cartas](CARD_ARTWORK.md).
 
 Na mesma data, as três cartas de nível 1 do domínio Esplendor receberam artes
 quadradas WebP de 960 × 960, totalizando 396.142 bytes. A paleta marfim-dourada
 identifica o domínio sem abandonar as sombras preto-ameixa da coleção. As
 composições foram verificadas no recorte central 2:3 e permanecem abaixo da meta
-de 150 KB por arquivo. O build contém 56 entradas e 4.504,00 KiB no precache,
-ainda dentro da faixa saudável do Estágio 1. A direção visual está registrada em
+de 150 KB por arquivo. A direção visual está registrada em
 [Artes de cartas](CARD_ARTWORK.md).
+
+Em 11 de outubro de 2026, Enganador Habilidoso e Cativar completaram as artes de
+nível 1 do domínio Graça. As duas novas imagens WebP de 960 × 960 totalizam
+125.352 bytes; com Palavras Inspiradoras, o trio ocupa 259.324 bytes. A paleta
+vinho–ameixa e os efeitos rosa-violeta permanecem contidos para priorizar
+expressões e linguagem corporal. Após a integração, o build contém 58 entradas
+e 4.583,72 KiB no precache, ainda dentro da faixa saudável do Estágio 1. A
+direção visual está registrada em [Artes de cartas](CARD_ARTWORK.md).
 
 ## Pendências planejadas
 

@@ -28,7 +28,7 @@ describe("generic item artwork", () => {
   it("matches known Portuguese and English names without mutating definitions", () => {
     expect(getItemArtwork(item)).toContain("torch.webp");
     expect(getItemArtwork({ ...item, name: "  TORCH  " })).toContain("torch.webp");
-    expect(getItemArtwork({ ...item, id: "item.demo.rope", name: "Corda (15m)" })).toContain("rope.webp");
+    expect(getItemArtwork({ ...item, name: "Corda (15m)" })).toBeUndefined();
     expect(getItemArtwork({ ...item, name: "Ouro", category: "loot" })).toContain("gold.webp");
     expect(getItemArtwork({ ...item, name: "Armadura de Couro (Leather Armor)", category: "armadura" })).toContain("leather-armor.webp");
     expect(item.image).toBeUndefined();

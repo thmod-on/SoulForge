@@ -27,7 +27,6 @@ import { replaceDataUrlsWithMedia, replaceMediaWithDataUrls } from "./mediaTrans
 import type { CloudSession, SyncConflict, SyncEnvelope, SyncPushChange, SyncResourceType, SyncStatus } from "./types";
 
 export type SyncCoordinatorDependencies = {
-  demoCharacterId: string;
   snapshot(): Promise<{ characters: Character[]; definitions: Definition[]; overrides: CardMarkerOverride[] }>;
   saveCharacter(character: Character): Promise<void>;
   deleteCharacter(id: string): Promise<void>;
@@ -83,7 +82,6 @@ export async function initializeSyncCoordinator(nextDependencies: SyncCoordinato
 }
 
 export async function markForSync(type: SyncResourceType, id: string, payload?: unknown, deleted = false): Promise<void> {
-  if (type === "character" && id === dependencies?.demoCharacterId) return;
   await enqueueSyncChange(type, id, payload, deleted);
   updateView({ status: view.session.authenticated ? (navigator.onLine ? "pending" : "offline") : "local-only", message: view.session.authenticated ? "Alterações aguardando sincronização." : undefined });
   if (view.session.authenticated) scheduleSync(900);
@@ -93,7 +91,7 @@ export async function queueLocalSnapshot(): Promise<void> {
   if (!dependencies) return;
   const snapshot = await dependencies.snapshot();
   await Promise.all([
-    ...snapshot.characters.filter((character) => character.id !== dependencies?.demoCharacterId).map((character) => enqueueSyncChange("character", character.id, character)),
+    ...snapshot.characters.map((character) => enqueueSyncChange("character", character.id, character)),
     ...snapshot.definitions.filter((definition) => definition.packId === "local").map((definition) => enqueueSyncChange("definition", definition.id, definition)),
     ...snapshot.overrides.map((override) => enqueueSyncChange("override", override.id, override))
   ]);
@@ -149,14 +147,14 @@ async function seedFirstSync(): Promise<void> {
   if (!dependencies || loadSyncCursor() !== 0 || (await listQueuedSyncChanges()).length) return;
   const snapshot = await dependencies.snapshot();
   await Promise.all([
-    ...snapshot.characters.filter((character) => character.id !== dependencies?.demoCharacterId).map((character) => enqueueSyncChange("character", character.id, character)),
+    ...snapshot.characters.map((character) => enqueueSyncChange("character", character.id, character)),
     ...snapshot.definitions.filter((definition) => definition.packId === "local").map((definition) => enqueueSyncChange("definition", definition.id, definition)),
     ...snapshot.overrides.map((override) => enqueueSyncChange("override", override.id, override))
   ]);
 }
 
 async function applyRemoteEnvelope(envelope: SyncEnvelope): Promise<void> {
-  if (!dependencies || (envelope.type === "character" && envelope.id === dependencies.demoCharacterId)) return;
+  if (!dependencies) return;
   if (envelope.deletedAt) {
     if (envelope.type === "character") await dependencies.deleteCharacter(envelope.id);
     if (envelope.type === "definition") await dependencies.deleteDefinition(envelope.id);

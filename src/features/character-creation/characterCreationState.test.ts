@@ -28,8 +28,6 @@ const subclasses: SubclassDefinition[] = classes.map((definition, index) => ({
   foundationFeatureIds: [], specializationFeatureIds: [], masteryFeatureIds: []
 }));
 const catalog = createCatalog([], [...ancestries, ...ancestryFeatures, ...classes, ...subclasses]);
-const fallback = { classDefinition: classes[0], subclassDefinition: subclasses[0], skills: [] };
-
 function createState(): CharacterCreationState {
   return {
     characterCreationOpen: false,
@@ -53,7 +51,7 @@ describe("estado da criação de personagem", () => {
   it("abre um fluxo limpo e seleciona a primeira classe e subclasse", () => {
     const state = createState();
 
-    openCharacterCreation(state, catalog, fallback);
+    openCharacterCreation(state, catalog);
 
     expect(state).toMatchObject({
       characterCreationOpen: true,
@@ -95,7 +93,7 @@ describe("estado da criação de personagem", () => {
     state.characterCreationFocusedCardId = "card.two";
     state.characterCreationCardDomainId = "domain.one";
 
-    selectCharacterCreationClass(state, catalog, fallback, classes[1].id);
+    selectCharacterCreationClass(state, catalog, classes[1].id);
 
     expect(state.characterCreationClassId).toBe(classes[1].id);
     expect(state.characterCreationSubclassId).toBe(subclasses[1].id);

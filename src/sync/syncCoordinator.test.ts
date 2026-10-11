@@ -228,7 +228,7 @@ describe("media, logout and account removal", () => {
     expect(coordinator.getSyncViewModel()).toMatchObject({ session: { authenticated: false }, status: "local-only", conflicts: [] });
   });
 
-  it("queues only user-owned resources and excludes the demo and imported Packs", async () => {
+  it("queues every ficha local e exclui Definitions de Packs importados", async () => {
     createHarness(true, { authenticated: false });
     const dependencies = createDependencies({
       characters: [character("kael", "Kael II"), character("hero", "Hero")],
@@ -241,6 +241,7 @@ describe("media, logout and account removal", () => {
 
     expect((await listQueuedSyncChanges()).map((change) => `${change.type}:${change.id}`).sort()).toEqual([
       "character:hero",
+      "character:kael",
       "definition:local-definition",
       "override:override"
     ]);
@@ -321,7 +322,6 @@ function createDependencies(snapshot: Partial<Awaited<ReturnType<SyncCoordinator
   deleteCharacter: ReturnType<typeof vi.fn>;
 } {
   return {
-    demoCharacterId: "kael",
     snapshot: vi.fn(async () => ({ characters: [], definitions: [], overrides: [], ...snapshot })),
     saveCharacter: vi.fn(async () => undefined),
     deleteCharacter: vi.fn(async () => undefined),

@@ -1,7 +1,7 @@
 import type { Catalog } from "../../domain/catalog";
 import type { AncestryDefinition, Attribute } from "../../domain/types";
 import { createEmptyCreationAttributeValues } from "./attributeAllocation";
-import { getCreationClasses, getCreationSubclasses, validateCreationStep, type CharacterCreationDraft, type CharacterCreationFallback } from "./characterCreationRules";
+import { getCreationClasses, getCreationSubclasses, validateCreationStep, type CharacterCreationDraft } from "./characterCreationRules";
 import type { CharacterCreationStep } from "./creationFlow";
 
 export type CharacterCreationState = {
@@ -29,11 +29,11 @@ export type CharacterCreationState = {
   characterCreationError?: string;
 };
 
-export function openCharacterCreation(state: CharacterCreationState, catalog: Catalog, fallback: CharacterCreationFallback): void {
-  const classes = getCreationClasses(catalog, fallback);
+export function openCharacterCreation(state: CharacterCreationState, catalog: Catalog): void {
+  const classes = getCreationClasses(catalog);
   state.characterCreationOpen = true;
   state.characterCreationClassId = classes[0]?.id;
-  state.characterCreationSubclassId = getCreationSubclasses(catalog, state.characterCreationClassId ?? "", fallback)[0]?.id;
+  state.characterCreationSubclassId = getCreationSubclasses(catalog, state.characterCreationClassId ?? "")[0]?.id;
   state.characterCreationStep = 1;
   state.characterCreationName = "";
   state.characterCreationCommunity = "";
@@ -112,14 +112,14 @@ export function syncCharacterCreationDraftFromForm(state: CharacterCreationState
   });
 }
 
-export function validateCharacterCreationState(state: CharacterCreationState, catalog: Catalog, fallback: CharacterCreationFallback): boolean {
+export function validateCharacterCreationState(state: CharacterCreationState, catalog: Catalog): boolean {
   if (state.characterCreationStep === 2) {
     const primary = catalog.ancestries.find((ancestry) => ancestry.id === state.characterCreationAncestryIds[0]);
     const secondary = catalog.ancestries.find((ancestry) => ancestry.id === state.characterCreationAncestryIds[1]);
     state.characterCreationTopFeatureId = primary?.topFeatureId;
     state.characterCreationBottomFeatureId = secondary?.bottomFeatureId ?? primary?.bottomFeatureId;
   }
-  state.characterCreationError = validateCreationStep(state.characterCreationStep, getCharacterCreationDraft(state), catalog, fallback);
+  state.characterCreationError = validateCreationStep(state.characterCreationStep, getCharacterCreationDraft(state), catalog);
   return !state.characterCreationError;
 }
 
@@ -142,9 +142,9 @@ export function selectCharacterCreationTopFeature(state: CharacterCreationState,
   state.characterCreationError = undefined;
 }
 
-export function selectCharacterCreationClass(state: CharacterCreationState, catalog: Catalog, fallback: CharacterCreationFallback, classId: string): void {
+export function selectCharacterCreationClass(state: CharacterCreationState, catalog: Catalog, classId: string): void {
   state.characterCreationClassId = classId;
-  state.characterCreationSubclassId = getCreationSubclasses(catalog, classId, fallback)[0]?.id;
+  state.characterCreationSubclassId = getCreationSubclasses(catalog, classId)[0]?.id;
   state.characterCreationCardIds = [];
   state.characterCreationFocusedCardId = undefined;
   state.characterCreationCardDomainId = undefined;

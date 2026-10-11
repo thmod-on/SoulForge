@@ -57,20 +57,18 @@ Use case: stylized-concept. Asset type: SoulForge fantasy RPG inventory artwork,
 
 Edit target: attached generated inventory object. Change ONLY the background: REMOVE ALL checkerboard squares and replace the entire background with perfectly uniform solid very dark blue-black RGB (8,13,19), hex #080d13. No transparency simulation, no checkerboard, no fog, no vignette or gradient. Preserve the object, shape, material, lighting and complete silhouette. Keep 12% empty padding so object fits small RPG inventory card. Output a square image.
 
-## Corda e adaga genérica
+## Adaga genérica
 
-Em 19 de setembro de 2026, o item `item.demo.rope` recebeu uma arte própria de
-corda e as famílias de adagas conhecidas dos Packs Core e Hope & Fear passaram
-a compartilhar uma arte genérica quando não declaram imagem própria. A
-associação usa IDs estáveis; nomes parciais não ativam os fallbacks. Assim,
-itens como Dardo de Corda e Pingente de Adaga de Ferro não recebem uma imagem
-incorreta. A prioridade da imagem fornecida pelo Pack ou usuário permanece
-inalterada.
+As famílias de adagas conhecidas dos Packs Core e Hope & Fear compartilham uma
+arte genérica quando não declaram imagem própria. A associação usa IDs
+estáveis; nomes parciais não ativam os fallbacks. Assim, itens como Dardo de
+Corda e Pingente de Adaga de Ferro não recebem uma imagem incorreta. A
+prioridade da imagem fornecida pelo Pack ou usuário permanece inalterada.
 
-As duas artes são originais, geradas com a ferramenta integrada imagegen e
-finalizadas como WebP 512 × 512, qualidade 82, sem transparência. O fundo
-uniforme `#080d13` mantém integração com os painéis escuros. `rope.webp` possui
-35.406 bytes e `dagger.webp`, 8.014 bytes; o lote totaliza 43.420 bytes.
+A arte é original, gerada com a ferramenta integrada imagegen e finalizada
+como WebP 512 × 512, qualidade 82, sem transparência. O fundo uniforme
+`#080d13` mantém integração com os painéis escuros. `dagger.webp` possui
+8.014 bytes.
 
 ### Prompt final — corda
 

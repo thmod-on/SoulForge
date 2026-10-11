@@ -4,6 +4,25 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.36.2]
+
+### Alterado
+
+- o catálogo inicial não inclui mais conteúdo fictício: classes, criação de
+  personagem, Vault e Compendium passam a depender exclusivamente dos Packs
+  oficiais instalados e das criações locais;
+- a seleção de personagens não trata mais uma ficha como especial: todas as
+  fichas existentes podem ser removidas pelo mesmo menu de ações.
+
+### Corrigido
+
+- Kael, Kael II e o Pack demo legado são removidos automaticamente do
+  armazenamento local, incluindo Definitions e marcadores associados; a mesma
+  limpeza é aplicada após restaurar backups antigos, evitando que esse conteúdo
+  reapareça;
+- artes e documentação que pertenciam exclusivamente aos itens demonstrativos
+  foram removidas.
+
 ## [0.36.1]
 
 ### Adicionado

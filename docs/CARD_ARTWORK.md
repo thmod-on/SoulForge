@@ -14,34 +14,53 @@ miniatura. Não há texto, logotipo, marca-d'água ou escrita legível nas pági
 
 ### Livro de Ava
 
-Composição: uma estudiosa conjura, no mesmo instante, uma onda cinética que
-arremessa um adversário, uma proteção dourada sobre um aliado e um grande
-espinho de gelo. A biblioteca em ruínas preserva o caráter erudito do domínio.
+Composição revisada em 11 de outubro de 2026: três faixas horizontais separam
+Empurrão de Poder, Armadura de Tava e Espinho de Gelo. O primeiro usa anéis de
+pressão e deslocamento de ar; o segundo concentra uma proteção dourada discreta
+no aliado; o terceiro apresenta uma lança contínua, vapor frio, respiração
+visível e geada sobre o códice. A mesma estudiosa e o mesmo livro unem as cenas.
 
 ### Livro de Illiat
 
-Composição: uma barragem de projéteis arcanos parte da conjuradora, enquanto um
-adversário dorme sob um halo violeta e um fio luminoso estabelece comunicação
-mental com um aliado.
+Composição revisada em 11 de outubro de 2026 no mesmo tríptico horizontal de
+Ava. Em Sonolência, uma mão repousa sobre o códice e conduz a magia pelo corpo
+da estudiosa até o estalar sutil dos dedos, sem papéis voando. Barragem Arcana
+separa cinco projéteis em trajetórias controladas e mostra esforço real na
+postura e na expressão da conjuradora. Telepatia usa um único vínculo
+violeta-azulado entre a estudiosa e o aliado. Nas três faixas, as páginas ficam
+inclinadas para quem acabou de ler as palavras mágicas; o jogador vê sobretudo
+a capa, a encadernação e a espessura do volume, mantendo o códice apoiado de
+forma estável.
 
 ### Livro de Tyfar
 
-Composição: chamas mágicas se ramificam até três adversários, uma mão espectral
-manipula a cena à distância e uma névoa violeta densa encobre o pátio da antiga
-biblioteca.
+Composição revisada em 11 de outubro de 2026 no mesmo tríptico horizontal dos
+outros grimórios. Chama Selvagem nasce de um núcleo além dos cinco dedos visíveis
+e se divide em três trajetórias legíveis, uma para cada adversário. Mão Mágica
+repete na projeção espectral o mesmo gesto de pinça da conjuradora para erguer um
+molho de chaves à distância. Névoa Misteriosa começa como um sopro curto nos
+lábios e se expande pelo pátio, reduzindo dois perseguidores a silhuetas. O códice
+mantém a capa voltada ao jogador e as páginas inclinadas para a conjuradora nas
+três faixas.
 
 ## Entrega
 
 | ID | Arquivo | Dimensões | Tamanho |
 | --- | --- | ---: | ---: |
-| `card.core.codex.p2-1` | `book-of-ava.webp` | 960 × 960 | 146.368 bytes |
-| `card.core.codex.p2-2` | `book-of-illiat.webp` | 960 × 960 | 118.648 bytes |
-| `card.core.codex.p2-3` | `book-of-tyfar.webp` | 960 × 960 | 148.402 bytes |
+| `card.core.codex.p2-1` | `book-of-ava.webp` | 960 × 960 | 141.956 bytes |
+| `card.core.codex.p2-2` | `book-of-illiat.webp` | 960 × 960 | 116.152 bytes |
+| `card.core.codex.p2-3` | `book-of-tyfar.webp` | 960 × 960 | 111.504 bytes |
 
 Os arquivos são WebP opacos e permanecem abaixo da meta de 150 KB por arte. A
 resolução central por ID preserva a prioridade de imagens fornecidas pelo usuário
 ou pelo Pack. A geração usou a ferramenta de imagem integrada do Codex, com as
 artes já incorporadas ao SoulForge apenas como referência de família visual.
+
+O tríptico horizontal tornou-se o padrão para grimórios com três efeitos: uma
+magia por faixa, personagens e objetos importantes dentro da área central do
+recorte 2:3, códice fisicamente coerente, expressões próprias para cada ação e
+efeitos localizados. Divisores escuros integram as faixas sem imitar quadrinhos
+ou adicionar texto.
 
 ## Esplendor — nível 1
 
@@ -96,3 +115,35 @@ partículas, reflexos e brilho difuso; conserva apenas uma luz suave no toque de
 apoio, uma trajetória fina para a nova tentativa e a possibilidade fracassada em
 violeta escuro. Personagens, cenário, perspectiva e associação permaneceram
 inalterados.
+
+## Graça — nível 1
+
+Em 11 de outubro de 2026, as duas cartas de nível 1 que ainda não possuíam arte
+receberam composições originais. A direção visual acompanha Palavras
+Inspiradoras: fantasia sombria intimista, tecidos vinho e ameixa, luz quente
+localizada e magia rosa-violeta discreta. As cenas privilegiam expressão,
+linguagem corporal e relações entre personagens em vez de grandes explosões.
+
+### Enganador Habilidoso
+
+Composição: uma cortesã mantém o olhar e a postura serenos enquanto convence um
+capitão a deixá-la passar. A mão escondida atrás do corpo segura o sinete que
+denunciaria a mentira; apenas um reflexo rosa muito fino sugere a vantagem de
+Graça sem transformar a habilidade em controle mental.
+
+### Cativar
+
+Composição: a voz da conjuradora percorre uma fita rosa-violeta controlada até
+um único alvo, cujo olhar e postura ficam inteiramente presos a ela. As demais
+pessoas e o salão perdem foco e contraste, representando visão estreitada e sons
+abafados.
+
+| ID | Arquivo | Dimensões | Tamanho |
+| --- | --- | ---: | ---: |
+| `card.core.grace.p2-4` | `deft-deceiver.webp` | 960 × 960 | 67.484 bytes |
+| `card.core.grace.p2-5` | `enrapture.webp` | 960 × 960 | 57.868 bytes |
+| `card.core.grace.p2-6` | `inspirational-words.jpg` | 960 × 960 | 133.972 bytes |
+
+As duas novas imagens são WebP opacas e ficam abaixo da meta de 150 KB. Foram
+geradas com a ferramenta de imagem integrada do Codex, usando as artes de Graça
+já incorporadas somente como referências de família visual.

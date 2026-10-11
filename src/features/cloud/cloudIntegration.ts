@@ -1,5 +1,4 @@
 import type { Character, Definition, GameMarkerDefinition } from "../../domain/types";
-import { demoKaelII } from "../../domain/demoKaelII";
 import { deleteCharacter, listCharacters, loadCharacter, saveCharacter } from "../../storage/characterRepository";
 import { deleteCardMarkerOverride, deleteCustomDefinition, loadCardMarkerOverrides, loadCustomDefinitions, putCardMarkerOverride, saveCardMarkerOverride, saveCustomDefinition, type CardMarkerOverride } from "../../storage/compendiumRepository";
 import { loadLocalDataSnapshot } from "../../storage/localDataRepository";
@@ -49,7 +48,6 @@ export function handleCloudAction(target: HTMLElement): boolean {
 
 export async function initializeCloudIntegration(options: { afterRemoteChange(): Promise<void>; stateChanged(): void }): Promise<void> {
   await initializeSyncCoordinator({
-    demoCharacterId: demoKaelII.id,
     snapshot: async () => {
       const snapshot = await loadLocalDataSnapshot();
       return { characters: snapshot.characters, definitions: snapshot.definitions.filter((definition) => definition.packId === "local"), overrides: snapshot.overrides };

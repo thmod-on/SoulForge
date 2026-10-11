@@ -24,7 +24,7 @@ describe("renderCharacterSelection", () => {
       }
     };
 
-    const html = renderCharacterSelection([character], demoCharacter.id, escapeHtml);
+    const html = renderCharacterSelection([character], escapeHtml);
 
     expect(html).toContain('class="character-select-carousel"');
     expect(html).toContain('data-character-carousel');
@@ -39,18 +39,17 @@ describe("renderCharacterSelection", () => {
   });
 
   it("usa placeholder e preserva as ações acessíveis quando não há retrato", () => {
-    const html = renderCharacterSelection([demoCharacter], demoCharacter.id, escapeHtml);
+    const html = renderCharacterSelection([demoCharacter], escapeHtml);
 
     expect(html).toContain('class="character-select-placeholder"');
     expect(html).toContain('aria-label="Compendium"');
     expect(html).toContain('aria-label="Configurações"');
     expect(html).toContain('class="sf-navigation-icon"');
-    expect(html).toContain("Ficha demo");
-    expect(html).not.toContain('data-action="request-delete-character"');
+    expect(html).toContain('data-action="request-delete-character"');
   });
 
   it("mantém o estado vazio sem controles de carrossel", () => {
-    const html = renderCharacterSelection([], demoCharacter.id, escapeHtml);
+    const html = renderCharacterSelection([], escapeHtml);
 
     expect(html).toContain("Nenhuma ficha encontrada");
     expect(html).not.toContain('data-character-carousel');

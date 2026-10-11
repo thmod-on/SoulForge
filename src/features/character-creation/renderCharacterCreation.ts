@@ -3,7 +3,7 @@ import { findDomain, type Catalog } from "../../domain/catalog";
 import type { AncestryDefinition, FeatureDefinition } from "../../domain/types";
 import { getPackDisplayName } from "../compendium/packPresentation";
 import { characterCreationAttributes } from "./attributeAllocation";
-import { getCreationAncestries, getCreationClasses, getCreationSubclasses, type CharacterCreationFallback } from "./characterCreationRules";
+import { getCreationAncestries, getCreationClasses, getCreationSubclasses } from "./characterCreationRules";
 import type { CharacterCreationState } from "./characterCreationState";
 import { renderCreationActions, renderCreationProgress, renderCreationTitle } from "./renderCreationChrome";
 import { renderCreationAncestryFeaturePreview, renderCreationAttributesStep, renderCreationClassStep, renderCreationCommunityStep, renderCreationExperiencesStep, renderCreationIdentityStep, renderCreationReviewStep } from "./renderCreationSteps";
@@ -12,23 +12,23 @@ import { getCharacterFieldDisplayValue, getCreationCharacterFieldSources } from 
 export type CharacterCreationRenderDependencies = {
   state: CharacterCreationState;
   catalog: Catalog;
-  fallback: CharacterCreationFallback;
   animate: boolean;
   escapeHtml(value: string): string;
 };
 
 export function renderCharacterCreationModal(deps: CharacterCreationRenderDependencies): string {
-  const { state, catalog, fallback, animate, escapeHtml } = deps;
+  const { state, catalog, animate, escapeHtml } = deps;
   if (!state.characterCreationOpen) {
     return "";
   }
 
-  const classes = getCreationClasses(catalog, fallback);
+  const classes = getCreationClasses(catalog);
+  if (!classes.length) return "";
   const classId = state.characterCreationClassId && classes.some((definition) => definition.id === state.characterCreationClassId)
     ? state.characterCreationClassId
     : classes[0].id;
   const selectedClass = classes.find((definition) => definition.id === classId) ?? classes[0];
-  const subclasses = getCreationSubclasses(catalog, selectedClass.id, fallback);
+  const subclasses = getCreationSubclasses(catalog, selectedClass.id);
   const ancestries = getCreationAncestries(catalog);
   const selectedAncestryIds = state.characterCreationAncestryIds.filter((id) => ancestries.some((ancestry) => ancestry.id === id)).slice(0, 2);
   const selectedAncestries = selectedAncestryIds.map((id) => ancestries.find((ancestry) => ancestry.id === id)).filter((ancestry): ancestry is AncestryDefinition => Boolean(ancestry));

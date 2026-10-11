@@ -2,7 +2,7 @@ import type { Character, Definition, PackBundle, PackManifest } from "../../doma
 import { parseCharacterImport } from "../character-transfer/characterTransfer";
 import { validatePackBundle } from "../packs/packValidation";
 import type { CardMarkerOverride } from "../../storage/compendiumRepository";
-import { loadLocalDataSnapshot, mergeLocalContent, replaceLocalDataSnapshot, type LocalDataSnapshot } from "../../storage/localDataRepository";
+import { loadLocalDataSnapshot, mergeLocalContent, purgeLegacyDemoContent, replaceLocalDataSnapshot, type LocalDataSnapshot } from "../../storage/localDataRepository";
 
 export const backupFormat = "soulforge-backup-v1" as const;
 export const contentFormat = "soulforge-content-v1" as const;
@@ -52,7 +52,6 @@ export type LocalBackupControllerState = LocalBackupState & {
 export type LocalBackupDependencies = {
   state: LocalBackupControllerState;
   appVersion: string;
-  ensureDemo(): Promise<void>;
   loadCharacter(id: string): Promise<Character | undefined>;
   listCharacters(): Promise<Character[]>;
   availableDefinitions(): Definition[];
@@ -275,7 +274,7 @@ async function confirmBackupRestore(deps: LocalBackupDependencies): Promise<void
   try {
     downloadLocalData(buildBackupBundle(await loadLocalDataSnapshot(), deps.appVersion));
     await replaceLocalDataSnapshot(snapshotFromBackup(backup));
-    await deps.ensureDemo();
+    await purgeLegacyDemoContent();
     await deps.refreshCatalog();
     await deps.afterLocalDataChange?.();
     deps.state.characters = await deps.listCharacters();
