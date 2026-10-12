@@ -8,7 +8,7 @@ Produção: <https://soulforge.guitojoker-cloudflare.workers.dev/>.
 
 ## Estado atual
 
-Estado revisado em **11 de outubro de 2026**, na versão **0.36.1**:
+Estado revisado em **12 de outubro de 2026**, na versão **0.37.2**:
 
 - o Worker `soulforge` entrega a PWA e atende às rotas `/api/*`;
 - o D1 `soulforge` está com a migração inicial aplicada;
@@ -22,10 +22,10 @@ Estado revisado em **11 de outubro de 2026**, na versão **0.36.1**:
 A Cloudflare é a produção oficial. O GitHub armazena o código e executa o
 deploy, mas não hospeda o backend nem os dados da produção.
 
-CLD-004 está coberto pela suíte de integração local. CLD-003 permanece em
-andamento somente até a coleta da baseline real de 24 horas; observabilidade e
-alertas de orçamento já estão ativos. Os demais itens operacionais e de
-segurança estão detalhados no [backlog](./BACKLOG.md).
+CLD-003 e CLD-004 estão concluídos. A observabilidade, a baseline operacional,
+os alertas de orçamento e a suíte de integração estão ativos e documentados.
+Os demais itens operacionais e de segurança estão detalhados no
+[backlog](./BACKLOG.md).
 
 ## Componentes
 
@@ -128,23 +128,33 @@ R2. Os alertas de orçamento de **US$ 1** e **US$ 5** são uma configuração
 manual da conta Cloudflare, não parte do `wrangler.jsonc` nem do deploy. Veja
 [Budget alerts][budget-alerts].
 
-### Baseline operacional de 24 horas
+### Baseline operacional inicial
 
-A janela iniciada no commit `d6f21d4` será substituída pela publicação da
-`0.36.1`. A baseline definitiva começará quando o deploy desta versão terminar
-e cobrirá as 24 horas seguintes, mantendo uma única versão de referência. Ao
-final, qualquer gráfico sem amostras deve ser registrado como **sem dados**,
-nunca como `0`.
+A coleta cobre o período entre a publicação da `0.36.1` e o horário solicitado
+para fechamento, totalizando aproximadamente 44 horas. O uso relevante ocorreu
+depois das primeiras 24 horas, por isso o intervalo foi estendido até
+**12 de outubro de 2026 às 20:37 BRT**. Durante a janela também foram publicadas
+as versões `0.36.2`, `0.37.0`, `0.37.1` e `0.37.2`; todas preservaram a mesma
+configuração de observabilidade. Valores iguais a zero abaixo são amostras
+efetivamente exibidas pelo painel, não ausência de dados.
 
 | Referência | Valor |
 | --- | --- |
-| Versão | `0.36.1` |
-| Commit implantado | Pendente da publicação da versão |
-| Janela UTC de 24 horas | Pendente da conclusão do deploy |
-| Worker: requisições, sucessos, erros, taxa de erro e CPU | Pendente do encerramento da janela |
-| Workers Logs: eventos, erros e inspeção de dados pessoais | Pendente do encerramento da janela |
-| D1: consultas/linhas lidas, consultas/linhas escritas e armazenamento | Pendente do encerramento da janela |
-| R2: operações, bytes enviados/baixados e armazenamento | Pendente do encerramento da janela |
+| Versões observadas | `0.36.1` a `0.37.2` |
+| Commit inicial | `6946ec0` (`release: publish 0.36.1`) |
+| Commit vigente na coleta | `d9957a3` (`release: publish 0.37.2`) |
+| Janela | 11/10/2026 03:42 UTC a 12/10/2026 23:37 UTC; 11/10 00:42 a 12/10 20:37 BRT |
+| Worker | 200 requisições de assets, 166 invocações, 166 sucessos inferidos por ausência de falhas, 0 erros e taxa de erro de 0%; CPU P50 1,88 ms, P90 3,16 ms e P99 4,05 ms; cache de assets 56% |
+| Workers Logs | 165 sucessos e 0 erros na consulta independente; amostra visível de 50 eventos contendo somente método, rota e metadados técnicos, sem tokens, cookies, e-mails, IDs de usuário, fichas ou payloads |
+| D1 | 512 consultas: 364 leituras e 148 escritas; 789 linhas lidas e 306 escritas; 393 kB armazenados em 9 tabelas no momento da coleta |
+| R2 | Na janela: 330,09 kB enviados e 330,09 kB baixados; o gráfico contabiliza somente objetos com pelo menos 100 KiB. No período de cobrança exibido, 8 de outubro a 8 de novembro: 32 operações Classe A e 31 Classe B. Estado atual: 3 objetos e 535,2 kB armazenados |
+| Custo R2 | US$ 0,00; nenhum uso faturável no período atual |
+
+A diferença de um evento entre invocações e Workers Logs decorre de superfícies
+analíticas independentes da Cloudflare. O painel do R2 não oferece o mesmo
+intervalo personalizado para operações Classe A/B; por isso esses contadores
+são identificados pelo período de cobrança, enquanto transferência usa a janela
+exata da baseline e armazenamento representa o estado no momento da coleta.
 
 ### Alertas de orçamento
 
@@ -152,8 +162,8 @@ Em **10 de outubro de 2026**, foram confirmados no painel os alertas
 `SoulForge — aviso US$ 1` e `SoulForge — alerta US$ 5`, ambos com um
 destinatário. A conta também mantém o alerta automático de US$ 10 da
 Cloudflare. Os alertas são gerais para a conta, informativos e não interrompem
-o serviço. CLD-003 poderá ser concluído depois do encerramento e registro da
-baseline acima.
+o serviço. Com o registro da baseline acima, CLD-003 foi concluído em
+**12 de outubro de 2026**.
 
 ## Runbook de recuperação
 
