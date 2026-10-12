@@ -135,11 +135,17 @@ As classes históricas `primary-action`, `secondary-action`, `danger-action` e `
 - estados bloqueados mantêm um rótulo textual, como `BLOQUEADA — TIER 3`, além da diferença visual;
 - carregamento usa `sf-state--loading` e texto de status. Não use animação intensa nem bloqueie a leitura de conteúdo já disponível.
 
-### Escolhas com detalhe
+### Escolhas de cartas com detalhe
 
-- quando uma opção precisa revelar texto complementar, a opção selecionada deve expandir no próprio card;
-- use o estado `is-selected is-focused` para que apenas uma opção revele o detalhe por vez;
-- não crie um painel separado abaixo da lista quando a informação explica diretamente a escolha feita; isso evita deslocamentos e rolagem de ida e volta em tablet.
+- selecionar uma carta e abrir seu efeito completo são ações independentes;
+- a carta selecionada exibe selo textual com ícone de confirmação, além do
+  controle explícito para remover a seleção; abrir ou fechar detalhes nunca
+  altera essa escolha;
+- a criação resume todas as cartas escolhidas, inclusive as filtradas em outro
+  Domínio. A progressão mantém um resumo da única carta selecionada ao trocar
+  filtros;
+- em grades de duas colunas, uma carta com detalhes abertos ocupa a linha
+  inteira. A lista rola, mas nenhuma carta pode encolher abaixo de seu conteúdo.
 
 ## Fluxos guiados
 

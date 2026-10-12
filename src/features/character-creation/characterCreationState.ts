@@ -18,7 +18,7 @@ export type CharacterCreationState = {
   characterCreationAncestrySearch: string;
   characterCreationCardIds: string[];
   characterCreationCardDomainId?: string;
-  characterCreationFocusedCardId?: string;
+  characterCreationExpandedCardId?: string;
   characterCreationExperiences: Array<{ name: string; description: string }>;
   characterCreationDefinitionSelections: Record<string, Record<string, string>>;
   characterCreationAttributeValues: Record<Attribute["id"], number>;
@@ -43,7 +43,7 @@ export function openCharacterCreation(state: CharacterCreationState, catalog: Ca
   state.characterCreationAncestryIds = [];
   state.characterCreationAncestrySearch = "";
   state.characterCreationCardIds = [];
-  state.characterCreationFocusedCardId = undefined;
+  state.characterCreationExpandedCardId = undefined;
   state.characterCreationExperiences = [{ name: "", description: "" }, { name: "", description: "" }];
   state.characterCreationDefinitionSelections = {};
   state.characterCreationAttributeValues = createEmptyCreationAttributeValues();
@@ -61,7 +61,7 @@ export function closeCharacterCreation(state: CharacterCreationState): void {
   state.characterCreationAncestryIds = [];
   state.characterCreationAncestrySearch = "";
   state.characterCreationCardIds = [];
-  state.characterCreationFocusedCardId = undefined;
+  state.characterCreationExpandedCardId = undefined;
   state.characterCreationDefinitionSelections = {};
   state.characterCreationAttributeValues = createEmptyCreationAttributeValues();
   state.characterCreationSelectedAttributeTokenId = undefined;
@@ -146,7 +146,7 @@ export function selectCharacterCreationClass(state: CharacterCreationState, cata
   state.characterCreationClassId = classId;
   state.characterCreationSubclassId = getCreationSubclasses(catalog, classId)[0]?.id;
   state.characterCreationCardIds = [];
-  state.characterCreationFocusedCardId = undefined;
+  state.characterCreationExpandedCardId = undefined;
   state.characterCreationCardDomainId = undefined;
   state.characterCreationError = undefined;
 }
@@ -155,8 +155,11 @@ export function toggleCharacterCreationCard(state: CharacterCreationState, cardI
   state.characterCreationCardIds = state.characterCreationCardIds.includes(cardId)
     ? state.characterCreationCardIds.filter((id) => id !== cardId)
     : state.characterCreationCardIds.length < maximumCards ? [...state.characterCreationCardIds, cardId] : state.characterCreationCardIds;
-  state.characterCreationFocusedCardId = state.characterCreationCardIds.includes(cardId) ? cardId : state.characterCreationCardIds[0];
   state.characterCreationError = undefined;
+}
+
+export function toggleCharacterCreationCardDetails(state: CharacterCreationState, cardId: string): void {
+  state.characterCreationExpandedCardId = state.characterCreationExpandedCardId === cardId ? undefined : cardId;
 }
 
 function getSelectedAncestries(state: CharacterCreationState, catalog: Catalog): AncestryDefinition[] {

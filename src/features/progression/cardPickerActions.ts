@@ -12,12 +12,18 @@ export function handleProgressionCardPickerAction(target: HTMLElement, dependenc
   const domainFilter = target.closest<HTMLElement>('[data-action="filter-progression-card-domain"]');
   if (domainFilter) {
     dependencies.state.progressionCardDomainFilter = domainFilter.dataset.progressionCardDomain;
-    dependencies.state.progressionCardPickerSelectionId = undefined;
+    return true;
+  }
+  const details = target.closest<HTMLElement>('[data-action="toggle-progression-card-details"]');
+  if (details) {
+    const cardId = details.dataset.progressionCardId;
+    dependencies.state.progressionCardPickerExpandedId = dependencies.state.progressionCardPickerExpandedId === cardId ? undefined : cardId;
     return true;
   }
   const selection = target.closest<HTMLElement>('[data-action="select-progression-card"]');
   if (selection) {
-    dependencies.state.progressionCardPickerSelectionId = selection.dataset.progressionCardId;
+    const cardId = selection.dataset.progressionCardId;
+    dependencies.state.progressionCardPickerSelectionId = dependencies.state.progressionCardPickerSelectionId === cardId ? undefined : cardId;
     return true;
   }
   if (!target.closest('[data-action="confirm-progression-card-picker"]')) return false;
@@ -31,6 +37,7 @@ export function handleProgressionCardPickerAction(target: HTMLElement, dependenc
     state.progressionSwapToCardId = undefined;
     state.progressionCardPickerMode = "swap-target";
     state.progressionCardPickerSelectionId = undefined;
+    state.progressionCardPickerExpandedId = undefined;
     state.progressionCardTierFilter = "todos";
     state.progressionCardDomainFilter = undefined;
     return true;
@@ -44,6 +51,7 @@ export function handleProgressionCardPickerAction(target: HTMLElement, dependenc
   state.progressionCardPickerMode = undefined;
   state.progressionCardPickerTier = undefined;
   state.progressionCardPickerSelectionId = undefined;
+  state.progressionCardPickerExpandedId = undefined;
   state.progressionCardTierFilter = "todos";
   state.progressionCardDomainFilter = undefined;
   return true;

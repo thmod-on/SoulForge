@@ -7,6 +7,7 @@ import {
   selectCharacterCreationClass,
   selectCharacterCreationTopFeature,
   toggleCharacterCreationCard,
+  toggleCharacterCreationCardDetails,
   type CharacterCreationState
 } from "./characterCreationState";
 
@@ -76,7 +77,7 @@ describe("estado da criação de personagem", () => {
     expect(state.characterCreationBottomFeatureId).toBe(ancestries[0].bottomFeatureId);
   });
 
-  it("limita a seleção inicial a duas cartas e mantém um foco válido", () => {
+  it("limita a seleção inicial a duas cartas sem alterar os detalhes abertos", () => {
     const state = createState();
     state.characterCreationCardIds = [];
 
@@ -85,7 +86,23 @@ describe("estado da criação de personagem", () => {
     toggleCharacterCreationCard(state, "card.three");
 
     expect(state.characterCreationCardIds).toEqual(["card.one", "card.two"]);
-    expect(state.characterCreationFocusedCardId).toBe("card.one");
+    expect(state.characterCreationExpandedCardId).toBeUndefined();
+  });
+
+  it("abre detalhes sem selecionar a carta e preserva a abertura ao selecionar", () => {
+    const state = createState();
+    state.characterCreationCardIds = [];
+
+    toggleCharacterCreationCardDetails(state, "card.two");
+    expect(state.characterCreationCardIds).toEqual([]);
+    expect(state.characterCreationExpandedCardId).toBe("card.two");
+
+    toggleCharacterCreationCard(state, "card.two");
+    expect(state.characterCreationCardIds).toEqual(["card.two"]);
+    expect(state.characterCreationExpandedCardId).toBe("card.two");
+
+    toggleCharacterCreationCardDetails(state, "card.two");
+    expect(state.characterCreationExpandedCardId).toBeUndefined();
   });
 
   it("aceita a carta inicial extra quando uma Feature declarativa a concede", () => {
@@ -101,7 +118,7 @@ describe("estado da criação de personagem", () => {
 
   it("limpa escolhas de cartas ao trocar de classe", () => {
     const state = createState();
-    state.characterCreationFocusedCardId = "card.two";
+    state.characterCreationExpandedCardId = "card.two";
     state.characterCreationCardDomainId = "domain.one";
 
     selectCharacterCreationClass(state, catalog, classes[1].id);
@@ -109,7 +126,7 @@ describe("estado da criação de personagem", () => {
     expect(state.characterCreationClassId).toBe(classes[1].id);
     expect(state.characterCreationSubclassId).toBe(subclasses[1].id);
     expect(state.characterCreationCardIds).toEqual([]);
-    expect(state.characterCreationFocusedCardId).toBeUndefined();
+    expect(state.characterCreationExpandedCardId).toBeUndefined();
     expect(state.characterCreationCardDomainId).toBeUndefined();
   });
 });

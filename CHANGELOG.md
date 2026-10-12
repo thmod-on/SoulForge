@@ -4,6 +4,22 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.37.2]
+
+### Alterado
+
+- a escolha de cartas na criação e na progressão separa definitivamente
+  **seleção** de **leitura de detalhes**: cada ação ganhou controle próprio,
+  selo explícito de carta selecionada e resumo persistente da escolha;
+- o seletor da progressão usa duas colunas legíveis em desktop e uma em telas
+  estreitas. Ao abrir detalhes, a carta ocupa a linha inteira, enquanto apenas
+  a lista interna rola.
+
+### Corrigido
+
+- cartas do seletor de progressão não encolhem nem sobrepõem título, resumo,
+  ações ou detalhes em listas roláveis.
+
 ## [0.37.1]
 
 ### Corrigido

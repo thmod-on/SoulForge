@@ -23,7 +23,7 @@ import { buildMulticlassChoice, canChooseMulticlass, getEligibleMulticlassClasse
 import { addProgressionChoice, applyProgression, getAdvanceSlotsUsed, getNextSubclassAdvance, getPrimaryDomainIds, getProgression, getProgressionCardCandidates, getProgressionChoiceCount, getProgressionSwapCandidates, getProgressionSwapSourceCards, requiresTierExperience } from "./features/progression/progressionActions";
 import { nextCharacterCreationStep, previousCharacterCreationStep, type CharacterCreationStep } from "./features/character-creation/creationFlow";
 import { buildCharacterFromDraft, getCreationClasses, getCreationSubclasses, getStartingDomainCardCount } from "./features/character-creation/characterCreationRules";
-import { closeCharacterCreation, getCharacterCreationDraft, openCharacterCreation, selectCharacterCreationClass, selectCharacterCreationTopFeature, syncCharacterCreationDraftFromForm, toggleCharacterCreationAncestry, toggleCharacterCreationCard, validateCharacterCreationState } from "./features/character-creation/characterCreationState";
+import { closeCharacterCreation, getCharacterCreationDraft, openCharacterCreation, selectCharacterCreationClass, selectCharacterCreationTopFeature, syncCharacterCreationDraftFromForm, toggleCharacterCreationAncestry, toggleCharacterCreationCard, toggleCharacterCreationCardDetails, validateCharacterCreationState } from "./features/character-creation/characterCreationState";
 import { renderCharacterCreationModal as renderCharacterCreationModalView, type CharacterCreationRenderDependencies } from "./features/character-creation/renderCharacterCreation";
 import { renderCharacterCreationInPlace as renderCharacterCreationSurface } from "./features/character-creation/renderInPlace";
 import { createEmptyCreationAttributeValues, handleCreationAttributeAllocation } from "./features/character-creation/attributeAllocation";
@@ -223,7 +223,7 @@ const state: {
   progressionCardPickerMode?: "mandatory" | "advance" | "swap-source" | "swap-target";
   progressionCardTierFilter: "todos" | number; progressionCardDomainFilter?: string;
   progressionCardPickerTier?: ProgressionTierNumber;
-  progressionCardId?: string; progressionSwapFromCardId?: string; progressionSwapToCardId?: string; progressionCardPickerSelectionId?: string; progressionCardPickerScrollTop?: number;
+  progressionCardId?: string; progressionSwapFromCardId?: string; progressionSwapToCardId?: string; progressionCardPickerSelectionId?: string; progressionCardPickerExpandedId?: string; progressionCardPickerScrollTop?: number;
   progressionTierExperienceOpen: boolean;
   progressionTierExperience?: { name: string; description: string };
   progressionTierExperienceError?: string;
@@ -284,7 +284,7 @@ const state: {
   characterCreationAncestryIds: string[];
   characterCreationAncestrySearch: string;
   characterCreationCardIds: string[];
-  characterCreationCardDomainId?: string; characterCreationFocusedCardId?: string;
+  characterCreationCardDomainId?: string; characterCreationExpandedCardId?: string;
   characterCreationExperiences: Array<{ name: string; description: string }>; characterCreationDefinitionSelections: Record<string, Record<string, string>>;
   characterCreationAttributeValues: Record<Attribute["id"], number>;
   characterCreationSelectedAttributeTokenId?: string;
@@ -1342,6 +1342,8 @@ function bindEvents(): void {
       state.progressionPickerIds = [];
       state.progressionCardPickerMode = undefined;
       state.progressionCardPickerTier = undefined;
+      state.progressionCardPickerSelectionId = undefined;
+      state.progressionCardPickerExpandedId = undefined;
       state.progressionTierExperienceOpen = false;
       state.progressionTierExperienceError = undefined;
       state.progressionMulticlassOpen = false;
@@ -1417,6 +1419,8 @@ function bindEvents(): void {
       state.progressionPickerIds = [];
       state.progressionCardPickerMode = undefined;
       state.progressionCardPickerTier = undefined;
+      state.progressionCardPickerSelectionId = undefined;
+      state.progressionCardPickerExpandedId = undefined;
       state.progressionTierExperienceOpen = false;
       state.progressionTierExperienceError = undefined;
       state.progressionMulticlassOpen = false;
@@ -1653,7 +1657,16 @@ function bindEvents(): void {
       return;
     }
 
-    const characterStartingCardButton = target.closest<HTMLElement>("[data-character-starting-card-id]");
+    const characterStartingCardDetailsButton = target.closest<HTMLElement>('[data-action="toggle-character-starting-card-details"]');
+    if (characterStartingCardDetailsButton) {
+      const cardId = characterStartingCardDetailsButton.dataset.characterStartingCardId;
+      if (!cardId) return;
+      toggleCharacterCreationCardDetails(state, cardId);
+      renderCharacterCreationInPlace();
+      return;
+    }
+
+    const characterStartingCardButton = target.closest<HTMLElement>('[data-action="toggle-character-starting-card"]');
     if (characterStartingCardButton) {
       const cardId = characterStartingCardButton.dataset.characterStartingCardId;
       if (!cardId) return;
@@ -2020,6 +2033,7 @@ function bindEvents(): void {
         state.progressionCardPickerTier = Number(progressionAdvanceButton.dataset.progressionTier) as ProgressionTierNumber;
         state.progressionCardTierFilter = "todos"; state.progressionCardDomainFilter = undefined;
         state.progressionCardPickerSelectionId = undefined;
+        state.progressionCardPickerExpandedId = undefined;
         state.progressionCardPickerScrollTop = 0;
       } else if (kind === "subclass") {
         const character = state.character;
@@ -2124,6 +2138,7 @@ function bindEvents(): void {
       state.progressionCardPickerTier = undefined;
       state.progressionCardTierFilter = "todos"; state.progressionCardDomainFilter = undefined;
       state.progressionCardPickerSelectionId = state.progressionCardId;
+      state.progressionCardPickerExpandedId = undefined;
       state.progressionCardPickerScrollTop = 0;
       render({ preserveMainScroll: true });
       return;
@@ -2134,6 +2149,7 @@ function bindEvents(): void {
       state.progressionCardPickerTier = undefined;
       state.progressionCardTierFilter = "todos"; state.progressionCardDomainFilter = undefined;
       state.progressionCardPickerSelectionId = state.progressionSwapFromCardId;
+      state.progressionCardPickerExpandedId = undefined;
       state.progressionCardPickerScrollTop = 0;
       render({ preserveMainScroll: true });
       return;
@@ -2143,6 +2159,7 @@ function bindEvents(): void {
       state.progressionCardPickerMode = "swap-target";
       state.progressionCardTierFilter = "todos"; state.progressionCardDomainFilter = undefined;
       state.progressionCardPickerSelectionId = state.progressionSwapToCardId;
+      state.progressionCardPickerExpandedId = undefined;
       state.progressionCardPickerScrollTop = 0;
       render({ preserveMainScroll: true });
       return;
@@ -2187,7 +2204,7 @@ function bindEvents(): void {
       return;
     }
 
-    if (target.closest('[data-action="select-progression-card"]')) {
+    if (target.closest('[data-action="select-progression-card"], [data-action="toggle-progression-card-details"]')) {
       state.progressionCardPickerScrollTop = appRoot.querySelector<HTMLElement>(".progression-card-choice-list")?.scrollTop ?? 0;
     }
     if (target.closest('[data-action="filter-progression-card-domain"]')) {
@@ -2391,6 +2408,8 @@ function bindEvents(): void {
     if (event.key === "Escape" && state.progressionCardPickerMode) {
       state.progressionCardPickerMode = undefined;
       state.progressionCardPickerTier = undefined;
+      state.progressionCardPickerSelectionId = undefined;
+      state.progressionCardPickerExpandedId = undefined;
       render();
     }
 
@@ -2614,7 +2633,7 @@ function bindEvents(): void {
     if (target instanceof HTMLInputElement && target.matches("[data-character-subclass-id]")) {
       syncCharacterCreationDraftFromForm(state); state.characterCreationSubclassId = target.dataset.characterSubclassId;
       state.characterCreationCardIds = [];
-      state.characterCreationFocusedCardId = undefined;
+      state.characterCreationExpandedCardId = undefined;
       state.characterCreationError = undefined;
       renderCharacterCreationInPlace();
       return;

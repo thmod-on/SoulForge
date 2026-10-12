@@ -1697,13 +1697,32 @@ textarea:disabled {
   gap: 0.65rem;
 }
 
+.card-choice-selection-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem 0.65rem;
+  border-left: 3px solid rgba(195, 155, 255, 0.78);
+  padding: 0.45rem 0.65rem;
+  background: rgba(195, 155, 255, 0.08);
+}
+
+.card-choice-selection-summary > span {
+  color: var(--color-gold);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.card-choice-selection-summary > strong { color: var(--color-text); }
+
 .character-domain-card {
   position: relative;
   display: grid;
   grid-template-columns: 4.4rem minmax(0, 1fr);
-  grid-template-rows: auto auto auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
   gap: 0.25rem 0.65rem;
-  min-height: 6.4rem;
+  min-height: 10rem;
   border: 1px solid rgba(244, 234, 219, 0.13);
   color: var(--color-text);
   background: rgba(255, 255, 255, 0.025);
@@ -1746,63 +1765,104 @@ textarea:disabled {
   line-height: 1.35;
 }
 
-.character-domain-card:not(.is-focused) p,
-.progression-card-choice-list button:not(.is-focused) em {
+.character-domain-card:not(.is-expanded) p,
+.progression-card-choice:not(.is-expanded) em {
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
 }
 
-.progression-card-choice-list button:not(.is-focused) strong,
-.progression-card-choice-list button:not(.is-focused) em {
+.progression-card-choice:not(.is-expanded) strong,
+.progression-card-choice:not(.is-expanded) em {
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
 }
 
-.progression-card-choice-list button:not(.is-focused) strong {
+.progression-card-choice:not(.is-expanded) strong {
   -webkit-line-clamp: 2;
 }
 
-.progression-card-choice-list button:not(.is-focused) em {
+.progression-card-choice:not(.is-expanded) em {
   -webkit-line-clamp: 2;
 }
 
-.character-domain-card.is-focused p {
-  display: none;
+.card-choice-copy {
+  display: grid;
+  align-content: start;
+  gap: 0.2rem;
+  min-width: 0;
 }
 
-.character-domain-card-detail {
-  display: none;
-}
-
-.character-domain-card-selected,
-.progression-card-choice-list button > span:last-child > b {
-  color: var(--color-gold);
+.card-choice-selected-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 0.25rem;
+  border: 1px solid rgba(195, 155, 255, 0.72);
+  border-radius: 999px;
+  padding: 0.14rem 0.4rem;
+  color: #eadcff;
+  background: rgba(117, 74, 177, 0.28);
   font-size: 0.66rem;
-  letter-spacing: 0.05em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
-.character-domain-card.is-focused {
-  grid-column: 1 / -1;
-  grid-template-columns: minmax(7rem, 0.32fr) minmax(0, 1fr);
-  grid-template-rows: auto auto auto auto minmax(0, 1fr);
-  min-height: 12rem;
+.card-choice-selected-badge > span {
+  display: grid;
+  place-items: center;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  color: #160b24;
+  background: #d9b5ff;
+  font-size: 0.72rem;
 }
 
-.character-domain-card.is-focused .character-domain-card-art {
+.card-choice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.2rem;
+}
+
+.card-choice-actions button {
+  min-height: 2.5rem;
+  border: 1px solid rgba(244, 234, 219, 0.2);
+  padding: 0.42rem 0.62rem;
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.card-choice-select-control {
+  border-color: rgba(195, 155, 255, 0.7) !important;
+  background: rgba(117, 74, 177, 0.25);
+}
+
+.card-choice-details-control { background: rgba(255, 255, 255, 0.035); }
+.card-choice-actions button:disabled { cursor: not-allowed; opacity: 0.48; }
+
+.character-domain-card.is-expanded {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(7rem, 0.32fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
+  min-height: 14rem;
+}
+
+.character-domain-card.is-expanded .character-domain-card-art {
   grid-column: 1;
   grid-row: 1 / -1;
   min-height: 100%;
 }
 
-.character-domain-card.is-focused > :not(.character-domain-card-art) {
+.character-domain-card.is-expanded > :not(.character-domain-card-art) {
   grid-column: 2;
 }
 
-.character-domain-card.is-focused .character-domain-card-detail {
+.character-domain-card-detail {
   display: block;
   max-height: 9rem;
   overflow-y: auto;
@@ -6064,7 +6124,7 @@ button.attribute-badge:active {
 }
 
 .progression-card-picker-modal {
-  grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto auto auto minmax(0, 1fr) auto;
   width: min(42rem, calc(100vw - 2rem));
   height: min(42rem, calc(100dvh - 2rem));
   max-height: calc(100dvh - 2rem);
@@ -6074,6 +6134,8 @@ button.attribute-badge:active {
 .progression-card-choice-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: max-content;
+  align-content: start;
   gap: 0.55rem;
   min-height: 0;
   overflow-y: auto;
@@ -6108,11 +6170,17 @@ button.attribute-badge:active {
   font-size: 0.84rem;
 }
 
-.progression-card-choice-list button {
+.progression-card-choice {
   display: grid;
-  grid-template-columns: 3.8rem minmax(0, 1fr);
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  grid-template-areas:
+    "art copy"
+    "art actions"
+    "art details";
+  grid-template-rows: max-content max-content max-content;
+  align-items: start;
   gap: 0.6rem;
-  min-height: 7.6rem;
+  min-block-size: max-content;
   border: 1px solid rgba(244, 234, 219, 0.15);
   padding: 0.5rem;
   color: var(--color-text);
@@ -6120,22 +6188,22 @@ button.attribute-badge:active {
   background: rgba(255, 255, 255, 0.025);
 }
 
-.progression-card-choice-list button.is-selected {
+.progression-card-choice.is-selected {
   border-color: rgba(195, 155, 255, 0.68);
   background: rgba(195, 155, 255, 0.1);
 }
 
-.progression-card-choice-list button.is-focused {
+.progression-card-choice.is-expanded {
   grid-column: 1 / -1;
-  grid-template-columns: minmax(7rem, 0.3fr) minmax(0, 1fr);
-  min-height: 12rem;
+  border-color: rgba(195, 155, 255, 0.45);
 }
 
-.progression-card-choice-list button.is-focused .progression-card-choice-art {
+.progression-card-choice.is-expanded .progression-card-choice-art {
   min-height: 100%;
 }
 
 .progression-card-choice-art {
+  grid-area: art;
   display: grid;
   place-items: center;
   min-height: 5rem;
@@ -6149,23 +6217,25 @@ button.attribute-badge:active {
   object-fit: cover;
 }
 
-.progression-card-choice-list button > span:last-child {
+.progression-card-choice .card-choice-copy { grid-area: copy; }
+
+.progression-card-choice .card-choice-actions {
   display: grid;
-  align-content: start;
-  gap: 0.2rem;
-  min-width: 0;
+  grid-area: actions;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 0.15rem;
 }
 
-.progression-card-choice-list button.is-focused em {
-  display: none;
+.progression-card-choice .card-choice-actions button {
+  width: 100%;
 }
 
-.progression-card-choice-list strong {
+.progression-card-choice strong {
   color: var(--color-text);
 }
 
-.progression-card-choice-list small,
-.progression-card-choice-list em {
+.progression-card-choice small,
+.progression-card-choice em {
   color: var(--color-muted);
   font-size: 0.75rem;
   font-style: normal;
@@ -6173,6 +6243,7 @@ button.attribute-badge:active {
 }
 
 .progression-card-choice-details {
+  grid-area: details;
   display: block;
   max-height: 9rem;
   overflow-y: auto;
@@ -6185,6 +6256,18 @@ button.attribute-badge:active {
 .progression-card-picker-confirm {
   width: 100%;
   margin-top: 0.75rem;
+}
+
+@media (max-width: 40rem) {
+  .character-domain-card-grid,
+  .progression-card-choice-list { grid-template-columns: 1fr; }
+
+  .character-domain-card.is-expanded {
+    grid-template-columns: 5.4rem minmax(0, 1fr);
+  }
+
+  .card-choice-actions > button { flex: 1 1 9rem; }
+  .card-choice-selection-summary { align-items: start; }
 }
 
 .progression-picker-list button {
