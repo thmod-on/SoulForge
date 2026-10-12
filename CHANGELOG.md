@@ -4,6 +4,14 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.37.1]
+
+### Corrigido
+
+- Configurações agora abre também em dispositivos sem ficha salva, permitindo
+  importar Packs, personagem ou backup antes da primeira criação. As regras de
+  carga passam a informar que sua capacidade será definida ao criar a ficha.
+
 ## [0.37.0]
 
 ### Adicionado
