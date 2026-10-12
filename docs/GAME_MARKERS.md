@@ -28,7 +28,9 @@ Cada marcador tem um `id` unico dentro de sua fonte e um `label`.
 }
 ```
 
-`max` e `reset` sao opcionais. Os valores aceitos para reinicializacao sao `session`, `short-rest` e `long-rest`.
+`max` e `reset` sao opcionais. Os valores aceitos para reinicializacao sao `session`, `short-rest`, `long-rest` e `any-rest`. `short-rest` só dispara no descanso breve, `long-rest` só no longo e `any-rest` uma vez em qualquer um dos dois.
+
+Versões antigas usavam `short-rest` com o significado histórico de “qualquer descanso”. Ao abrir o SoulForge, importar um Pack ou restaurar um arquivo, esse valor legado é convertido automaticamente para `any-rest`; novas Definitions devem usar a semântica atual.
 
 Quando a quantidade do contador depende de uma regra declarada, use `quantity` no lugar de um valor numerico fixo. Ela determina tanto o maximo quanto a reposicao no evento de reinicializacao:
 

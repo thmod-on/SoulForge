@@ -4,6 +4,31 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.37.0]
+
+### Adicionado
+
+- marcadores e efeitos temporários podem encerrar ou reiniciar em **qualquer
+  descanso**; o evento é disparado uma única vez tanto no descanso breve quanto
+  no longo, e conteúdo legado é migrado automaticamente sem alterar seu estado
+  já consumido;
+- Features de Fundação agora podem conceder cartas adicionais de Domínio já na
+  criação. Preparado, da Escola do Conhecimento do Mago, passa a conceder a
+  terceira carta elegível de forma declarativa.
+
+### Alterado
+
+- a cadeia de desenvolvimento e publicação passa a usar Node 24, pnpm 12,
+  Vite 8, Vite PWA 2, Vitest 5 e TypeScript 7; o projeto declara Safari 16.4+
+  como baseline e valida pull requests antes de chegarem à `main`;
+- o GitHub Pages permanece como deploy de transição, enquanto o deploy para
+  Cloudflare e o novo CI usam Actions e runtime atualizados.
+
+### Corrigido
+
+- a seleção de valores de atributos na criação volta a associar cada pedra ao
+  valor correto e não desloca visualmente os encaixes a cada escolha.
+
 ## [0.36.2]
 
 ### Alterado

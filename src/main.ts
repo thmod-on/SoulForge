@@ -22,7 +22,7 @@ import { getTierForLevel, progressionAdvanceLabels } from "./features/progressio
 import { buildMulticlassChoice, canChooseMulticlass, getEligibleMulticlassClasses } from "./features/progression/multiclassRules";
 import { addProgressionChoice, applyProgression, getAdvanceSlotsUsed, getNextSubclassAdvance, getPrimaryDomainIds, getProgression, getProgressionCardCandidates, getProgressionChoiceCount, getProgressionSwapCandidates, getProgressionSwapSourceCards, requiresTierExperience } from "./features/progression/progressionActions";
 import { nextCharacterCreationStep, previousCharacterCreationStep, type CharacterCreationStep } from "./features/character-creation/creationFlow";
-import { buildCharacterFromDraft, getCreationClasses } from "./features/character-creation/characterCreationRules";
+import { buildCharacterFromDraft, getCreationClasses, getCreationSubclasses, getStartingDomainCardCount } from "./features/character-creation/characterCreationRules";
 import { closeCharacterCreation, getCharacterCreationDraft, openCharacterCreation, selectCharacterCreationClass, selectCharacterCreationTopFeature, syncCharacterCreationDraftFromForm, toggleCharacterCreationAncestry, toggleCharacterCreationCard, validateCharacterCreationState } from "./features/character-creation/characterCreationState";
 import { renderCharacterCreationModal as renderCharacterCreationModalView, type CharacterCreationRenderDependencies } from "./features/character-creation/renderCharacterCreation";
 import { renderCharacterCreationInPlace as renderCharacterCreationSurface } from "./features/character-creation/renderInPlace";
@@ -164,6 +164,7 @@ import {
 import type { CompendiumSpread, CompendiumView, InventoryFilter, Page, ProgressionDraftChoice, ProgressionFlowStep, ProgressionMulticlassDraft, ProgressionPicker, ProgressionTierNumber, SettingsSection } from "./app/types";
 import { editorNavigation as sideNavItems, getPageFromEventTarget, isEditorPage, playerNavigation as topNavItems } from "./app/navigation";
 import { deleteLocalCharacter as deleteStoredCharacter, deleteSyncedCharacter, deleteSyncedDefinition as deleteCustomDefinition, getSyncViewModel, handleCloudAction, initializeCloudIntegration, loadCardMarkerOverrides, loadCustomDefinitions, mountGoogleSignIn, queueLocalSnapshot, refreshCloudAppliedState, saveLocalCharacter as persistCharacter, saveSyncedCardMarkerOverride as saveCardMarkerOverride, saveSyncedCharacter, saveSyncedDefinition as saveCustomDefinition } from "./features/cloud/cloudIntegration";
+import { migrateLegacyRestTimings } from "./storage/compendiumRepository";
 import "./styles.css"; function getAppRoot(): HTMLDivElement {
   const element = document.querySelector<HTMLDivElement>("#app");
   if (!element) {
@@ -286,7 +287,7 @@ const state: {
   characterCreationCardDomainId?: string; characterCreationFocusedCardId?: string;
   characterCreationExperiences: Array<{ name: string; description: string }>; characterCreationDefinitionSelections: Record<string, Record<string, string>>;
   characterCreationAttributeValues: Record<Attribute["id"], number>;
-  characterCreationSelectedAttributeValue?: number;
+  characterCreationSelectedAttributeTokenId?: string;
   characterCreationPortraitImage?: string;
   characterCreationTopFeatureId?: string;
   characterCreationBottomFeatureId?: string;
@@ -359,7 +360,7 @@ const state: {
   characterCreationCardIds: [],
   characterCreationExperiences: [{ name: "", description: "" }, { name: "", description: "" }], characterCreationDefinitionSelections: {},
   characterCreationAttributeValues: createEmptyCreationAttributeValues(),
-  characterCreationSelectedAttributeValue: undefined,
+  characterCreationSelectedAttributeTokenId: undefined,
   characters: [],
   installedPacks: [],
   packImportOpen: false,
@@ -1269,12 +1270,12 @@ function bindEvents(): void {
     const attributeAllocation = target.closest<HTMLElement>("[data-character-attribute-allocation]");
     if (attributeAllocation) {
       const result = handleCreationAttributeAllocation({
-        values: state.characterCreationAttributeValues, selectedValue: state.characterCreationSelectedAttributeValue,
+        values: state.characterCreationAttributeValues, selectedTokenId: state.characterCreationSelectedAttributeTokenId,
         action: attributeAllocation.dataset.characterAttributeAllocation, attributeId: attributeAllocation.dataset.characterAttributeId,
-        value: Number(attributeAllocation.dataset.characterAttributeValue)
+        tokenId: attributeAllocation.dataset.characterAttributeTokenId
       });
       state.characterCreationAttributeValues = result.values;
-      state.characterCreationSelectedAttributeValue = result.selectedValue;
+      state.characterCreationSelectedAttributeTokenId = result.selectedTokenId;
       state.characterCreationError = result.error;
       renderCharacterCreationInPlace();
       return;
@@ -1660,7 +1661,8 @@ function bindEvents(): void {
     if (characterStartingCardButton) {
       const cardId = characterStartingCardButton.dataset.characterStartingCardId;
       if (!cardId) return;
-      toggleCharacterCreationCard(state, cardId);
+      const selectedSubclass = getCreationSubclasses(catalog, state.characterCreationClassId ?? "").find((subclass) => subclass.id === state.characterCreationSubclassId);
+      toggleCharacterCreationCard(state, cardId, getStartingDomainCardCount(selectedSubclass, catalog));
       renderCharacterCreationInPlace();
       return;
     }
@@ -2615,6 +2617,8 @@ function bindEvents(): void {
     }
     if (target instanceof HTMLInputElement && target.matches("[data-character-subclass-id]")) {
       syncCharacterCreationDraftFromForm(state); state.characterCreationSubclassId = target.dataset.characterSubclassId;
+      state.characterCreationCardIds = [];
+      state.characterCreationFocusedCardId = undefined;
       state.characterCreationError = undefined;
       renderCharacterCreationInPlace();
       return;
@@ -2626,6 +2630,7 @@ async function boot(): Promise<void> {
   render();
   bindEvents();
   bindInventoryDragEvents(getInventoryDragDependencies());
+  await migrateLegacyRestTimings();
   await refreshCatalog();
   await Promise.all([deleteStoredCharacter("character.kael-ironheart"), deleteStoredCharacter("character.kael-ironheart-ii")]);
   await purgeLegacyDemoContent();

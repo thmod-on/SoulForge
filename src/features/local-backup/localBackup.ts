@@ -2,6 +2,7 @@ import type { Character, Definition, PackBundle, PackManifest } from "../../doma
 import { parseCharacterImport } from "../character-transfer/characterTransfer";
 import { validatePackBundle } from "../packs/packValidation";
 import type { CardMarkerOverride } from "../../storage/compendiumRepository";
+import { normalizeCardMarkerOverride } from "../../domain/restTimingMigration";
 import { loadLocalDataSnapshot, mergeLocalContent, purgeLegacyDemoContent, replaceLocalDataSnapshot, type LocalDataSnapshot } from "../../storage/localDataRepository";
 
 export const backupFormat = "soulforge-backup-v1" as const;
@@ -369,7 +370,7 @@ function validateLocalDefinitions(entries: unknown[]): Definition[] {
 function validateOverrides(entries: unknown[]): CardMarkerOverride[] {
   if (entries.some((entry) => !isValidOverride(entry))) throw new Error("O arquivo contém complementos locais inválidos.");
   assertUniqueIds(entries as Array<{ id: string }>, "id", "O arquivo possui complementos com o mesmo identificador.");
-  return structuredClone(entries) as CardMarkerOverride[];
+  return (structuredClone(entries) as CardMarkerOverride[]).map(normalizeCardMarkerOverride);
 }
 
 function isValidOverride(value: unknown): value is CardMarkerOverride {

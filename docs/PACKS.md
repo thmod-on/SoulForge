@@ -83,6 +83,8 @@ continua pertencendo ao personagem. O Pack declara somente a regra reutilizável
 
 Features com custo, duração e modificadores temporários devem declarar `activation` de forma estruturada. Consulte [FEATURE_EFFECTS.md](FEATURE_EFFECTS.md) para o contrato, os custos por recurso ou marcador e as condições de término suportadas.
 
+Marcadores e efeitos podem reagir a `session`, `short-rest`, `long-rest` ou `any-rest`. Durante a importação, `short-rest` declarado por arquivos legados é normalizado para `any-rest`, pois antes representava qualquer descanso; em Packs novos, `short-rest` significa somente descanso breve.
+
 ### Itens oficiais
 
 Um pack de itens pode declarar, além dos campos comuns, `weaponProfile` e `armorProfile`. Esses metadados registram os dados oficiais de arma e armadura sem depender da interpretação de descrições livres.

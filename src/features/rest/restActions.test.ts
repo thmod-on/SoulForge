@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createCatalog } from "../../domain/catalog";
 import { demoCharacter } from "../../domain/demoCharacter";
 import type { FeatureDefinition } from "../../domain/types";
-import { handleRestAction, type RestActionState } from "./restActions";
+import { getRestResetEvents, handleRestAction, type RestActionState } from "./restActions";
 
 const trance: FeatureDefinition = {
   id: "feature.test.elf.bottom",
@@ -27,6 +27,11 @@ function actionTarget(action: string): HTMLElement {
 }
 
 describe("rest actions", () => {
+  it("dispara qualquer descanso uma única vez antes do evento específico", () => {
+    expect(getRestResetEvents("short")).toEqual(["any-rest", "short-rest"]);
+    expect(getRestResetEvents("long")).toEqual(["any-rest", "long-rest"]);
+  });
+
   it("permite o terceiro movimento concedido pela Feature e bloqueia o quarto", () => {
     const character = { ...demoCharacter, identity: { ...demoCharacter.identity, ancestryFeatureIds: { bottom: trance.id } } };
     const state: RestActionState = { character, restDialogKind: "short", restChoices: [{ id: "prepare" }, { id: "clear-stress", roll: 2 }] };

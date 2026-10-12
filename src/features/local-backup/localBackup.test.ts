@@ -31,6 +31,17 @@ describe("backup e conteúdo local", () => {
     expect(result.localDefinitions).toEqual([localDomain]);
   });
 
+  it("normaliza marcadores e efeitos legados em backup e conteúdo compartilhável", () => {
+    const legacyFeature = { id: "feature.local.rest", type: "feature" as const, packId: "local", name: "Descanso", summary: "Teste.", sourceType: "class" as const, sourceId: "class.local", tier: "class" as const, activation: { label: "Ativar", costs: [], endsOn: ["short-rest", "long-rest"], modifiers: [] }, gameMarkers: [{ id: "uses", kind: "counter" as const, label: "Usos", initialValue: 1, reset: "short-rest" as const }] };
+    const legacyOverride = { id: "card-marker:card.external", kind: "card-marker" as const, definitionId: "card.external", gameMarkers: [{ id: "uses", kind: "counter" as const, label: "Usos", initialValue: 1, reset: "short-rest" as const }] };
+    const content = parseContentBundle(JSON.stringify({ format: contentFormat, exportedAt: "2026-10-12T12:00:00.000Z", appVersion: "0.36.2", definitions: [legacyFeature], overrides: [legacyOverride] }));
+    const backup = parseBackupBundle(JSON.stringify({ format: backupFormat, exportedAt: "2026-10-12T12:00:00.000Z", appVersion: "0.36.2", characters: [], packs: [], localDefinitions: [legacyFeature], overrides: [legacyOverride] }));
+
+    expect(content.definitions[0]).toMatchObject({ activation: { endsOn: ["any-rest"] }, gameMarkers: [{ reset: "any-rest" }] });
+    expect(content.overrides[0]?.gameMarkers).toMatchObject([{ reset: "any-rest" }]);
+    expect(backup.localDefinitions[0]).toMatchObject({ activation: { endsOn: ["any-rest"] } });
+  });
+
   it("rejeita conteúdo compartilhável que tente distribuir Pack externo", () => {
     const serialized = JSON.stringify({ format: contentFormat, exportedAt: "2026-09-29T12:00:00.000Z", appVersion: "0.35.0", definitions: [{ ...localDomain, packId: "pack.private" }], overrides: [] });
 

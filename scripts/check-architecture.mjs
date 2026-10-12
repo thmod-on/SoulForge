@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import ts from "typescript";
 import { fileURLToPath } from "node:url";
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -11,16 +10,44 @@ const baseline = JSON.parse(fs.readFileSync(path.join(scriptDirectory, "architec
 const violations = [];
 
 const mainSource = fs.readFileSync(mainPath, "utf8");
-const sourceFile = ts.createSourceFile(mainPath, mainSource, ts.ScriptTarget.Latest, true);
-const renderFunctions = [];
-let templateLiterals = 0;
+// O compilador nativo do TypeScript 7 não expõe a antiga Compiler API no
+// pacote principal. Este verificador precisa somente de guardas estruturais
+// simples, portanto usa análise lexical independente da implementação do TS.
+const renderFunctions = [...mainSource.matchAll(/\bfunction\s+(render\w*)\s*\(/g)].map((match) => match[1]);
+const templateLiterals = countTemplateLiterals(mainSource);
 
-function visitMain(node) {
-  if (ts.isFunctionDeclaration(node) && node.name?.text.startsWith("render")) renderFunctions.push(node.name.text);
-  if (ts.isTemplateExpression(node) || ts.isNoSubstitutionTemplateLiteral(node)) templateLiterals += 1;
-  ts.forEachChild(node, visitMain);
+function countTemplateLiterals(source) {
+  let count = 0;
+  let quote = null;
+  let inLineComment = false;
+  let inBlockComment = false;
+
+  for (let index = 0; index < source.length; index += 1) {
+    const character = source[index];
+    const next = source[index + 1];
+    if (inLineComment) {
+      if (character === "\n") inLineComment = false;
+      continue;
+    }
+    if (inBlockComment) {
+      if (character === "*" && next === "/") { inBlockComment = false; index += 1; }
+      continue;
+    }
+    if (!quote && character === "/" && next === "/") { inLineComment = true; index += 1; continue; }
+    if (!quote && character === "/" && next === "*") { inBlockComment = true; index += 1; continue; }
+    if (quote) {
+      if (character === "\\") { index += 1; continue; }
+      if (character === quote) quote = null;
+      continue;
+    }
+    if (character === "'" || character === '"') { quote = character; continue; }
+    if (character === "`") {
+      count += 1;
+      quote = "`";
+    }
+  }
+  return count;
 }
-visitMain(sourceFile);
 
 const lineCount = mainSource.split(/\r?\n/).length - 1;
 if (lineCount > baseline.main.maxLines) violations.push(`src/main.ts cresceu para ${lineCount} linhas (limite legado: ${baseline.main.maxLines}).`);
@@ -40,15 +67,10 @@ function listTypeScriptFiles(directory) {
 
 for (const file of listTypeScriptFiles(sourceDirectory).filter((file) => path.normalize(file) !== path.normalize(mainPath))) {
   const content = fs.readFileSync(file, "utf8");
-  const parsed = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true);
-  const checkImports = (node) => {
-    if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier) && node.moduleSpecifier.text.startsWith(".")) {
-      const importedPath = path.resolve(path.dirname(file), `${node.moduleSpecifier.text}.ts`);
-      if (path.normalize(importedPath) === path.normalize(mainPath)) violations.push(`${path.relative(root, file)} não pode importar src/main.ts.`);
-    }
-    ts.forEachChild(node, checkImports);
-  };
-  checkImports(parsed);
+  for (const match of content.matchAll(/\bimport(?:\s+type)?\s+(?:[\s\S]*?\s+from\s+)?["'](\.[^"']+)["']/g)) {
+    const importedPath = path.resolve(path.dirname(file), `${match[1]}.ts`);
+    if (path.normalize(importedPath) === path.normalize(mainPath)) violations.push(`${path.relative(root, file)} não pode importar src/main.ts.`);
+  }
 }
 
 if (violations.length) {

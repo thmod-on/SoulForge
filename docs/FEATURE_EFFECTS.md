@@ -47,7 +47,8 @@ Condições suportadas de término:
 
 - `scene-end`: o jogador encerra manualmente o efeito ao fim da cena;
 - `severe-damage`: o motor de efeitos já sabe remover o estado, mas o gatilho será conectado quando existir um fluxo de registro de dano com severidade explícita. Reduzir PV manualmente não encerra efeitos, pois isso não informa a severidade do dano.
-- `short-rest` e `long-rest`: o efeito é encerrado automaticamente ao concluir o descanso correspondente;
+- `short-rest` e `long-rest`: o efeito é encerrado automaticamente ao concluir somente o descanso breve ou longo correspondente;
+- `any-rest`: o efeito é encerrado automaticamente uma única vez ao concluir qualquer descanso;
 - `next-successful-attack`: a ficha mantém o lembrete até o jogador encerrar o efeito, pois ainda não registra resultados de ataques.
 
 ## Interface

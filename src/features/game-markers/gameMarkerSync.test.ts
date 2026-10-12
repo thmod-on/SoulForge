@@ -28,6 +28,18 @@ describe("marcadores de jogo", () => {
     expect(applyGameMarkerEvent(synchronized, catalog, "long-rest").gameMarkers?.[0]).toMatchObject({ value: 0, max: 6 });
   });
 
+  it("distingue descanso breve, longo e qualquer descanso", () => {
+    const cards: CardDefinition[] = ["short-rest", "long-rest", "any-rest"].map((reset) => ({ id: `card.test.${reset}`, type: "card", packId: "test", name: reset, summary: "", domainId: "domain.test", tier: 1, cardType: "acao", effect: "", gameMarkers: [{ id: "uses", kind: "counter", label: "Usos", initialValue: 2, max: 2, reset: reset as "short-rest" | "long-rest" | "any-rest" }] }));
+    const catalog = createCatalog([], cards);
+    const character = synchronizeGameMarkers({ ...demoCharacter, deck: { activeCardIds: cards.map((card) => card.id), learnedCardIds: cards.map((card) => card.id) }, gameMarkers: undefined }, catalog);
+    const spent = { ...character, gameMarkers: character.gameMarkers?.map((marker) => marker.kind === "counter" ? { ...marker, value: 0 } : marker) };
+
+    const afterShort = applyGameMarkerEvent(spent, catalog, "short-rest");
+    expect(applyGameMarkerEvent(afterShort, catalog, "any-rest").gameMarkers?.map((marker) => marker.kind === "counter" ? marker.value : -1)).toEqual([2, 0, 2]);
+    const afterLong = applyGameMarkerEvent(spent, catalog, "long-rest");
+    expect(applyGameMarkerEvent(afterLong, catalog, "any-rest").gameMarkers?.map((marker) => marker.kind === "counter" ? marker.value : -1)).toEqual([0, 2, 2]);
+  });
+
   it("cria contador para carta ativa e preserva estado quando a carta fica inativa", () => {
     const card: CardDefinition = { id: "card.test.charges", type: "card", packId: "test", name: "Carta de cargas", summary: "", domainId: "domain.test", tier: 1, cardType: "acao", effect: "", gameMarkers: [{ id: "charges", kind: "counter", label: "Cargas", initialValue: 3, max: 3, reset: "long-rest" }] };
     const catalog = createCatalog([], [card]);

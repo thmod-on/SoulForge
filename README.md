@@ -2,7 +2,7 @@
 
 SoulForge é uma PWA *offline-first* para acompanhar personagens de Daggerheart sem depender de servidor durante a mesa.
 
-Versão atual: `0.36.2`.
+Versão atual: `0.37.0`.
 
 ## Recursos principais
 
@@ -45,8 +45,8 @@ para exportação dos dados locais armazenados na origem anterior.
 
 Pré-requisitos:
 
-- Node.js 22;
-- pnpm 11.9 ou compatível;
+- Node.js 24 LTS (`24.19.0` no arquivo `.node-version`);
+- pnpm 12.11.2;
 - Git.
 
 Para preparar artes, instale também as dependências opcionais com
@@ -67,6 +67,9 @@ O Vite exibirá o endereço local no terminal; normalmente é `http://localhost:
 pnpm run check
 pnpm run build
 ```
+
+O CI também executa essa validação em pull requests e antes dos deploys para
+Cloudflare e GitHub Pages.
 
 ## Estrutura principal
 

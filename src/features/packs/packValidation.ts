@@ -1,4 +1,5 @@
 import type { Definition, PackBundle, PackManifest } from "../../domain/types";
+import { normalizeDefinitionRestTimings } from "../../domain/restTimingMigration";
 
 /** Valida a estrutura mínima de um pack antes de qualquer escrita no IndexedDB. */
 export function validatePackBundle(value: unknown): PackBundle {
@@ -25,6 +26,7 @@ export function validatePackBundle(value: unknown): PackBundle {
     if (!isGameMarkerListValid(feature.gameMarkers)) throw new Error(`A Feature “${feature.name}” possui marcadores de jogo inválidos.`);
     if (!isSheetModifierListValid(feature.sheetModifiers)) throw new Error(`A ${feature.type === "card" ? "carta" : "Feature"} “${feature.name}” possui modificadores de ficha inválidos.`);
     if (feature.type === "feature" && !isFeatureActivationValid(feature.activation)) throw new Error(`A Feature “${feature.name}” possui metadados de ativação inválidos.`);
+    if (feature.type === "feature" && feature.startingDomainCardBonus !== undefined && (!Number.isInteger(feature.startingDomainCardBonus) || feature.startingDomainCardBonus < 0)) throw new Error(`A Feature “${feature.name}” possui bônus inicial de cartas inválido.`);
     if (feature.type === "feature" && !isFeatureCharacterFieldsValid(feature.characterFields)) throw new Error(`A Feature “${feature.name}” possui campos de personagem inválidos.`);
   }
 
@@ -35,7 +37,7 @@ export function validatePackBundle(value: unknown): PackBundle {
       if (!marker || typeof marker !== "object") return false;
       const candidate = marker as { id?: unknown; kind?: unknown; label?: unknown; die?: unknown; quantity?: unknown; initialValue?: unknown; max?: unknown; reset?: unknown; eventChanges?: unknown; gainTrigger?: unknown; resetRecovery?: unknown };
       if (typeof candidate.id !== "string" || !candidate.id || typeof candidate.label !== "string" || !candidate.label) return false;
-      if (candidate.reset !== undefined && !["session", "short-rest", "long-rest"].includes(String(candidate.reset))) return false;
+      if (candidate.reset !== undefined && !["session", "short-rest", "long-rest", "any-rest"].includes(String(candidate.reset))) return false;
       if (candidate.kind === "counter") {
         if (candidate.initialValue !== undefined && (!Number.isInteger(candidate.initialValue) || Number(candidate.initialValue) < 0)) return false;
         if (candidate.max !== undefined && (!Number.isInteger(candidate.max) || Number(candidate.max) < 0)) return false;
@@ -83,7 +85,7 @@ export function validatePackBundle(value: unknown): PackBundle {
       throw new Error(`A condição “${condition.name}” precisa declarar categoria, efeito e encerramento válidos.`);
     }
   }
-  return { format: "soulforge-pack-v1", manifest: manifest as PackManifest, definitions };
+  return { format: "soulforge-pack-v1", manifest: manifest as PackManifest, definitions: definitions.map(normalizeDefinitionRestTimings) };
 
   function isDefinitionShapeValid(definition: unknown, candidateManifest: Partial<PackManifest>): definition is { id: string; name: string; summary: string; packId: string; type: string } {
     if (!definition || typeof definition !== "object") return false;
@@ -134,7 +136,7 @@ export function validatePackBundle(value: unknown): PackBundle {
       if (entry.kind === "resource") return typeof entry.resourceId === "string" && Boolean(entry.resourceId);
       return entry.kind === "game-marker" && typeof entry.sourceDefinitionId === "string" && Boolean(entry.sourceDefinitionId) && typeof entry.markerId === "string" && Boolean(entry.markerId);
     })) return false;
-    if (!candidate.endsOn.every((condition) => ["scene-end", "severe-damage", "short-rest", "long-rest", "next-successful-attack"].includes(String(condition)))) return false;
+    if (!candidate.endsOn.every((condition) => ["scene-end", "severe-damage", "short-rest", "long-rest", "any-rest", "next-successful-attack"].includes(String(condition)))) return false;
     if (!candidate.modifiers.every((modifier) => {
       if (!modifier || typeof modifier !== "object") return false;
       const entry = modifier as { kind?: unknown; fields?: unknown; amount?: unknown };
@@ -187,7 +189,7 @@ export function validatePackBundle(value: unknown): PackBundle {
     return value.every((change) => {
       if (!change || typeof change !== "object") return false;
       const entry = change as { event?: unknown; operation?: unknown; amount?: unknown; minimum?: unknown; maximum?: unknown };
-      if (!["session", "short-rest", "long-rest"].includes(String(entry.event)) || entry.event === reset) return false;
+      if (!["session", "short-rest", "long-rest", "any-rest"].includes(String(entry.event)) || entry.event === reset) return false;
       if (!["increment", "decrement"].includes(String(entry.operation)) || !Number.isInteger(entry.amount) || Number(entry.amount) < 1) return false;
       if (entry.minimum !== undefined && (!Number.isInteger(entry.minimum) || Number(entry.minimum) < 0)) return false;
       if (entry.maximum !== undefined && (!Number.isInteger(entry.maximum) || Number(entry.maximum) < 0)) return false;

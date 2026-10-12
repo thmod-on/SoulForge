@@ -22,7 +22,7 @@ export type CharacterCreationState = {
   characterCreationExperiences: Array<{ name: string; description: string }>;
   characterCreationDefinitionSelections: Record<string, Record<string, string>>;
   characterCreationAttributeValues: Record<Attribute["id"], number>;
-  characterCreationSelectedAttributeValue?: number;
+  characterCreationSelectedAttributeTokenId?: string;
   characterCreationPortraitImage?: string;
   characterCreationTopFeatureId?: string;
   characterCreationBottomFeatureId?: string;
@@ -47,7 +47,7 @@ export function openCharacterCreation(state: CharacterCreationState, catalog: Ca
   state.characterCreationExperiences = [{ name: "", description: "" }, { name: "", description: "" }];
   state.characterCreationDefinitionSelections = {};
   state.characterCreationAttributeValues = createEmptyCreationAttributeValues();
-  state.characterCreationSelectedAttributeValue = undefined;
+  state.characterCreationSelectedAttributeTokenId = undefined;
   state.characterCreationPortraitImage = undefined;
   state.characterCreationCardDomainId = undefined;
   state.characterCreationTopFeatureId = undefined;
@@ -64,7 +64,7 @@ export function closeCharacterCreation(state: CharacterCreationState): void {
   state.characterCreationFocusedCardId = undefined;
   state.characterCreationDefinitionSelections = {};
   state.characterCreationAttributeValues = createEmptyCreationAttributeValues();
-  state.characterCreationSelectedAttributeValue = undefined;
+  state.characterCreationSelectedAttributeTokenId = undefined;
   state.characterCreationPortraitImage = undefined;
   state.characterCreationCardDomainId = undefined;
   state.characterCreationTopFeatureId = undefined;
@@ -151,10 +151,10 @@ export function selectCharacterCreationClass(state: CharacterCreationState, cata
   state.characterCreationError = undefined;
 }
 
-export function toggleCharacterCreationCard(state: CharacterCreationState, cardId: string): void {
+export function toggleCharacterCreationCard(state: CharacterCreationState, cardId: string, maximumCards = 2): void {
   state.characterCreationCardIds = state.characterCreationCardIds.includes(cardId)
     ? state.characterCreationCardIds.filter((id) => id !== cardId)
-    : state.characterCreationCardIds.length < 2 ? [...state.characterCreationCardIds, cardId] : state.characterCreationCardIds;
+    : state.characterCreationCardIds.length < maximumCards ? [...state.characterCreationCardIds, cardId] : state.characterCreationCardIds;
   state.characterCreationFocusedCardId = state.characterCreationCardIds.includes(cardId) ? cardId : state.characterCreationCardIds[0];
   state.characterCreationError = undefined;
 }

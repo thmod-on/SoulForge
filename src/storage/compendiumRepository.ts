@@ -1,4 +1,5 @@
 import type { Definition, GameMarkerDefinition } from "../domain/types";
+import { normalizeCardMarkerOverride, normalizeDefinitionRestTimings } from "../domain/restTimingMigration";
 import { ensureSyncStores } from "./syncRepository";
 
 const databaseName = "soulforge";
@@ -106,6 +107,36 @@ export async function deleteCustomDefinition(definitionId: string): Promise<void
     transaction.objectStore(storeName).delete(definitionId);
     transaction.oncomplete = () => resolve();
     transaction.onerror = () => reject(transaction.error);
+  });
+  database.close();
+}
+
+/** Persiste a semântica atual de descanso para conteúdo local e Packs já instalados. */
+export async function migrateLegacyRestTimings(): Promise<void> {
+  const database = await openDatabase();
+  await new Promise<void>((resolve, reject) => {
+    const transaction = database.transaction([storeName, overrideStoreName], "readwrite");
+    const definitions = transaction.objectStore(storeName);
+    const overrides = transaction.objectStore(overrideStoreName);
+    const definitionsRequest = definitions.getAll();
+    definitionsRequest.onerror = () => reject(definitionsRequest.error);
+    definitionsRequest.onsuccess = () => {
+      for (const definition of definitionsRequest.result as Definition[]) {
+        const normalized = normalizeDefinitionRestTimings(definition);
+        if (normalized !== definition) definitions.put(normalized);
+      }
+    };
+    const overridesRequest = overrides.getAll();
+    overridesRequest.onerror = () => reject(overridesRequest.error);
+    overridesRequest.onsuccess = () => {
+      for (const override of overridesRequest.result as CardMarkerOverride[]) {
+        const normalized = normalizeCardMarkerOverride(override);
+        if (normalized !== override) overrides.put(normalized);
+      }
+    };
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
   });
   database.close();
 }

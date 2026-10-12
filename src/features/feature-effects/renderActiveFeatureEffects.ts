@@ -31,6 +31,7 @@ function describeEndConditions(effect: ActiveFeatureEffect): string {
     "severe-damage": "dano severo em você (encerre manualmente)",
     "short-rest": "descanso breve",
     "long-rest": "descanso longo",
+    "any-rest": "qualquer descanso",
     "next-successful-attack": "próximo ataque bem-sucedido (encerre manualmente)"
   })[condition]).join(" ou ");
 }

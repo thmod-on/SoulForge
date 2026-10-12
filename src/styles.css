@@ -1516,8 +1516,7 @@ textarea:disabled {
 }
 
 .character-attribute-card:hover,
-.character-attribute-card:focus-visible,
-.character-attribute-card.is-targetable { transform: translateY(-0.08rem); }
+.character-attribute-card:focus-visible { transform: translateY(-0.08rem); }
 
 .character-attribute-card:hover .character-attribute-slot::before,
 .character-attribute-card:focus-visible .character-attribute-slot::before,

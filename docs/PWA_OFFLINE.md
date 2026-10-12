@@ -4,6 +4,8 @@
 
 O SoulForge deve permanecer utilizável durante sessões sem conexão com a internet. A PWA instala uma cópia do aplicativo no navegador ou na tela inicial do dispositivo e mantém seus arquivos de interface em cache.
 
+O build atual usa Vite 8 e suporta navegadores no baseline Safari 16.4 ou mais recente. Em iPads, mantenha o sistema atualizado antes de instalar ou validar uma nova versão.
+
 ## Instalação
 
 ### iPadOS e iOS
@@ -75,3 +77,10 @@ Antes de uma release, validar pelo menos:
 - atualização para uma versão publicada;
 - preservação dos dados locais após atualização normal.
 - fila offline, conflito entre duas revisões e isolamento entre duas contas.
+
+Para uma atualização de toolchain ou Service Worker, complementar a lista com:
+
+- instalar a PWA em um dispositivo sem instalação anterior;
+- atualizar uma instalação existente e confirmar que o novo Service Worker é ativado;
+- reabrir sem rede e conferir uma ficha, Compendium, backup e restauração;
+- confirmar que uma edição offline volta para a fila e sincroniza ao recuperar a conexão.

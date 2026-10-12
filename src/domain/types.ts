@@ -12,7 +12,7 @@ export type ResourceTrack = {
   tone: "hope" | "stress" | "hp" | "shadow" | "focus";
 };
 
-export type GameMarkerReset = "session" | "short-rest" | "long-rest";
+export type GameMarkerReset = "session" | "short-rest" | "long-rest" | "any-rest";
 
 export type GameMarkerEventChange = {
   event: GameMarkerReset;
@@ -177,7 +177,7 @@ export type FeatureActivationModifier =
   | { kind: "defense"; fields: Array<keyof Defense>; amount: number }
   | { kind: "defense-per-tier"; fields: Array<"minor" | "major"> };
 
-export type FeatureEffectEndCondition = "scene-end" | "severe-damage" | "short-rest" | "long-rest" | "next-successful-attack";
+export type FeatureEffectEndCondition = "scene-end" | "severe-damage" | "short-rest" | "long-rest" | "any-rest" | "next-successful-attack";
 
 /**
  * Metadados de uma Feature ativável. A Definition descreve a regra; a ficha
@@ -460,6 +460,8 @@ export type FeatureDefinition = BaseDefinition & {
   gameMarkers?: GameMarkerDefinition[];
   sheetModifiers?: CharacterSheetModifier[];
   activation?: FeatureActivationDefinition;
+  /** Cartas extras de Domínio exigidas por esta Feature durante a criação. */
+  startingDomainCardBonus?: number;
   /** Campos persistentes pedidos por esta Feature, sem criar propriedades específicas por classe. */
   characterFields?: FeatureCharacterFieldDefinition[];
 };

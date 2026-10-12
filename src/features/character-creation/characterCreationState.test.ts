@@ -88,6 +88,17 @@ describe("estado da criação de personagem", () => {
     expect(state.characterCreationFocusedCardId).toBe("card.one");
   });
 
+  it("aceita a carta inicial extra quando uma Feature declarativa a concede", () => {
+    const state = createState();
+    state.characterCreationCardIds = [];
+
+    toggleCharacterCreationCard(state, "card.one", 3);
+    toggleCharacterCreationCard(state, "card.two", 3);
+    toggleCharacterCreationCard(state, "card.three", 3);
+
+    expect(state.characterCreationCardIds).toEqual(["card.one", "card.two", "card.three"]);
+  });
+
   it("limpa escolhas de cartas ao trocar de classe", () => {
     const state = createState();
     state.characterCreationFocusedCardId = "card.two";

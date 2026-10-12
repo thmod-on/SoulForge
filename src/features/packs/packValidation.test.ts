@@ -18,9 +18,26 @@ describe("validação de Packs", () => {
     expect(validatePackBundle({ format: "soulforge-pack-v1", manifest, definitions: [feature] }).definitions).toHaveLength(1);
   });
 
+  it("normaliza o descanso legado para qualquer descanso", () => {
+    const legacy = {
+      ...feature,
+      activation: { ...feature.activation, endsOn: ["short-rest", "long-rest"] },
+      gameMarkers: [{ id: "uses", kind: "counter", label: "Usos", initialValue: 2, reset: "short-rest", eventChanges: [{ event: "long-rest", operation: "decrement", amount: 1 }] }]
+    };
+    expect(validatePackBundle({ format: "soulforge-pack-v1", manifest, definitions: [legacy] }).definitions[0]).toMatchObject({
+      gameMarkers: [{ reset: "any-rest", eventChanges: [{ event: "long-rest" }] }],
+      activation: { endsOn: ["any-rest"] }
+    });
+  });
+
   it("aceita campos genéricos de personagem em uma Feature", () => {
     const configurable = { ...feature, characterFields: [{ id: "sphere", kind: "text", label: "Esfera", required: true, suggestions: ["Caos", "Justiça"], maxLength: 80 }, { id: "element", kind: "select", label: "Elemento", options: [{ value: "fire", label: "Fogo" }] }] };
     expect(validatePackBundle({ format: "soulforge-pack-v1", manifest, definitions: [configurable] }).definitions).toHaveLength(1);
+  });
+
+  it("aceita apenas bônus inteiro não negativo para cartas iniciais", () => {
+    expect(validatePackBundle({ format: "soulforge-pack-v1", manifest, definitions: [{ ...feature, startingDomainCardBonus: 1 }] }).definitions).toHaveLength(1);
+    expect(() => validatePackBundle({ format: "soulforge-pack-v1", manifest, definitions: [{ ...feature, startingDomainCardBonus: -1 }] })).toThrow("bônus inicial de cartas inválido");
   });
 
   it("rejeita opções repetidas em campos de personagem", () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createCatalog } from "../../domain/catalog";
 import type { AncestryDefinition, CardDefinition, ClassDefinition, CommunityDefinition, FeatureDefinition, SubclassDefinition } from "../../domain/types";
-import { buildCharacterFromDraft } from "./characterCreationRules";
+import { buildCharacterFromDraft, getStartingDomainCardCount } from "./characterCreationRules";
 
 const packId = "pack.test";
 const ancestry: AncestryDefinition = { id: "ancestry.test", type: "ancestry", packId, name: "Humano", summary: "", topFeatureId: "feature.ancestry.top", bottomFeatureId: "feature.ancestry.bottom" };
@@ -52,5 +52,22 @@ describe("criação de personagem", () => {
     expect(imported.skills).toContainEqual(expect.objectContaining({ id: communityFeature.id, source: "community" }));
     expect(local.identity).toMatchObject({ primaryCommunityId: localCommunity.id, community: "Vigília de Tristelo" });
     expect(local.skills).toContainEqual(expect.objectContaining({ id: localFeature.id, source: "community" }));
+  });
+
+  it("concede uma terceira carta inicial somente quando a Feature a declara", () => {
+    const preparedFeature: FeatureDefinition = { id: "feature.subclass.prepared", type: "feature", packId, name: "Preparado", summary: "Carta adicional.", sourceType: "subclass", sourceId: "subclass.knowledge", tier: "foundation", startingDomainCardBonus: 1 };
+    const knowledgeSubclass: SubclassDefinition = { ...subclass, id: "subclass.knowledge", foundationFeatureIds: [preparedFeature.id] };
+    const extraCard: CardDefinition = { id: "card.three", type: "card", packId, name: "three", summary: "", domainId: "domain.one", tier: 1, cardType: "acao", effect: "" };
+    const knowledgeCatalog = createCatalog([], [ancestry, topFeature, bottomFeature, community, communityFeature, characterClass, knowledgeSubclass, hopeFeature, classChoiceFeature, preparedFeature, ...cards, extraCard]);
+    const draft = {
+      name: "Maga preparada", community: "", communityId: community.id, classId: characterClass.id, subclassId: knowledgeSubclass.id,
+      ancestryIds: [ancestry.id], topFeatureId: topFeature.id, bottomFeatureId: bottomFeature.id,
+      cardIds: [...cards.map((card) => card.id), extraCard.id], attributeValues: { dex: 2, for: 1, cha: 1, wil: 0, con: 0, int: -1 }, experiences: [{ name: "Exploradora", description: "" }, { name: "Diplomata", description: "" }], definitionSelections: { [classChoiceFeature.id]: { name: "A Sentinela" } }
+    };
+
+    expect(getStartingDomainCardCount(subclass, catalog)).toBe(2);
+    expect(getStartingDomainCardCount(knowledgeSubclass, knowledgeCatalog)).toBe(3);
+    expect(buildCharacterFromDraft(draft, knowledgeCatalog)).not.toBeInstanceOf(Error);
+    expect(buildCharacterFromDraft({ ...draft, cardIds: cards.map((card) => card.id) }, knowledgeCatalog)).toBeInstanceOf(Error);
   });
 });

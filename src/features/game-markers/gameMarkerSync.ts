@@ -1,7 +1,7 @@
 import type { Catalog } from "../../domain/catalog";
 import { getSpellcastAttributeId } from "../../content/spellcastAttributes";
 import { getCharacterCommunity, getCharacterCommunityFeature } from "../communities/communityRules";
-import type { CardDefinition, Character, CharacterGameMarkerState, ClassDefinition, FeatureDefinition, GameMarkerDefinition, GameMarkerQuantity, TransformationDefinition } from "../../domain/types";
+import type { CardDefinition, Character, CharacterGameMarkerState, ClassDefinition, FeatureDefinition, GameMarkerDefinition, GameMarkerQuantity, GameMarkerReset, TransformationDefinition } from "../../domain/types";
 import { isCardUnavailable } from "../player/cardAvailability";
 
 export type ActiveGameMarker = { key: string; sourceDefinitionId: string; sourceLabel: string; definition: GameMarkerDefinition; state: CharacterGameMarkerState };
@@ -32,7 +32,7 @@ export function getActiveGameMarkers(character: Character, catalog: Catalog): Ac
  * Aplica resets e alterações incrementais declaradas para um evento. Definitions
  * antigas, que possuem apenas `reset`, mantêm exatamente o comportamento atual.
  */
-export function applyGameMarkerEvent(character: Character, catalog: Catalog, reset: "session" | "short-rest" | "long-rest"): Character {
+export function applyGameMarkerEvent(character: Character, catalog: Catalog, reset: GameMarkerReset): Character {
   const markerByKey = new Map(getActiveGameMarkers(character, catalog).map((marker) => [marker.key, marker]));
   let changed = false;
   const recoveredResources = new Map<string, number>();
@@ -77,7 +77,7 @@ export function applyGameMarkerEvent(character: Character, catalog: Catalog, res
 }
 
 /** Compatibilidade nominal para consumidores existentes do contrato de reset. */
-export function resetGameMarkers(character: Character, catalog: Catalog, reset: "session" | "short-rest" | "long-rest"): Character {
+export function resetGameMarkers(character: Character, catalog: Catalog, reset: GameMarkerReset): Character {
   return applyGameMarkerEvent(character, catalog, reset);
 }
 

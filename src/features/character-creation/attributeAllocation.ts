@@ -11,17 +11,28 @@ export const characterCreationAttributes: Array<{ id: Attribute["id"]; label: st
 
 const allocation = [-1, 0, 0, 1, 1, 2] as const;
 
+export type CreationAttributeToken = { id: string; value: number };
+
 export function createEmptyCreationAttributeValues(): Record<Attribute["id"], number> {
   return { dex: Number.NaN, for: Number.NaN, cha: Number.NaN, wil: Number.NaN, con: Number.NaN, int: Number.NaN };
 }
 
 export function getRemainingCreationAttributeValues(values: Record<Attribute["id"], number>, excludingAttributeId?: Attribute["id"]): number[] {
+  return getRemainingCreationAttributeTokens(values, excludingAttributeId).map((token) => token.value);
+}
+
+/**
+ * Cada pedra recebe uma identidade estável. Isso é importante para os valores
+ * repetidos: as duas pedras +1, por exemplo, precisam continuar clicáveis de
+ * forma independente, mesmo tendo o mesmo valor mecânico.
+ */
+export function getRemainingCreationAttributeTokens(values: Record<Attribute["id"], number>, excludingAttributeId?: Attribute["id"]): CreationAttributeToken[] {
   const used = Object.entries(values)
     .filter(([attributeId, value]) => attributeId !== excludingAttributeId && Number.isInteger(value))
     .map(([, value]) => value);
-  const remaining = [...allocation];
+  const remaining = allocation.map((value, index) => ({ id: `attribute-token-${index}`, value }));
   used.forEach((value) => {
-    const index = remaining.indexOf(value as -1 | 0 | 1 | 2);
+    const index = remaining.findIndex((token) => token.value === value);
     if (index >= 0) remaining.splice(index, 1);
   });
   return remaining;
@@ -33,6 +44,10 @@ export function formatCreationAttributeValue(value: number): string {
 
 export function selectCreationAttributeValue(values: Record<Attribute["id"], number>, value: number): number | undefined {
   return getRemainingCreationAttributeValues(values).includes(value) ? value : undefined;
+}
+
+export function selectCreationAttributeToken(values: Record<Attribute["id"], number>, tokenId?: string): CreationAttributeToken | undefined {
+  return getRemainingCreationAttributeTokens(values).find((token) => token.id === tokenId);
 }
 
 export function assignCreationAttributeValue(values: Record<Attribute["id"], number>, attributeId: Attribute["id"], selectedValue?: number): { values: Record<Attribute["id"], number>; error?: string } {
@@ -49,15 +64,16 @@ export function assignCreationAttributeValue(values: Record<Attribute["id"], num
   return { values: { ...values, [attributeId]: value } };
 }
 
-export function handleCreationAttributeAllocation(input: { values: Record<Attribute["id"], number>; selectedValue?: number; action?: string; attributeId?: string; value?: number }): { values: Record<Attribute["id"], number>; selectedValue?: number; error?: string } {
+export function handleCreationAttributeAllocation(input: { values: Record<Attribute["id"], number>; selectedTokenId?: string; action?: string; attributeId?: string; tokenId?: string }): { values: Record<Attribute["id"], number>; selectedTokenId?: string; error?: string } {
   if (input.action === "reset") return { values: createEmptyCreationAttributeValues() };
   if (input.action === "select") {
-    const selectedValue = input.value;
-    const nextValue = Number.isInteger(selectedValue) ? selectCreationAttributeValue(input.values, selectedValue as number) : undefined;
-    return { values: input.values, selectedValue: input.selectedValue === nextValue ? undefined : nextValue };
+    const selectedToken = selectCreationAttributeToken(input.values, input.tokenId);
+    const nextTokenId = selectedToken?.id;
+    return { values: input.values, selectedTokenId: input.selectedTokenId === nextTokenId ? undefined : nextTokenId };
   }
   const attribute = characterCreationAttributes.find((entry) => entry.id === input.attributeId);
-  if (!attribute) return { values: input.values, selectedValue: input.selectedValue };
-  const result = assignCreationAttributeValue(input.values, attribute.id, input.selectedValue);
-  return { ...result, selectedValue: undefined };
+  if (!attribute) return { values: input.values, selectedTokenId: input.selectedTokenId };
+  const selectedToken = selectCreationAttributeToken(input.values, input.selectedTokenId);
+  const result = assignCreationAttributeValue(input.values, attribute.id, selectedToken?.value);
+  return { ...result, selectedTokenId: undefined };
 }

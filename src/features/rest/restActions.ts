@@ -9,6 +9,11 @@ import { applyRestMoves, getRestMoveLimit, requiresRestRoll, type RestKind, type
 export type RestActionState = { character?: Character; restDialogKind?: RestKind; restChoices: RestMoveChoice[]; restError?: string };
 export type RestActionDependencies = { catalog: Catalog; saveCharacter: (character: Character) => Promise<void>; render: () => void };
 
+/** A ordem preserva o antigo ciclo: regras genéricas primeiro, depois o descanso específico. */
+export function getRestResetEvents(kind: RestKind): ["any-rest", "short-rest" | "long-rest"] {
+  return ["any-rest", kind === "short" ? "short-rest" : "long-rest"];
+}
+
 export function handleRestAction(target: HTMLElement, state: RestActionState, dependencies: RestActionDependencies): boolean {
   if (target.closest('[data-action="open-rest"]')) { openRestDialog("short", state, dependencies); return true; }
   if (target.closest('[data-action="rest-short"]')) { openRestDialog("short", state, dependencies); return true; }
@@ -67,11 +72,9 @@ async function confirmRest(state: RestActionState, dependencies: RestActionDepen
   let updated = applyRestMoves(character, kind, state.restChoices);
   for (const choice of state.restChoices) if (choice.id === "definition-action") updated = applyDefinitionRestMoveChoice(updated, choice);
   updated = reactivateCardsForEvent(updated, kind === "long" ? "long-rest" : "rest");
-  updated = endFeatureEffectsForCondition(updated, dependencies.catalog, "short-rest");
-  updated = applyGameMarkerEvent(updated, dependencies.catalog, "short-rest");
-  if (kind === "long") {
-    updated = endFeatureEffectsForCondition(updated, dependencies.catalog, "long-rest");
-    updated = applyGameMarkerEvent(updated, dependencies.catalog, "long-rest");
+  for (const event of getRestResetEvents(kind)) {
+    updated = endFeatureEffectsForCondition(updated, dependencies.catalog, event);
+    updated = applyGameMarkerEvent(updated, dependencies.catalog, event);
   }
   state.character = updated; state.restDialogKind = undefined; state.restChoices = []; state.restError = undefined;
   await dependencies.saveCharacter(updated); dependencies.render();

@@ -90,7 +90,7 @@ Na criação de personagem, além dos valores definidos pela classe:
 - todos começam com 2 Esperanças;
 - todos começam com 6 espaços de Stress;
 - os modificadores de atributos são definidos na criação do personagem, não pela classe;
-- o personagem recebe duas cartas de Domínio de nível 1 dentre os Domínios da sua classe;
+- o personagem recebe duas cartas de Domínio de nível 1 dentre os Domínios da sua classe; Features de Fundação podem declarar uma quantidade adicional no Pack, que o fluxo apresenta e valida sem interpretar o texto da regra;
 - os limiares de dano são calculados a partir da armadura equipada: limiar base da armadura + nível do personagem;
 - a Pontuação de Armadura vem da armadura equipada, somada a bônus permanentes aplicáveis.
 

@@ -5,7 +5,7 @@ metadados somente depois de sua regra publicada ser conferida manualmente. O
 SoulForge não extrai marcadores por busca de palavras em resumos ou efeitos.
 
 Além de `reset`, contadores podem declarar `eventChanges` para incrementos ou
-decrementos determinísticos em `session`, `short-rest` ou `long-rest`. O valor é
+decrementos determinísticos em `session`, `short-rest`, `long-rest` ou `any-rest`. O valor é
 limitado por `minimum`, `maximum` e pelo máximo persistido do marcador. Para
 evitar ordem ambígua, um marcador não pode combinar `reset` e `eventChanges` no
 mesmo evento. O Sangue do Vampiro é o primeiro uso desse contrato reutilizável.
@@ -38,7 +38,7 @@ mesmo evento. O Sangue do Vampiro é o primeiro uso desse contrato reutilizável
 | Proteção Rúnica | Sem metadado nesta etapa | Usa um d8 e uma condição de término no resultado 8; o modelo atual suporta somente d4 e d6, sem descarte automatizado por resultado. |
 | Voo | Sem metadado nesta etapa | A quantidade é Agilidade com mínimo de 1; o modelo atual ainda não declara mínimo para quantidade dinâmica. |
 | Aura Confusa | Sem metadado nesta etapa | As camadas variam conforme Estresse gasto e são destruídas por um evento; exige contador orientado a evento. |
-| Cartas “uma vez por descanso” | Sem metadado nesta etapa | O modelo ainda não distingue a reinicialização genérica por qualquer descanso. |
+| Cartas “uma vez por descanso” | Metadado pendente de revisão | `any-rest` já é suportado; falta confirmar individualmente quais regras devem receber o marcador, sem inferência pelo texto. |
 | Demais cartas de Arcana | Sem metadado | Usam recursos existentes, efeitos contínuos ou não possuem estado próprio que a ficha deva controlar. |
 
 ## Cobertura acumulada
@@ -62,7 +62,7 @@ mesmo evento. O Sangue do Vampiro é o primeiro uso desse contrato reutilizável
 | Onda de Desintegração | 1 uso; descanso longo | A regra limita explicitamente o uso a uma vez por descanso longo. |
 | União Transcendente | 1 uso; descanso longo | A regra limita explicitamente o uso a uma vez por descanso longo. |
 | Sigilo de Retaliação | Metadado pendente de revisão | Armazena d8 até o nível do personagem; o contrato atual já suporta d8 e quantidade por nível, mas a associação ainda precisa ser validada no Pack. |
-| Técnicas “uma vez por descanso” | Sem metadado nesta etapa | A reinicialização genérica por qualquer descanso ainda não está modelada. |
+| Técnicas “uma vez por descanso” | Metadado pendente de revisão | `any-rest` já é suportado; falta confirmar individualmente quais regras devem receber o marcador, sem inferência pelo texto. |
 | Demais cartas de Códice | Sem metadado | Usam recursos existentes, efeitos contínuos ou não possuem estado próprio que a ficha deva controlar. |
 
 ## Cobertura acumulada
@@ -103,7 +103,7 @@ mesmo evento. O Sangue do Vampiro é o primeiro uso desse contrato reutilizável
 | Mãos Curativas | Sem metadado nesta etapa | A restrição é por alvo até o próximo descanso longo; exige estado associado a múltiplos alvos. |
 | Zona de Proteção | Sem metadado nesta etapa | Usa um único d6 com valor progressivo. |
 | Ressurreição | Sem metadado nesta etapa | Tem indisponibilidade por uma semana após falha; cooldown temporal não está modelado. |
-| Cartas “uma vez por descanso” | Sem metadado nesta etapa | A reinicialização genérica por qualquer descanso ainda não está modelada. |
+| Cartas “uma vez por descanso” | Metadado pendente de revisão | `any-rest` já é suportado; falta confirmar individualmente quais regras devem receber o marcador, sem inferência pelo texto. |
 | Demais cartas de Esplendor | Sem metadado | Usam recursos existentes, efeitos contínuos ou não possuem estado próprio que a ficha deva controlar. |
 
 ## Cobertura acumulada

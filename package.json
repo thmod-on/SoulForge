@@ -1,9 +1,12 @@
 {
   "name": "soulforge",
-  "version": "0.36.2",
+  "version": "0.37.0",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@11.9.0",
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=24 <25"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -19,20 +22,19 @@
     "check:release": "node scripts/check-release.mjs",
     "check": "pnpm run check:release && pnpm run check:architecture && tsc --noEmit && tsc -p tsconfig.worker.json --noEmit && tsc -p tsconfig.worker-test.json --noEmit && pnpm test"
   },
-  "dependencies": {
-    "vite-plugin-pwa": "^0.21.1"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.63.0",
+    "@cloudflare/vite-plugin": "^1.63.1",
     "@cloudflare/vitest-plugin": "^1.4.0",
-    "@cloudflare/workers-types": "^5.20261008.1",
+    "@cloudflare/workers-types": "^5.20261011.1",
     "@msw/cloudflare": "^0.2.0",
-    "@types/node": "^22.10.2",
+    "@types/node": "^24.19.2",
     "fake-indexeddb": "^6.2.5",
-    "msw": "3.0.0",
-    "typescript": "^5.7.2",
-    "vite": "^6.0.5",
-    "vitest": "^4.1.0",
-    "wrangler": "^4.148.0"
+    "msw": "3.0.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^5.0.3",
+    "wrangler": "^4.149.0"
   }
 }

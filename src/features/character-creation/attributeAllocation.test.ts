@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assignCreationAttributeValue, createEmptyCreationAttributeValues, getRemainingCreationAttributeValues, handleCreationAttributeAllocation, selectCreationAttributeValue } from "./attributeAllocation";
+import { assignCreationAttributeValue, createEmptyCreationAttributeValues, getRemainingCreationAttributeTokens, getRemainingCreationAttributeValues, handleCreationAttributeAllocation, selectCreationAttributeValue } from "./attributeAllocation";
 
 describe("distribuição inicial de atributos", () => {
   it("oferece todos os valores antes de qualquer escolha", () => {
@@ -26,10 +26,22 @@ describe("distribuição inicial de atributos", () => {
   });
 
   it("mantém a interação por toque no domínio da distribuição", () => {
-    const selected = handleCreationAttributeAllocation({ values: createEmptyCreationAttributeValues(), action: "select", value: 1 });
-    const assigned = handleCreationAttributeAllocation({ values: selected.values, selectedValue: selected.selectedValue, action: "assign", attributeId: "wil" });
+    const selected = handleCreationAttributeAllocation({ values: createEmptyCreationAttributeValues(), action: "select", tokenId: "attribute-token-3" });
+    const assigned = handleCreationAttributeAllocation({ values: selected.values, selectedTokenId: selected.selectedTokenId, action: "assign", attributeId: "wil" });
 
     expect(assigned.values.wil).toBe(1);
-    expect(assigned.selectedValue).toBeUndefined();
+    expect(assigned.selectedTokenId).toBeUndefined();
+  });
+
+  it("mantém pedras de mesmo valor como alvos independentes", () => {
+    const values = createEmptyCreationAttributeValues();
+    const tokens = getRemainingCreationAttributeTokens(values);
+    const firstZero = tokens.find((token) => token.value === 0);
+    const secondZero = [...tokens].reverse().find((token) => token.value === 0);
+
+    expect(firstZero?.id).not.toBe(secondZero?.id);
+
+    const selected = handleCreationAttributeAllocation({ values, action: "select", tokenId: secondZero?.id });
+    expect(selected.selectedTokenId).toBe(secondZero?.id);
   });
 });

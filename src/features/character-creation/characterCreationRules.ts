@@ -20,6 +20,17 @@ export type CharacterCreationDraft = {
   definitionSelections?: Record<string, Record<string, string>>;
 };
 
+const baseStartingDomainCardCount = 2;
+
+/** Calcula cartas iniciais por metadados declarativos da subclasse, nunca pelo texto da Feature. */
+export function getStartingDomainCardCount(subclass: SubclassDefinition | undefined, catalog: Catalog): number {
+  if (!subclass) return baseStartingDomainCardCount;
+  const bonus = subclass.foundationFeatureIds
+    .map((id) => catalog.features.find((feature) => feature.id === id && feature.sourceType === "subclass" && feature.sourceId === subclass.id && feature.tier === "foundation")?.startingDomainCardBonus ?? 0)
+    .reduce((total, value) => total + value, 0);
+  return baseStartingDomainCardCount + bonus;
+}
+
 export function getCreationClasses(catalog: Catalog): ClassDefinition[] {
   return catalog.classes;
 }
@@ -61,7 +72,11 @@ export function validateCreationStep(step: CharacterCreationStep, draft: Charact
     }
   }
   if (step === 6 && !hasValidCreationAttributes(draft.attributeValues)) return "Distribua uma vez cada valor: +2, +1, +1, +0, +0 e −1.";
-  if (step === 7 && draft.cardIds.length !== 2) return "Escolha exatamente duas cartas de Domínio de nível 1.";
+  if (step === 7) {
+    const subclass = catalog.subclasses.find((entry) => entry.id === draft.subclassId);
+    const expectedCardCount = getStartingDomainCardCount(subclass, catalog);
+    if (draft.cardIds.length !== expectedCardCount) return `Escolha exatamente ${expectedCardCount} cartas de Domínio de nível 1.`;
+  }
   if (step === 8 && !hasValidStartingExperiences(draft.experiences)) return "Defina duas Experiências diferentes para o personagem.";
   return undefined;
 }
@@ -78,7 +93,8 @@ export function buildCharacterFromDraft(draft: CharacterCreationDraft, catalog: 
   const topOrigin = ancestries.find((entry) => entry.topFeatureId === draft.topFeatureId);
   const bottomOrigin = ancestries.find((entry) => entry.bottomFeatureId === draft.bottomFeatureId);
   const hasValidMixedAncestryFeatures = ancestries.length !== 2 || topOrigin?.id !== bottomOrigin?.id;
-  const cards = classDefinition ? draft.cardIds.filter((id) => catalog.cards.some((card) => card.id === id && card.tier === 1 && classDefinition.domainIds.includes(card.domainId))) : [];
+  const cards = classDefinition ? [...new Set(draft.cardIds)].filter((id) => catalog.cards.some((card) => card.id === id && card.tier === 1 && classDefinition.domainIds.includes(card.domainId))) : [];
+  const expectedCardCount = getStartingDomainCardCount(subclassDefinition, catalog);
   const experiences = draft.experiences.map((entry) => ({ ...entry, name: entry.name.trim(), description: entry.description.trim() }));
   const characterFieldSources = getCreationCharacterFieldSources(classDefinition, subclassDefinition, catalog);
   const definitionSelections = characterFieldSources.map(({ feature }) => ({
@@ -86,8 +102,8 @@ export function buildCharacterFromDraft(draft: CharacterCreationDraft, catalog: 
     values: normalizeCharacterFieldValues(feature, draft.definitionSelections?.[feature.id] ?? {})
   }));
   const hasInvalidCharacterFields = characterFieldSources.some(({ feature }) => validateCharacterFieldValues(feature, normalizeCharacterFieldValues(feature, draft.definitionSelections?.[feature.id] ?? {})));
-  if (!draft.name.trim() || !community || !communityFeature || !classDefinition || !subclassDefinition || ancestries.length !== draft.ancestryIds.length || !ancestries.length || !validTop || !validBottom || !hasValidMixedAncestryFeatures || !hasValidCreationAttributes(draft.attributeValues) || cards.length !== 2 || !hasValidStartingExperiences(experiences) || hasInvalidCharacterFields) {
-    return new Error("Complete a ficha, escolha duas cartas de Domínio e defina duas Experiências diferentes.");
+  if (!draft.name.trim() || !community || !communityFeature || !classDefinition || !subclassDefinition || ancestries.length !== draft.ancestryIds.length || !ancestries.length || !validTop || !validBottom || !hasValidMixedAncestryFeatures || !hasValidCreationAttributes(draft.attributeValues) || cards.length !== expectedCardCount || !hasValidStartingExperiences(experiences) || hasInvalidCharacterFields) {
+    return new Error(`Complete a ficha, escolha ${expectedCardCount} cartas de Domínio e defina duas Experiências diferentes.`);
   }
   const features = catalog.features;
   const subclassSkills = getSubclassSkills(subclassDefinition, features);

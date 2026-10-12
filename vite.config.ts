@@ -6,6 +6,10 @@ const legacyGitHubPages = process.env.SOULFORGE_LEGACY_PAGES === "true";
 
 export default defineConfig(({ mode }) => ({
   base: legacyGitHubPages ? "/SoulForge/" : "/",
+  build: {
+    // Vite 8 baseline: Safari 16.4+, Chrome/Edge 111+ e Firefox 114+.
+    target: ["chrome111", "edge111", "firefox114", "safari16.4"]
+  },
   plugins: [
     ...(mode === "test" || legacyGitHubPages ? [] : [cloudflare()]),
     VitePWA({

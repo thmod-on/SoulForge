@@ -2,6 +2,14 @@
 
 Este documento é a referência canônica para fechar uma entrega do SoulForge. Alterações comuns podem permanecer em desenvolvimento sem mudar a versão; a revisão da versão acontece somente quando o usuário solicitar explicitamente o comando **`versione`** ou pedir uma publicação equivalente.
 
+## Toolchain de release
+
+- Node.js 24 LTS (`24.19.0` no `.node-version`);
+- pnpm 12.11.2, obtido pelo campo `packageManager`;
+- a configuração de segurança e overrides transitivos pertence a `pnpm-workspace.yaml`; não a recrie em `package.json`.
+- os overrides de `brace-expansion`, `fast-uri` e `glob` existem para corrigir avisos transitivos auditados; remova-os somente quando uma dependência direta já trouxer a versão corrigida.
+- MSW 3 é mantido porque o adaptador Cloudflare o requer. A regra de peer do mocker opcional do Vitest não muda o runtime do aplicativo.
+
 ## Convenção de versão
 
 O SoulForge utiliza Versionamento Semântico: `MAJOR.MINOR.PATCH`.
