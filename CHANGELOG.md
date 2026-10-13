@@ -4,6 +4,22 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.37.3]
+
+### Alterado
+
+- a distribuição inicial de atributos agora começa pelo atributo: tocar em
+  Agilidade, Força ou outro cartão abre um seletor persistente com as pedras
+  disponíveis, progresso explícito e orientação para a próxima ação;
+- valores atribuídos permanecem ajustáveis no mesmo painel, pedras repetidas
+  conservam identidades independentes e a remoção exige a ação textual
+  **Liberar valor**, sem exclusões implícitas por toque;
+- a etapa passa a usar alvos adequados para toque, duas colunas em telas
+  estreitas, rolagem vertical e os mesmos controles para mouse, teclado e iPad;
+- progresso, seletor e ações agora formam uma faixa visual única, sem painéis
+  aninhados. O atributo ativo usa uma linha de destaque e as ações secundárias
+  deixam de parecer novas caixas dentro da etapa.
+
 ## [0.37.2]
 
 ### Alterado

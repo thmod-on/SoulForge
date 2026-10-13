@@ -12,6 +12,9 @@ export const characterCreationAttributes: Array<{ id: Attribute["id"]; label: st
 const allocation = [-1, 0, 0, 1, 1, 2] as const;
 
 export type CreationAttributeToken = { id: string; value: number };
+export type CreationAttributeTokenAssignments = Partial<Record<Attribute["id"], string>>;
+
+const tokens: CreationAttributeToken[] = allocation.map((value, index) => ({ id: `attribute-token-${index}`, value }));
 
 export function createEmptyCreationAttributeValues(): Record<Attribute["id"], number> {
   return { dex: Number.NaN, for: Number.NaN, cha: Number.NaN, wil: Number.NaN, con: Number.NaN, int: Number.NaN };
@@ -30,7 +33,7 @@ export function getRemainingCreationAttributeTokens(values: Record<Attribute["id
   const used = Object.entries(values)
     .filter(([attributeId, value]) => attributeId !== excludingAttributeId && Number.isInteger(value))
     .map(([, value]) => value);
-  const remaining = allocation.map((value, index) => ({ id: `attribute-token-${index}`, value }));
+  const remaining = tokens.map((token) => ({ ...token }));
   used.forEach((value) => {
     const index = remaining.findIndex((token) => token.value === value);
     if (index >= 0) remaining.splice(index, 1);
@@ -38,42 +41,96 @@ export function getRemainingCreationAttributeTokens(values: Record<Attribute["id
   return remaining;
 }
 
+/**
+ * Reconstrói apenas identidades ausentes ou inválidas. O mapa é transitório,
+ * mas impede que a segunda pedra 0 ou +1 mude de identidade após um repaint.
+ */
+export function normalizeCreationAttributeTokenAssignments(values: Record<Attribute["id"], number>, assignments: CreationAttributeTokenAssignments = {}): CreationAttributeTokenAssignments {
+  const normalized: CreationAttributeTokenAssignments = {};
+  const usedTokenIds = new Set<string>();
+
+  characterCreationAttributes.forEach(({ id }) => {
+    const value = values[id];
+    if (!Number.isInteger(value)) return;
+    const assignedToken = tokens.find((token) => token.id === assignments[id] && token.value === value && !usedTokenIds.has(token.id));
+    const token = assignedToken ?? tokens.find((candidate) => candidate.value === value && !usedTokenIds.has(candidate.id));
+    if (!token) return;
+    normalized[id] = token.id;
+    usedTokenIds.add(token.id);
+  });
+
+  return normalized;
+}
+
+export function getCreationAttributeTokens(): CreationAttributeToken[] {
+  return tokens.map((token) => ({ ...token }));
+}
+
 export function formatCreationAttributeValue(value: number): string {
   return value > 0 ? `+${value}` : String(value);
 }
 
-export function selectCreationAttributeValue(values: Record<Attribute["id"], number>, value: number): number | undefined {
-  return getRemainingCreationAttributeValues(values).includes(value) ? value : undefined;
-}
-
-export function selectCreationAttributeToken(values: Record<Attribute["id"], number>, tokenId?: string): CreationAttributeToken | undefined {
-  return getRemainingCreationAttributeTokens(values).find((token) => token.id === tokenId);
-}
-
 export function assignCreationAttributeValue(values: Record<Attribute["id"], number>, attributeId: Attribute["id"], selectedValue?: number): { values: Record<Attribute["id"], number>; error?: string } {
-  if (!Number.isInteger(selectedValue)) {
-    if (Number.isInteger(values[attributeId])) return { values: { ...values, [attributeId]: Number.NaN } };
-    return { values, error: "Escolha um valor disponível antes de selecionar um atributo." };
-  }
+  if (!Number.isInteger(selectedValue)) return { values, error: "Escolha um valor disponível para este atributo." };
   const value = selectedValue as number;
-
-  if (!getRemainingCreationAttributeValues(values).includes(value)) {
-    return { values, error: "Esse valor não está mais disponível." };
-  }
-
+  if (!getRemainingCreationAttributeValues(values, attributeId).includes(value)) return { values, error: "Esse valor não está mais disponível." };
   return { values: { ...values, [attributeId]: value } };
 }
 
-export function handleCreationAttributeAllocation(input: { values: Record<Attribute["id"], number>; selectedTokenId?: string; action?: string; attributeId?: string; tokenId?: string }): { values: Record<Attribute["id"], number>; selectedTokenId?: string; error?: string } {
-  if (input.action === "reset") return { values: createEmptyCreationAttributeValues() };
-  if (input.action === "select") {
-    const selectedToken = selectCreationAttributeToken(input.values, input.tokenId);
-    const nextTokenId = selectedToken?.id;
-    return { values: input.values, selectedTokenId: input.selectedTokenId === nextTokenId ? undefined : nextTokenId };
+function findAttributeId(value?: string): Attribute["id"] | undefined {
+  return characterCreationAttributes.find((attribute) => attribute.id === value)?.id;
+}
+
+export function handleCreationAttributeAllocation(input: {
+  values: Record<Attribute["id"], number>;
+  activeAttributeId?: Attribute["id"];
+  assignedTokenIds?: CreationAttributeTokenAssignments;
+  action?: string;
+  attributeId?: string;
+  tokenId?: string;
+}): {
+  values: Record<Attribute["id"], number>;
+  activeAttributeId?: Attribute["id"];
+  assignedTokenIds: CreationAttributeTokenAssignments;
+  error?: string;
+} {
+  const assignedTokenIds = normalizeCreationAttributeTokenAssignments(input.values, input.assignedTokenIds);
+
+  if (input.action === "reset") return { values: createEmptyCreationAttributeValues(), assignedTokenIds: {} };
+  if (input.action === "close") return { values: input.values, assignedTokenIds };
+  if (input.action === "activate") {
+    const activeAttributeId = findAttributeId(input.attributeId);
+    return activeAttributeId
+      ? { values: input.values, assignedTokenIds, activeAttributeId }
+      : { values: input.values, assignedTokenIds, activeAttributeId: input.activeAttributeId };
   }
-  const attribute = characterCreationAttributes.find((entry) => entry.id === input.attributeId);
-  if (!attribute) return { values: input.values, selectedTokenId: input.selectedTokenId };
-  const selectedToken = selectCreationAttributeToken(input.values, input.selectedTokenId);
-  const result = assignCreationAttributeValue(input.values, attribute.id, selectedToken?.value);
-  return { ...result, selectedTokenId: undefined };
+
+  const activeAttributeId = findAttributeId(input.activeAttributeId);
+  if (!activeAttributeId) return { values: input.values, assignedTokenIds, error: "Escolha primeiro o atributo que deseja preencher." };
+
+  if (input.action === "release") {
+    const nextAssignments = { ...assignedTokenIds };
+    delete nextAssignments[activeAttributeId];
+    return {
+      values: { ...input.values, [activeAttributeId]: Number.NaN },
+      activeAttributeId,
+      assignedTokenIds: nextAssignments
+    };
+  }
+
+  if (input.action === "assign-token") {
+    const token = tokens.find((candidate) => candidate.id === input.tokenId);
+    if (!token) return { values: input.values, assignedTokenIds, activeAttributeId, error: "Essa pedra não está disponível." };
+    const owner = characterCreationAttributes.find(({ id }) => assignedTokenIds[id] === token.id)?.id;
+    if (owner && owner !== activeAttributeId) {
+      return { values: input.values, assignedTokenIds, activeAttributeId, error: "Essa pedra já está encaixada em outro atributo." };
+    }
+    return {
+      values: { ...input.values, [activeAttributeId]: token.value },
+      activeAttributeId,
+      assignedTokenIds: { ...assignedTokenIds, [activeAttributeId]: token.id }
+    };
+  }
+
+  return { values: input.values, assignedTokenIds, activeAttributeId };
 }

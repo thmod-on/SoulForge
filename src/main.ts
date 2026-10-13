@@ -26,7 +26,8 @@ import { buildCharacterFromDraft, getCreationClasses, getCreationSubclasses, get
 import { closeCharacterCreation, getCharacterCreationDraft, openCharacterCreation, selectCharacterCreationClass, selectCharacterCreationTopFeature, syncCharacterCreationDraftFromForm, toggleCharacterCreationAncestry, toggleCharacterCreationCard, toggleCharacterCreationCardDetails, validateCharacterCreationState } from "./features/character-creation/characterCreationState";
 import { renderCharacterCreationModal as renderCharacterCreationModalView, type CharacterCreationRenderDependencies } from "./features/character-creation/renderCharacterCreation";
 import { renderCharacterCreationInPlace as renderCharacterCreationSurface } from "./features/character-creation/renderInPlace";
-import { createEmptyCreationAttributeValues, handleCreationAttributeAllocation } from "./features/character-creation/attributeAllocation";
+import { createEmptyCreationAttributeValues, type CreationAttributeTokenAssignments } from "./features/character-creation/attributeAllocation";
+import { handleCharacterAttributeAllocationAction, handleCharacterAttributeAllocationEscape } from "./features/character-creation/attributeAllocationUi";
 import { handleCommunityAction, renderCompendiumCommunityFormModal, renderCompendiumCommunitiesManager as renderCompendiumCommunitiesManagerView } from "./features/compendium/communities";
 import { handleTransformationAction, renderTransformationFormModal, renderCompendiumTransformationsManager as renderCompendiumTransformationsManagerView, renderCompendiumTransformationsSpread as renderCompendiumTransformationsSpreadView, type TransformationFeatureDependencies, type TransformationFeatureState } from "./features/compendium/transformations";
 import { handleConditionAction, renderConditionFormModal, renderCompendiumConditionsManager as renderCompendiumConditionsManagerView, renderCompendiumConditionsSpread as renderCompendiumConditionsSpreadView, type ConditionFeatureDependencies, type ConditionFeatureState } from "./features/compendium/conditions";
@@ -287,7 +288,8 @@ const state: {
   characterCreationCardDomainId?: string; characterCreationExpandedCardId?: string;
   characterCreationExperiences: Array<{ name: string; description: string }>; characterCreationDefinitionSelections: Record<string, Record<string, string>>;
   characterCreationAttributeValues: Record<Attribute["id"], number>;
-  characterCreationSelectedAttributeTokenId?: string;
+  characterCreationActiveAttributeId?: Attribute["id"];
+  characterCreationAttributeTokenIds: CreationAttributeTokenAssignments;
   characterCreationPortraitImage?: string;
   characterCreationTopFeatureId?: string;
   characterCreationBottomFeatureId?: string;
@@ -360,7 +362,8 @@ const state: {
   characterCreationCardIds: [],
   characterCreationExperiences: [{ name: "", description: "" }, { name: "", description: "" }], characterCreationDefinitionSelections: {},
   characterCreationAttributeValues: createEmptyCreationAttributeValues(),
-  characterCreationSelectedAttributeTokenId: undefined,
+  characterCreationActiveAttributeId: undefined,
+  characterCreationAttributeTokenIds: {},
   characters: [],
   installedPacks: [],
   packImportOpen: false,
@@ -1263,19 +1266,7 @@ function bindEvents(): void {
     if (handleCommunityAction(target, { state, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render })) return;
     if (handleTransformationAction(target, getTransformationFeatureDependencies())) return; if (handleConditionAction(target, getConditionFeatureDependencies())) return; if (state.character && handleCharacterTransformationAction(target, getCharacterTransformationDependencies())) return;
 
-    const attributeAllocation = target.closest<HTMLElement>("[data-character-attribute-allocation]");
-    if (attributeAllocation) {
-      const result = handleCreationAttributeAllocation({
-        values: state.characterCreationAttributeValues, selectedTokenId: state.characterCreationSelectedAttributeTokenId,
-        action: attributeAllocation.dataset.characterAttributeAllocation, attributeId: attributeAllocation.dataset.characterAttributeId,
-        tokenId: attributeAllocation.dataset.characterAttributeTokenId
-      });
-      state.characterCreationAttributeValues = result.values;
-      state.characterCreationSelectedAttributeTokenId = result.selectedTokenId;
-      state.characterCreationError = result.error;
-      renderCharacterCreationInPlace();
-      return;
-    }
+    if (handleCharacterAttributeAllocationAction(target, state, appRoot, renderCharacterCreationInPlace)) return;
 
     const communityChoice = target.closest<HTMLElement>("[data-character-community-id]"); if (communityChoice) { state.characterCreationCommunityId = communityChoice.dataset.characterCommunityId; state.characterCreationError = undefined; renderCharacterCreationInPlace(); return; }
 
@@ -2364,6 +2355,7 @@ function bindEvents(): void {
   });
 
   document.addEventListener("keydown", (event) => {
+    if (handleCharacterAttributeAllocationEscape(event, state, appRoot, renderCharacterCreationInPlace)) return;
     if (handleCharacterScarEscape(event, getCharacterScarDependencies())) return; if (state.character && handleCharacterTransformationEscape(event, getCharacterTransformationDependencies())) return;
     if (handleAttributeDetailEscape(event, state, () => render({ preserveMainScroll: true }))) return;
     if (handleCustomResourceEscape(event, state, () => render({ preserveMainScroll: true }))) return;

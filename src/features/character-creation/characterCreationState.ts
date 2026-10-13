@@ -1,6 +1,6 @@
 import type { Catalog } from "../../domain/catalog";
 import type { AncestryDefinition, Attribute } from "../../domain/types";
-import { createEmptyCreationAttributeValues } from "./attributeAllocation";
+import { createEmptyCreationAttributeValues, type CreationAttributeTokenAssignments } from "./attributeAllocation";
 import { getCreationClasses, getCreationSubclasses, validateCreationStep, type CharacterCreationDraft } from "./characterCreationRules";
 import type { CharacterCreationStep } from "./creationFlow";
 
@@ -22,7 +22,8 @@ export type CharacterCreationState = {
   characterCreationExperiences: Array<{ name: string; description: string }>;
   characterCreationDefinitionSelections: Record<string, Record<string, string>>;
   characterCreationAttributeValues: Record<Attribute["id"], number>;
-  characterCreationSelectedAttributeTokenId?: string;
+  characterCreationActiveAttributeId?: Attribute["id"];
+  characterCreationAttributeTokenIds: CreationAttributeTokenAssignments;
   characterCreationPortraitImage?: string;
   characterCreationTopFeatureId?: string;
   characterCreationBottomFeatureId?: string;
@@ -47,7 +48,8 @@ export function openCharacterCreation(state: CharacterCreationState, catalog: Ca
   state.characterCreationExperiences = [{ name: "", description: "" }, { name: "", description: "" }];
   state.characterCreationDefinitionSelections = {};
   state.characterCreationAttributeValues = createEmptyCreationAttributeValues();
-  state.characterCreationSelectedAttributeTokenId = undefined;
+  state.characterCreationActiveAttributeId = undefined;
+  state.characterCreationAttributeTokenIds = {};
   state.characterCreationPortraitImage = undefined;
   state.characterCreationCardDomainId = undefined;
   state.characterCreationTopFeatureId = undefined;
@@ -64,7 +66,8 @@ export function closeCharacterCreation(state: CharacterCreationState): void {
   state.characterCreationExpandedCardId = undefined;
   state.characterCreationDefinitionSelections = {};
   state.characterCreationAttributeValues = createEmptyCreationAttributeValues();
-  state.characterCreationSelectedAttributeTokenId = undefined;
+  state.characterCreationActiveAttributeId = undefined;
+  state.characterCreationAttributeTokenIds = {};
   state.characterCreationPortraitImage = undefined;
   state.characterCreationCardDomainId = undefined;
   state.characterCreationTopFeatureId = undefined;

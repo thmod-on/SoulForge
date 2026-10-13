@@ -43,6 +43,7 @@ function createState(): CharacterCreationState {
     characterCreationExperiences: [{ name: "Uma", description: "" }, { name: "Duas", description: "" }],
     characterCreationDefinitionSelections: {},
     characterCreationAttributeValues: createEmptyCreationAttributeValues(),
+    characterCreationAttributeTokenIds: {},
     characterCreationPortraitImage: "data:image/png;base64,test",
     characterCreationError: "Erro anterior"
   };

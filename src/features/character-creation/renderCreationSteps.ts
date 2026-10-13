@@ -1,7 +1,7 @@
 import type { AncestryDefinition, Attribute, ClassDefinition, CommunityDefinition, FeatureDefinition, SubclassDefinition } from "../../domain/types";
 import { getClassDetailArtwork } from "../../content/classArtwork";
 import { getClassDisplayName } from "../compendium/classPresentation";
-import { characterCreationAttributes, formatCreationAttributeValue, getRemainingCreationAttributeTokens } from "./attributeAllocation";
+import { characterCreationAttributes, formatCreationAttributeValue, getCreationAttributeTokens, normalizeCreationAttributeTokenAssignments, type CreationAttributeTokenAssignments } from "./attributeAllocation";
 import type { CharacterFieldSource } from "../feature-fields/featureFields";
 
 type EscapeHtml = (value: string) => string;
@@ -22,9 +22,33 @@ export function renderCreationExperiencesStep(experiences: Array<{ name: string 
   return `<section class="character-creation-experiences creation-step-panel" data-creation-panel="8"><div><span>História</span><h3>Defina duas Experiências</h3><p>Cada uma começa em +2. Escolha frases específicas que expressem vivências, aptidões ou traços do personagem.</p></div><div class="form-grid">${experiences.map((experience, index) => `<label class="form-field form-field-wide"><span>Experiência ${index + 1} · +2</span><input data-character-experience-name="${index}" maxlength="80" value="${escapeHtml(experience.name)}" placeholder="Ex.: Vigia de fronteira" /><small>Evite termos muito amplos ou que concedam um poder específico.</small></label>`).join("")}</div></section>`;
 }
 
-export function renderCreationAttributesStep(values: Record<Attribute["id"], number>, selectedTokenId?: string, spellcastAttributeId?: Attribute["id"]): string {
-  const available = getRemainingCreationAttributeTokens(values);
-  return `<section class="character-attributes-picker creation-step-panel" data-creation-panel="6"><div><span>Traços</span><p>Distribua seus atributos. Escolha uma pedra e encaixe-a no atributo desejado.</p><div class="character-attribute-available" aria-live="polite"><div><strong>Pedras disponíveis</strong></div><div class="character-attribute-token-list">${available.length ? available.map((token) => `<button type="button" class="character-attribute-token ${selectedTokenId === token.id ? "is-selected" : ""}" data-character-attribute-allocation="select" data-character-attribute-token-id="${token.id}" aria-pressed="${selectedTokenId === token.id}"><strong>${formatCreationAttributeValue(token.value)}</strong></button>`).join("") : "<span class=\"character-attribute-complete\">Todos encaixados</span>"}</div><button type="button" class="character-attribute-reset" data-character-attribute-allocation="reset">Resetar</button></div></div><div class="character-attribute-choice-grid">${characterCreationAttributes.map((attribute) => { const value = values[attribute.id]; const assigned = Number.isInteger(value); const isSpellcast = attribute.id === spellcastAttributeId; return `<button type="button" class="character-attribute-card ${assigned ? "is-assigned" : ""} ${selectedTokenId !== undefined ? "is-targetable" : ""} ${isSpellcast ? "is-spellcast" : ""}" data-character-attribute-allocation="assign" data-character-attribute-id="${attribute.id}"><span>${attribute.label}${isSpellcast ? '<em class="character-attribute-spellcast" title="Atributo de Conjuração">🪄 Conjuração</em>' : ""}</span><i class="character-attribute-slot" aria-hidden="true"><strong>${assigned ? formatCreationAttributeValue(value) : "—"}</strong></i><small>${attribute.description}</small></button>`; }).join("")}</div></section>`;
+export function renderCreationAttributesStep(values: Record<Attribute["id"], number>, activeAttributeId: Attribute["id"] | undefined, tokenIds: CreationAttributeTokenAssignments, spellcastAttributeId?: Attribute["id"]): string {
+  const assignments = normalizeCreationAttributeTokenAssignments(values, tokenIds);
+  const activeAttribute = characterCreationAttributes.find((attribute) => attribute.id === activeAttributeId);
+  const assignedCount = characterCreationAttributes.filter((attribute) => Number.isInteger(values[attribute.id])).length;
+  const currentTokenId = activeAttribute ? assignments[activeAttribute.id] : undefined;
+  const ownerByToken = new Map(Object.entries(assignments).map(([attributeId, tokenId]) => [tokenId, characterCreationAttributes.find((attribute) => attribute.id === attributeId)]));
+  const remainingCount = characterCreationAttributes.length - assignedCount;
+  const guidance = activeAttribute
+    ? `Escolha o valor de ${activeAttribute.label}.`
+    : remainingCount
+      ? "Toque em um atributo para escolher o valor dele."
+      : "Distribuição completa. Toque em um atributo para revisar seu valor.";
+  const tokens = getCreationAttributeTokens().map((token) => {
+    const owner = ownerByToken.get(token.id);
+    const current = token.id === currentTokenId;
+    const available = !owner || current;
+    const status = current ? "Valor atual" : owner ? `Em ${owner.label}` : "Disponível";
+    return `<button type="button" class="character-attribute-token ${current ? "is-selected" : ""} ${owner && !current ? "is-used" : ""}" data-character-attribute-allocation="assign-token" data-character-attribute-token-id="${token.id}" aria-pressed="${current}" aria-label="${formatCreationAttributeValue(token.value)} — ${status}" ${!activeAttribute || !available ? "disabled" : ""}><strong>${formatCreationAttributeValue(token.value)}</strong><small>${status}</small></button>`;
+  }).join("");
+  const release = activeAttribute && Number.isInteger(values[activeAttribute.id])
+    ? `<button type="button" class="character-attribute-release" data-character-attribute-allocation="release">Liberar valor</button>`
+    : "";
+  const reset = assignedCount
+    ? `<button type="button" class="character-attribute-reset" data-character-attribute-allocation="reset">Recomeçar distribuição</button>`
+    : "";
+
+  return `<section class="character-attributes-picker creation-step-panel" data-creation-panel="6"><div class="character-attribute-intro"><span>Traços</span><p>Escolha primeiro um atributo e depois defina o valor dele.</p></div><div class="character-attribute-progress" aria-live="polite"><strong>${assignedCount} de ${characterCreationAttributes.length} definidos</strong><i aria-hidden="true">·</i><span>${guidance}</span></div><div class="character-attribute-available ${activeAttribute ? "is-active" : ""}" id="character-attribute-value-picker"><div class="character-attribute-picker-heading"><small>${activeAttribute ? "Valor para" : "Distribuição"}</small><strong>${activeAttribute ? activeAttribute.label : "Pedras disponíveis"}</strong></div><div class="character-attribute-token-list" role="group" aria-label="${activeAttribute ? `Valores para ${activeAttribute.label}` : "Valores da distribuição"}">${tokens}</div><div class="character-attribute-picker-actions">${release}${reset}</div></div><div class="character-attribute-choice-grid">${characterCreationAttributes.map((attribute) => { const value = values[attribute.id]; const assigned = Number.isInteger(value); const active = attribute.id === activeAttribute?.id; const isSpellcast = attribute.id === spellcastAttributeId; const action = active ? "Selecionado" : assigned ? "Alterar valor" : "Escolher valor"; return `<button type="button" class="character-attribute-card ${assigned ? "is-assigned" : ""} ${active ? "is-active" : ""} ${isSpellcast ? "is-spellcast" : ""}" data-character-attribute-allocation="activate" data-character-attribute-id="${attribute.id}" aria-pressed="${active}" aria-expanded="${active}" aria-controls="character-attribute-value-picker" aria-label="${attribute.label}: ${assigned ? formatCreationAttributeValue(value) : "sem valor"}. ${action}"><span>${attribute.label}${isSpellcast ? '<em class="character-attribute-spellcast" title="Atributo de Conjuração">🪄 Conjuração</em>' : ""}</span><i class="character-attribute-slot" aria-hidden="true"><strong>${assigned ? formatCreationAttributeValue(value) : "—"}</strong></i><small>${attribute.description}</small><b class="character-attribute-card-action">${action}</b></button>`; }).join("")}</div></section>`;
 }
 
 export function renderCreationClassStep(model: { classes: ClassDefinition[]; selectedClass: ClassDefinition; subclasses: SubclassDefinition[]; selectedSubclassId?: string; features: FeatureDefinition[]; characterFieldSources?: CharacterFieldSource[]; definitionSelections?: Record<string, Record<string, string>> }, escapeHtml: EscapeHtml): string {

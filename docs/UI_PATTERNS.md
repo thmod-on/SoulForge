@@ -151,6 +151,27 @@ As classes históricas `primary-action`, `secondary-action`, `danger-action` e `
 
 Criação de personagem, progressão e descanso apresentam uma decisão por vez e compartilham o mesmo contrato visual: indicador de etapa no topo, título estável, corpo rolável sem deslocar o cabeçalho e ações previsíveis no rodapé. Áreas internas que possam exceder a altura disponível usam `sf-scroll-region`, preservando uma pista de rolagem visível no tema escuro.
 
+### Distribuição inicial de atributos
+
+- a interação começa pelo atributo e somente então oferece os valores que ele
+  pode receber; a pedra nunca precisa ser selecionada antes de seu destino;
+- o seletor permanece aberto depois da atribuição para permitir revisão, troca
+  e mudança direta para outro atributo sem esconder o estado atual;
+- progresso, atributo ativo, pedras e ações formam uma única faixa integrada,
+  separada apenas por espaço e linhas discretas. Contornos fortes ficam
+  reservados à pedra atual e ao foco de teclado;
+- cada pedra conserva uma identidade transitória, inclusive os valores `0` e
+  `+1` repetidos, enquanto textos distinguem **Disponível**, **Valor atual** e
+  o atributo em que uma pedra já está encaixada;
+- remover uma atribuição exige **Liberar valor**. Tocar novamente no cartão ou
+  no valor atual não executa uma ação destrutiva. **Liberar valor** e
+  **Recomeçar distribuição** são ações textuais, não novos painéis;
+- a interação principal é clique, toque ou teclado, com alvos mínimos de 44 px.
+  Drag-and-drop não é requisito nem alternativa exclusiva;
+- a grade usa três colunas em desktop e iPad horizontal e duas em larguras
+  menores. O corpo continua rolável sempre que painel e cartões excederem a
+  altura disponível.
+
 ## Compendium
 
 O Compendium usa uma metáfora leve de livro de consulta. Em paisagem, apresenta duas páginas por abertura; em larguras menores, organiza essas páginas em sequência vertical. Detalhes completos estão em [COMPENDIUM.md](COMPENDIUM.md).

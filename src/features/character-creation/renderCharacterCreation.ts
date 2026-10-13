@@ -99,7 +99,7 @@ export function renderCharacterCreationModal(deps: CharacterCreationRenderDepend
         </section>
         ${renderCreationCommunityStep({ communities: catalog.communities, features: catalog.features, selectedId: state.characterCreationCommunityId, search: state.characterCreationCommunitySearch, packId: state.characterCreationCommunityPackId, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs) }, escapeHtml)}
         ${renderCreationClassStep({ classes, selectedClass, subclasses, selectedSubclassId: selectedSubclass?.id, features: catalog.features, characterFieldSources, definitionSelections: state.characterCreationDefinitionSelections }, escapeHtml)}
-        ${renderCreationAttributesStep(state.characterCreationAttributeValues, state.characterCreationSelectedAttributeTokenId, spellcastAttributeId)}
+        ${renderCreationAttributesStep(state.characterCreationAttributeValues, state.characterCreationActiveAttributeId, state.characterCreationAttributeTokenIds, spellcastAttributeId)}
         <section class="character-domain-card-picker creation-step-panel" data-creation-panel="7">
           <div><span>Loadout inicial</span><h3>Escolha ${startingCardCount} cartas de Domínio</h3><p>Selecionar uma carta e abrir seu efeito completo são ações independentes. Você pode escolher mais de uma do mesmo domínio.</p></div>
           <div class="card-choice-selection-summary" aria-live="polite"><span>${state.characterCreationCardIds.length} / ${startingCardCount} selecionadas</span><strong>${selectedStartingCards.length ? selectedStartingCards.map((card) => escapeHtml(card.name)).join(" · ") : "Nenhuma carta selecionada"}</strong></div>
