@@ -4,6 +4,25 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.37.4]
+
+### Alterado
+
+- Configurações passou a concentrar apenas utilitários funcionais, em uma
+  coluna centralizada: Nuvem, Conteúdo e Packs e Backup e compartilhamento;
+  Aparência, Progressão e Regras de carga saíram até que tenham contratos de
+  produto próprios;
+- a lista de Packs ganhou altura responsiva e um indicador persistente de
+  rolagem, com orientação para continuar a lista ou retornar ao topo, sem
+  depender da barra nativa do navegador;
+- o cabeçalho das Configurações agora alinha versão e estado offline/PWA como
+  metadados compactos e legíveis em desktop, iPad e tela estreita.
+
+### Adicionado
+
+- cada ficha no seletor de personagens agora oferece **Exportar personagem**
+  no menu `•••`; a importação permanece na própria tela de seleção.
+
 ## [0.37.3]
 
 ### Alterado

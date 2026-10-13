@@ -33,6 +33,8 @@ describe("renderCharacterSelection", () => {
     expect(html).toContain("Exploradora · Elfa");
     expect(html).toContain("Nível 2");
     expect(html).toContain('class="character-card-menu"');
+    expect(html).toContain('data-action="export-character" data-character-id="character.lyra"');
+    expect(html).toContain("Exportar personagem");
     expect(html).toContain("Excluir personagem");
     expect(html).not.toContain("Último acesso");
     expect(html).not.toContain("Experiência");

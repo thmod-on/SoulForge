@@ -1,6 +1,6 @@
 # Backlog do SoulForge
 
-Última revisão: 12 de outubro de 2026.
+Última revisão: 13 de outubro de 2026.
 
 ## Objetivo
 
@@ -73,6 +73,8 @@ de outubro de 2026.
 | PWA-001 | P1 | Em andamento | PWA | Concluir a matriz manual de release. Criação, imagem própria e sincronização desktop→iPad já foram validadas na `0.36.0`. | Instalação e reabertura offline no iPad, atualização do Service Worker, preservação local, edição offline seguida de reconexão, conflito e isolamento entre duas contas possuem evidências registradas ou impedimentos explicitamente aceitos. |
 | ARC-001 | P2 | Condicional | Arquitetura | Continuar reduzindo as renderizações e templates legados de `main.ts` sem criar abstrações preventivas. | Cada área tocada transfere responsabilidades completas para sua feature e a barreira arquitetural não aumenta. Gatilho: alteração funcional na área correspondente. |
 | UI-001 | P3 | Condicional | Interface | Substituir aliases históricos de ações e pesquisa pelas primitives `sf-*`. | Área revisada usa somente as primitives atuais sem regressão visual. Gatilho: alteração funcional na área. |
+| SET-002 | P3 | A definir | Configurações e Aparência | Definir preferências de aparência realmente suportadas antes de reintroduzir controles: tema, densidade, escala, persistência e comportamento por dispositivo. | Contrato de preferências aprovado, persistência e defaults definidos, interface mostra somente escolhas funcionais e testes cobrem restauração e telas estreitas. |
+| SET-003 | P2 | A definir | Configurações e Regras de carga | Decidir se o SoulForge oferecerá regras da casa para capacidade e carga. Se sim, modelar um contrato declarativo que não altere fichas existentes e deixe explícito quando a regra vale apenas para personagens novos. | Decisão de produto registrada; caso aprovada, contrato, persistência, criação e ficha distinguem regra oficial e regra da casa, com migração ou preservação explícita das fichas existentes. |
 
 ## Limitações deliberadas — não tratar como pendência automática
 
@@ -116,6 +118,7 @@ rastreabilidade. O changelog continua sendo o histórico definitivo das entregas
 | CLS-001 | 21/09/2026 · `0.32.0` | Features agora podem declarar campos genéricos persistentes, preenchidos na criação e editados numa seção própria de Aptidões. O contrato estreia com Patrono e esfera do Bruxo, elemento da Origem Elemental e número de Padrões Estranhos do Mago, sem regras condicionadas ao nome de uma classe. |
 | UI-005 | 26/09/2026 · `0.32.1` | Os cartões de Escolhas de classe passaram a apresentar os valores persistidos em modo de leitura e a abrir os campos somente após “Editar escolhas”. A regra da Feature permanece visível como orientação secundária, com tipografia menor e cor discreta, preservando informações mecânicas como o gasto de Favor e o Dado do Patrono sem competir visualmente com os dados da ficha. |
 | UI-006 | 12/10/2026 · `0.37.2` | A escolha de cartas da criação e da progressão separa seleção de detalhes. Selos, controles explícitos e resumos persistentes tornam a escolha inequívoca; a progressão usa grade de duas colunas com expansão em linha inteira, sem comprimir ou sobrepor o conteúdo rolável. |
+| SET-001 | 13/10/2026 · `0.37.4` | Configurações foi reorganizada como página vertical de utilitários: Nuvem, Conteúdo e Packs e Backup e compartilhamento. Packs possuem contagem, rolagem interna com indicador persistente e altura responsiva; Aparência, Progressão e Regras de carga saíram por não terem controles funcionais. A importação de ficha ficou no seletor e a exportação passou ao menu `•••` da ficha correspondente. |
 | NAV-002 | 12/10/2026 · `0.37.1` | Configurações deixa de depender de uma ficha ativa na seleção de personagens. Dispositivos novos podem importar Packs, personagens e backups antes da primeira criação; informações que dependem da ficha, como capacidade de carga, assumem um estado informativo até que ela exista. |
 | RSC-001 | 26/09/2026 · `0.33.0` | Recursos criados pela pessoa usuária agora exibem um menu próprio para remoção, com confirmação que identifica nome e valor atual. A origem customizada é persistida e migrada para registros legados, enquanto recursos principais, derivados ou concedidos por regras permanecem protegidos. |
 | CRI-001 | 27/09/2026 · `0.34.0` | A escolha de ancestralidade agora permite expandir cada card para consultar nome e descrição das Features Top e Bottom antes de selecionar. A prévia usa o controle nativo acessível para clique, toque e teclado, preserva a seleção atual e não substitui a etapa posterior que define as Features de uma ancestralidade mista. |

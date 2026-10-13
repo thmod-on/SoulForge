@@ -162,7 +162,7 @@ import {
   type AncestryFeatureDependencies,
   type AncestrySourceFilter
 } from "./features/compendium/ancestries";
-import type { CompendiumSpread, CompendiumView, InventoryFilter, Page, ProgressionDraftChoice, ProgressionFlowStep, ProgressionMulticlassDraft, ProgressionPicker, ProgressionTierNumber, SettingsSection } from "./app/types";
+import type { CompendiumSpread, CompendiumView, InventoryFilter, Page, ProgressionDraftChoice, ProgressionFlowStep, ProgressionMulticlassDraft, ProgressionPicker, ProgressionTierNumber } from "./app/types";
 import { editorNavigation as sideNavItems, getPageFromEventTarget, isEditorPage, playerNavigation as topNavItems } from "./app/navigation";
 import { deleteLocalCharacter as deleteStoredCharacter, deleteSyncedCharacter, deleteSyncedDefinition as deleteCustomDefinition, getSyncViewModel, handleCloudAction, initializeCloudIntegration, loadCardMarkerOverrides, loadCustomDefinitions, mountGoogleSignIn, queueLocalSnapshot, refreshCloudAppliedState, saveLocalCharacter as persistCharacter, saveSyncedCardMarkerOverride as saveCardMarkerOverride, saveSyncedCharacter, saveSyncedDefinition as saveCustomDefinition } from "./features/cloud/cloudIntegration";
 import { migrateLegacyRestTimings } from "./storage/compendiumRepository";
@@ -309,7 +309,6 @@ const state: {
   backupRestoreOpen: boolean; pendingBackup?: SoulforgeBackupBundle; backupError?: string;
   contentImportOpen: boolean; pendingContentImport?: ContentImportPreview; contentImportError?: string; acceptedContentConflictIds: string[];
   deletingInstalledPackId?: string;
-  openSettingsSections: Record<SettingsSection, boolean>;
   character?: Character; characterScarsOpen: boolean; deletingCharacterScarId?: string;
 } = {
   page: "overview",
@@ -369,15 +368,7 @@ const state: {
   packImportOpen: false,
   removeAllInstalledPacksOpen: false,
   characterImportOpen: false, characterScarsOpen: false,
-  backupRestoreOpen: false, contentImportOpen: false, acceptedContentConflictIds: [],
-  openSettingsSections: {
-    general: true,
-    cloud: true,
-    localData: false,
-    loadRules: false,
-    appearance: false,
-    progression: false
-  }
+  backupRestoreOpen: false, contentImportOpen: false, acceptedContentConflictIds: []
 };
 const appVersion = packageJson.version;
 const itemFilterLabels: Record<InventoryFilter, string> = {
@@ -545,12 +536,10 @@ function getAncestryFeatureDependencies(): AncestryFeatureDependencies {
 }
 
 function getTransformationFeatureDependencies(): TransformationFeatureDependencies { return { state: state.transformationState, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render: () => render({ preserveMainScroll: true }) }; } function getConditionFeatureDependencies(): ConditionFeatureDependencies { return { state: state.conditionState, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render: () => render({ preserveMainScroll: true }) }; }
-function getCharacterTransformationDependencies(): CharacterTransformationDependencies { return { state: state.transformationState, character: state.character!, catalog, escapeHtml, saveCharacter: async (character) => { state.character = character; await saveCharacter(character); }, render: () => render({ preserveMainScroll: true }) }; } function getCharacterScarDependencies(): CharacterScarDependencies { return { state, escapeHtml, saveCharacter, render: () => render({ preserveMainScroll: true }) }; } function renderSettings(character: Character): string {
+function getCharacterTransformationDependencies(): CharacterTransformationDependencies { return { state: state.transformationState, character: state.character!, catalog, escapeHtml, saveCharacter: async (character) => { state.character = character; await saveCharacter(character); }, render: () => render({ preserveMainScroll: true }) }; } function getCharacterScarDependencies(): CharacterScarDependencies { return { state, escapeHtml, saveCharacter, render: () => render({ preserveMainScroll: true }) }; } function renderSettings(): string {
   return renderSettingsPage({
-    character,
     appVersion,
     state,
-    hasActiveCharacter: Boolean(state.character),
     escapeHtml,
     getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs),
     getPackDisplayDescription,
@@ -890,8 +879,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
   const previousSidebarScrollTop = options.preserveMainScroll ? appRoot.querySelector<HTMLElement>(".sidebar")?.scrollTop : undefined;
   const currentCharacter = state.character;
   if (state.characterSelectionOpen && isEditorPage(state.page)) {
-    const editorContextCharacter = currentCharacter ?? state.characters[0];
-    const editorScreen = state.page === "compendium" ? renderCompendium() : renderSettings(editorContextCharacter);
+    const editorScreen = state.page === "compendium" ? renderCompendium() : renderSettings();
     appRoot.innerHTML = `<div class="editor-shell">${renderEditorHeaderView(getPlayerShellDependencies())}${editorScreen}</div>${renderPackManagementDialogs(getPackManagementDependencies())}${renderLocalBackupDialogs(state, escapeHtml)}${renderCharacterImportModal({ isOpen: state.characterImportOpen, character: state.pendingCharacterImport, error: state.characterImportError, escapeHtml })}${renderCardModalView(state.modalCardId, getCardFeatureDependencies())}${renderDomainModalView(getDomainFeatureDependencies())}${renderDeleteDomainModalView(getDomainFeatureDependencies())}${renderCompendiumCardFormModalView(getCardFeatureDependencies())}${renderDeleteCompendiumCardModalView(getCardFeatureDependencies())}${renderCompendiumItemFormModalView(getItemFeatureDependencies())}${renderDeleteCompendiumItemModalView(getItemFeatureDependencies())}${renderCompendiumItemPreviewModalView(getItemFeatureDependencies())}${renderCompendiumClassPreviewModalView(getClassFeatureDependencies())}${renderCompendiumClassFormModalView(getClassFeatureDependencies())}${renderDeleteCompendiumClassModalView(getClassFeatureDependencies())}${renderCompendiumAncestryFormModalView(getAncestryFeatureDependencies())}${renderDeleteCompendiumAncestryModalView(getAncestryFeatureDependencies())}`;
     document.body.classList.toggle("has-modal", state.packImportOpen || state.removeAllInstalledPacksOpen || state.characterImportOpen || Boolean(state.deletingInstalledPackId) || Boolean(state.modalCardId) || state.domainModalOpen || Boolean(state.deletingDomainId) || state.cardModalOpen || Boolean(state.deletingCompendiumCardId) || state.itemDefinitionModalOpen || Boolean(state.deletingCompendiumItemId) || Boolean(state.compendiumItemPreviewId) || state.classModalOpen || Boolean(state.deletingCompendiumClassId) || Boolean(state.compendiumClassPreviewId) || state.ancestryModalOpen || Boolean(state.deletingCompendiumAncestryId) || Boolean(state.compendiumAncestryPreviewId) || Boolean(state.compendiumCommunityPreviewId) || state.transformationState.transformationModalOpen || Boolean(state.transformationState.deletingCompendiumTransformationId) || Boolean(state.transformationState.compendiumTransformationPreviewId) || state.conditionState.conditionModalOpen || Boolean(state.conditionState.deletingCompendiumConditionId) || Boolean(state.conditionState.compendiumConditionPreviewId));
     if (options.preserveMainScroll) requestAnimationFrame(() => { const content = appRoot.querySelector<HTMLElement>(".content"); if (content && previousContentScrollTop !== undefined) content.scrollTop = previousContentScrollTop; if (previousDocumentScrollTop !== undefined) window.scrollTo({ top: previousDocumentScrollTop, behavior: "auto" }); });
@@ -941,7 +929,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
                 : state.page === "compendium"
                   ? renderCompendium()
                   : state.page === "settings"
-                    ? renderSettings(character)
+                    ? renderSettings()
                     : renderPlaceholder(state.page);
 
   const shell = isEditorPage(state.page)
@@ -1044,11 +1032,6 @@ const renderCharacterCreationInPlace = (options: { resetScroll?: boolean; reveal
   }
 };
 const renderRestInPlace = (): void => { if (!renderRestModalInPlace(appRoot, state.character, state.restDialogKind, state.restChoices, state.restError, { escapeHtml, catalog })) render({ preserveMainScroll: true }); };
-function exportCharacter(): void {
-  const character = state.character;
-  if (character) downloadCharacterExport(character);
-}
-
 function focusInventorySearch(): void {
   requestAnimationFrame(() => {
     const input = document.querySelector<HTMLInputElement>("[data-inventory-search]");
@@ -1488,8 +1471,11 @@ function bindEvents(): void {
       return;
     }
 
-    if (target.closest('[data-action="export-character"]')) {
-      exportCharacter();
+    const exportCharacterButton = target.closest<HTMLElement>('[data-action="export-character"]');
+    if (exportCharacterButton) {
+      const characterId = exportCharacterButton.dataset.characterId;
+      const character = characterId ? state.characters.find((candidate) => candidate.id === characterId) : state.character;
+      if (character) downloadCharacterExport(character);
       return;
     }
 
@@ -1669,14 +1655,6 @@ function bindEvents(): void {
 
     if (target.closest('[data-action="save-new-character"]')) {
       void createCharacter();
-      return;
-    }
-
-    const settingsSectionButton = target.closest<HTMLElement>("[data-settings-section]");
-    if (settingsSectionButton) {
-      const section = settingsSectionButton.dataset.settingsSection as SettingsSection;
-      state.openSettingsSections[section] = !state.openSettingsSections[section];
-      render();
       return;
     }
 

@@ -7,7 +7,7 @@ import { confirmRemoveAllInstalledPacks, readPackImportFiles, renderPackManageme
 const escapeHtml = (value: string) => value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 
 function createState(): SettingsViewState {
-  return { installedPacks: [], openSettingsSections: { general: false, cloud: false, localData: false, loadRules: false, appearance: false, progression: false }, packImportOpen: false, removeAllInstalledPacksOpen: false };
+  return { installedPacks: [], packImportOpen: false, removeAllInstalledPacksOpen: false };
 }
 
 function createBundle(id: string, name: string): PackBundle {

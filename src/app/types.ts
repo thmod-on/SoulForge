@@ -4,7 +4,6 @@ export type Page = "overview" | "skills" | "inventory" | "progression" | "notes"
 export type InventoryFilter = "todos" | ItemDefinition["category"];
 export type ProgressionTierNumber = 2 | 3 | 4;
 export type ProgressionFlowStep = "advances" | "domain-card" | "card-swap" | "tier-experience" | "review";
-export type SettingsSection = "general" | "cloud" | "localData" | "loadRules" | "appearance" | "progression";
 export type CompendiumView = "index" | "cards" | "domains" | "items" | "classes" | "ancestries" | "communities" | "transformations" | "conditions";
 export type CompendiumSpread = 1 | 2 | 3 | 4 | 5;
 export type ProgressionPicker = "attributes" | "experiences";
@@ -23,7 +22,6 @@ export type ProgressionMulticlassDraft = Partial<Pick<CharacterMulticlass, "clas
 
 export type SettingsViewState = {
   installedPacks: PackManifest[];
-  openSettingsSections: Record<SettingsSection, boolean>;
   packImportOpen: boolean;
   pendingPackBundles?: PackBundle[];
   packImportError?: string;

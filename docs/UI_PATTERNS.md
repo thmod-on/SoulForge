@@ -36,6 +36,14 @@ concedidos por regras. A confirmação identifica nome e valor atual do recurso.
 
 Consulte também [UX_GUIDELINES.md](UX_GUIDELINES.md).
 
+## Configurações
+
+- Configurações reúne somente utilitários que funcionam no momento; versão e estado offline aparecem como contexto compacto, não como um painel expansível;
+- Nuvem, Conteúdo e Packs e Backup e compartilhamento usam uma única coluna, na ordem de uso mais frequente;
+- a lista de Packs mostra sua contagem e rola dentro de uma altura limitada e responsiva. Quando houver conteúdo oculto, um trilho e uma dica fixa indicam se há mais conteúdo abaixo ou o retorno ao topo; a remoção em massa fica fora dela, em zona destrutiva explícita;
+- exportar ou importar uma ficha pertence ao seletor de personagens: a importação fica na ação auxiliar da tela e a exportação no menu `•••` de cada ficha;
+- opções sem contrato de produto, como aparência, regras de carga e regras de progressão, não aparecem como controles inativos.
+
 ## Inventário
 
 - Equipados e Mochila são containers padrão;

@@ -53,13 +53,13 @@ recursos principais e recursos sem origem customizada permanecem protegidos.
 
 ## Backup e portabilidade
 
-O SoulForge exporta uma ficha por vez em um arquivo `.soulforge-character.json`. O arquivo contém um envelope com a versão de formato, a data da exportação e todo o estado da ficha.
+O SoulForge exporta uma ficha por vez em um arquivo `.soulforge-character.json`. A exportação fica no menu `•••` da ficha correspondente, no seletor de personagens, para que não seja necessário abri-la. A importação de ficha também pertence exclusivamente ao seletor. O arquivo contém um envelope com a versão de formato, a data da exportação e todo o estado da ficha.
 
 Ao importar, o SoulForge valida a estrutura antes de salvar. Se já existir uma ficha com o mesmo identificador neste dispositivo, cria uma cópia com novo identificador em vez de sobrescrever a ficha local. Exportações em JSON simples de versões anteriores também são aceitas quando a estrutura da ficha for válida.
 
 O arquivo carrega referências a Definitions de Packs, mas não instala Packs automaticamente. Para que cartas, classes, itens ou ancestralidades apareçam corretamente, os Packs correspondentes também devem estar instalados no dispositivo de destino.
 
-Além da ficha, **Criar backup completo** gera um `.soulforge-backup.json` com todas as fichas, Packs instalados, Definitions locais e complementos de cartas. **Restaurar backup** valida o arquivo, baixa uma cópia de segurança automática do estado atual e substitui as quatro coleções locais em uma única transação.
+Além da ficha, a seção **Backup e compartilhamento** das Configurações oferece **Criar backup completo**, que gera um `.soulforge-backup.json` com todas as fichas, Packs instalados, Definitions locais e complementos de cartas. **Restaurar backup** valida o arquivo, baixa uma cópia de segurança automática do estado atual e substitui as quatro coleções locais em uma única transação.
 
 Para compartilhar somente criações do Compendium, **Exportar conteúdo** gera um `.soulforge-content.json`. Ele inclui apenas Definitions com origem `local` e complementos locais; não redistribui fichas nem Packs externos. Na importação, conteúdo novo é acrescentado e conflitos por ID exigem que a pessoa escolha explicitamente quais versões recebidas substituirão as locais.
 
