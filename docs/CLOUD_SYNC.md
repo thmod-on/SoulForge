@@ -8,7 +8,7 @@ Produção: <https://soulforge.guitojoker-cloudflare.workers.dev/>.
 
 ## Estado atual
 
-Estado revisado em **13 de outubro de 2026**, na versão **0.38.0**:
+Estado revisado em **13 de outubro de 2026**, na versão **0.38.1**:
 
 - o Worker `soulforge` entrega a PWA e atende às rotas `/api/*`;
 - o D1 `soulforge` está com a migração inicial aplicada;
@@ -91,7 +91,7 @@ A API limita cada imagem a 1,5 MB e a mídia remota a 100 MB por conta.
 
 ### Segurança HTTP e limites de entrada
 
-CLD-005 está **em andamento**. A versão 0.38.0 passou a aplicar no Worker,
+CLD-005 está **em andamento**. As versões 0.38.0 e 0.38.1 passaram a aplicar no Worker,
 inclusive sobre Static Assets, respostas da API e erros:
 
 - CSP restrita à própria origem e aos endpoints necessários do Google Identity;

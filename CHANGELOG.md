@@ -4,6 +4,14 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.38.1]
+
+### Corrigido
+
+- Static Assets agora passam pelo Worker antes de serem entregues, garantindo
+  que os cabeçalhos de segurança também alcancem HTML, CSS, JavaScript,
+  manifesto, Service Worker e rotas inexistentes em produção.
+
 ## [0.38.0]
 
 ### Adicionado
