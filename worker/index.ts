@@ -12,36 +12,63 @@ type AuthenticatedRequest = { userId: string; sessionId: string };
 type GoogleClaims = { sub: string; email: string; email_verified: boolean; name?: string; picture?: string; iss: string; aud: string; exp: number };
 
 const maxImageBytes = 1_500_000;
+const maxGoogleLoginBytes = 32 * 1024;
+const maxSyncPushBytes = 2_000_000;
 const accountMediaQuota = 100_000_000;
 const sessionCookie = "soulforge_session";
 const allowedMediaTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
 const resourceTables: Record<SyncResourceType, string> = { character: "characters", definition: "definitions", override: "definition_overrides" };
+const mutatingMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  "script-src 'self' https://accounts.google.com/gsi/client",
+  "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
+  "img-src 'self' data: blob: https://lh3.googleusercontent.com",
+  "connect-src 'self' https://accounts.google.com/gsi/",
+  "frame-src https://accounts.google.com/gsi/",
+  "font-src 'self'",
+  "manifest-src 'self'",
+  "worker-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'"
+].join("; ");
 let googleKeys: { expiresAt: number; keys: JsonWebKey[] } | undefined;
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
+    let response: Response;
     try {
-      if (request.method !== "GET") assertSameOrigin(request);
-      if (url.pathname === "/api/config" && request.method === "GET") return json({ googleClientId: env.GOOGLE_CLIENT_ID, syncEnabled: env.SYNC_ENABLED !== "false" && Boolean(env.GOOGLE_CLIENT_ID) });
-      if (url.pathname === "/api/session" && request.method === "GET") return await sessionResponse(request, env);
-      if (url.pathname === "/api/auth/google" && request.method === "POST") return await googleLogin(request, env);
-      if (url.pathname === "/api/auth/logout" && request.method === "POST") return await logout(request, env);
-      const auth = await requireSession(request, env);
-      if (url.pathname === "/api/account" && request.method === "DELETE") return await deleteAccount(auth, env);
-      if (url.pathname === "/api/sync/push" && request.method === "POST") return await pushChanges(request, auth, env);
-      if (url.pathname === "/api/sync/pull" && request.method === "GET") return await pullChanges(url, auth, env);
-      if (url.pathname === "/api/media" && request.method === "POST") return await uploadMedia(request, auth, env);
-      if (url.pathname.startsWith("/api/media/") && request.method === "GET") return await downloadMedia(decodeURIComponent(url.pathname.slice("/api/media/".length)), auth, env);
-      return json({ error: "Rota não encontrada." }, 404);
+      response = url.pathname.startsWith("/api/")
+        ? await handleApiRequest(request, url, env)
+        : await env.ASSETS.fetch(request);
     } catch (error) {
-      if (isHttpError(error)) return json({ error: error.message }, error.status);
-      console.error({ event: "worker_error", errorName: error instanceof Error ? error.name : "UnknownError" });
-      return json({ error: "Falha interna do SoulForge." }, 500);
+      if (isHttpError(error)) response = json({ error: error.message }, error.status);
+      else {
+        console.error({ event: "worker_error", errorName: error instanceof Error ? error.name : "UnknownError" });
+        response = json({ error: "Falha interna do SoulForge." }, 500);
+      }
     }
+    return withSecurityHeaders(response);
   }
 } satisfies ExportedHandler<Env>;
+
+async function handleApiRequest(request: Request, url: URL, env: Env): Promise<Response> {
+  if (mutatingMethods.has(request.method)) assertSameOrigin(request);
+  if (url.pathname === "/api/config" && request.method === "GET") return json({ googleClientId: env.GOOGLE_CLIENT_ID, syncEnabled: env.SYNC_ENABLED !== "false" && Boolean(env.GOOGLE_CLIENT_ID) });
+  if (url.pathname === "/api/session" && request.method === "GET") return sessionResponse(request, env);
+  if (url.pathname === "/api/auth/google" && request.method === "POST") return googleLogin(request, env);
+  if (url.pathname === "/api/auth/logout" && request.method === "POST") return logout(request, env);
+  const auth = await requireSession(request, env);
+  if (url.pathname === "/api/account" && request.method === "DELETE") return deleteAccount(auth, env);
+  if (url.pathname === "/api/sync/push" && request.method === "POST") return pushChanges(request, auth, env);
+  if (url.pathname === "/api/sync/pull" && request.method === "GET") return pullChanges(url, auth, env);
+  if (url.pathname === "/api/media" && request.method === "POST") return uploadMedia(request, auth, env);
+  if (url.pathname.startsWith("/api/media/") && request.method === "GET") return downloadMedia(decodeURIComponent(url.pathname.slice("/api/media/".length)), auth, env);
+  return json({ error: "Rota não encontrada." }, 404);
+}
 
 async function sessionResponse(request: Request, env: Env): Promise<Response> {
   try {
@@ -56,7 +83,7 @@ async function sessionResponse(request: Request, env: Env): Promise<Response> {
 
 async function googleLogin(request: Request, env: Env): Promise<Response> {
   if (!env.GOOGLE_CLIENT_ID) throw new HttpError(503, "Login Google ainda não foi configurado.");
-  const body = await request.json<{ credential?: string }>();
+  const body = await readJsonBody<{ credential?: string }>(request, maxGoogleLoginBytes);
   if (!body.credential) throw new HttpError(400, "Credencial do Google ausente.");
   const claims = await verifyGoogleCredential(body.credential, env.GOOGLE_CLIENT_ID);
   const userId = await sha256Hex(`google:${claims.sub}`);
@@ -85,7 +112,7 @@ async function requireSession(request: Request, env: Env): Promise<Authenticated
 }
 
 async function pushChanges(request: Request, auth: AuthenticatedRequest, env: Env): Promise<Response> {
-  const body = await request.json<{ changes?: SyncPushChange[] }>();
+  const body = await readJsonBody<{ changes?: SyncPushChange[] }>(request, maxSyncPushBytes);
   if (!Array.isArray(body.changes) || body.changes.length > 100) throw new HttpError(400, "Lote de sincronização inválido.");
   const applied: SyncEnvelope[] = [];
   const conflicts: Array<{ key: string; local: SyncPushChange; remote: SyncEnvelope }> = [];
@@ -102,7 +129,7 @@ async function pushChanges(request: Request, auth: AuthenticatedRequest, env: En
     const updatedAt = new Date().toISOString();
     const deletedAt = change.deleted ? updatedAt : null;
     const payloadJson = change.deleted ? null : JSON.stringify(change.payload);
-    if (payloadJson && payloadJson.length > 1_500_000) throw new HttpError(413, "Um registro sincronizado excede o limite permitido.");
+    if (payloadJson && byteLength(payloadJson) > 1_500_000) throw new HttpError(413, "Um registro sincronizado excede o limite permitido.");
     const result = await env.DB.prepare(`INSERT INTO ${table} (user_id, resource_id, revision, payload_json, updated_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(user_id, resource_id) DO UPDATE SET revision = excluded.revision, payload_json = excluded.payload_json, updated_at = excluded.updated_at, deleted_at = excluded.deleted_at WHERE ${table}.revision = ? RETURNING revision`)
       .bind(auth.userId, change.id, revision, payloadJson, updatedAt, deletedAt, currentRevision).first<{ revision: number }>();
     if (!result) {
@@ -159,7 +186,7 @@ async function uploadMedia(request: Request, auth: AuthenticatedRequest, env: En
   const mimeType = request.headers.get("Content-Type")?.split(";")[0] ?? "";
   const claimedChecksum = request.headers.get("X-Media-Checksum") ?? "";
   if (!allowedMediaTypes.has(mimeType)) throw new HttpError(415, "Use uma imagem PNG, JPG ou WebP.");
-  const bytes = new Uint8Array(await request.arrayBuffer());
+  const bytes = await readLimitedBody(request, maxImageBytes);
   if (!bytes.byteLength || bytes.byteLength > maxImageBytes) throw new HttpError(413, "A imagem deve ter no máximo 1,5 MB.");
   if (!matchesImageSignature(bytes, mimeType)) throw new HttpError(415, "O conteúdo do arquivo não corresponde ao formato informado.");
   const checksum = await sha256Hex(bytes);
@@ -232,7 +259,56 @@ function validateChange(value: SyncPushChange): void {
 
 function assertSameOrigin(request: Request): void {
   const origin = request.headers.get("Origin");
-  if (origin && origin !== new URL(request.url).origin) throw new HttpError(403, "Origem não permitida.");
+  if (!origin || origin === "null" || origin !== new URL(request.url).origin) throw new HttpError(403, "Origem não permitida.");
+}
+
+async function readJsonBody<T>(request: Request, maxBytes: number): Promise<T> {
+  const mimeType = request.headers.get("Content-Type")?.split(";", 1)[0].trim().toLowerCase();
+  if (mimeType !== "application/json") throw new HttpError(415, "Envie o corpo como application/json.");
+  const bytes = await readLimitedBody(request, maxBytes);
+  try {
+    return JSON.parse(new TextDecoder().decode(bytes)) as T;
+  } catch {
+    throw new HttpError(400, "JSON inválido.");
+  }
+}
+
+async function readLimitedBody(request: Request, maxBytes: number): Promise<Uint8Array> {
+  const contentLength = request.headers.get("Content-Length");
+  if (contentLength !== null) {
+    const declaredBytes = Number(contentLength);
+    if (!Number.isSafeInteger(declaredBytes) || declaredBytes < 0) throw new HttpError(400, "Content-Length inválido.");
+    if (declaredBytes > maxBytes) throw new HttpError(413, "O corpo da requisição excede o limite permitido.");
+  }
+  if (!request.body) return new Uint8Array();
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel("request body limit exceeded");
+        throw new HttpError(413, "O corpo da requisição excede o limite permitido.");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const body = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return body;
+}
+
+function byteLength(value: string): number {
+  return new TextEncoder().encode(value).byteLength;
 }
 
 function matchesImageSignature(bytes: Uint8Array, mime: string): boolean {
@@ -284,6 +360,17 @@ function base64Url(value: Uint8Array): string {
 
 function json(value: unknown, status = 200, extraHeaders: HeadersInit = {}): Response {
   return Response.json(value, { status, headers: { "Cache-Control": "no-store", ...extraHeaders } });
+}
+
+function withSecurityHeaders(response: Response): Response {
+  const secured = new Response(response.body, response);
+  secured.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  secured.headers.set("X-Content-Type-Options", "nosniff");
+  secured.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  secured.headers.set("X-Frame-Options", "DENY");
+  secured.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=()");
+  if (!secured.headers.has("Content-Security-Policy")) secured.headers.set("Content-Security-Policy", contentSecurityPolicy);
+  return secured;
 }
 
 class HttpError extends Error {

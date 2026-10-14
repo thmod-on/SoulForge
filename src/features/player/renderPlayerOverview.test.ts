@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { demoCharacter } from "../../domain/demoCharacter";
-import type { CardDefinition } from "../../domain/types";
+import { createCatalog } from "../../domain/catalog";
+import type { CardDefinition, ConditionDefinition } from "../../domain/types";
 import { renderOverview, renderStoredCards, type PlayerOverviewDependencies } from "./renderPlayerOverview";
 
 const card: CardDefinition = {
@@ -16,8 +17,11 @@ const card: CardDefinition = {
   effect: "Efeito completo."
 };
 
+const vulnerable: ConditionDefinition = { id: "condition.core.vulnerable", type: "condition", packId: "test", name: "Vulnerável", summary: "A criatura está exposta.", category: "standard", effect: "Rolagens contra a criatura têm vantagem.", clearing: "Limpe Estresse." };
+
 function dependencies(cards: CardDefinition[]): PlayerOverviewDependencies {
   return {
+    catalog: createCatalog([], []),
     escapeHtml: (value) => value,
     renderResources: () => "",
     renderEmptyInline: (message) => `<p>${message}</p>`,
@@ -65,6 +69,20 @@ describe("renderOverview", () => {
     expect(html).toContain('aria-label="Abrir descanso"');
     expect(html).toContain('title="Descanso"');
     expect(html).not.toMatch(/downtime/i);
+    expect(html).toContain("Estados em cena");
+    expect(html).toContain("Nenhuma condição ou efeito ativo.");
+  });
+
+  it("mostra uma condição ativa antes dos efeitos e mantém seu detalhe acessível", () => {
+    const character = { ...demoCharacter, activeConditions: [{ conditionId: vulnerable.id, fallbackName: vulnerable.name, origins: [{ id: "scene", kind: "scene" as const, label: "Ataque inimigo", appliedAt: "2026-10-13T00:00:00.000Z" }] }] };
+    const deps = dependencies([]);
+    deps.catalog = createCatalog([], [vulnerable]);
+    const html = renderOverview(character, deps);
+
+    expect(html).toContain("Condições");
+    expect(html).toContain(vulnerable.name);
+    expect(html).toContain(vulnerable.effect);
+    expect(html).toContain(`data-character-condition-detail-id="${vulnerable.id}"`);
   });
 
   it("mostra o verso da carta indisponível e mantém o detalhe acessível", () => {

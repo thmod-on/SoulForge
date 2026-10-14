@@ -93,6 +93,7 @@ import { getActiveSheetModifierEffects, synchronizeCharacterSheetModifiers } fro
 import { handleCharacterScarAction, handleCharacterScarEscape, renderCharacterScarDialogs, type CharacterScarDependencies } from "./features/player/characterScars";
 import { getAttributeLabel, handleAttributeDetailAction, handleAttributeDetailEscape, renderAttributeDetailModal } from "./features/player/attributeDetails";
 import { handleCustomResourceAction, handleCustomResourceEscape, renderAddCustomResourceModal, renderRemoveCustomResourceModal } from "./features/player/customResourceActions";
+import { handleCharacterConditionAction, handleCharacterConditionEscape, renderCharacterConditionDialogs, synchronizeCharacterConditions, type CharacterConditionDependencies } from "./features/player/characterConditions";
 import { getActiveFeatureEffectDefenseModifiers, getActiveFeatureEffects, getFeatureActivationForCharacter } from "./features/feature-effects/featureEffects";
 import { handleFeatureEffectAction, renderFeatureTokenActivationDialog, type FeatureTokenActivationDialogState } from "./features/feature-effects/featureTokenActivation";
 import { renderCharacterIdentityModal as renderCharacterIdentityModalView } from "./features/character-identity/renderCharacterIdentityModal";
@@ -164,7 +165,7 @@ import {
 } from "./features/compendium/ancestries";
 import type { CompendiumSpread, CompendiumView, InventoryFilter, Page, ProgressionDraftChoice, ProgressionFlowStep, ProgressionMulticlassDraft, ProgressionPicker, ProgressionTierNumber } from "./app/types";
 import { editorNavigation as sideNavItems, getPageFromEventTarget, isEditorPage, playerNavigation as topNavItems } from "./app/navigation";
-import { deleteLocalCharacter as deleteStoredCharacter, deleteSyncedCharacter, deleteSyncedDefinition as deleteCustomDefinition, getSyncViewModel, handleCloudAction, initializeCloudIntegration, loadCardMarkerOverrides, loadCustomDefinitions, mountGoogleSignIn, queueLocalSnapshot, refreshCloudAppliedState, saveLocalCharacter as persistCharacter, saveSyncedCardMarkerOverride as saveCardMarkerOverride, saveSyncedCharacter, saveSyncedDefinition as saveCustomDefinition } from "./features/cloud/cloudIntegration";
+import { deleteLocalCharacter as deleteStoredCharacter, deleteSyncedCharacter, deleteSyncedDefinition as deleteCustomDefinition, getSyncViewModel, handleCloudAction, initializeCloudIntegration, loadCardMarkerOverrides, loadCustomDefinitions, mountGoogleSignIn, queueLocalSnapshot, refreshCloudAppliedState, saveSyncedCardMarkerOverride as saveCardMarkerOverride, saveSyncedCharacter, saveSyncedDefinition as saveCustomDefinition } from "./features/cloud/cloudIntegration";
 import { migrateLegacyRestTimings } from "./storage/compendiumRepository";
 import "./styles.css"; function getAppRoot(): HTMLDivElement {
   const element = document.querySelector<HTMLDivElement>("#app");
@@ -182,7 +183,8 @@ let shouldAnimateCharacterCreationModal = false;
 async function saveCharacter(character: Character): Promise<void> {
   const withSynchronizedArmor = synchronizeArmorResource(character, getItemDefinition);
   const withSynchronizedSheet = synchronizeCharacterSheetModifiers(withSynchronizedArmor, catalog);
-  const synchronized = synchronizeGameMarkers(withSynchronizedSheet, catalog);
+  const withSynchronizedConditions = synchronizeCharacterConditions(withSynchronizedSheet);
+  const synchronized = synchronizeGameMarkers(withSynchronizedConditions, catalog);
   if (synchronized !== character) {
     Object.assign(character, synchronized);
   }
@@ -203,7 +205,7 @@ const state: {
   compendiumAncestrySource: AncestrySourceFilter;
   compendiumCommunitySearch: string;
   compendiumCommunityPackId: string;
-  transformationState: TransformationFeatureState & CharacterTransformationUiState; conditionState: ConditionFeatureState;
+  transformationState: TransformationFeatureState & CharacterTransformationUiState; conditionState: ConditionFeatureState; characterConditionPickerOpen: boolean; characterConditionPickerSearch: string; characterConditionDetailId?: string;
   lastPlayerPage: Page;
   selectedItemId?: string;
   selectedCardId: string;
@@ -325,7 +327,7 @@ const state: {
   compendiumAncestrySource: "todos",
   compendiumCommunitySearch: "",
   compendiumCommunityPackId: "todos",
-  transformationState: { compendiumTransformationSearch: "", transformationModalOpen: false, characterTransformationPickerOpen: false, characterTransformationDetailOpen: false, characterTransformationRemoveOpen: false }, conditionState: { compendiumConditionSearch: "", conditionModalOpen: false },
+  transformationState: { compendiumTransformationSearch: "", transformationModalOpen: false, characterTransformationPickerOpen: false, characterTransformationDetailOpen: false, characterTransformationRemoveOpen: false }, conditionState: { compendiumConditionSearch: "", conditionModalOpen: false }, characterConditionPickerOpen: false, characterConditionPickerSearch: "",
   lastPlayerPage: "overview",
   selectedCardId: "",
   progressionStep: "advances",
@@ -439,6 +441,7 @@ function getPlayerShellDependencies(): PlayerShellDependencies {
 
 function getPlayerOverviewDependencies(): PlayerOverviewDependencies {
   return {
+    catalog,
     escapeHtml,
     renderResources: (character) => renderResourcesView(character, getPlayerShellDependencies()),
     renderEmptyInline,
@@ -545,6 +548,10 @@ function getCharacterTransformationDependencies(): CharacterTransformationDepend
     getPackDisplayDescription,
     sync: getSyncViewModel()
   });
+}
+
+function getCharacterConditionDependencies(): CharacterConditionDependencies {
+  return { state, catalog, escapeHtml, saveCharacter: async (character) => { state.character = character; await saveCharacter(character); }, render: () => render({ preserveMainScroll: true }) };
 }
 
 function getPackManagementDependencies(): PackManagementDependencies {
@@ -907,10 +914,11 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
   }
   const characterWithSynchronizedArmor = synchronizeArmorResource(currentCharacter, getItemDefinition);
   const characterWithSynchronizedSheet = synchronizeCharacterSheetModifiers(characterWithSynchronizedArmor, catalog);
-  const synchronizedCharacter = synchronizeGameMarkers(characterWithSynchronizedSheet, catalog);
+  const characterWithSynchronizedConditions = synchronizeCharacterConditions(characterWithSynchronizedSheet);
+  const synchronizedCharacter = synchronizeGameMarkers(characterWithSynchronizedConditions, catalog);
   if (synchronizedCharacter !== currentCharacter) {
     state.character = synchronizedCharacter;
-    void persistCharacter(synchronizedCharacter);
+    void saveCharacter(synchronizedCharacter);
   }
   const character = synchronizedCharacter;
 
@@ -952,7 +960,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
   appRoot.innerHTML = `
     ${shell}
     ${renderCardModalView(state.modalCardId, getCardFeatureDependencies())}
-    ${renderActivateStoredCardModal()}${renderCharacterTransformationDialogs(getCharacterTransformationDependencies())}${renderCharacterScarDialogs(getCharacterScarDependencies())}
+    ${renderActivateStoredCardModal()}${renderCharacterTransformationDialogs(getCharacterTransformationDependencies())}${renderCharacterScarDialogs(getCharacterScarDependencies())}${renderCharacterConditionDialogs(getCharacterConditionDependencies())}
     ${renderItemModalView(getInventoryRenderDependencies())}
     ${renderDeleteItemModalView(getInventoryRenderDependencies())}
     ${renderAddCustomResourceModal(state)}
@@ -1246,6 +1254,7 @@ function bindEvents(): void {
 
     if (handleCharacterFieldAction(target, { catalog, character: state.character, update: (character) => { state.character = character; void saveCharacter(character).then(() => render({ preserveMainScroll: true })); } })) return;
     if (handleCharacterScarAction(target, getCharacterScarDependencies())) { event.preventDefault(); return; } if (handleAncestryAction(target, getAncestryFeatureDependencies())) return;
+    if (state.character && handleCharacterConditionAction(target, getCharacterConditionDependencies())) return;
     if (handleCommunityAction(target, { state, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render })) return;
     if (handleTransformationAction(target, getTransformationFeatureDependencies())) return; if (handleConditionAction(target, getConditionFeatureDependencies())) return; if (state.character && handleCharacterTransformationAction(target, getCharacterTransformationDependencies())) return;
 
@@ -1373,6 +1382,9 @@ function bindEvents(): void {
       state.restDialogKind = undefined;
       state.restChoices = [];
       state.restError = undefined;
+      state.characterConditionPickerOpen = false;
+      state.characterConditionPickerSearch = "";
+      state.characterConditionDetailId = undefined;
       render({ preserveMainScroll: true, restoreActiveCardFocus });
       return;
     }
@@ -1450,6 +1462,9 @@ function bindEvents(): void {
       state.restDialogKind = undefined;
       state.restChoices = [];
       state.restError = undefined;
+      state.characterConditionPickerOpen = false;
+      state.characterConditionPickerSearch = "";
+      state.characterConditionDetailId = undefined;
       render({ preserveMainScroll: true, restoreActiveCardFocus });
       return;
     }
@@ -2334,6 +2349,7 @@ function bindEvents(): void {
 
   document.addEventListener("keydown", (event) => {
     if (handleCharacterAttributeAllocationEscape(event, state, appRoot, renderCharacterCreationInPlace)) return;
+    if (handleCharacterConditionEscape(event, getCharacterConditionDependencies())) return;
     if (handleCharacterScarEscape(event, getCharacterScarDependencies())) return; if (state.character && handleCharacterTransformationEscape(event, getCharacterTransformationDependencies())) return;
     if (handleAttributeDetailEscape(event, state, () => render({ preserveMainScroll: true }))) return;
     if (handleCustomResourceEscape(event, state, () => render({ preserveMainScroll: true }))) return;
@@ -2483,6 +2499,7 @@ function bindEvents(): void {
     if (target.matches("[data-compendium-community-search]")) { state.compendiumCommunitySearch = target.value; render({ preserveMainScroll: true }); requestAnimationFrame(() => { const search = document.querySelector<HTMLInputElement>("[data-compendium-community-search]"); search?.focus({ preventScroll: true }); search?.setSelectionRange(search.value.length, search.value.length); }); }
     if (target.matches("[data-compendium-transformation-search]")) { state.transformationState.compendiumTransformationSearch = target.value; render({ preserveMainScroll: true }); requestAnimationFrame(() => { const search = document.querySelector<HTMLInputElement>("[data-compendium-transformation-search]"); search?.focus({ preventScroll: true }); search?.setSelectionRange(search.value.length, search.value.length); }); }
     if (target.matches("[data-compendium-condition-search]")) { state.conditionState.compendiumConditionSearch = target.value; render({ preserveMainScroll: true }); requestAnimationFrame(() => { const search = document.querySelector<HTMLInputElement>("[data-compendium-condition-search]"); search?.focus({ preventScroll: true }); search?.setSelectionRange(search.value.length, search.value.length); }); }
+    if (target.matches("[data-character-condition-search]")) { state.characterConditionPickerSearch = target.value; render({ preserveMainScroll: true }); requestAnimationFrame(() => { const search = document.querySelector<HTMLInputElement>("[data-character-condition-search]"); search?.focus({ preventScroll: true }); search?.setSelectionRange(search.value.length, search.value.length); }); }
 
     if (target.matches("[data-character-ancestry-search]")) {
       state.characterCreationAncestrySearch = target.value;

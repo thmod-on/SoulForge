@@ -52,6 +52,8 @@ let dependencies: SyncCoordinatorDependencies | undefined;
 let syncTimer: number | undefined;
 let running: Promise<void> | undefined;
 let retryCount = 0;
+const maxSyncPushChanges = 100;
+const maxSyncPushBytes = 2_000_000;
 
 declare global {
   interface Window {
@@ -114,11 +116,20 @@ async function performSync(): Promise<void> {
     if (queued.length) {
       const prepared: SyncPushChange[] = [];
       for (const change of queued) {
-        prepared.push({ ...change, payload: change.payload === undefined ? undefined : await replaceDataUrlsWithMedia(change.payload, uploadCloudMedia) });
+        prepared.push({
+          mutationId: change.mutationId,
+          type: change.type,
+          id: change.id,
+          expectedRevision: change.expectedRevision,
+          deleted: change.deleted,
+          ...(change.payload === undefined ? {} : { payload: await replaceDataUrlsWithMedia(change.payload, uploadCloudMedia) })
+        });
       }
-      const pushed = await pushCloudChanges(prepared);
-      await acceptAppliedSync(pushed.applied, new Map(queued.map((change) => [change.key, change.mutationId])));
-      await saveSyncConflicts(pushed.conflicts);
+      for (const batch of splitSyncPushBatches(prepared)) {
+        const pushed = await pushCloudChanges(batch);
+        await acceptAppliedSync(pushed.applied, new Map(batch.map((change) => [`${change.type}:${change.id}`, change.mutationId])));
+        await saveSyncConflicts(pushed.conflicts);
+      }
     }
     const pulled = await pullCloudChanges(loadSyncCursor());
     const pendingKeys = new Set((await listQueuedSyncChanges()).map((change) => change.key));
@@ -141,6 +152,26 @@ async function performSync(): Promise<void> {
     updateView({ status: navigator.onLine ? "error" : "offline", message: errorMessage(error) });
     if (navigator.onLine && retryCount <= 5) scheduleSync(Math.min(30_000, 1_000 * 2 ** retryCount));
   }
+}
+
+export function splitSyncPushBatches(changes: SyncPushChange[]): SyncPushChange[][] {
+  const batches: SyncPushChange[][] = [];
+  let current: SyncPushChange[] = [];
+  for (const change of changes) {
+    const candidate = [...current, change];
+    if (candidate.length > maxSyncPushChanges || syncPushBodySize(candidate) > maxSyncPushBytes) {
+      if (!current.length) throw new Error("Uma alteração local excede o limite de sincronização de 2 MB.");
+      batches.push(current);
+      current = [change];
+      if (syncPushBodySize(current) > maxSyncPushBytes) throw new Error("Uma alteração local excede o limite de sincronização de 2 MB.");
+    } else current = candidate;
+  }
+  if (current.length) batches.push(current);
+  return batches;
+}
+
+function syncPushBodySize(changes: SyncPushChange[]): number {
+  return new TextEncoder().encode(JSON.stringify({ changes })).byteLength;
 }
 
 async function seedFirstSync(): Promise<void> {

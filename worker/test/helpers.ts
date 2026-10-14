@@ -64,7 +64,7 @@ export async function signGoogleToken(privateKey: CryptoKey, overrides: Partial<
 
 export async function request(path: string, init: RequestInit = {}, cookie?: string, workerEnv: Env = env as Env): Promise<Response> {
   const headers = new Headers(init.headers);
-  if (init.method && init.method !== "GET") headers.set("Origin", testOrigin);
+  if (init.method && init.method !== "GET" && !headers.has("Origin")) headers.set("Origin", testOrigin);
   if (cookie) headers.set("Cookie", cookie);
   return worker.fetch(new Request(`${testOrigin}${path}`, { ...init, headers }), workerEnv);
 }

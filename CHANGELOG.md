@@ -4,6 +4,31 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.38.0]
+
+### Adicionado
+
+- a ficha ganhou a faixa permanente **Estados em cena**, reunindo Condições e
+  efeitos de habilidade sem misturá-los; Condições podem ser aplicadas com
+  origem narrativa, consultadas em detalhe e removidas por origem;
+- Vulnerável recebe automaticamente uma origem vinculada ao Estresse quando a
+  última marca é preenchida e perde somente essa origem ao limpar uma marca,
+  sem encerrar outra aplicação ainda ativa;
+- referências a Condições permanecem reconhecíveis por ID e nome quando o Pack
+  de origem não está instalado.
+
+### Segurança
+
+- o Worker passa a aplicar CSP compatível com Google Identity, HSTS, proteção
+  contra framing, políticas de conteúdo, referência e permissões em assets,
+  API, mídia, erros e rotas inexistentes;
+- mutações exigem origem válida da própria aplicação, JSON e mídia possuem
+  validação estrita de tipo e corpos são interrompidos ao ultrapassar os
+  limites definidos para login, sincronização e imagens;
+- a fila de sincronização é dividida em lotes de até 100 alterações e 2 MB,
+  confirmados individualmente para preservar apenas o trabalho ainda pendente
+  quando uma etapa posterior falha.
+
 ## [0.37.4]
 
 ### Alterado

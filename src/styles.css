@@ -2615,6 +2615,268 @@ button.attribute-badge:active {
   color: var(--color-text);
 }
 
+.scene-states-band {
+  gap: 0.7rem;
+}
+
+.scene-states-heading {
+  align-items: center;
+}
+
+.scene-states-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.scene-states-actions > strong {
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.scene-state-group {
+  display: grid;
+  gap: 0.42rem;
+  border-top: 1px solid rgba(244, 234, 219, 0.12);
+  padding-top: 0.55rem;
+}
+
+.scene-state-group-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.scene-state-group-heading h3 {
+  margin: 0;
+  color: var(--color-gold);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.scene-state-group-heading span {
+  display: grid;
+  place-items: center;
+  min-width: 1.15rem;
+  min-height: 1.15rem;
+  border: 1px solid rgba(195, 155, 255, 0.4);
+  border-radius: 999px;
+  color: var(--color-muted);
+  font-size: 0.62rem;
+}
+
+.scene-states-empty {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+}
+
+.active-condition-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.45rem;
+}
+
+.active-condition {
+  display: grid;
+  grid-template-columns: 2.45rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  border: 1px solid rgba(235, 104, 139, 0.48);
+  border-left: 3px solid #ef6579;
+  padding: 0.38rem;
+  background: rgba(76, 22, 46, 0.26);
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.active-condition:hover {
+  border-color: rgba(244, 170, 190, 0.76);
+}
+
+.active-condition > span:not(.active-condition-art) {
+  display: grid;
+  min-width: 0;
+  gap: 0.08rem;
+}
+
+.active-condition strong {
+  font-size: 0.82rem;
+}
+
+.active-condition small {
+  overflow: hidden;
+  color: var(--color-muted);
+  font-size: 0.68rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.active-condition > i {
+  color: var(--color-gold);
+  font-size: 1.1rem;
+  font-style: normal;
+}
+
+.active-condition-art {
+  display: block;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 1px solid rgba(244, 234, 219, 0.24);
+  background: linear-gradient(135deg, #24172f, #0d0a12);
+  background-position: center;
+  background-size: cover;
+}
+
+.condition-glyph {
+  display: grid;
+  place-items: center;
+  color: var(--color-gold);
+  font-size: 1.25rem;
+}
+
+.character-condition-picker-modal {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  gap: 0.8rem;
+  width: min(44rem, calc(100vw - 2rem));
+  max-height: min(44rem, calc(100dvh - 2rem));
+  padding: 1.2rem;
+}
+
+.character-condition-picker-modal header h2,
+.character-condition-picker-modal header p {
+  margin: 0;
+}
+
+.character-condition-picker-modal header {
+  display: grid;
+  gap: 0.32rem;
+}
+
+.character-condition-source-field {
+  gap: 0.26rem;
+}
+
+.character-condition-source-field em {
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 400;
+}
+
+.character-condition-picker-list {
+  display: grid;
+  align-content: start;
+  gap: 0.45rem;
+  overflow: auto;
+  padding-right: 0.15rem;
+}
+
+.character-condition-picker-option {
+  display: grid;
+  grid-template-columns: 3.4rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.65rem;
+  border: 1px solid rgba(195, 155, 255, 0.24);
+  padding: 0.48rem;
+}
+
+.character-condition-picker-option .active-condition-art {
+  width: 3.4rem;
+}
+
+.character-condition-picker-option h3,
+.character-condition-picker-option p,
+.character-condition-picker-option small {
+  margin: 0;
+}
+
+.character-condition-picker-option > div {
+  display: grid;
+  gap: 0.14rem;
+  min-width: 0;
+}
+
+.character-condition-picker-option h3 {
+  font-size: 0.9rem;
+}
+
+.character-condition-picker-option p,
+.character-condition-picker-option small {
+  color: var(--color-muted);
+  font-size: 0.74rem;
+}
+
+.character-condition-origins {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.character-condition-origins > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  border-top: 1px solid rgba(244, 234, 219, 0.12);
+  padding-top: 0.42rem;
+}
+
+.character-condition-origins > div > span {
+  display: grid;
+  gap: 0.08rem;
+}
+
+.character-condition-origins small {
+  color: var(--color-muted);
+}
+
+.condition-locked-origin {
+  max-width: 13rem;
+  color: #d5b8f5 !important;
+  text-align: right;
+}
+
+@media (max-width: 42rem) {
+  .scene-states-heading,
+  .scene-states-actions {
+    align-items: flex-start;
+  }
+
+  .scene-states-heading {
+    flex-direction: column;
+  }
+
+  .scene-states-actions {
+    justify-content: flex-start;
+  }
+
+  .active-condition-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .character-condition-picker-option {
+    grid-template-columns: 2.9rem minmax(0, 1fr);
+  }
+
+  .character-condition-picker-option .active-condition-art {
+    width: 2.9rem;
+  }
+
+  .character-condition-picker-option button {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+
 .combat-primary-grid {
   display: grid;
   gap: 0.42rem;

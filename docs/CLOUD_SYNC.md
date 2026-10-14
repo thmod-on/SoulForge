@@ -8,7 +8,7 @@ Produção: <https://soulforge.guitojoker-cloudflare.workers.dev/>.
 
 ## Estado atual
 
-Estado revisado em **12 de outubro de 2026**, na versão **0.37.2**:
+Estado revisado em **13 de outubro de 2026**, na versão **0.38.0**:
 
 - o Worker `soulforge` entrega a PWA e atende às rotas `/api/*`;
 - o D1 `soulforge` está com a migração inicial aplicada;
@@ -88,6 +88,34 @@ Worker com seus Static Assets. Um deploy manual deve ser reservado para
 diagnóstico ou recuperação e precisa passar pelas mesmas verificações.
 
 A API limita cada imagem a 1,5 MB e a mídia remota a 100 MB por conta.
+
+### Segurança HTTP e limites de entrada
+
+CLD-005 está **em andamento**. A versão 0.38.0 passou a aplicar no Worker,
+inclusive sobre Static Assets, respostas da API e erros:
+
+- CSP restrita à própria origem e aos endpoints necessários do Google Identity;
+- HSTS por um ano, `X-Content-Type-Options: nosniff`,
+  `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: DENY` e
+  `Permissions-Policy` sem câmera, microfone, geolocalização, pagamentos, USB
+  ou serial;
+- `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'self'` e
+  `form-action 'self'`;
+- origem obrigatória e exatamente igual à origem do Worker em `POST`, `PUT`,
+  `PATCH` e `DELETE`, sem habilitar CORS;
+- leitura limitada antes do parse: 32 KiB no login Google, 2 MB por lote de
+  sincronização e 1,5 MB por imagem;
+- lotes locais com no máximo 100 alterações e 2 MB, confirmados separadamente
+  para que uma falha posterior não reenvie alterações já aceitas.
+
+Estilos inline continuam autorizados pela CSP porque cores e imagens locais são
+aplicadas dinamicamente. `unsafe-eval`, origens genéricas e curingas não são
+permitidos. JSON malformado retorna `400`, tipo de conteúdo inadequado retorna
+`415` e corpo acima do limite retorna `413` antes de ser carregado integralmente.
+
+O item só será concluído depois do deploy restrito e da validação no PC e iPad
+de carregamento, atualização da PWA, login e logout Google, avatar, sincronização,
+upload/download de imagem e reabertura offline.
 
 ### Testes de integração
 

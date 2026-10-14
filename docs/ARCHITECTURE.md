@@ -363,6 +363,7 @@ Exemplos de dados mutáveis:
 - Inventário
 - Equipamentos
 - Efeitos temporários
+- Condições ativas e suas origens
 
 ---
 

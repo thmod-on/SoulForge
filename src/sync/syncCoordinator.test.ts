@@ -111,6 +111,39 @@ describe("local-first sync lifecycle", () => {
     expect(queued[0].mutationId).not.toBe(sent.mutationId);
   });
 
+  it("splits pushes by count and UTF-8 body size", async () => {
+    createHarness(true, authenticatedSession());
+    const coordinator = await loadCoordinator();
+    const small = Array.from({ length: 101 }, (_, index) => syncChange(`hero-${index}`, { name: `Hero ${index}` }));
+    expect(coordinator.splitSyncPushBatches(small).map((batch) => batch.length)).toEqual([100, 1]);
+
+    const large = [syncChange("large-a", { text: "á".repeat(600_000) }), syncChange("large-b", { text: "á".repeat(600_000) })];
+    expect(coordinator.splitSyncPushBatches(large).map((batch) => batch.length)).toEqual([1, 1]);
+  });
+
+  it("acknowledges each batch before sending the next one", async () => {
+    const harness = createHarness(true, authenticatedSession());
+    let call = 0;
+    harness.cloud.push.mockImplementation(async (changes: SyncPushChange[]) => {
+      call += 1;
+      if (call === 2) throw new Error("second batch unavailable");
+      return {
+        applied: changes.map((change) => ({ type: change.type, id: change.id, revision: 1, updatedAt: "2026-10-13T12:00:00.000Z", payload: change.payload })),
+        conflicts: []
+      };
+    });
+    const coordinator = await loadCoordinator();
+    await coordinator.initializeSyncCoordinator(createDependencies());
+    await coordinator.markForSync("character", "large-a", { text: "á".repeat(600_000) });
+    await coordinator.markForSync("character", "large-b", { text: "á".repeat(600_000) });
+
+    await coordinator.runSync();
+
+    expect(harness.cloud.push).toHaveBeenCalledTimes(2);
+    expect((await listQueuedSyncChanges()).map((change) => change.id)).toEqual(["large-b"]);
+    expect(coordinator.getSyncViewModel()).toMatchObject({ status: "error", message: "second batch unavailable" });
+  });
+
   it("applies a remote tombstone locally", async () => {
     const harness = createHarness(true, authenticatedSession());
     harness.cloud.pull.mockResolvedValue({ cursor: 4, changes: [{ type: "character", id: "hero", revision: 2, updatedAt: "2026-10-10T12:00:00.000Z", deletedAt: "2026-10-10T12:00:00.000Z" }] });
@@ -336,6 +369,10 @@ function createDependencies(snapshot: Partial<Awaited<ReturnType<SyncCoordinator
 
 function authenticatedSession(): CloudSession {
   return { authenticated: true, user: { id: "account-a", email: "account@example.invalid", name: "Test Account" } };
+}
+
+function syncChange(id: string, payload: unknown): SyncPushChange {
+  return { mutationId: `mutation-${id}`, type: "character", id, expectedRevision: 0, deleted: false, payload };
 }
 
 function character(id: string, name: string): Character {

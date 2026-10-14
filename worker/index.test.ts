@@ -3,8 +3,8 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { HttpResponse, http } from "msw";
 import { setupNetwork } from "@msw/cloudflare";
 import type { SyncPushChange } from "../src/sync/types";
-import type { Env } from "./index";
-import { createSigningKey, login, pngBytes, request, resetCloudStorage, sha256Hex, signGoogleToken } from "./test/helpers";
+import worker, { type Env } from "./index";
+import { createSigningKey, login, pngBytes, request, resetCloudStorage, sha256Hex, signGoogleToken, testOrigin } from "./test/helpers";
 
 const network = setupNetwork();
 let signingKey: Awaited<ReturnType<typeof createSigningKey>>;
@@ -21,6 +21,50 @@ beforeEach(async () => {
 
 afterEach(() => network.resetHandlers());
 afterAll(() => network.disable());
+
+describe("public response hardening", () => {
+  it("adds security headers to static assets, API responses and errors", async () => {
+    const assets = { fetch: vi.fn(async () => new Response("<!doctype html><title>SoulForge</title>", { headers: { "Content-Type": "text/html" } })) } as unknown as Fetcher;
+    const workerEnv = { ...env, ASSETS: assets } as Env;
+    const staticResponse = await request("/", {}, undefined, workerEnv);
+    const configResponse = await request("/api/config");
+    const { cookie } = await login(signingKey.privateKey);
+    const notFound = await request("/api/not-found", {}, cookie);
+
+    for (const response of [staticResponse, configResponse, notFound]) assertSecurityHeaders(response);
+    expect(notFound.status).toBe(404);
+    const csp = staticResponse.headers.get("Content-Security-Policy") ?? "";
+    expect(csp).toContain("script-src 'self' https://accounts.google.com/gsi/client");
+    expect(csp).toContain("style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style");
+    expect(csp).toContain("connect-src 'self' https://accounts.google.com/gsi/");
+    expect(csp).toContain("frame-src https://accounts.google.com/gsi/");
+    expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).toContain("object-src 'none'");
+    expect(csp).not.toContain("unsafe-eval");
+    expect(csp).not.toMatch(/(?:^|\s)\*(?:;|\s|$)/);
+    expect(configResponse.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  it("requires the exact request origin for mutations", async () => {
+    expect((await request("/api/auth/logout", { method: "POST" })).status).toBe(204);
+    expect((await request("/api/auth/logout", { method: "POST", headers: { Origin: "https://example.invalid" } })).status).toBe(403);
+    expect((await request("/api/auth/logout", { method: "POST", headers: { Origin: "null" } })).status).toBe(403);
+    const missingOrigin = await worker.fetch(new Request(`${testOrigin}/api/auth/logout`, { method: "POST" }), env as Env);
+    expect(missingOrigin.status).toBe(403);
+    assertSecurityHeaders(missingOrigin);
+  });
+
+  it("validates JSON media type, syntax and login body size before parsing", async () => {
+    const unsupported = await request("/api/auth/google", { method: "POST", headers: { "Content-Type": "text/plain" }, body: "{}" });
+    expect(unsupported.status).toBe(415);
+    const malformed = await request("/api/auth/google", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{" });
+    expect(malformed.status).toBe(400);
+    const oversized = await request("/api/auth/google", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ credential: "x".repeat(33 * 1024) }) });
+    expect(oversized.status).toBe(413);
+    const declaredOversized = await request("/api/auth/google", { method: "POST", headers: { "Content-Type": "application/json", "Content-Length": String(32 * 1024 + 1) }, body: "{}" });
+    expect(declaredOversized.status).toBe(413);
+  });
+});
 
 describe("Google authentication and sessions", () => {
   it("rejects malformed and invalid Google credentials", async () => {
@@ -126,6 +170,8 @@ describe("private media", () => {
     const valid = pngBytes();
     expect((await request("/api/media", mediaBody(valid, "0".repeat(64)), cookie)).status).toBe(400);
 
+    const exactLimit = pngBytes(1_500_000);
+    expect((await request("/api/media", mediaBody(exactLimit, await sha256Hex(exactLimit)), cookie)).status).toBe(201);
     const tooLarge = pngBytes(1_500_001);
     expect((await request("/api/media", mediaBody(tooLarge, await sha256Hex(tooLarge)), cookie)).status).toBe(413);
 
@@ -170,6 +216,18 @@ describe("private media", () => {
     expect(objectKey && await env.MEDIA.head(objectKey)).toBeNull();
     await expect((await request("/api/session", {}, cookie)).json()).resolves.toEqual({ authenticated: false });
   });
+
+  it("preserves private media caching and applies the common security headers", async () => {
+    const { cookie } = await login(signingKey.privateKey);
+    const bytes = pngBytes();
+    const upload = await request("/api/media", mediaBody(bytes, await sha256Hex(bytes)), cookie);
+    const mediaId = ((await upload.json()) as { id: string }).id;
+    const response = await request(`/api/media/${mediaId}`, {}, cookie);
+
+    expect(response.headers.get("Cache-Control")).toBe("private, max-age=86400");
+    expect(response.headers.get("Content-Security-Policy")).toBe("default-src 'none'");
+    assertSecurityHeaders(response, false);
+  });
 });
 
 describe("unexpected failures", () => {
@@ -196,4 +254,13 @@ function jsonBody(value: unknown): RequestInit {
 function mediaBody(bytes: Uint8Array, checksum: string, mimeType = "image/png"): RequestInit {
   const body = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
   return { method: "POST", headers: { "Content-Type": mimeType, "X-Media-Checksum": checksum }, body };
+}
+
+function assertSecurityHeaders(response: Response, expectApplicationCsp = true): void {
+  expect(response.headers.get("Strict-Transport-Security")).toBe("max-age=31536000; includeSubDomains");
+  expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
+  expect(response.headers.get("Referrer-Policy")).toBe("strict-origin-when-cross-origin");
+  expect(response.headers.get("X-Frame-Options")).toBe("DENY");
+  expect(response.headers.get("Permissions-Policy")).toBe("camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=()");
+  if (expectApplicationCsp) expect(response.headers.get("Content-Security-Policy")).toContain("frame-ancestors 'none'");
 }

@@ -2,9 +2,9 @@
 
 ## Escopo
 
-Condições são Definitions reutilizáveis do Compendium. Elas descrevem um
-estado de jogo, mas não guardam quem está sob esse estado nem interpretam texto
-livre para aplicar efeitos automaticamente.
+Condições são Definitions reutilizáveis do Compendium. A Definition descreve a
+regra; a ficha guarda separadamente quais Condições estão ativas e as origens
+que ainda as mantêm em vigor.
 
 O capítulo do Compendium permite pesquisar conteúdo importado, consultar sua
 fonte e criar, editar ou excluir condições locais. Quando nenhum Pack fornece
@@ -33,12 +33,19 @@ detalhe de Vulnerável também lembra que marcar o último espaço de Estresse d
 a personagem Vulnerável e que limpar ao menos 1 Estresse encerra essa origem da
 Condição.
 
-## Limite desta entrega
+## Condições na ficha
 
-Aplicar condições a personagens, preservar múltiplas origens e automatizar a
-relação entre Estresse e Vulnerável pertence à pendência `CND-001`. Este capítulo
-fornece as Definitions que esse estado referenciará, sem antecipar a persistência
-na ficha.
+A faixa **Estados em cena**, no topo da ficha, agrupa Condições e efeitos de
+habilidade sem misturá-los. Cada Condição usa uma única referência visual, mesmo
+quando possui mais de uma origem. O detalhe mostra o efeito completo, a forma de
+encerramento e as origens ativas.
+
+Uma pessoa pode adicionar uma Condição da cena e, opcionalmente, registrar sua
+origem narrativa — por exemplo, o ataque de uma criatura. Essa origem é removida
+manualmente. A origem automática `stress` de Vulnerável é independente: ela é
+adicionada ao marcar o último espaço de Estresse e termina somente ao limpar ao
+menos um espaço. Referências continuam na ficha mesmo se o Pack de origem não
+estiver instalado; nesse caso, o SoulForge usa o nome salvo e um placeholder.
 
 ## Artes preparadas
 

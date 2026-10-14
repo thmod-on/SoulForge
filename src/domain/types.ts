@@ -118,6 +118,23 @@ export type CharacterActiveFeatureEffect = {
   tokens?: { label: string; value: number };
 };
 
+/** Uma origem independente que mantém uma Condição ativa na ficha. */
+export type CharacterConditionOrigin = {
+  id: string;
+  kind: "scene" | "stress";
+  /** Contexto narrativo livre para aplicações feitas durante a cena. */
+  label: string;
+  appliedAt: string;
+};
+
+/** Estado variável de uma Condição, separado da Definition do Compendium. */
+export type CharacterActiveCondition = {
+  conditionId: string;
+  /** Mantém a identificação legível se o Pack de origem deixar de estar instalado. */
+  fallbackName: string;
+  origins: CharacterConditionOrigin[];
+};
+
 export type Attribute = {
   id: "for" | "dex" | "con" | "int" | "wil" | "cha";
   label: string;
@@ -535,6 +552,8 @@ export type Character = {
   definitionSelections?: CharacterDefinitionSelection[];
   /** Effects temporários ativados a partir de Features declaradas pelo Compendium. */
   activeFeatureEffects?: CharacterActiveFeatureEffect[];
+  /** Condições em vigor e suas origens independentes. */
+  activeConditions?: CharacterActiveCondition[];
   skills: CharacterSkill[];
   experiences: CharacterExperience[];
   notes: CharacterNote[];
