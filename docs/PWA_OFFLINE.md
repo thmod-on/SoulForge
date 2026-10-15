@@ -84,3 +84,19 @@ Para uma atualização de toolchain ou Service Worker, complementar a lista com:
 - atualizar uma instalação existente e confirmar que o novo Service Worker é ativado;
 - reabrir sem rede e conferir uma ficha, Compendium, backup e restauração;
 - confirmar que uma edição offline volta para a fila e sincroniza ao recuperar a conexão.
+
+### Evidência da versão 0.38.2
+
+Em **15 de outubro de 2026**, a matriz foi concluída em PC e iPad com:
+
+- instalação nova da PWA em um ambiente sem dados anteriores;
+- atualização da instalação existente e ativação do novo Service Worker;
+- preservação das fichas e demais dados locais após a atualização;
+- reabertura e consulta de ficha e Compendium sem conexão;
+- criação e restauração de backup enquanto o aplicativo estava offline;
+- edição offline enviada após a reconexão;
+- conflito real provocado entre PC e iPad, preservando as versões até a escolha.
+
+Os testes automatizados do sincronizador e do Worker complementam essa evidência
+com fila, retry, tombstones, resolução de conflito e isolamento entre contas. A
+matriz encerrou PWA-001 e a validação manual que ainda mantinha DEP-001 aberto.
