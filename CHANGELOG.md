@@ -4,6 +4,18 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.38.2]
+
+### Segurança
+
+- respostas do Worker passam a declarar isolamento compatível com o popup do
+  Google e a desativar explicitamente filtros XSS legados;
+- o deploy valida a configuração compilada de Static Assets e executa um smoke
+  sem credenciais contra a produção, cobrindo HTML, assets, PWA, API, CSP,
+  cache `no-store` e rejeição de mutações sem origem;
+- os limites exatos de 32 KiB para login e 2 MB para sincronização ganharam
+  cobertura automatizada, além da proteção de 1,5 MB já existente para mídia.
+
 ## [0.38.1]
 
 ### Corrigido

@@ -8,7 +8,7 @@ Produção: <https://soulforge.guitojoker-cloudflare.workers.dev/>.
 
 ## Estado atual
 
-Estado revisado em **13 de outubro de 2026**, na versão **0.38.1**:
+Estado revisado em **15 de outubro de 2026**, na versão **0.38.2**:
 
 - o Worker `soulforge` entrega a PWA e atende às rotas `/api/*`;
 - o D1 `soulforge` está com a migração inicial aplicada;
@@ -91,14 +91,17 @@ A API limita cada imagem a 1,5 MB e a mídia remota a 100 MB por conta.
 
 ### Segurança HTTP e limites de entrada
 
-CLD-005 está **em andamento**. As versões 0.38.0 e 0.38.1 passaram a aplicar no Worker,
-inclusive sobre Static Assets, respostas da API e erros:
+CLD-005 está **em andamento**. As versões 0.38.0 a 0.38.2 passaram a aplicar no
+Worker, inclusive sobre Static Assets, respostas da API e erros:
 
 - CSP restrita à própria origem e aos endpoints necessários do Google Identity;
 - HSTS por um ano, `X-Content-Type-Options: nosniff`,
   `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: DENY` e
   `Permissions-Policy` sem câmera, microfone, geolocalização, pagamentos, USB
   ou serial;
+- `Cross-Origin-Opener-Policy: same-origin-allow-popups`, compatível com o popup
+  do Google quando FedCM não estiver disponível, e `X-XSS-Protection: 0` para
+  desativar filtros legados;
 - `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'self'` e
   `form-action 'self'`;
 - origem obrigatória e exatamente igual à origem do Worker em `POST`, `PUT`,
@@ -116,6 +119,26 @@ permitidos. JSON malformado retorna `400`, tipo de conteúdo inadequado retorna
 O item só será concluído depois do deploy restrito e da validação no PC e iPad
 de carregamento, atualização da PWA, login e logout Google, avatar, sincronização,
 upload/download de imagem e reabertura offline.
+
+O build valida que o Wrangler compilado conserva `run_worker_first: true`. Após
+o deploy, `pnpm run check:production` consulta a origem oficial sem credenciais
+e confirma HTML, asset versionado, manifesto, Service Worker, API, erros,
+cabeçalhos e rejeição de mutações sem `Origin`. O smoke não substitui o teste
+autenticado e não executa rollback automático.
+
+Enquanto `run_worker_first` estiver ativo para todos os assets, cada requisição
+estática também invoca o Worker e consome sua franquia. A estratégia deverá ser
+reavaliada antes da abertura pública ou ao atingir 10 mil requisições diárias.
+Até lá, a aplicação permanece centralizada no Worker para evitar diferenças de
+segurança entre assets e API.
+
+Para fechar o item, registrar abaixo a evidência manual da 0.38.2:
+
+| Ambiente | Evidência necessária | Resultado |
+| --- | --- | --- |
+| PC | navegador e versão; atualização; console sem violações CSP; logout/login; popup; avatar; ficha; imagem; offline e reconexão | Pendente |
+| iPad | modelo, iPadOS e Safari; atualização da PWA; login; avatar; ficha; imagem; offline e reconexão | Pendente |
+| Cloudflare | workflow e commit; ausência de novos `5xx`; logs sem dados pessoais; volume de invocações observado | Pendente |
 
 ### Testes de integração
 

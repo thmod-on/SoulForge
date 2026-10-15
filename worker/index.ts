@@ -61,13 +61,18 @@ async function handleApiRequest(request: Request, url: URL, env: Env): Promise<R
   if (url.pathname === "/api/session" && request.method === "GET") return sessionResponse(request, env);
   if (url.pathname === "/api/auth/google" && request.method === "POST") return googleLogin(request, env);
   if (url.pathname === "/api/auth/logout" && request.method === "POST") return logout(request, env);
+  const isAccountDeletion = url.pathname === "/api/account" && request.method === "DELETE";
+  const isSyncPush = url.pathname === "/api/sync/push" && request.method === "POST";
+  const isSyncPull = url.pathname === "/api/sync/pull" && request.method === "GET";
+  const isMediaUpload = url.pathname === "/api/media" && request.method === "POST";
+  const isMediaDownload = url.pathname.startsWith("/api/media/") && request.method === "GET";
+  if (!isAccountDeletion && !isSyncPush && !isSyncPull && !isMediaUpload && !isMediaDownload) return json({ error: "Rota não encontrada." }, 404);
   const auth = await requireSession(request, env);
-  if (url.pathname === "/api/account" && request.method === "DELETE") return deleteAccount(auth, env);
-  if (url.pathname === "/api/sync/push" && request.method === "POST") return pushChanges(request, auth, env);
-  if (url.pathname === "/api/sync/pull" && request.method === "GET") return pullChanges(url, auth, env);
-  if (url.pathname === "/api/media" && request.method === "POST") return uploadMedia(request, auth, env);
-  if (url.pathname.startsWith("/api/media/") && request.method === "GET") return downloadMedia(decodeURIComponent(url.pathname.slice("/api/media/".length)), auth, env);
-  return json({ error: "Rota não encontrada." }, 404);
+  if (isAccountDeletion) return deleteAccount(auth, env);
+  if (isSyncPush) return pushChanges(request, auth, env);
+  if (isSyncPull) return pullChanges(url, auth, env);
+  if (isMediaUpload) return uploadMedia(request, auth, env);
+  return downloadMedia(decodeURIComponent(url.pathname.slice("/api/media/".length)), auth, env);
 }
 
 async function sessionResponse(request: Request, env: Env): Promise<Response> {
@@ -368,6 +373,8 @@ function withSecurityHeaders(response: Response): Response {
   secured.headers.set("X-Content-Type-Options", "nosniff");
   secured.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   secured.headers.set("X-Frame-Options", "DENY");
+  secured.headers.set("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+  secured.headers.set("X-XSS-Protection", "0");
   secured.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=()");
   if (!secured.headers.has("Content-Security-Policy")) secured.headers.set("Content-Security-Policy", contentSecurityPolicy);
   return secured;

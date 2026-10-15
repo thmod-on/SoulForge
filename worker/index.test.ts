@@ -28,8 +28,7 @@ describe("public response hardening", () => {
     const workerEnv = { ...env, ASSETS: assets } as Env;
     const staticResponse = await request("/", {}, undefined, workerEnv);
     const configResponse = await request("/api/config");
-    const { cookie } = await login(signingKey.privateKey);
-    const notFound = await request("/api/not-found", {}, cookie);
+    const notFound = await request("/api/not-found");
 
     for (const response of [staticResponse, configResponse, notFound]) assertSecurityHeaders(response);
     expect(notFound.status).toBe(404);
@@ -59,8 +58,13 @@ describe("public response hardening", () => {
     expect(unsupported.status).toBe(415);
     const malformed = await request("/api/auth/google", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{" });
     expect(malformed.status).toBe(400);
-    const oversized = await request("/api/auth/google", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ credential: "x".repeat(33 * 1024) }) });
-    expect(oversized.status).toBe(413);
+    const loginOverhead = new TextEncoder().encode(JSON.stringify({ credential: "" })).byteLength;
+    const exactBody = JSON.stringify({ credential: "x".repeat(32 * 1024 - loginOverhead) });
+    expect(new TextEncoder().encode(exactBody)).toHaveLength(32 * 1024);
+    expect((await request("/api/auth/google", { method: "POST", headers: { "Content-Type": "application/json" }, body: exactBody })).status).toBe(401);
+    const oversized = `${exactBody} `;
+    expect(new TextEncoder().encode(oversized)).toHaveLength(32 * 1024 + 1);
+    expect((await request("/api/auth/google", { method: "POST", headers: { "Content-Type": "application/json" }, body: oversized })).status).toBe(413);
     const declaredOversized = await request("/api/auth/google", { method: "POST", headers: { "Content-Type": "application/json", "Content-Length": String(32 * 1024 + 1) }, body: "{}" });
     expect(declaredOversized.status).toBe(413);
   });
@@ -115,6 +119,17 @@ describe("Google authentication and sessions", () => {
 });
 
 describe("sync revisions and account isolation", () => {
+  it("accepts exactly 2 MB and rejects one byte above the sync body limit", async () => {
+    const { cookie } = await login(signingKey.privateKey);
+    const first = syncChange("exact-a", 0, { text: "a".repeat(900_000) });
+    const second = syncChange("exact-b", 0, { text: "" });
+    const baseBytes = new TextEncoder().encode(JSON.stringify({ changes: [first, second] })).byteLength;
+    const exactBody = JSON.stringify({ changes: [first, { ...second, payload: { text: "b".repeat(2_000_000 - baseBytes) } }] });
+    expect(new TextEncoder().encode(exactBody)).toHaveLength(2_000_000);
+    expect((await request("/api/sync/push", { method: "POST", headers: { "Content-Type": "application/json" }, body: exactBody }, cookie)).status).toBe(200);
+    expect((await request("/api/sync/push", { method: "POST", headers: { "Content-Type": "application/json" }, body: `${exactBody} ` }, cookie)).status).toBe(413);
+  });
+
   it("isolates records and media between accounts", async () => {
     const accountA = await login(signingKey.privateKey, { sub: "account-a", email: "a@example.invalid", name: "Account A" });
     const accountB = await login(signingKey.privateKey, { sub: "account-b", email: "b@example.invalid", name: "Account B" });
@@ -261,6 +276,8 @@ function assertSecurityHeaders(response: Response, expectApplicationCsp = true):
   expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
   expect(response.headers.get("Referrer-Policy")).toBe("strict-origin-when-cross-origin");
   expect(response.headers.get("X-Frame-Options")).toBe("DENY");
+  expect(response.headers.get("Cross-Origin-Opener-Policy")).toBe("same-origin-allow-popups");
+  expect(response.headers.get("X-XSS-Protection")).toBe("0");
   expect(response.headers.get("Permissions-Policy")).toBe("camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=()");
   if (expectApplicationCsp) expect(response.headers.get("Content-Security-Policy")).toContain("frame-ancestors 'none'");
 }
