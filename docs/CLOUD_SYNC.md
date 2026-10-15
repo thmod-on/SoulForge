@@ -22,8 +22,9 @@ Estado revisado em **15 de outubro de 2026**, na versão **0.38.2**:
 A Cloudflare é a produção oficial. O GitHub armazena o código e executa o
 deploy, mas não hospeda o backend nem os dados da produção.
 
-CLD-003 e CLD-004 estão concluídos. A observabilidade, a baseline operacional,
-os alertas de orçamento e a suíte de integração estão ativos e documentados.
+CLD-003, CLD-004 e CLD-005 estão concluídos. A observabilidade, a baseline
+operacional, os alertas de orçamento, a suíte de integração e o endurecimento
+HTTP estão ativos e documentados.
 Os demais itens operacionais e de segurança estão detalhados no
 [backlog](./BACKLOG.md).
 
@@ -91,8 +92,9 @@ A API limita cada imagem a 1,5 MB e a mídia remota a 100 MB por conta.
 
 ### Segurança HTTP e limites de entrada
 
-CLD-005 está **em andamento**. As versões 0.38.0 a 0.38.2 passaram a aplicar no
-Worker, inclusive sobre Static Assets, respostas da API e erros:
+CLD-005 foi **concluído em 15 de outubro de 2026**, após a validação da versão
+0.38.2 em produção. As versões 0.38.0 a 0.38.2 passaram a aplicar no Worker,
+inclusive sobre Static Assets, respostas da API e erros:
 
 - CSP restrita à própria origem e aos endpoints necessários do Google Identity;
 - HSTS por um ano, `X-Content-Type-Options: nosniff`,
@@ -116,9 +118,9 @@ aplicadas dinamicamente. `unsafe-eval`, origens genéricas e curingas não são
 permitidos. JSON malformado retorna `400`, tipo de conteúdo inadequado retorna
 `415` e corpo acima do limite retorna `413` antes de ser carregado integralmente.
 
-O item só será concluído depois do deploy restrito e da validação no PC e iPad
-de carregamento, atualização da PWA, login e logout Google, avatar, sincronização,
-upload/download de imagem e reabertura offline.
+O deploy restrito foi validado no PC e no iPad para carregamento, atualização
+da PWA, login e logout Google, avatar, sincronização, upload/download de imagem,
+reabertura offline e retomada após reconexão.
 
 O build valida que o Wrangler compilado conserva `run_worker_first: true`. Após
 o deploy, `pnpm run check:production` consulta a origem oficial sem credenciais
@@ -132,13 +134,23 @@ reavaliada antes da abertura pública ou ao atingir 10 mil requisições diária
 Até lá, a aplicação permanece centralizada no Worker para evitar diferenças de
 segurança entre assets e API.
 
-Para fechar o item, registrar abaixo a evidência manual da 0.38.2:
+Evidência manual e operacional da 0.38.2:
 
-| Ambiente | Evidência necessária | Resultado |
+| Ambiente | Evidência verificada | Resultado |
 | --- | --- | --- |
-| PC | navegador e versão; atualização; console sem violações CSP; logout/login; popup; avatar; ficha; imagem; offline e reconexão | Pendente |
-| iPad | modelo, iPadOS e Safari; atualização da PWA; login; avatar; ficha; imagem; offline e reconexão | Pendente |
-| Cloudflare | workflow e commit; ausência de novos `5xx`; logs sem dados pessoais; volume de invocações observado | Pendente |
+| PC | atualização; ausência de quebra aparente por CSP; logout/login; popup; avatar; ficha; imagem; offline e reconexão | Aprovado em 15/10/2026. Teste realizado no navegador habitual; a versão exata não foi registrada. |
+| iPad | atualização da PWA instalada; login; avatar; ficha; imagem; offline e reconexão | Aprovado em 15/10/2026. Modelo, iPadOS e versão exata do Safari não foram registrados. |
+| Cloudflare | workflow do commit `202f06c`; ausência de `5xx`; logs sem dados pessoais; volume de invocações observado | Aprovado em 15/10/2026. Em uma consulta às 14:01 BRT, Workers Logs exibiu 268 sucessos e 0 erros nas últimas 24 horas. A amostra continha somente método e rota; identificadores de mídia estavam mascarados, sem tokens, cookies, e-mails, fichas ou payloads. |
+
+Na mesma inspeção, o painel de requisições registrava 277 requisições, sendo
+262 originadas no Brasil e 15 nos Estados Unidos, com 240 respostas `2xx`, 30
+respostas `3xx`, 7 respostas `4xx` e nenhuma `5xx`. As requisições dos Estados
+Unidos são compatíveis com o agente `node` observado e com o smoke executado
+por runners do GitHub Actions; trata-se de uma inferência operacional, não de
+uma identificação da pessoa ou do serviço de origem. Os `4xx` também são
+compatíveis com as verificações negativas do smoke, que exercitam `404` e a
+rejeição `403` de mutações sem `Origin`. O volume e as rotas observadas não
+indicam abuso ou acesso indevido.
 
 ### Testes de integração
 
