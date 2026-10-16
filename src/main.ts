@@ -29,8 +29,8 @@ import { renderCharacterCreationInPlace as renderCharacterCreationSurface } from
 import { createEmptyCreationAttributeValues, type CreationAttributeTokenAssignments } from "./features/character-creation/attributeAllocation";
 import { handleCharacterAttributeAllocationAction, handleCharacterAttributeAllocationEscape } from "./features/character-creation/attributeAllocationUi";
 import { handleCommunityAction, renderCompendiumCommunityFormModal, renderCompendiumCommunitiesManager as renderCompendiumCommunitiesManagerView } from "./features/compendium/communities";
-import { handleTransformationAction, renderTransformationFormModal, renderCompendiumTransformationsManager as renderCompendiumTransformationsManagerView, renderCompendiumTransformationsSpread as renderCompendiumTransformationsSpreadView, type TransformationFeatureDependencies, type TransformationFeatureState } from "./features/compendium/transformations";
-import { handleConditionAction, renderConditionFormModal, renderCompendiumConditionsManager as renderCompendiumConditionsManagerView, renderCompendiumConditionsSpread as renderCompendiumConditionsSpreadView, type ConditionFeatureDependencies, type ConditionFeatureState } from "./features/compendium/conditions";
+import { createCompendiumTransformationChapter, handleTransformationAction, renderTransformationFormModal, renderCompendiumTransformationsManager as renderCompendiumTransformationsManagerView, type TransformationFeatureDependencies, type TransformationFeatureState } from "./features/compendium/transformations";
+import { createCompendiumConditionChapter, handleConditionAction, renderConditionFormModal, renderCompendiumConditionsManager as renderCompendiumConditionsManagerView, type ConditionFeatureDependencies, type ConditionFeatureState } from "./features/compendium/conditions";
 import { handlePackManagementAction, readPackImportFiles, renderPackManagementDialogs, type PackManagementDependencies } from "./features/packs/packManagement";
 import { renderCharacterSelection as renderCharacterSelectionView } from "./features/character-selection/renderCharacterSelection";
 import { scrollCharacterCarousel, setupCharacterCarousel, syncCharacterCarousel } from "./features/character-selection/characterSelectionCarousel";
@@ -703,7 +703,8 @@ function renderCompendium(): string {
     spread: state.compendiumSpread,
     catalog,
     escapeHtml,
-    renderTransformationsSpread: (renderChapterCard) => renderCompendiumTransformationsSpreadView(getTransformationFeatureDependencies(), renderChapterCard), renderConditionsSpread: (renderChapterCard) => renderCompendiumConditionsSpreadView(getConditionFeatureDependencies(), renderChapterCard)
+    transformationChapter: createCompendiumTransformationChapter(catalog),
+    conditionChapter: createCompendiumConditionChapter(catalog)
   }) + renderCompendiumCommunityFormModal({ state, catalog, escapeHtml, getPackDisplayName: (packId) => getPackDisplayName(packId, catalog.packs), saveCustomDefinition, deleteCustomDefinition, refreshCatalog, render }) + renderTransformationFormModal(getTransformationFeatureDependencies()) + renderConditionFormModal(getConditionFeatureDependencies());
 }
 

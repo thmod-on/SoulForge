@@ -4,6 +4,18 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.38.3]
+
+### Alterado
+
+- o índice do Compendium passou a reunir Transformações e Condições na mesma
+  abertura do livro, com quatro spreads consistentes e cartões de capítulo
+  revisados para refletir os fluxos já disponíveis na ficha;
+- a documentação do Compendium foi reconciliada com Transformações e Condições
+  ativas; o acompanhamento próprio de Projetos foi descartado por decisão de
+  escopo, pois o movimento de descanso permanece narrativo e já aceita
+  repetição conforme a regra oficial.
+
 ## [0.38.2]
 
 ### Segurança

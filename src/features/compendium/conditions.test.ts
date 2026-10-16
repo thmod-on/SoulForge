@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createCatalog } from "../../domain/catalog";
 import type { ConditionDefinition } from "../../domain/types";
-import { renderCompendiumConditionsManager, renderCompendiumConditionsSpread, type ConditionFeatureDependencies } from "./conditions";
+import { createCompendiumConditionChapter, renderCompendiumConditionsManager, type ConditionFeatureDependencies } from "./conditions";
 
 const vulnerable: ConditionDefinition = {
   id: "condition.core.vulnerable",
@@ -37,9 +37,10 @@ describe("condições no Compendium", () => {
   });
 
   it("explica a relação de Vulnerável com o último Estresse no capítulo", () => {
-    const html = renderCompendiumConditionsSpread(dependencies(), () => "capítulo");
-    expect(html).toContain("último Estresse");
-    expect(html).toContain("Vulnerável");
+    const chapter = createCompendiumConditionChapter(dependencies().catalog);
+    expect(chapter.details.join(" ")).toContain("último Estresse");
+    expect(chapter.details.join(" ")).toContain("Vulnerável");
+    expect(chapter.details.join(" ")).toContain("origem do conteúdo");
   });
 
   it("oferece um estado vazio útil quando o Pack não está instalado", () => {

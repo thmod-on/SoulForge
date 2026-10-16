@@ -7757,7 +7757,6 @@ body:has(.modal-backdrop) {
   gap: 0.35rem;
 }
 
-.compendium-page-heading span,
 .compendium-page-heading p,
 .compendium-entry span,
 .compendium-entry p {
@@ -10753,6 +10752,22 @@ body:has(.modal-backdrop) {
 
   .compendium-spread {
     background: rgba(255, 255, 255, 0.02);
+  }
+
+  .editor-shell > .compendium-index-content {
+    grid-template-rows: auto;
+    align-content: start;
+    overflow: visible;
+  }
+
+  .compendium-index-content > .compendium-spread {
+    height: auto;
+    grid-template-rows: repeat(2, max-content);
+  }
+
+  .compendium-index-content .compendium-index-card {
+    height: auto;
+    overflow: visible;
   }
 
   .compendium-page {

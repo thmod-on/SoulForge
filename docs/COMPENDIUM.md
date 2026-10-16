@@ -59,7 +59,7 @@ As aberturas atuais do livro são:
 | 1 | Domínios | Cartas |
 | 2 | Itens | Classes e subclasses |
 | 3 | Ancestralidades | Comunidades |
-| 4 | Transformações | Guia de identidade opcional |
+| 4 | Transformações | Condições |
 
 Essa organização pode crescer conforme novos Packs forem instalados, sem alterar a responsabilidade de cada Definition.
 
@@ -122,14 +122,20 @@ Reúne escolhas opcionais de identidade com benefício, desvantagem, perguntas
 narrativas e marcadores declarativos opcionais. O Compendium já oferece busca,
 detalhes, CRUD local e importação por Pack.
 
-A aplicação da transformação ao personagem ainda não foi implementada. Esse
-fluxo deverá respeitar o limite de uma transformação e sua presença no Loadout
-sem consumir o limite normal de cartas; consultar
-[Transformações](TRANSFORMATIONS.md).
+A ficha permite conceder, substituir e remover uma transformação, respeitando
+o limite de uma por personagem. Ela integra a herança sem consumir o limite
+normal de cartas; consultar [Transformações](TRANSFORMATIONS.md).
 
-### Condições e características
+### Condições
 
-São tipos reconhecidos pelo modelo de domínio, mas podem ser introduzidos em uma etapa futura, quando houver conteúdo e fluxos de uso suficientes para justificá-los como capítulo próprio.
+Reúne estados temporários e especiais, com efeito, forma de encerramento e
+origem identificada. O Compendium oferece busca, detalhes, CRUD local e
+importação por Pack. Na ficha, Condições e suas origens ficam na faixa Estados
+em cena; consultar [Condições](CONDITIONS.md).
+
+Características permanecem apresentadas no contexto da Definition que as
+concede. Um capítulo independente continua condicionado à existência de
+conteúdo e fluxos suficientes para justificá-lo.
 
 ## CRUD e segurança
 
@@ -159,9 +165,9 @@ O gerenciamento de instalação, atualização e remoção de Packs pertence às
 ## Estado atual
 
 O índice em formato de livro reúne **Domínios**, **Cartas**, **Itens**,
-**Classes e subclasses**, **Ancestralidades**, **Comunidades** e
-**Transformações**. Cada capítulo mantém a mesma separação entre índice,
-página de gerenciamento e modais focados.
+**Classes e subclasses**, **Ancestralidades**, **Comunidades**,
+**Transformações** e **Condições**. Cada abertura reúne dois assuntos e mantém
+a mesma separação entre índice, página de gerenciamento e modais focados.
 
 Domínios, Cartas e Itens possuem fluxos completos:
 
@@ -176,7 +182,7 @@ diretamente a um container compatível, respeitando categoria, peso e
 capacidade.
 
 Classes, ancestralidades e comunidades integram suas escolhas à criação e à
-ficha. Transformações permanecem limitadas ao catálogo até que o contrato de
-aplicação ao personagem seja definido. Condições e um eventual capítulo
-independente de Features continuam condicionados à existência de conteúdo e
-fluxos que os justifiquem.
+ficha. Transformações podem ser concedidas e consultadas na ficha; Condições
+podem ser aplicadas com origens independentes na faixa Estados em cena. Um
+eventual capítulo independente de Features continua condicionado à existência
+de conteúdo e fluxos que o justifiquem.

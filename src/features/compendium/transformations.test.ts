@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createCatalog } from "../../domain/catalog";
 import type { TransformationDefinition } from "../../domain/types";
-import { renderCompendiumTransformationsManager } from "./transformations";
+import { createCompendiumTransformationChapter, renderCompendiumTransformationsManager } from "./transformations";
 
 const transformation: TransformationDefinition = {
   id: "transformation.test.werewolf",
@@ -23,6 +23,12 @@ const transformation: TransformationDefinition = {
 };
 
 describe("transformações no Compendium", () => {
+  it("resume a diferença para Condições e mantém benefício e desvantagem juntos", () => {
+    const chapter = createCompendiumTransformationChapter(createCatalog([], [transformation]));
+    expect(chapter.details.join(" ")).toContain("não são Condições");
+    expect(chapter.details.join(" ")).toContain("benefício e a desvantagem");
+  });
+
   it("exibe regras, lembretes e todas as perguntas no detalhe", () => {
     const html = renderCompendiumTransformationsManager({
       state: {

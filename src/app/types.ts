@@ -5,7 +5,7 @@ export type InventoryFilter = "todos" | ItemDefinition["category"];
 export type ProgressionTierNumber = 2 | 3 | 4;
 export type ProgressionFlowStep = "advances" | "domain-card" | "card-swap" | "tier-experience" | "review";
 export type CompendiumView = "index" | "cards" | "domains" | "items" | "classes" | "ancestries" | "communities" | "transformations" | "conditions";
-export type CompendiumSpread = 1 | 2 | 3 | 4 | 5;
+export type CompendiumSpread = 1 | 2 | 3 | 4;
 export type ProgressionPicker = "attributes" | "experiences";
 
 export type ProgressionDraftChoice = {
