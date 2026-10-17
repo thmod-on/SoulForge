@@ -293,9 +293,9 @@ direção visual está registrada em [Artes de cartas](CARD_ARTWORK.md).
 
 Em 17 de outubro de 2026, Sem Armadura, Empurrão Poderoso e Eu Sou Seu Escudo
 completaram as artes de nível 1 do domínio Valor. As três imagens WebP de
-960 × 960 totalizam 360.966 bytes e usam o mesmo guardião, iluminação prática
+960 × 960 totalizam 346.816 bytes e usam o mesmo guardião, iluminação prática
 baixa e efeitos âmbar localizados para evitar poluição visual. Após a integração,
-o build contém 69 entradas e 5.018,14 KiB no precache, ainda dentro da faixa
+o build contém 69 entradas e 5.004,32 KiB no precache, ainda dentro da faixa
 saudável do Estágio 1. A direção visual está registrada em
 [Artes de cartas](CARD_ARTWORK.md).
 

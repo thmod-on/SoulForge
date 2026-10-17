@@ -160,11 +160,13 @@ partículas ou brilho difuso.
 
 ### Sem Armadura
 
-Em um corredor de fortaleza de escala humana, o guardião bloqueia um único golpe
-com o antebraço. A pequena placa âmbar translúcida, comprimida no ponto de
-impacto e rachada por linhas curtas, comunica resiliência sem se tornar uma
-armadura mágica completa. Uma única tocha baixa ilumina a pedra e mantém o
-cenário secundário.
+Em um corredor de fortaleza de escala humana, o guardião suporta um único golpe
+direto no peitoral, vestindo apenas uma túnica espessa. Com os braços baixos e
+o tórax projetado, ele permanece firme enquanto uma pequena placa de ferro
+espectral âmbar flutua diante da túnica e intercepta o golpe sem contato com a
+roupa. Rachada por linhas curtas, ela comunica resiliência sem se tornar uma
+armadura mágica completa. Uma única
+tocha baixa ilumina a pedra e mantém o cenário secundário.
 
 ### Empurrão Poderoso
 
@@ -185,7 +187,7 @@ do corredor mantêm a ação íntima e silenciosa, priorizando o sacrifício.
 
 | ID | Arquivo | Dimensões | Tamanho |
 | --- | --- | ---: | ---: |
-| `card.core.valor.p3-7` | `barebones.webp` | 960 × 960 | 118.294 bytes |
+| `card.core.valor.p3-7` | `barebones.webp` | 960 × 960 | 104.144 bytes |
 | `card.core.valor.p3-8` | `forceful-push.webp` | 960 × 960 | 130.828 bytes |
 | `card.core.valor.p3-9` | `i-am-your-shield.webp` | 960 × 960 | 111.844 bytes |
 
@@ -196,10 +198,11 @@ SoulForge preservam imagens fornecidas pelo Pack ou pela pessoa usuária.
 ### Prompts finais
 
 **Sem Armadura:** guardião recorrente sem peitoral metálico, em túnica carvão,
-faixas simples, couro gasto e capa vinho-terrosa, bloqueando com o antebraço um
-golpe único em corredor de pedra úmida. Uma pequena placa âmbar translúcida e
-rachada existe somente no contato; tocha lateral baixa, fundo desfocado, sem
-aura, runas, partículas, brilho difuso ou ornamentos dourados.
+faixas simples, couro gasto e capa vinho-terrosa, recebendo de frente um golpe
+único no peitoral em corredor de pedra úmida. Braços baixos e tórax projetado;
+uma pequena placa de ferro espectral âmbar, rachada e suspensa à frente da
+túnica, intercepta a arma antes do contato. Tocha lateral baixa, fundo
+desfocado, sem aura, runas, partículas, brilho difuso ou ornamentos dourados.
 
 **Empurrão Poderoso:** o mesmo guardião empurra o peito de um único inimigo com
 o cabo de madeira de uma lança, segurada por duas mãos separadas. A ponta inteira
