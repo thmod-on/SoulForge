@@ -4,6 +4,35 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.39.0]
+
+### Adicionado
+
+- o Worker ganhou manutenção diária às 03:17 UTC para remover sessões
+  expiradas e, após uma tolerância de 24 horas, mídias sem referência; uma fila
+  persistente no D1 torna a exclusão no R2 repetível quando houver falha;
+- espadas, cajados, armaduras metálicas, arcos, escudos, armas de impacto,
+  lanças, machados e bestas convencionais passaram a receber artes genéricas
+  por ID estável quando não possuem imagem própria;
+- as três cartas de nível 1 do domínio Valor receberam artes originais e
+  coerentes entre si.
+
+### Alterado
+
+- referências de mídia agora são conciliadas atomicamente com o registro
+  sincronizado, preservando edições concorrentes e iniciando a tolerância de
+  limpeza somente quando a última referência desaparece;
+- o modo `SYNC_ENABLED=false` passou a congelar login e operações de nuvem sem
+  impedir o uso local, apoiando o runbook de recuperação por D1 Time Travel;
+- Features permanecem deliberadamente no contexto da Definition que as concede,
+  sem capítulo ou CRUD independentes no Compendium.
+
+### Segurança
+
+- falhas entre upload no R2 e persistência no D1 recebem compensação, evitando
+  objetos sem rastreamento; logs da manutenção contêm somente contagens
+  agregadas e não registram identidades, chaves ou payloads.
+
 ## [0.38.3]
 
 ### Alterado

@@ -15,6 +15,9 @@ const maxImageBytes = 1_500_000;
 const maxGoogleLoginBytes = 32 * 1024;
 const maxSyncPushBytes = 2_000_000;
 const accountMediaQuota = 100_000_000;
+const orphanGraceMs = 24 * 60 * 60 * 1000;
+const cleanupBatchLimit = 100;
+const maxCleanupBatches = 5;
 const sessionCookie = "soulforge_session";
 const allowedMediaTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
 const resourceTables: Record<SyncResourceType, string> = { character: "characters", definition: "definitions", override: "definition_overrides" };
@@ -36,7 +39,7 @@ const contentSecurityPolicy = [
 ].join("; ");
 let googleKeys: { expiresAt: number; keys: JsonWebKey[] } | undefined;
 
-export default {
+const worker = {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     let response: Response;
@@ -52,21 +55,35 @@ export default {
       }
     }
     return withSecurityHeaders(response);
+  },
+  async scheduled(controller: ScheduledController, env: Env, _context: ExecutionContext): Promise<void> {
+    const startedAt = Date.now();
+    try {
+      const result = await performCloudMaintenance(controller.scheduledTime, env);
+      console.info({ event: "cloud_maintenance_completed", ...result, durationMs: Date.now() - startedAt });
+    } catch (error) {
+      console.error({ event: "cloud_maintenance_failed", errorName: error instanceof Error ? error.name : "UnknownError", durationMs: Date.now() - startedAt });
+      throw error;
+    }
   }
 } satisfies ExportedHandler<Env>;
 
+export default worker;
+
 async function handleApiRequest(request: Request, url: URL, env: Env): Promise<Response> {
   if (mutatingMethods.has(request.method)) assertSameOrigin(request);
-  if (url.pathname === "/api/config" && request.method === "GET") return json({ googleClientId: env.GOOGLE_CLIENT_ID, syncEnabled: env.SYNC_ENABLED !== "false" && Boolean(env.GOOGLE_CLIENT_ID) });
+  if (url.pathname === "/api/config" && request.method === "GET") return json({ googleClientId: env.GOOGLE_CLIENT_ID, syncEnabled: isSyncEnabled(env) });
   if (url.pathname === "/api/session" && request.method === "GET") return sessionResponse(request, env);
-  if (url.pathname === "/api/auth/google" && request.method === "POST") return googleLogin(request, env);
   if (url.pathname === "/api/auth/logout" && request.method === "POST") return logout(request, env);
+  const isGoogleLogin = url.pathname === "/api/auth/google" && request.method === "POST";
   const isAccountDeletion = url.pathname === "/api/account" && request.method === "DELETE";
   const isSyncPush = url.pathname === "/api/sync/push" && request.method === "POST";
   const isSyncPull = url.pathname === "/api/sync/pull" && request.method === "GET";
   const isMediaUpload = url.pathname === "/api/media" && request.method === "POST";
   const isMediaDownload = url.pathname.startsWith("/api/media/") && request.method === "GET";
-  if (!isAccountDeletion && !isSyncPush && !isSyncPull && !isMediaUpload && !isMediaDownload) return json({ error: "Rota não encontrada." }, 404);
+  if (!isGoogleLogin && !isAccountDeletion && !isSyncPush && !isSyncPull && !isMediaUpload && !isMediaDownload) return json({ error: "Rota não encontrada." }, 404);
+  if (!isSyncEnabled(env)) throw new HttpError(503, "A sincronização está temporariamente indisponível.");
+  if (isGoogleLogin) return googleLogin(request, env);
   const auth = await requireSession(request, env);
   if (isAccountDeletion) return deleteAccount(auth, env);
   if (isSyncPush) return pushChanges(request, auth, env);
@@ -135,38 +152,65 @@ async function pushChanges(request: Request, auth: AuthenticatedRequest, env: En
     const deletedAt = change.deleted ? updatedAt : null;
     const payloadJson = change.deleted ? null : JSON.stringify(change.payload);
     if (payloadJson && byteLength(payloadJson) > 1_500_000) throw new HttpError(413, "Um registro sincronizado excede o limite permitido.");
-    const result = await env.DB.prepare(`INSERT INTO ${table} (user_id, resource_id, revision, payload_json, updated_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(user_id, resource_id) DO UPDATE SET revision = excluded.revision, payload_json = excluded.payload_json, updated_at = excluded.updated_at, deleted_at = excluded.deleted_at WHERE ${table}.revision = ? RETURNING revision`)
-      .bind(auth.userId, change.id, revision, payloadJson, updatedAt, deletedAt, currentRevision).first<{ revision: number }>();
-    if (!result) {
+    const mediaIds = change.deleted ? [] : [...collectMediaIds(change.payload)];
+    for (const mediaId of mediaIds) {
+      const owned = await env.DB.prepare("SELECT id FROM media_assets WHERE id = ? AND user_id = ?").bind(mediaId, auth.userId).first();
+      if (!owned) throw new HttpError(400, "Uma imagem referenciada não pertence à conta atual.");
+    }
+    const mutationApplied = `EXISTS (SELECT 1 FROM ${table} WHERE user_id = ? AND resource_id = ? AND last_mutation_id = ? AND updated_at = ?)`;
+    const statements = [
+      env.DB.prepare(`INSERT INTO ${table} (user_id, resource_id, revision, payload_json, updated_at, deleted_at, last_mutation_id) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id, resource_id) DO UPDATE SET revision = excluded.revision, payload_json = excluded.payload_json, updated_at = excluded.updated_at, deleted_at = excluded.deleted_at, last_mutation_id = excluded.last_mutation_id WHERE ${table}.revision = ? RETURNING revision`)
+        .bind(auth.userId, change.id, revision, payloadJson, updatedAt, deletedAt, change.mutationId, currentRevision),
+      env.DB.prepare(`DELETE FROM media_references WHERE user_id = ? AND resource_type = ? AND resource_id = ? AND ${mutationApplied}`)
+        .bind(auth.userId, change.type, change.id, auth.userId, change.id, change.mutationId, updatedAt)
+    ];
+    mediaIds.forEach((mediaId) => statements.push(env.DB.prepare(`INSERT INTO media_references (user_id, resource_type, resource_id, media_id) SELECT ?, ?, ?, ? WHERE ${mutationApplied}`)
+      .bind(auth.userId, change.type, change.id, mediaId, auth.userId, change.id, change.mutationId, updatedAt)));
+    statements.push(env.DB.prepare(`INSERT INTO sync_changes (user_id, resource_type, resource_id, revision, payload_json, updated_at, deleted_at) SELECT ?, ?, ?, ?, ?, ?, ? WHERE ${mutationApplied}`)
+      .bind(auth.userId, change.type, change.id, revision, payloadJson, updatedAt, deletedAt, auth.userId, change.id, change.mutationId, updatedAt));
+    statements.push(env.DB.prepare(`UPDATE media_assets SET unreferenced_at = NULL WHERE user_id = ? AND EXISTS (SELECT 1 FROM media_references WHERE media_references.media_id = media_assets.id) AND ${mutationApplied}`)
+      .bind(auth.userId, auth.userId, change.id, change.mutationId, updatedAt));
+    statements.push(env.DB.prepare(`UPDATE media_assets SET unreferenced_at = COALESCE(unreferenced_at, ?) WHERE user_id = ? AND NOT EXISTS (SELECT 1 FROM media_references WHERE media_references.media_id = media_assets.id) AND ${mutationApplied}`)
+      .bind(updatedAt, auth.userId, auth.userId, change.id, change.mutationId, updatedAt));
+    const [result] = await env.DB.batch(statements);
+    if (!result.results.length) {
       const remote = await env.DB.prepare(`SELECT revision, payload_json, updated_at, deleted_at FROM ${table} WHERE user_id = ? AND resource_id = ?`).bind(auth.userId, change.id).first<StoredRecord>();
       conflicts.push({ key: `${change.type}:${change.id}`, local: change, remote: toEnvelope(change.type, change.id, remote) });
       continue;
     }
-    await env.DB.prepare("INSERT INTO sync_changes (user_id, resource_type, resource_id, revision, payload_json, updated_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?)").bind(auth.userId, change.type, change.id, revision, payloadJson, updatedAt, deletedAt).run();
-    await updateMediaReferences(auth.userId, change, env);
     applied.push({ type: change.type, id: change.id, revision, updatedAt, ...(deletedAt ? { deletedAt } : {}), ...(change.deleted ? {} : { payload: change.payload }) });
   }
-  await removeUnreferencedMedia(auth.userId, env);
   return json({ applied, conflicts });
 }
 
-async function updateMediaReferences(userId: string, change: SyncPushChange, env: Env): Promise<void> {
-  const mediaIds = change.deleted ? [] : [...collectMediaIds(change.payload)];
-  for (const mediaId of mediaIds) {
-    const owned = await env.DB.prepare("SELECT id FROM media_assets WHERE id = ? AND user_id = ?").bind(mediaId, userId).first();
-    if (!owned) throw new HttpError(400, "Uma imagem referenciada não pertence à conta atual.");
-  }
-  const statements = [env.DB.prepare("DELETE FROM media_references WHERE user_id = ? AND resource_type = ? AND resource_id = ?").bind(userId, change.type, change.id)];
-  mediaIds.forEach((mediaId) => statements.push(env.DB.prepare("INSERT INTO media_references (user_id, resource_type, resource_id, media_id) VALUES (?, ?, ?, ?)").bind(userId, change.type, change.id, mediaId)));
-  await env.DB.batch(statements);
-}
+async function performCloudMaintenance(scheduledTime: number, env: Env): Promise<{ expiredSessions: number; mediaQueued: number; mediaDeleted: number; mediaPendingRetry: number }> {
+  const now = new Date(scheduledTime).toISOString();
+  const cutoff = new Date(scheduledTime - orphanGraceMs).toISOString();
+  const sessions = await env.DB.prepare("DELETE FROM sessions WHERE expires_at <= ?").bind(now).run();
+  await env.DB.batch([
+    env.DB.prepare("UPDATE media_assets SET unreferenced_at = NULL WHERE EXISTS (SELECT 1 FROM media_references WHERE media_references.media_id = media_assets.id)"),
+    env.DB.prepare("UPDATE media_assets SET unreferenced_at = COALESCE(unreferenced_at, ?) WHERE NOT EXISTS (SELECT 1 FROM media_references WHERE media_references.media_id = media_assets.id)").bind(now)
+  ]);
 
-async function removeUnreferencedMedia(userId: string, env: Env): Promise<void> {
-  const unused = await env.DB.prepare("SELECT id, object_key FROM media_assets WHERE user_id = ? AND NOT EXISTS (SELECT 1 FROM media_references WHERE media_references.media_id = media_assets.id)").bind(userId).all<{ id: string; object_key: string }>();
-  for (const media of unused.results) {
-    await env.MEDIA.delete(media.object_key);
-    await env.DB.prepare("DELETE FROM media_assets WHERE id = ? AND user_id = ?").bind(media.id, userId).run();
+  let mediaQueued = 0;
+  let mediaDeleted = 0;
+  for (let batchIndex = 0; batchIndex < maxCleanupBatches; batchIndex += 1) {
+    const [queued] = await env.DB.batch([
+      env.DB.prepare("INSERT OR IGNORE INTO media_cleanup_queue (media_id, object_key, queued_at) SELECT id, object_key, ? FROM media_assets WHERE unreferenced_at <= ? AND NOT EXISTS (SELECT 1 FROM media_references WHERE media_references.media_id = media_assets.id) ORDER BY unreferenced_at ASC LIMIT ?").bind(now, cutoff, cleanupBatchLimit),
+      env.DB.prepare("DELETE FROM media_assets WHERE id IN (SELECT media_id FROM media_cleanup_queue) AND unreferenced_at <= ? AND NOT EXISTS (SELECT 1 FROM media_references WHERE media_references.media_id = media_assets.id)").bind(cutoff),
+      env.DB.prepare("DELETE FROM media_cleanup_queue WHERE EXISTS (SELECT 1 FROM media_assets WHERE media_assets.id = media_cleanup_queue.media_id)")
+    ]);
+    mediaQueued += queued.meta.changes ?? 0;
+    const pending = await env.DB.prepare("SELECT media_id, object_key FROM media_cleanup_queue ORDER BY queued_at ASC LIMIT ?").bind(cleanupBatchLimit).all<{ media_id: string; object_key: string }>();
+    if (!pending.results.length) break;
+    await env.MEDIA.delete(pending.results.map((entry) => entry.object_key));
+    const placeholders = pending.results.map(() => "?").join(", ");
+    await env.DB.prepare(`DELETE FROM media_cleanup_queue WHERE media_id IN (${placeholders})`).bind(...pending.results.map((entry) => entry.media_id)).run();
+    mediaDeleted += pending.results.length;
+    if (pending.results.length < cleanupBatchLimit) break;
   }
+  const retry = await env.DB.prepare("SELECT COUNT(*) AS count FROM media_cleanup_queue").first<{ count: number }>();
+  return { expiredSessions: sessions.meta.changes ?? 0, mediaQueued, mediaDeleted, mediaPendingRetry: retry?.count ?? 0 };
 }
 
 function collectMediaIds(value: unknown, found = new Set<string>()): Set<string> {
@@ -196,14 +240,24 @@ async function uploadMedia(request: Request, auth: AuthenticatedRequest, env: En
   if (!matchesImageSignature(bytes, mimeType)) throw new HttpError(415, "O conteúdo do arquivo não corresponde ao formato informado.");
   const checksum = await sha256Hex(bytes);
   if (claimedChecksum && claimedChecksum !== checksum) throw new HttpError(400, "A imagem foi alterada durante o envio.");
-  const existing = await env.DB.prepare("SELECT id FROM media_assets WHERE user_id = ? AND checksum = ?").bind(auth.userId, checksum).first<{ id: string }>();
+  const createdAt = new Date().toISOString();
+  const existing = await env.DB.prepare("UPDATE media_assets SET unreferenced_at = CASE WHEN EXISTS (SELECT 1 FROM media_references WHERE media_references.media_id = media_assets.id) THEN NULL ELSE ? END WHERE user_id = ? AND checksum = ? RETURNING id").bind(createdAt, auth.userId, checksum).first<{ id: string }>();
   if (existing) return json(existing);
   const usage = await env.DB.prepare("SELECT COALESCE(SUM(size_bytes), 0) AS total FROM media_assets WHERE user_id = ?").bind(auth.userId).first<{ total: number }>();
   if ((usage?.total ?? 0) + bytes.byteLength > accountMediaQuota) throw new HttpError(413, "A conta atingiu o limite de 100 MB de imagens.");
   const id = crypto.randomUUID();
   const objectKey = `users/${auth.userId}/${id}`;
   await env.MEDIA.put(objectKey, bytes, { httpMetadata: { contentType: mimeType }, customMetadata: { checksum } });
-  await env.DB.prepare("INSERT INTO media_assets (id, user_id, object_key, checksum, mime_type, size_bytes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)").bind(id, auth.userId, objectKey, checksum, mimeType, bytes.byteLength, new Date().toISOString()).run();
+  try {
+    await env.DB.prepare("INSERT INTO media_assets (id, user_id, object_key, checksum, mime_type, size_bytes, created_at, unreferenced_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").bind(id, auth.userId, objectKey, checksum, mimeType, bytes.byteLength, createdAt, createdAt).run();
+  } catch (error) {
+    try {
+      await env.MEDIA.delete(objectKey);
+    } catch (cleanupError) {
+      console.error({ event: "media_upload_compensation_failed", errorName: cleanupError instanceof Error ? cleanupError.name : "UnknownError" });
+    }
+    throw error;
+  }
   return json({ id }, 201);
 }
 
@@ -260,6 +314,10 @@ function toEnvelope(type: SyncResourceType, id: string, record: StoredRecord | n
 function validateChange(value: SyncPushChange): void {
   if (!value || typeof value.mutationId !== "string" || !value.mutationId || !Object.hasOwn(resourceTables, value.type) || typeof value.id !== "string" || !value.id || value.id.length > 200 || !Number.isInteger(value.expectedRevision) || value.expectedRevision < 0 || typeof value.deleted !== "boolean" || (!value.deleted && (value.payload === undefined || value.payload === null))) throw new HttpError(400, "Alteração de sincronização inválida.");
   if (value.type === "definition" && !value.deleted && (value.payload as { packId?: string }).packId !== "local") throw new HttpError(400, "Somente criações locais podem ser sincronizadas.");
+}
+
+function isSyncEnabled(env: Env): boolean {
+  return env.SYNC_ENABLED !== "false" && Boolean(env.GOOGLE_CLIENT_ID);
 }
 
 function assertSameOrigin(request: Request): void {

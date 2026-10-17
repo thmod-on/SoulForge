@@ -24,10 +24,10 @@ function changedFiles(args) {
 const workingChanges = changedFiles(["diff", "--name-only", "HEAD"]);
 const committedChanges = changedFiles(["diff", "--name-only", "HEAD^", "HEAD"]);
 const changed = new Set([...workingChanges, ...committedChanges]);
-const isProductChange = (file) =>
-  (file.startsWith("src/") || file.startsWith("packs/")) &&
-  !file.startsWith("src/test/") &&
-  !/\.(?:test|spec)\.[cm]?[jt]sx?$/.test(file);
+const isProductChange = (file) => {
+  const runtimeFile = file.startsWith("src/") || file.startsWith("packs/") || file.startsWith("worker/") || file.startsWith("migrations/") || file === "wrangler.jsonc";
+  return runtimeFile && !file.startsWith("src/test/") && !file.startsWith("worker/test/") && !/\.(?:test|spec)\.[cm]?[jt]sx?$/.test(file);
+};
 const hasProductChange = [...changed].some(isProductChange);
 
 if (!hasProductChange) {

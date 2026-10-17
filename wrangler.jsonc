@@ -10,6 +10,9 @@
       "invocation_logs": true
     }
   },
+  "triggers": {
+    "crons": ["17 3 * * *"]
+  },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",

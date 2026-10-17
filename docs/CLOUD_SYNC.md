@@ -230,6 +230,24 @@ o serviço. Com o registro da baseline acima, CLD-003 foi concluído em
 
 ## Runbook de recuperação
 
+### Manutenção diária
+
+O mesmo Worker executa uma manutenção diária pelo Cron Trigger `17 3 * * *`,
+às **03:17 UTC**. A rotina remove sessões expiradas e mídias que permanecem sem
+referência por mais de 24 horas. Objetos R2 são colocados antes em uma fila
+durável no D1: uma falha do bucket preserva a fila e a execução seguinte repete
+a exclusão de forma idempotente.
+
+Cada execução registra somente contagens agregadas de sessões expiradas,
+mídias enfileiradas, objetos removidos e itens pendentes para retry. IDs de
+usuário, e-mails, chaves R2, fichas, tokens e payloads não são registrados.
+`sync_changes`, tombstones e registros com `deleted_at` não participam dessa
+limpeza; sua retenção continua reservada ao CLD-009.
+
+CLD-006 somente poderá ser movido para concluído depois que a primeira execução
+real aparecer como bem-sucedida em **Workers & Pages > soulforge >
+Observability** e as contagens do D1 e R2 forem conferidas.
+
 ### Reverter o Worker
 
 1. Interrompa novos deploys até entender o incidente.
@@ -254,17 +272,29 @@ Para localizar o bookmark anterior a um incidente:
 pnpm exec wrangler d1 time-travel info soulforge --timestamp="2026-10-10T12:00:00Z"
 ```
 
-Depois de confirmar o horário e o banco de produção, pause os deploys e, se o
-banco ainda estiver acessível, preserve uma exportação diagnóstica. A
-restauração remota é destrutiva para alterações posteriores ao ponto escolhido:
+Depois de confirmar o horário e o banco de produção, pause os deploys, publique
+temporariamente o Worker com `SYNC_ENABLED=false` e confira em `/api/config`
+que `syncEnabled` está falso. Essa configuração bloqueia login, sincronização,
+mídia e exclusão da conta com `503`; sessões e logout continuam disponíveis e
+as filas locais permanecem nos dispositivos. Se o banco ainda estiver
+acessível, preserve uma exportação diagnóstica. A restauração remota é
+destrutiva para alterações posteriores ao ponto escolhido:
 
 ```bash
 pnpm exec wrangler d1 time-travel restore soulforge --bookmark="<bookmark>"
 ```
 
 Após a restauração, valide contas, fichas, cursores, tombstones e vínculos de
-mídia antes de reabrir o deploy. Exportações para retenção superior a sete dias
-ficam fora deste marco.
+mídia antes de republicar a versão conhecida com `SYNC_ENABLED=true`. Confirme
+`/api/config`, login, pull, push e uma imagem antes de encerrar o incidente.
+Exportações para retenção superior a sete dias ficam fora deste marco. Em
+validações rotineiras, consulte apenas o bookmark; nunca execute uma
+restauração destrutiva em produção como teste.
+
+Em **17 de outubro de 2026**, `wrangler d1 time-travel info soulforge`
+confirmou que a produção retorna um bookmark restaurável. O valor não é
+registrado neste documento porque novos bookmarks o substituem continuamente;
+nenhuma restauração foi executada durante a validação.
 
 ### Excluir conta e mídia com segurança
 
@@ -275,10 +305,10 @@ que a sessão foi invalidada e que um novo login não recupera os dados
 excluídos.
 
 Não remova manualmente apenas o registro D1 ou apenas os objetos R2: isso pode
-deixar mídias órfãs ou referências quebradas. A limpeza diária de sessões
-expiradas e mídias sem referência há mais de 24 horas será implementada em
-CLD-006. Até existir a política segura de cursores prevista em CLD-009, não
-podar `sync_changes` nem tombstones.
+deixar mídias órfãs ou referências quebradas. A manutenção diária aguarda 24
+horas desde a perda da última referência e usa uma fila persistente entre D1 e
+R2. Até existir a política segura de cursores prevista em CLD-009, não podar
+`sync_changes` nem tombstones.
 
 ## Migração do GitHub Pages
 

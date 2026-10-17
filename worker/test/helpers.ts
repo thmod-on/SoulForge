@@ -17,6 +17,7 @@ type TestClaims = {
 
 export async function resetCloudStorage(): Promise<void> {
   await env.DB.batch([
+    env.DB.prepare("DELETE FROM media_cleanup_queue"),
     env.DB.prepare("DELETE FROM media_references"),
     env.DB.prepare("DELETE FROM media_assets"),
     env.DB.prepare("DELETE FROM sync_changes"),

@@ -100,7 +100,7 @@ A página de gerenciamento permite criar, editar e excluir domínios locais com 
 
 Reúne classes jogáveis e suas subclasses. Uma subclasse pertence sempre a uma classe.
 
-Características permanentes concedidas por classes ou subclasses devem aparecer como parte de sua origem, sem exigir inicialmente um capítulo próprio.
+Features concedidas por Classes ou Subclasses são consultadas e editadas como parte de sua origem. Não há capítulo próprio: origem, tier, custo, marcador e ativação podem depender da Definition que as concede.
 
 ### Ancestralidades e comunidades
 
@@ -133,9 +133,12 @@ origem identificada. O Compendium oferece busca, detalhes, CRUD local e
 importação por Pack. Na ficha, Condições e suas origens ficam na faixa Estados
 em cena; consultar [Condições](CONDITIONS.md).
 
-Características permanecem apresentadas no contexto da Definition que as
-concede. Um capítulo independente continua condicionado à existência de
-conteúdo e fluxos suficientes para justificá-lo.
+Features permanecem apresentadas no contexto da Definition que as concede.
+Elas não possuem capítulo, busca ou CRUD independentes, para evitar conteúdo
+avulso sem origem, tier e regras válidas. A decisão só deve ser reaberta se
+uma Feature passar a ser escolhida independentemente, se a busca global se
+tornar uma necessidade comprovada em mesa, ou se o mesmo conteúdo precisar
+ser reutilizado com segurança por múltiplas origens.
 
 ## CRUD e segurança
 
@@ -158,7 +161,8 @@ O gerenciamento de instalação, atualização e remoção de Packs pertence às
 - O Compendium trabalha com Definitions, nunca com cópias do conteúdo dentro de Characters.
 - Relações entre conteúdos usam identificadores estáveis.
 - Domínios agrupam Cartas e servem como filtro de consulta.
-- Características são apresentadas no contexto da Definition que as concede.
+- Features são apresentadas e mantidas no contexto da Definition que as
+  concede; o Compendium não permite Features avulsas.
 - A interface deve favorecer consulta rápida durante a mesa, com alvos de toque adequados ao iPad.
 - A exclusão deve respeitar as diretrizes de UX do projeto e sempre pedir confirmação.
 
@@ -182,7 +186,6 @@ diretamente a um container compatível, respeitando categoria, peso e
 capacidade.
 
 Classes, ancestralidades e comunidades integram suas escolhas à criação e à
-ficha. Transformações podem ser concedidas e consultadas na ficha; Condições
-podem ser aplicadas com origens independentes na faixa Estados em cena. Um
-eventual capítulo independente de Features continua condicionado à existência
-de conteúdo e fluxos que o justifiquem.
+ficha, incluindo suas Features contextuais. Transformações podem ser
+concedidas e consultadas na ficha; Condições podem ser aplicadas com origens
+independentes na faixa Estados em cena.

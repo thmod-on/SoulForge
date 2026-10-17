@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { createExecutionContext, createScheduledController, waitOnExecutionContext } from "cloudflare:test";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { HttpResponse, http } from "msw";
 import { setupNetwork } from "@msw/cloudflare";
@@ -152,6 +153,15 @@ describe("sync revisions and account isolation", () => {
     expect((await request(`/api/media/${mediaId}`, {}, accountA.cookie)).status).toBe(200);
   });
 
+  it("does not persist a resource when its media reference is invalid", async () => {
+    const { cookie } = await login(signingKey.privateKey);
+    const invalid = syncChange("invalid-media", 0, { portrait: { $soulforgeMedia: "missing-media" } });
+
+    expect((await request("/api/sync/push", jsonBody({ changes: [invalid] }), cookie)).status).toBe(400);
+    expect(await env.DB.prepare("SELECT resource_id FROM characters WHERE resource_id = 'invalid-media'").first()).toBeNull();
+    expect(await env.DB.prepare("SELECT seq FROM sync_changes WHERE resource_id = 'invalid-media'").first()).toBeNull();
+  });
+
   it("returns conflicts, advances revisions and preserves tombstones", async () => {
     const { cookie } = await login(signingKey.privateKey);
     const created = await request("/api/sync/push", jsonBody({ changes: [syncChange("hero", 0, { name: "Original" })] }), cookie);
@@ -203,9 +213,11 @@ describe("private media", () => {
     const checksum = await sha256Hex(bytes);
     const first = await request("/api/media", mediaBody(bytes, checksum), accountA.cookie);
     const firstId = ((await first.json()) as { id: string }).id;
+    await env.DB.prepare("UPDATE media_assets SET unreferenced_at = '2020-01-01T00:00:00.000Z' WHERE id = ?").bind(firstId).run();
     const duplicate = await request("/api/media", mediaBody(bytes, checksum), accountA.cookie);
     expect(duplicate.status).toBe(200);
     expect(await duplicate.json()).toEqual({ id: firstId });
+    expect((await env.DB.prepare("SELECT unreferenced_at FROM media_assets WHERE id = ?").bind(firstId).first<{ unreferenced_at: string }>())?.unreferenced_at).not.toBe("2020-01-01T00:00:00.000Z");
     const otherAccount = await request("/api/media", mediaBody(bytes, checksum), accountB.cookie);
     expect(((await otherAccount.json()) as { id: string }).id).not.toBe(firstId);
 
@@ -242,6 +254,108 @@ describe("private media", () => {
     expect(response.headers.get("Cache-Control")).toBe("private, max-age=86400");
     expect(response.headers.get("Content-Security-Policy")).toBe("default-src 'none'");
     assertSecurityHeaders(response, false);
+  });
+
+  it("compensates the R2 upload when the D1 metadata cannot be stored", async () => {
+    const { cookie } = await login(signingKey.privateKey);
+    const bytes = pngBytes();
+    const failedInsert = {
+      prepare(query: string) {
+        if (query.startsWith("INSERT INTO media_assets")) return { bind: () => ({ run: async () => { throw new Error("metadata unavailable"); } }) };
+        return env.DB.prepare(query);
+      }
+    } as unknown as D1Database;
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const response = await request("/api/media", mediaBody(bytes, await sha256Hex(bytes)), cookie, { ...env, DB: failedInsert } as Env);
+
+    expect(response.status).toBe(500);
+    expect((await env.MEDIA.list()).objects).toHaveLength(0);
+    expect(JSON.stringify(errorLog.mock.calls)).not.toContain("metadata unavailable");
+  });
+});
+
+describe("scheduled cloud maintenance", () => {
+  it("removes expired sessions while preserving active sessions", async () => {
+    await login(signingKey.privateKey);
+    const user = await env.DB.prepare("SELECT id FROM users").first<{ id: string }>();
+    expect(user).not.toBeNull();
+    await env.DB.prepare("INSERT INTO sessions (id, user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?)")
+      .bind("expired-session", user!.id, "expired-token-hash", "2026-01-01T00:00:00.000Z", "2025-12-01T00:00:00.000Z").run();
+
+    await runScheduled(new Date("2026-10-17T03:17:00.000Z"));
+
+    expect(await env.DB.prepare("SELECT COUNT(*) AS count FROM sessions").first()).toEqual({ count: 1 });
+    expect(await env.DB.prepare("SELECT COUNT(*) AS count FROM sessions WHERE id = 'expired-session'").first()).toEqual({ count: 0 });
+  });
+
+  it("waits 24 hours after the last media reference and preserves sync history", async () => {
+    const { cookie } = await login(signingKey.privateKey);
+    const bytes = pngBytes();
+    const upload = await request("/api/media", mediaBody(bytes, await sha256Hex(bytes)), cookie);
+    const mediaId = ((await upload.json()) as { id: string }).id;
+    const objectKey = (await env.DB.prepare("SELECT object_key FROM media_assets WHERE id = ?").bind(mediaId).first<{ object_key: string }>())!.object_key;
+    const withMedia = syncChange("maintenance-hero", 0, { portrait: { $soulforgeMedia: mediaId } });
+    expect((await request("/api/sync/push", jsonBody({ changes: [withMedia] }), cookie)).status).toBe(200);
+    expect(await env.DB.prepare("SELECT unreferenced_at FROM media_assets WHERE id = ?").bind(mediaId).first()).toEqual({ unreferenced_at: null });
+
+    expect((await request("/api/sync/push", jsonBody({ changes: [syncChange("maintenance-hero", 1, undefined, true)] }), cookie)).status).toBe(200);
+    const orphan = await env.DB.prepare("SELECT unreferenced_at FROM media_assets WHERE id = ?").bind(mediaId).first<{ unreferenced_at: string }>();
+    expect(orphan?.unreferenced_at).toBeTruthy();
+    const historyBefore = await env.DB.prepare("SELECT COUNT(*) AS count FROM sync_changes").first<{ count: number }>();
+
+    await runScheduled(new Date(new Date(orphan!.unreferenced_at).getTime() + 23 * 60 * 60 * 1000));
+    expect(await env.DB.prepare("SELECT id FROM media_assets WHERE id = ?").bind(mediaId).first()).not.toBeNull();
+    expect(await env.MEDIA.head(objectKey)).not.toBeNull();
+
+    await runScheduled(new Date(new Date(orphan!.unreferenced_at).getTime() + 25 * 60 * 60 * 1000));
+    expect(await env.DB.prepare("SELECT id FROM media_assets WHERE id = ?").bind(mediaId).first()).toBeNull();
+    expect(await env.MEDIA.head(objectKey)).toBeNull();
+    expect(await env.DB.prepare("SELECT COUNT(*) AS count FROM sync_changes").first()).toEqual(historyBefore);
+    expect(await env.DB.prepare("SELECT deleted_at FROM characters WHERE resource_id = 'maintenance-hero'").first()).toMatchObject({ deleted_at: expect.any(String) });
+  });
+
+  it("keeps referenced media and retries a failed R2 deletion without losing the queue", async () => {
+    const { cookie } = await login(signingKey.privateKey);
+    const user = await env.DB.prepare("SELECT id FROM users").first<{ id: string }>();
+    const referencedBytes = pngBytes(13);
+    const referencedUpload = await request("/api/media", mediaBody(referencedBytes, await sha256Hex(referencedBytes)), cookie);
+    const referencedId = ((await referencedUpload.json()) as { id: string }).id;
+    await env.DB.prepare("UPDATE media_assets SET unreferenced_at = ? WHERE id = ?").bind("2026-10-14T00:00:00.000Z", referencedId).run();
+    expect((await request("/api/sync/push", jsonBody({ changes: [syncChange("referenced", 0, { art: { $soulforgeMedia: referencedId } })] }), cookie)).status).toBe(200);
+
+    const orphanId = "orphan-for-retry";
+    const orphanKey = `users/${user!.id}/${orphanId}`;
+    const old = "2026-10-14T00:00:00.000Z";
+    await env.MEDIA.put(orphanKey, pngBytes());
+    await env.DB.prepare("INSERT INTO media_assets (id, user_id, object_key, checksum, mime_type, size_bytes, created_at, unreferenced_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+      .bind(orphanId, user!.id, orphanKey, "orphan-checksum", "image/png", 12, old, old).run();
+    const failingMedia = { delete: vi.fn(async () => { throw new Error("R2 unavailable"); }) } as unknown as R2Bucket;
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await expect(runScheduled(new Date("2026-10-17T03:17:00.000Z"), { ...env, MEDIA: failingMedia } as Env)).rejects.toThrow("R2 unavailable");
+    expect(await env.DB.prepare("SELECT media_id FROM media_cleanup_queue WHERE media_id = ?").bind(orphanId).first()).not.toBeNull();
+    expect(await env.DB.prepare("SELECT id FROM media_assets WHERE id = ?").bind(orphanId).first()).toBeNull();
+    expect(await env.MEDIA.head(orphanKey)).not.toBeNull();
+    expect(JSON.stringify(errorLog.mock.calls)).not.toContain(orphanKey);
+
+    const infoLog = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    await runScheduled(new Date("2026-10-18T03:17:00.000Z"));
+    expect(await env.DB.prepare("SELECT media_id FROM media_cleanup_queue WHERE media_id = ?").bind(orphanId).first()).toBeNull();
+    expect(await env.MEDIA.head(orphanKey)).toBeNull();
+    expect(await env.DB.prepare("SELECT id FROM media_assets WHERE id = ?").bind(referencedId).first()).not.toBeNull();
+    expect(Object.keys(infoLog.mock.calls.at(-1)?.[0] ?? {}).sort()).toEqual(["durationMs", "event", "expiredSessions", "mediaDeleted", "mediaPendingRetry", "mediaQueued"].sort());
+  });
+});
+
+describe("cloud maintenance mode", () => {
+  it("blocks cloud routes while keeping config, session and logout available", async () => {
+    const disabled = { ...env, SYNC_ENABLED: "false" } as Env;
+    await expect((await request("/api/config", {}, undefined, disabled)).json()).resolves.toMatchObject({ syncEnabled: false });
+    expect((await request("/api/auth/google", jsonBody({ credential: "unused" }), undefined, disabled)).status).toBe(503);
+    expect((await request("/api/sync/pull?cursor=0", {}, undefined, disabled)).status).toBe(503);
+    expect((await request("/api/media/example", {}, undefined, disabled)).status).toBe(503);
+    expect((await request("/api/auth/logout", { method: "POST" }, undefined, disabled)).status).toBe(204);
+    expect((await request("/api/not-found", {}, undefined, disabled)).status).toBe(404);
   });
 });
 
@@ -280,4 +394,11 @@ function assertSecurityHeaders(response: Response, expectApplicationCsp = true):
   expect(response.headers.get("X-XSS-Protection")).toBe("0");
   expect(response.headers.get("Permissions-Policy")).toBe("camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=()");
   if (expectApplicationCsp) expect(response.headers.get("Content-Security-Policy")).toContain("frame-ancestors 'none'");
+}
+
+async function runScheduled(time: Date, workerEnv: Env = env as Env): Promise<void> {
+  const controller = createScheduledController({ scheduledTime: time, cron: "17 3 * * *" });
+  const context = createExecutionContext();
+  await worker.scheduled(controller, workerEnv, context);
+  await waitOnExecutionContext(context);
 }

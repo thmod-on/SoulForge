@@ -207,6 +207,66 @@ e preserva imagens próprias. O build passou a 50 entradas e 3.651,07 KiB no
 precache, ainda dentro da faixa saudável do Estágio 1. Os prompts e critérios
 do lote estão registrados em [Artes genéricas de itens](ITEM_ARTWORK.md).
 
+Em 17 de outubro de 2026, uma espada genérica WebP de 512 × 512, com 8.122
+bytes, passou a representar somente as famílias convencionais de espada do Pack
+Core quando não possuem arte própria. A associação também usa IDs estáveis e
+exclui armas de silhueta específica. Após a integração, o build contém 58
+entradas e 4.551,59 KiB no precache. Os prompts e critérios do lote estão em
+[Artes genéricas de itens](ITEM_ARTWORK.md).
+
+Na mesma data, um cajado genérico WebP de 512 × 512, com 6.376 bytes, passou a
+representar somente as quatro famílias convencionais de bastões e cajados do Pack
+Core, incluindo suas progressões. Itens nomeados e silhuetas específicas
+permanecem sem fallback. Após a integração, o build contém 59 entradas e
+4.558,72 KiB no precache. Os critérios do lote estão em
+[Artes genéricas de itens](ITEM_ARTWORK.md).
+
+Na mesma data, uma armadura metálica genérica WebP de 512 × 512, com 29.758
+bytes, passou a representar apenas as famílias convencionais de cota de malha,
+placas, brigantina, bandas e escamas, incluindo suas progressões. Armaduras
+nomeadas, mágicas ou de silhueta particular permanecem sem fallback. Após a
+integração, o build contém 60 entradas e 4.588,87 KiB no precache. Os critérios do
+lote estão em [Artes genéricas de itens](ITEM_ARTWORK.md).
+
+Na mesma data, um arco genérico WebP de 512 × 512, com 6.038 bytes, passou a
+representar somente os arcos curtos, longos e o arco grande convencionais do Pack
+Core, incluindo as progressões disponíveis. Arcos nomeados ou de silhueta
+particular permanecem sem fallback. Após a integração, o build contém 61 entradas
+e 4.595,27 KiB no precache. Os critérios do lote estão em
+[Artes genéricas de itens](ITEM_ARTWORK.md).
+
+Na mesma data, um escudo genérico WebP de 512 × 512, com 30.764 bytes, passou a
+representar somente os escudos redondos e broquéis convencionais do Pack Core,
+incluindo as progressões disponíveis. Escudos torre, mágicos ou de silhueta
+particular permanecem sem fallback. Após a integração, o build contém 62 entradas
+e 4.625,67 KiB no precache. Os critérios do lote estão em
+[Artes genéricas de itens](ITEM_ARTWORK.md).
+
+Na mesma data, uma arma de impacto genérica WebP de 512 × 512, com 11.432 bytes,
+passou a representar somente maças e martelos de guerra convencionais do Pack
+Core, incluindo as progressões. Mangual e armas nomeadas ou incomuns permanecem
+sem fallback. Após a integração, o build contém 63 entradas e 4.637,30 KiB no
+precache. Os critérios do lote estão em [Artes genéricas de itens](ITEM_ARTWORK.md).
+
+Na mesma data, uma lança genérica WebP de 512 × 512, com 5.822 bytes, passou a
+representar somente a Lança convencional do Pack Core, incluindo suas
+progressões. Armas nomeadas, mágicas ou de silhueta particular permanecem sem
+fallback. Após a integração, o build contém 64 entradas e 4.642,99 KiB no
+precache. Os critérios do lote estão em [Artes genéricas de itens](ITEM_ARTWORK.md).
+
+Na mesma data, um machado genérico WebP de 512 × 512, com 9.806 bytes, passou a
+representar somente o Machado de Batalha convencional do Pack Core, incluindo
+suas progressões. Machado Sagrado e armas nomeadas, mágicas ou de silhueta
+particular permanecem sem fallback. Após a integração, o build contém 65
+entradas e 4.653,14 KiB no precache. Os critérios do lote estão em
+[Artes genéricas de itens](ITEM_ARTWORK.md).
+
+Na mesma data, uma besta genérica WebP de 512 × 512, com 12.390 bytes, passou a
+representar somente a Besta convencional do Pack Core, incluindo suas
+progressões. Bestas nomeadas, mágicas ou de silhueta particular permanecem sem
+fallback. Após a integração, o build contém 66 entradas e 4.665,50 KiB no
+precache. Os critérios do lote estão em [Artes genéricas de itens](ITEM_ARTWORK.md).
+
 Em 10 de outubro de 2026, os três grimórios de nível 1 do domínio Códice
 receberam artes quadradas WebP de 960 × 960. Em 11 de outubro, Ava, Illiat e
 Tyfar foram refeitos como trípticos horizontais, com uma magia por faixa; o lote
@@ -230,6 +290,14 @@ vinho–ameixa e os efeitos rosa-violeta permanecem contidos para priorizar
 expressões e linguagem corporal. Após a integração, o build contém 58 entradas
 e 4.583,72 KiB no precache, ainda dentro da faixa saudável do Estágio 1. A
 direção visual está registrada em [Artes de cartas](CARD_ARTWORK.md).
+
+Em 17 de outubro de 2026, Sem Armadura, Empurrão Poderoso e Eu Sou Seu Escudo
+completaram as artes de nível 1 do domínio Valor. As três imagens WebP de
+960 × 960 totalizam 360.966 bytes e usam o mesmo guardião, iluminação prática
+baixa e efeitos âmbar localizados para evitar poluição visual. Após a integração,
+o build contém 69 entradas e 5.018,14 KiB no precache, ainda dentro da faixa
+saudável do Estágio 1. A direção visual está registrada em
+[Artes de cartas](CARD_ARTWORK.md).
 
 ## Pendências planejadas
 

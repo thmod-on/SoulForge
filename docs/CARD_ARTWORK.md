@@ -147,3 +147,68 @@ abafados.
 As duas novas imagens são WebP opacas e ficam abaixo da meta de 150 KB. Foram
 geradas com a ferramenta de imagem integrada do Codex, usando as artes de Graça
 já incorporadas somente como referências de família visual.
+
+## Valor — nível 1
+
+Em 17 de outubro de 2026, as três cartas de nível 1 do domínio Valor receberam
+artes originais unificadas por um mesmo guardião: túnica carvão sem peitoral de
+metal, braçadeiras de couro gasto, capa curta vinho-terrosa, cabelo escuro preso,
+barba curta e cicatriz na sobrancelha esquerda. A paleta privilegia azul-preto,
+pedra úmida, aço fosco e castanho queimado. O âmbar oficial de Valor (`#c9883a`)
+aparece somente no evento físico principal de cada cena, sem aura, halo,
+partículas ou brilho difuso.
+
+### Sem Armadura
+
+Em um corredor de fortaleza de escala humana, o guardião bloqueia um único golpe
+com o antebraço. A pequena placa âmbar translúcida, comprimida no ponto de
+impacto e rachada por linhas curtas, comunica resiliência sem se tornar uma
+armadura mágica completa. Uma única tocha baixa ilumina a pedra e mantém o
+cenário secundário.
+
+### Empurrão Poderoso
+
+O guardião aplica uma investida controlada com a haste de madeira de uma lança
+contra um adversário único. A ponta inteira fica à esquerda dele, em espaço
+aberto, e a haste passa à frente de seu corpo até o alvo; a postura inclinada,
+os joelhos dobrados e o pé que desliza
+comunicam deslocamento com peso. Uma curva âmbar aberta e curta no contato e
+água deslocada no chão sugerem a pressão do golpe, sem portal, explosão, rastros
+extras ou multidão.
+
+### Eu Sou Seu Escudo
+
+O guardião entra na frente de uma aliada ferida e recebe no antebraço um ataque
+que vem do limite do quadro. Não há escudo literal: o corpo dele é a barreira.
+Uma curva âmbar mínima no impacto, a aliada mais baixa atrás dele e a luz baixa
+do corredor mantêm a ação íntima e silenciosa, priorizando o sacrifício.
+
+| ID | Arquivo | Dimensões | Tamanho |
+| --- | --- | ---: | ---: |
+| `card.core.valor.p3-7` | `barebones.webp` | 960 × 960 | 118.294 bytes |
+| `card.core.valor.p3-8` | `forceful-push.webp` | 960 × 960 | 130.828 bytes |
+| `card.core.valor.p3-9` | `i-am-your-shield.webp` | 960 × 960 | 111.844 bytes |
+
+Os três arquivos são WebP opacos e permanecem abaixo da meta de 150 KB. A
+geração usou a ferramenta integrada imagegen; as associações por ID no
+SoulForge preservam imagens fornecidas pelo Pack ou pela pessoa usuária.
+
+### Prompts finais
+
+**Sem Armadura:** guardião recorrente sem peitoral metálico, em túnica carvão,
+faixas simples, couro gasto e capa vinho-terrosa, bloqueando com o antebraço um
+golpe único em corredor de pedra úmida. Uma pequena placa âmbar translúcida e
+rachada existe somente no contato; tocha lateral baixa, fundo desfocado, sem
+aura, runas, partículas, brilho difuso ou ornamentos dourados.
+
+**Empurrão Poderoso:** o mesmo guardião empurra o peito de um único inimigo com
+o cabo de madeira de uma lança, segurada por duas mãos separadas. A ponta inteira
+fica em espaço aberto à esquerda do guardião, e toda a haste passa à frente de
+seu corpo; uma curva âmbar aberta no contato e água discreta deslocada junto ao
+pé que desliza comunicam impacto sem
+perfuração, portal, explosão, multidão ou partículas.
+
+**Eu Sou Seu Escudo:** o mesmo guardião cruza à frente de uma aliada ferida e
+apara com antebraço e ombro um único golpe que entra pela direita do quadro.
+Sem escudo literal; somente uma curva âmbar minúscula no impacto, pedra úmida,
+luz baixa e fundo desfocado, sem aura, cúpula, brilho difuso ou efeitos extras.
