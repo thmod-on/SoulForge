@@ -18,6 +18,13 @@ const accountMediaQuota = 100_000_000;
 const orphanGraceMs = 24 * 60 * 60 * 1000;
 const cleanupBatchLimit = 100;
 const maxCleanupBatches = 5;
+const syncRetentionMs = 90 * 24 * 60 * 60 * 1000;
+const snapshotTtlMs = 60 * 60 * 1000;
+const syncCompactionLimit = 500;
+const tombstoneCompactionLimit = 100;
+const syncPullLimit = 20;
+const snapshotQueryLimit = 21;
+const snapshotResponseBytes = 1_800_000;
 const sessionCookie = "soulforge_session";
 const allowedMediaTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
 const resourceTables: Record<SyncResourceType, string> = { character: "characters", definition: "definitions", override: "definition_overrides" };
@@ -48,7 +55,7 @@ const worker = {
         ? await handleApiRequest(request, url, env)
         : await env.ASSETS.fetch(request);
     } catch (error) {
-      if (isHttpError(error)) response = json({ error: error.message }, error.status);
+      if (isHttpError(error)) response = json({ error: error.message, ...(error.code ? { code: error.code } : {}) }, error.status);
       else {
         console.error({ event: "worker_error", errorName: error instanceof Error ? error.name : "UnknownError" });
         response = json({ error: "Falha interna do SoulForge." }, 500);
@@ -79,15 +86,17 @@ async function handleApiRequest(request: Request, url: URL, env: Env): Promise<R
   const isAccountDeletion = url.pathname === "/api/account" && request.method === "DELETE";
   const isSyncPush = url.pathname === "/api/sync/push" && request.method === "POST";
   const isSyncPull = url.pathname === "/api/sync/pull" && request.method === "GET";
+  const isSyncSnapshot = url.pathname.startsWith("/api/sync/snapshot/") && request.method === "GET";
   const isMediaUpload = url.pathname === "/api/media" && request.method === "POST";
   const isMediaDownload = url.pathname.startsWith("/api/media/") && request.method === "GET";
-  if (!isGoogleLogin && !isAccountDeletion && !isSyncPush && !isSyncPull && !isMediaUpload && !isMediaDownload) return json({ error: "Rota não encontrada." }, 404);
+  if (!isGoogleLogin && !isAccountDeletion && !isSyncPush && !isSyncPull && !isSyncSnapshot && !isMediaUpload && !isMediaDownload) return json({ error: "Rota não encontrada." }, 404);
   if (!isSyncEnabled(env)) throw new HttpError(503, "A sincronização está temporariamente indisponível.");
   if (isGoogleLogin) return googleLogin(request, env);
   const auth = await requireSession(request, env);
   if (isAccountDeletion) return deleteAccount(auth, env);
   if (isSyncPush) return pushChanges(request, auth, env);
-  if (isSyncPull) return pullChanges(url, auth, env);
+  if (isSyncPull) return pullChanges(request, auth, env);
+  if (isSyncSnapshot) return pullSnapshot(url, auth, env);
   if (isMediaUpload) return uploadMedia(request, auth, env);
   return downloadMedia(decodeURIComponent(url.pathname.slice("/api/media/".length)), auth, env);
 }
@@ -134,6 +143,8 @@ async function requireSession(request: Request, env: Env): Promise<Authenticated
 }
 
 async function pushChanges(request: Request, auth: AuthenticatedRequest, env: Env): Promise<Response> {
+  const { deviceId, cursor } = readSyncIdentity(request, auth.sessionId);
+  await assertCursorRetained(auth.userId, cursor, env);
   const body = await readJsonBody<{ changes?: SyncPushChange[] }>(request, maxSyncPushBytes);
   if (!Array.isArray(body.changes) || body.changes.length > 100) throw new HttpError(400, "Lote de sincronização inválido.");
   const applied: SyncEnvelope[] = [];
@@ -159,8 +170,8 @@ async function pushChanges(request: Request, auth: AuthenticatedRequest, env: En
     }
     const mutationApplied = `EXISTS (SELECT 1 FROM ${table} WHERE user_id = ? AND resource_id = ? AND last_mutation_id = ? AND updated_at = ?)`;
     const statements = [
-      env.DB.prepare(`INSERT INTO ${table} (user_id, resource_id, revision, payload_json, updated_at, deleted_at, last_mutation_id) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id, resource_id) DO UPDATE SET revision = excluded.revision, payload_json = excluded.payload_json, updated_at = excluded.updated_at, deleted_at = excluded.deleted_at, last_mutation_id = excluded.last_mutation_id WHERE ${table}.revision = ? RETURNING revision`)
-        .bind(auth.userId, change.id, revision, payloadJson, updatedAt, deletedAt, change.mutationId, currentRevision),
+      env.DB.prepare(`INSERT INTO ${table} (user_id, resource_id, revision, payload_json, updated_at, deleted_at, last_mutation_id) SELECT ?, ?, ?, ?, ?, ?, ? WHERE COALESCE((SELECT compacted_through_seq FROM sync_retention_state WHERE user_id = ?), 0) <= ? ON CONFLICT(user_id, resource_id) DO UPDATE SET revision = excluded.revision, payload_json = excluded.payload_json, updated_at = excluded.updated_at, deleted_at = excluded.deleted_at, last_mutation_id = excluded.last_mutation_id WHERE ${table}.revision = ? RETURNING revision`)
+        .bind(auth.userId, change.id, revision, payloadJson, updatedAt, deletedAt, change.mutationId, auth.userId, cursor, currentRevision),
       env.DB.prepare(`DELETE FROM media_references WHERE user_id = ? AND resource_type = ? AND resource_id = ? AND ${mutationApplied}`)
         .bind(auth.userId, change.type, change.id, auth.userId, change.id, change.mutationId, updatedAt)
     ];
@@ -174,18 +185,21 @@ async function pushChanges(request: Request, auth: AuthenticatedRequest, env: En
       .bind(updatedAt, auth.userId, auth.userId, change.id, change.mutationId, updatedAt));
     const [result] = await env.DB.batch(statements);
     if (!result.results.length) {
+      await assertCursorRetained(auth.userId, cursor, env);
       const remote = await env.DB.prepare(`SELECT revision, payload_json, updated_at, deleted_at FROM ${table} WHERE user_id = ? AND resource_id = ?`).bind(auth.userId, change.id).first<StoredRecord>();
       conflicts.push({ key: `${change.type}:${change.id}`, local: change, remote: toEnvelope(change.type, change.id, remote) });
       continue;
     }
     applied.push({ type: change.type, id: change.id, revision, updatedAt, ...(deletedAt ? { deletedAt } : {}), ...(change.deleted ? {} : { payload: change.payload }) });
   }
+  await acknowledgeDevice(auth.userId, deviceId, cursor, env);
   return json({ applied, conflicts });
 }
 
-async function performCloudMaintenance(scheduledTime: number, env: Env): Promise<{ expiredSessions: number; mediaQueued: number; mediaDeleted: number; mediaPendingRetry: number }> {
+async function performCloudMaintenance(scheduledTime: number, env: Env): Promise<{ expiredSessions: number; mediaQueued: number; mediaDeleted: number; mediaPendingRetry: number; expiredDevices: number; expiredSnapshots: number; syncChangesCompacted: number; tombstonesCompacted: number }> {
   const now = new Date(scheduledTime).toISOString();
   const cutoff = new Date(scheduledTime - orphanGraceMs).toISOString();
+  const retentionCutoff = new Date(scheduledTime - syncRetentionMs).toISOString();
   const sessions = await env.DB.prepare("DELETE FROM sessions WHERE expires_at <= ?").bind(now).run();
   await env.DB.batch([
     env.DB.prepare("UPDATE media_assets SET unreferenced_at = NULL WHERE EXISTS (SELECT 1 FROM media_references WHERE media_references.media_id = media_assets.id)"),
@@ -210,7 +224,47 @@ async function performCloudMaintenance(scheduledTime: number, env: Env): Promise
     if (pending.results.length < cleanupBatchLimit) break;
   }
   const retry = await env.DB.prepare("SELECT COUNT(*) AS count FROM media_cleanup_queue").first<{ count: number }>();
-  return { expiredSessions: sessions.meta.changes ?? 0, mediaQueued, mediaDeleted, mediaPendingRetry: retry?.count ?? 0 };
+  const candidateSql = `SELECT c.user_id, c.seq FROM sync_changes c
+    WHERE c.updated_at <= ? AND c.seq <= COALESCE(
+      (SELECT MIN(d.acknowledged_seq) FROM sync_devices d WHERE d.user_id = c.user_id AND d.last_ack_at > ?),
+      (SELECT MAX(c2.seq) FROM sync_changes c2 WHERE c2.user_id = c.user_id), 0)
+    ORDER BY c.seq ASC LIMIT ?`;
+  const retention = await env.DB.batch([
+    env.DB.prepare("DELETE FROM sync_snapshot_sessions WHERE expires_at <= ?").bind(now),
+    env.DB.prepare("DELETE FROM sync_devices WHERE last_ack_at <= ?").bind(retentionCutoff),
+    env.DB.prepare(`INSERT INTO sync_retention_state (user_id, compacted_through_seq, last_compacted_at)
+      SELECT user_id, MAX(seq), ? FROM (${candidateSql}) GROUP BY user_id
+      ON CONFLICT(user_id) DO UPDATE SET compacted_through_seq = MAX(sync_retention_state.compacted_through_seq, excluded.compacted_through_seq), last_compacted_at = excluded.last_compacted_at`)
+      .bind(now, retentionCutoff, retentionCutoff, syncCompactionLimit),
+    env.DB.prepare(`DELETE FROM sync_changes WHERE seq IN (SELECT seq FROM (${candidateSql}))`)
+      .bind(retentionCutoff, retentionCutoff, syncCompactionLimit),
+    tombstoneDeleteStatement(env, "characters", "character", retentionCutoff),
+    tombstoneDeleteStatement(env, "definitions", "definition", retentionCutoff),
+    tombstoneDeleteStatement(env, "definition_overrides", "override", retentionCutoff)
+  ]);
+  return {
+    expiredSessions: sessions.meta.changes ?? 0,
+    mediaQueued,
+    mediaDeleted,
+    mediaPendingRetry: retry?.count ?? 0,
+    expiredSnapshots: retention[0].meta.changes ?? 0,
+    expiredDevices: retention[1].meta.changes ?? 0,
+    syncChangesCompacted: retention[3].meta.changes ?? 0,
+    tombstonesCompacted: retention.slice(4).reduce((total, result) => total + (result.meta.changes ?? 0), 0)
+  };
+}
+
+function tombstoneDeleteStatement(env: Env, table: string, type: SyncResourceType, cutoff: string): D1PreparedStatement {
+  return env.DB.prepare(`DELETE FROM ${table} WHERE rowid IN (
+    SELECT resource.rowid FROM ${table} resource
+    JOIN sync_retention_state state ON state.user_id = resource.user_id
+    WHERE resource.deleted_at IS NOT NULL AND resource.deleted_at <= ?
+      AND NOT EXISTS (
+        SELECT 1 FROM sync_changes change
+        WHERE change.user_id = resource.user_id AND change.resource_type = ? AND change.resource_id = resource.resource_id
+      )
+    ORDER BY resource.deleted_at ASC LIMIT ?
+  )`).bind(cutoff, type, tombstoneCompactionLimit);
 }
 
 function collectMediaIds(value: unknown, found = new Set<string>()): Set<string> {
@@ -224,11 +278,65 @@ function collectMediaIds(value: unknown, found = new Set<string>()): Set<string>
   return found;
 }
 
-async function pullChanges(url: URL, auth: AuthenticatedRequest, env: Env): Promise<Response> {
-  const cursor = Math.max(0, Number(url.searchParams.get("cursor") ?? "0") || 0);
-  const result = await env.DB.prepare("SELECT seq, resource_type, resource_id, revision, payload_json, updated_at, deleted_at FROM sync_changes WHERE user_id = ? AND seq > ? ORDER BY seq ASC LIMIT 500").bind(auth.userId, cursor).all<ChangeRecord>();
-  const changes = result.results.map((record) => ({ type: record.resource_type, id: record.resource_id, revision: record.revision, updatedAt: record.updated_at, ...(record.deleted_at ? { deletedAt: record.deleted_at } : {}), ...(record.payload_json ? { payload: JSON.parse(record.payload_json) as unknown } : {}) } satisfies SyncEnvelope));
-  return json({ cursor: result.results.at(-1)?.seq ?? cursor, changes });
+async function pullChanges(request: Request, auth: AuthenticatedRequest, env: Env): Promise<Response> {
+  const { deviceId, cursor } = readSyncIdentity(request, auth.sessionId, new URL(request.url).searchParams.get("cursor"));
+  const floor = await compactedFloor(auth.userId, env);
+  if (cursor < floor) {
+    const now = new Date();
+    const snapshotId = crypto.randomUUID();
+    const baseline = await env.DB.prepare("SELECT COALESCE(MAX(seq), 0) AS seq FROM sync_changes WHERE user_id = ?").bind(auth.userId).first<{ seq: number }>();
+    const baselineCursor = Math.max(floor, baseline?.seq ?? 0);
+    await env.DB.batch([
+      env.DB.prepare("INSERT INTO sync_snapshot_sessions (id, user_id, device_id, baseline_seq, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)")
+        .bind(snapshotId, auth.userId, deviceId, baselineCursor, now.toISOString(), new Date(now.getTime() + snapshotTtlMs).toISOString()),
+      deviceAcknowledgementStatement(env, auth.userId, deviceId, cursor, now.toISOString())
+    ]);
+    return json({ mode: "reset-required", snapshotId, baselineCursor });
+  }
+  const result = await env.DB.prepare("SELECT seq, resource_type, resource_id, revision, payload_json, updated_at, deleted_at FROM sync_changes WHERE user_id = ? AND seq > ? ORDER BY seq ASC LIMIT ?").bind(auth.userId, cursor, syncPullLimit + 1).all<ChangeRecord>();
+  const changes: SyncEnvelope[] = [];
+  let usedBytes = 0;
+  let lastSeq = cursor;
+  for (const record of result.results.slice(0, syncPullLimit)) {
+    const envelope = changeRecordToEnvelope(record);
+    const size = byteLength(JSON.stringify(envelope));
+    if (changes.length && usedBytes + size > snapshotResponseBytes) break;
+    changes.push(envelope);
+    usedBytes += size;
+    lastSeq = record.seq;
+  }
+  await acknowledgeDevice(auth.userId, deviceId, cursor, env);
+  return json({ mode: "incremental", cursor: lastSeq, changes, hasMore: changes.length < result.results.length || result.results.length > syncPullLimit });
+}
+
+async function pullSnapshot(url: URL, auth: AuthenticatedRequest, env: Env): Promise<Response> {
+  const snapshotId = url.pathname.slice("/api/sync/snapshot/".length);
+  if (!isDeviceId(snapshotId)) throw new HttpError(400, "Identificador de reconstrução inválido.");
+  const session = await env.DB.prepare("SELECT baseline_seq, expires_at FROM sync_snapshot_sessions WHERE id = ? AND user_id = ?")
+    .bind(snapshotId, auth.userId).first<{ baseline_seq: number; expires_at: string }>();
+  if (!session || session.expires_at <= new Date().toISOString()) throw new HttpError(410, "A reconstrução expirou e será reiniciada.", "sync_snapshot_expired");
+  const after = decodeSnapshotCursor(url.searchParams.get("after"));
+  const rows = await env.DB.prepare(`SELECT resource_type, resource_id, revision, payload_json, updated_at, deleted_at, sort_key FROM (
+      SELECT 'character' AS resource_type, resource_id, revision, payload_json, updated_at, deleted_at, 'character:' || resource_id AS sort_key FROM characters WHERE user_id = ? AND deleted_at IS NULL
+      UNION ALL
+      SELECT 'definition', resource_id, revision, payload_json, updated_at, deleted_at, 'definition:' || resource_id FROM definitions WHERE user_id = ? AND deleted_at IS NULL
+      UNION ALL
+      SELECT 'override', resource_id, revision, payload_json, updated_at, deleted_at, 'override:' || resource_id FROM definition_overrides WHERE user_id = ? AND deleted_at IS NULL
+    ) WHERE sort_key > ? ORDER BY sort_key ASC LIMIT ?`)
+    .bind(auth.userId, auth.userId, auth.userId, after, snapshotQueryLimit).all<ResourceRecord & { sort_key: string }>();
+  const changes: SyncEnvelope[] = [];
+  let usedBytes = 0;
+  let nextCursor: string | undefined;
+  for (const row of rows.results) {
+    const envelope = changeRecordToEnvelope(row);
+    const size = byteLength(JSON.stringify(envelope));
+    if (changes.length && usedBytes + size > snapshotResponseBytes) break;
+    changes.push(envelope);
+    usedBytes += size;
+    nextCursor = encodeSnapshotCursor(row.sort_key);
+  }
+  const done = changes.length === rows.results.length && rows.results.length < snapshotQueryLimit;
+  return json({ snapshotId, baselineCursor: session.baseline_seq, changes, ...(done ? {} : { nextCursor }), done });
 }
 
 async function uploadMedia(request: Request, auth: AuthenticatedRequest, env: Env): Promise<Response> {
@@ -304,7 +412,62 @@ async function getGoogleKeys(): Promise<JsonWebKey[]> {
 }
 
 type StoredRecord = { revision: number; payload_json: string | null; updated_at: string; deleted_at: string | null };
-type ChangeRecord = StoredRecord & { seq: number; resource_type: SyncResourceType; resource_id: string };
+type ResourceRecord = StoredRecord & { resource_type: SyncResourceType; resource_id: string };
+type ChangeRecord = ResourceRecord & { seq: number };
+
+function changeRecordToEnvelope(record: ResourceRecord): SyncEnvelope {
+  return { type: record.resource_type, id: record.resource_id, revision: record.revision, updatedAt: record.updated_at, ...(record.deleted_at ? { deletedAt: record.deleted_at } : {}), ...(record.payload_json ? { payload: JSON.parse(record.payload_json) as unknown } : {}) };
+}
+
+function readSyncIdentity(request: Request, sessionId: string, fallbackCursor: string | null = null): { deviceId: string; cursor: number } {
+  const suppliedDeviceId = request.headers.get("X-SoulForge-Device-Id");
+  if (suppliedDeviceId && !isDeviceId(suppliedDeviceId)) throw new HttpError(400, "Identificador de dispositivo inválido.");
+  return {
+    deviceId: suppliedDeviceId ?? `legacy:${sessionId}`,
+    cursor: readCursor(request.headers.get("X-SoulForge-Sync-Cursor") ?? fallbackCursor)
+  };
+}
+
+function isDeviceId(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function readCursor(value: string | null): number {
+  const cursor = Number(value ?? "0");
+  if (!Number.isSafeInteger(cursor) || cursor < 0) throw new HttpError(400, "Cursor de sincronização inválido.");
+  return cursor;
+}
+
+async function compactedFloor(userId: string, env: Env): Promise<number> {
+  const state = await env.DB.prepare("SELECT compacted_through_seq FROM sync_retention_state WHERE user_id = ?").bind(userId).first<{ compacted_through_seq: number }>();
+  return state?.compacted_through_seq ?? 0;
+}
+
+async function assertCursorRetained(userId: string, cursor: number, env: Env): Promise<void> {
+  if (cursor < await compactedFloor(userId, env)) throw new HttpError(409, "Este dispositivo precisa reconstruir os dados da nuvem antes de enviar alterações.", "sync_reset_required");
+}
+
+function deviceAcknowledgementStatement(env: Env, userId: string, deviceId: string, cursor: number, now: string): D1PreparedStatement {
+  return env.DB.prepare("INSERT INTO sync_devices (user_id, device_id, acknowledged_seq, created_at, last_ack_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(user_id, device_id) DO UPDATE SET acknowledged_seq = MAX(sync_devices.acknowledged_seq, excluded.acknowledged_seq), last_ack_at = excluded.last_ack_at")
+    .bind(userId, deviceId, cursor, now, now);
+}
+
+async function acknowledgeDevice(userId: string, deviceId: string, cursor: number, env: Env): Promise<void> {
+  await deviceAcknowledgementStatement(env, userId, deviceId, cursor, new Date().toISOString()).run();
+}
+
+function encodeSnapshotCursor(value: string): string {
+  return base64Url(new TextEncoder().encode(value));
+}
+
+function decodeSnapshotCursor(value: string | null): string {
+  if (!value) return "";
+  try {
+    const decoded = new TextDecoder().decode(base64UrlBytes(value));
+    if (!/^(character|definition|override):.{1,200}$/.test(decoded)) throw new Error("invalid cursor");
+    return decoded;
+  } catch { throw new HttpError(400, "Cursor de reconstrução inválido."); }
+}
 
 function toEnvelope(type: SyncResourceType, id: string, record: StoredRecord | null): SyncEnvelope {
   if (!record) return { type, id, revision: 0, updatedAt: new Date(0).toISOString() };
@@ -440,7 +603,7 @@ function withSecurityHeaders(response: Response): Response {
 
 class HttpError extends Error {
   readonly isHttpError = true;
-  constructor(readonly status: number, message: string) { super(message); this.name = "HttpError"; }
+  constructor(readonly status: number, message: string, readonly code?: string) { super(message); this.name = "HttpError"; }
 }
 
 function isHttpError(error: unknown): error is HttpError {

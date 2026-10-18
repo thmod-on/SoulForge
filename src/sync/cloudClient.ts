@@ -1,4 +1,4 @@
-import type { CloudSession, SyncPullResponse, SyncPushChange, SyncPushResponse } from "./types";
+import type { CloudSession, SyncPullResponse, SyncPushChange, SyncPushResponse, SyncSnapshotResponse } from "./types";
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/api${path}`, { credentials: "same-origin", ...init, headers: { ...(init?.body ? { "Content-Type": "application/json" } : {}), ...init?.headers } });
@@ -30,12 +30,21 @@ export function deleteCloudAccount(): Promise<void> {
   return api("/account", { method: "DELETE", body: "{}" });
 }
 
-export function pushCloudChanges(changes: SyncPushChange[]): Promise<SyncPushResponse> {
-  return api("/sync/push", { method: "POST", body: JSON.stringify({ changes }) });
+export function pushCloudChanges(changes: SyncPushChange[], deviceId: string, cursor: number): Promise<SyncPushResponse> {
+  return api("/sync/push", { method: "POST", headers: syncHeaders(deviceId, cursor), body: JSON.stringify({ changes }) });
 }
 
-export function pullCloudChanges(cursor: number): Promise<SyncPullResponse> {
-  return api(`/sync/pull?cursor=${encodeURIComponent(String(cursor))}`);
+export function pullCloudChanges(cursor: number, deviceId: string): Promise<SyncPullResponse> {
+  return api(`/sync/pull?cursor=${encodeURIComponent(String(cursor))}`, { headers: syncHeaders(deviceId, cursor) });
+}
+
+export function pullCloudSnapshot(snapshotId: string, after?: string): Promise<SyncSnapshotResponse> {
+  const query = after ? `?after=${encodeURIComponent(after)}` : "";
+  return api(`/sync/snapshot/${encodeURIComponent(snapshotId)}${query}`);
+}
+
+function syncHeaders(deviceId: string, cursor: number): HeadersInit {
+  return { "X-SoulForge-Device-Id": deviceId, "X-SoulForge-Sync-Cursor": String(cursor) };
 }
 
 export async function uploadCloudMedia(media: { bytes: Uint8Array; mimeType: string; checksum: string }): Promise<{ id: string }> {

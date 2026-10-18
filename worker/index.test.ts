@@ -5,7 +5,7 @@ import { HttpResponse, http } from "msw";
 import { setupNetwork } from "@msw/cloudflare";
 import type { SyncPushChange } from "../src/sync/types";
 import worker, { type Env } from "./index";
-import { createSigningKey, login, pngBytes, request, resetCloudStorage, sha256Hex, signGoogleToken, testOrigin } from "./test/helpers";
+import { createSigningKey, login, pngBytes, request, resetCloudStorage, sha256Hex, signGoogleToken, testDeviceId, testOrigin } from "./test/helpers";
 
 const network = setupNetwork();
 let signingKey: Awaited<ReturnType<typeof createSigningKey>>;
@@ -128,6 +128,10 @@ describe("sync revisions and account isolation", () => {
     const exactBody = JSON.stringify({ changes: [first, { ...second, payload: { text: "b".repeat(2_000_000 - baseBytes) } }] });
     expect(new TextEncoder().encode(exactBody)).toHaveLength(2_000_000);
     expect((await request("/api/sync/push", { method: "POST", headers: { "Content-Type": "application/json" }, body: exactBody }, cookie)).status).toBe(200);
+    const pull = await request("/api/sync/pull?cursor=0", {}, cookie);
+    const pullBytes = new TextEncoder().encode(await pull.clone().text()).byteLength;
+    expect(pullBytes).toBeLessThan(2_000_000);
+    await expect(pull.json()).resolves.toMatchObject({ mode: "incremental", hasMore: true });
     expect((await request("/api/sync/push", { method: "POST", headers: { "Content-Type": "application/json" }, body: `${exactBody} ` }, cookie)).status).toBe(413);
   });
 
@@ -231,6 +235,13 @@ describe("private media", () => {
 
   it("removes D1 records, sessions and R2 objects when the account is deleted", async () => {
     const { cookie } = await login(signingKey.privateKey);
+    await request("/api/sync/pull?cursor=0", {}, cookie);
+    const user = await env.DB.prepare("SELECT id FROM users").first<{ id: string }>();
+    await env.DB.batch([
+      env.DB.prepare("INSERT INTO sync_retention_state (user_id, compacted_through_seq, last_compacted_at) VALUES (?, 0, ?)").bind(user!.id, new Date().toISOString()),
+      env.DB.prepare("INSERT INTO sync_snapshot_sessions (id, user_id, device_id, baseline_seq, created_at, expires_at) VALUES (?, ?, ?, 0, ?, ?)")
+        .bind("account-delete-snapshot", user!.id, testDeviceId, new Date().toISOString(), new Date(Date.now() + 60_000).toISOString())
+    ]);
     const bytes = pngBytes();
     const upload = await request("/api/media", mediaBody(bytes, await sha256Hex(bytes)), cookie);
     const mediaId = ((await upload.json()) as { id: string }).id;
@@ -240,6 +251,9 @@ describe("private media", () => {
     expect((await request("/api/account", { method: "DELETE", body: "{}" }, cookie)).status).toBe(204);
     expect(await env.DB.prepare("SELECT COUNT(*) AS count FROM users").first()).toEqual({ count: 0 });
     expect(await env.DB.prepare("SELECT COUNT(*) AS count FROM sessions").first()).toEqual({ count: 0 });
+    expect(await env.DB.prepare("SELECT COUNT(*) AS count FROM sync_devices").first()).toEqual({ count: 0 });
+    expect(await env.DB.prepare("SELECT COUNT(*) AS count FROM sync_retention_state").first()).toEqual({ count: 0 });
+    expect(await env.DB.prepare("SELECT COUNT(*) AS count FROM sync_snapshot_sessions").first()).toEqual({ count: 0 });
     expect(objectKey && await env.MEDIA.head(objectKey)).toBeNull();
     await expect((await request("/api/session", {}, cookie)).json()).resolves.toEqual({ authenticated: false });
   });
@@ -343,7 +357,84 @@ describe("scheduled cloud maintenance", () => {
     expect(await env.DB.prepare("SELECT media_id FROM media_cleanup_queue WHERE media_id = ?").bind(orphanId).first()).toBeNull();
     expect(await env.MEDIA.head(orphanKey)).toBeNull();
     expect(await env.DB.prepare("SELECT id FROM media_assets WHERE id = ?").bind(referencedId).first()).not.toBeNull();
-    expect(Object.keys(infoLog.mock.calls.at(-1)?.[0] ?? {}).sort()).toEqual(["durationMs", "event", "expiredSessions", "mediaDeleted", "mediaPendingRetry", "mediaQueued"].sort());
+    expect(Object.keys(infoLog.mock.calls.at(-1)?.[0] ?? {}).sort()).toEqual(["durationMs", "event", "expiredDevices", "expiredSessions", "expiredSnapshots", "mediaDeleted", "mediaPendingRetry", "mediaQueued", "syncChangesCompacted", "tombstonesCompacted"].sort());
+  });
+});
+
+describe("sync retention and reconstruction", () => {
+  it("keeps cached clients without device headers compatible during the transition", async () => {
+    const { cookie } = await login(signingKey.privateKey);
+    const legacyPull = await worker.fetch(new Request(`${testOrigin}/api/sync/pull?cursor=0`, {
+      headers: { Cookie: cookie }
+    }), env as Env);
+
+    expect(legacyPull.status).toBe(200);
+    await expect(legacyPull.json()).resolves.toMatchObject({ mode: "incremental", cursor: 0, hasMore: false });
+
+    const legacyPush = await worker.fetch(new Request(`${testOrigin}/api/sync/push`, {
+      method: "POST",
+      headers: { Cookie: cookie, Origin: testOrigin, "Content-Type": "application/json" },
+      body: JSON.stringify({ changes: [syncChange("legacy-client-hero", 0, { name: "Legacy" })] })
+    }), env as Env);
+
+    expect(legacyPush.status).toBe(200);
+    expect(await env.DB.prepare("SELECT COUNT(*) AS count FROM sync_devices WHERE device_id LIKE 'legacy:%'").first()).toEqual({ count: 1 });
+  });
+
+  it("paginates more than 500 incremental changes without losing the cursor", async () => {
+    const { cookie } = await login(signingKey.privateKey);
+    const user = await env.DB.prepare("SELECT id FROM users").first<{ id: string }>();
+    await env.DB.prepare(`WITH RECURSIVE counter(value) AS (
+      SELECT 1 UNION ALL SELECT value + 1 FROM counter WHERE value < 501
+    ) INSERT INTO sync_changes (user_id, resource_type, resource_id, revision, payload_json, updated_at, deleted_at)
+      SELECT ?, 'character', 'bulk-' || value, 1, '{"id":"bulk"}', '2026-10-18T00:00:00.000Z', NULL FROM counter`).bind(user!.id).run();
+
+    let cursor = 0;
+    let total = 0;
+    let pages = 0;
+    let hasMore = true;
+    while (hasMore) {
+      const page = await (await request(`/api/sync/pull?cursor=${cursor}`, {}, cookie)).json<{ mode: string; cursor: number; changes: unknown[]; hasMore: boolean }>();
+      expect(page.mode).toBe("incremental");
+      expect(new TextEncoder().encode(JSON.stringify(page)).byteLength).toBeLessThan(2_000_000);
+      total += page.changes.length;
+      pages += 1;
+      cursor = page.cursor;
+      hasMore = page.hasMore;
+    }
+    expect(total).toBe(501);
+    expect(pages).toBeGreaterThan(1);
+  });
+
+  it("lets an active device block pruning, expires it after 90 days and rejects a stale push", async () => {
+    const { cookie } = await login(signingKey.privateKey);
+    const user = await env.DB.prepare("SELECT id FROM users").first<{ id: string }>();
+    expect((await request("/api/sync/push", jsonBody({ changes: [syncChange("retained-hero", 0, { name: "Hero" })] }), cookie)).status).toBe(200);
+    expect((await request("/api/sync/push", jsonBody({ changes: [syncChange("retained-hero", 1, undefined, true)] }), cookie)).status).toBe(200);
+    await env.DB.batch([
+      env.DB.prepare("UPDATE sync_changes SET updated_at = '2026-01-01T00:00:00.000Z' WHERE user_id = ?").bind(user!.id),
+      env.DB.prepare("UPDATE characters SET updated_at = '2026-01-01T00:00:00.000Z', deleted_at = '2026-01-01T00:00:00.000Z' WHERE user_id = ?").bind(user!.id),
+      env.DB.prepare("UPDATE sync_devices SET acknowledged_seq = 0, last_ack_at = '2026-10-17T00:00:00.000Z' WHERE user_id = ? AND device_id = ?").bind(user!.id, testDeviceId)
+    ]);
+
+    await runScheduled(new Date("2026-10-18T03:17:00.000Z"));
+    expect(await env.DB.prepare("SELECT COUNT(*) AS count FROM sync_changes WHERE user_id = ?").bind(user!.id).first()).toEqual({ count: 2 });
+    expect(await env.DB.prepare("SELECT resource_id FROM characters WHERE user_id = ?").bind(user!.id).first()).not.toBeNull();
+
+    const secondRun = new Date("2026-10-19T03:17:00.000Z");
+    const exactExpiry = new Date(secondRun.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString();
+    await env.DB.prepare("UPDATE sync_devices SET last_ack_at = ? WHERE user_id = ?").bind(exactExpiry, user!.id).run();
+    await runScheduled(secondRun);
+    expect(await env.DB.prepare("SELECT COUNT(*) AS count FROM sync_changes WHERE user_id = ?").bind(user!.id).first()).toEqual({ count: 0 });
+    expect(await env.DB.prepare("SELECT resource_id FROM characters WHERE user_id = ?").bind(user!.id).first()).toBeNull();
+
+    const stale = await request("/api/sync/push", jsonBody({ changes: [syncChange("retained-hero", 0, { name: "Resurrected" })] }), cookie);
+    expect(stale.status).toBe(409);
+    await expect(stale.json()).resolves.toMatchObject({ code: "sync_reset_required" });
+    const reset = await (await request("/api/sync/pull?cursor=0", {}, cookie)).json<{ mode: string; snapshotId: string; baselineCursor: number }>();
+    expect(reset).toMatchObject({ mode: "reset-required", baselineCursor: expect.any(Number) });
+    const snapshot = await request(`/api/sync/snapshot/${reset.snapshotId}`, {}, cookie);
+    await expect(snapshot.json()).resolves.toMatchObject({ done: true, changes: [] });
   });
 });
 

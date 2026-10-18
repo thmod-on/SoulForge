@@ -2,7 +2,7 @@ import type { Definition, PackBundle, PackManifest } from "../domain/types";
 import { ensureSyncStores } from "./syncRepository";
 
 const databaseName = "soulforge";
-const databaseVersion = 5;
+const databaseVersion = 6;
 const packStoreName = "installedPacks";
 const definitionStoreName = "customDefinitions";
 

@@ -4,7 +4,7 @@ import { ensureSyncStores } from "./syncRepository";
 
 const databaseName = "soulforge";
 const storeName = "characters";
-const databaseVersion = 5;
+const databaseVersion = 6;
 
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {

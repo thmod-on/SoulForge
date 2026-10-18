@@ -4,9 +4,11 @@ import type { CardMarkerOverride } from "../storage/compendiumRepository";
 import {
   listQueuedSyncChanges,
   listSyncConflicts,
+  loadSyncIdentity,
   loadSyncCursor,
   saveSyncConflicts,
-  saveSyncCursor
+  saveSyncCursor,
+  setRemoteMetadata
 } from "../storage/syncRepository";
 import type { SyncCoordinatorDependencies } from "./syncCoordinator";
 import type { CloudSession, SyncConflict, SyncEnvelope, SyncPushChange } from "./types";
@@ -17,6 +19,7 @@ const cloudClient = vi.hoisted(() => ({
   getCloudConfig: vi.fn(),
   getCloudSession: vi.fn(),
   pullCloudChanges: vi.fn(),
+  pullCloudSnapshot: vi.fn(),
   pushCloudChanges: vi.fn(),
   signInWithGoogle: vi.fn(),
   signOutCloud: vi.fn(),
@@ -146,14 +149,14 @@ describe("local-first sync lifecycle", () => {
 
   it("applies a remote tombstone locally", async () => {
     const harness = createHarness(true, authenticatedSession());
-    harness.cloud.pull.mockResolvedValue({ cursor: 4, changes: [{ type: "character", id: "hero", revision: 2, updatedAt: "2026-10-10T12:00:00.000Z", deletedAt: "2026-10-10T12:00:00.000Z" }] });
+    harness.cloud.pull.mockResolvedValue({ mode: "incremental", cursor: 4, hasMore: false, changes: [{ type: "character", id: "hero", revision: 2, updatedAt: "2026-10-10T12:00:00.000Z", deletedAt: "2026-10-10T12:00:00.000Z" }] });
     const dependencies = createDependencies();
     const coordinator = await loadCoordinator();
     await coordinator.initializeSyncCoordinator(dependencies);
     await coordinator.runSync();
 
-    expect(dependencies.deleteCharacter).toHaveBeenCalledWith("hero");
-    expect(loadSyncCursor()).toBe(4);
+    expect(await getLocalRecord("characters", "hero")).toBeUndefined();
+    expect(await loadSyncCursor()).toBe(4);
   });
 });
 
@@ -196,7 +199,9 @@ describe("media, logout and account removal", () => {
     const dependencies = createDependencies();
     const localImage = "data:image/png;base64,iVBORw==";
     harness.cloud.pull.mockResolvedValue({
+      mode: "incremental",
       cursor: 2,
+      hasMore: false,
       changes: [{
         type: "character",
         id: "remote",
@@ -215,7 +220,7 @@ describe("media, logout and account removal", () => {
     expect(harness.cloud.uploadMedia.mock.invocationCallOrder[0]).toBeLessThan(harness.cloud.push.mock.invocationCallOrder[0]);
     expect(harness.lastPushed[0].payload).toEqual({ id: "local", portrait: expect.objectContaining({ $soulforgeMedia: "uploaded-media" }) });
     expect(harness.cloud.downloadMedia).toHaveBeenCalledWith("remote-media");
-    expect(dependencies.saveCharacter).toHaveBeenCalledWith({ id: "remote", portrait: "data:image/png;base64,iVBORw==" });
+    expect(await getLocalRecord("characters", "remote")).toEqual({ id: "remote", portrait: "data:image/png;base64,iVBORw==" });
   });
 
   it("preserves local data and queue on logout", async () => {
@@ -246,7 +251,7 @@ describe("media, logout and account removal", () => {
       local: { mutationId: "local-mutation", type: "character", id: "hero", expectedRevision: 0, deleted: false, payload: { id: "hero" } },
       remote: { type: "character", id: "hero", revision: 1, updatedAt: "2026-10-10T12:00:00.000Z", payload: { id: "hero" } }
     }]);
-    saveSyncCursor(12);
+    await saveSyncCursor(12);
     localStorage.setItem("soulforge.sync.user", "account-a");
 
     await coordinator.removeCloudAccount();
@@ -254,7 +259,7 @@ describe("media, logout and account removal", () => {
     expect(harness.cloud.deleteAccount).toHaveBeenCalledOnce();
     expect(await listQueuedSyncChanges()).toHaveLength(0);
     expect(await listSyncConflicts()).toHaveLength(0);
-    expect(loadSyncCursor()).toBe(0);
+    expect(await loadSyncCursor()).toBe(0);
     expect(localStorage.getItem("soulforge.sync.user")).toBeNull();
     expect(dependencies.deleteCharacter).not.toHaveBeenCalled();
     expect(await getLocalRecord("characters", "hero")).toEqual({ id: "hero", identity: { name: "Local Hero" } });
@@ -281,6 +286,71 @@ describe("media, logout and account removal", () => {
   });
 });
 
+describe("retention recovery", () => {
+  it("migrates the legacy cursor and keeps a stable anonymous device id", async () => {
+    localStorage.setItem("soulforge.sync.cursor", "37");
+    const first = await loadSyncIdentity();
+    const second = await loadSyncIdentity();
+    expect(first).toEqual({ deviceId: expect.stringMatching(/^[0-9a-f-]{36}$/i), cursor: 37 });
+    expect(second).toEqual(first);
+    expect(localStorage.getItem("soulforge.sync.cursor")).toBeNull();
+  });
+
+  it("consumes every incremental page and commits each cursor with the records", async () => {
+    const harness = createHarness(true, authenticatedSession());
+    harness.cloud.pull
+      .mockResolvedValueOnce({ mode: "incremental", cursor: 1, hasMore: true, changes: [{ type: "character", id: "page-a", revision: 1, updatedAt: "2026-10-18T00:00:00.000Z", payload: { id: "page-a" } }] })
+      .mockResolvedValueOnce({ mode: "incremental", cursor: 2, hasMore: false, changes: [{ type: "character", id: "page-b", revision: 1, updatedAt: "2026-10-18T00:01:00.000Z", payload: { id: "page-b" } }] })
+      .mockImplementation(async (cursor: number) => ({ mode: "incremental", cursor, hasMore: false, changes: [] }));
+    const coordinator = await loadCoordinator();
+    await coordinator.initializeSyncCoordinator(createDependencies());
+    await coordinator.runSync();
+    expect(await getLocalRecord("characters", "page-a")).toEqual({ id: "page-a" });
+    expect(await getLocalRecord("characters", "page-b")).toEqual({ id: "page-b" });
+    expect(await loadSyncCursor()).toBe(2);
+  });
+
+  it("rebuilds automatically while preserving new work and turning a missing edited record into conflict", async () => {
+    const harness = createHarness(true, authenticatedSession());
+    await loadSyncIdentity();
+    await putLocalRecord("characters", { id: "edited-old", identity: { name: "Edited" } });
+    await putLocalRecord("characters", { id: "new-local", identity: { name: "New" } });
+    await setRemoteMetadata({ type: "character", id: "edited-old", revision: 3, updatedAt: "2026-01-01T00:00:00.000Z", payload: { id: "edited-old" } });
+    const coordinator = await loadCoordinator();
+    await coordinator.initializeSyncCoordinator(createDependencies());
+    await coordinator.markForSync("character", "edited-old", { id: "edited-old", identity: { name: "Edited" } });
+    await coordinator.markForSync("character", "new-local", { id: "new-local", identity: { name: "New" } });
+    harness.cloud.pull
+      .mockResolvedValueOnce({ mode: "reset-required", snapshotId: "snapshot-a", baselineCursor: 42 })
+      .mockImplementation(async (cursor: number) => ({ mode: "incremental", cursor, hasMore: false, changes: [] }));
+    harness.cloud.pullSnapshot.mockResolvedValue({ snapshotId: "snapshot-a", baselineCursor: 42, done: true, changes: [{ type: "character", id: "remote-live", revision: 2, updatedAt: "2026-10-18T00:00:00.000Z", payload: { id: "remote-live", identity: { name: "Remote" } } }] });
+
+    await coordinator.runSync();
+
+    expect(await getLocalRecord("characters", "remote-live")).toEqual({ id: "remote-live", identity: { name: "Remote" } });
+    expect(await getLocalRecord("characters", "edited-old")).toBeTruthy();
+    expect(await getLocalRecord("characters", "new-local")).toBeTruthy();
+    expect(await listSyncConflicts()).toEqual([expect.objectContaining({ key: "character:edited-old", remote: expect.objectContaining({ deletedAt: expect.any(String), revision: 0 }) })]);
+    expect(harness.lastPushed.map((entry) => entry.id)).toContain("new-local");
+    expect((await listQueuedSyncChanges()).map((entry) => entry.id)).toEqual(["edited-old"]);
+    expect(await loadSyncCursor()).toBe(42);
+  });
+
+  it("does not expose a partially downloaded snapshot", async () => {
+    const harness = createHarness(true, authenticatedSession());
+    harness.cloud.pull.mockResolvedValueOnce({ mode: "reset-required", snapshotId: "snapshot-b", baselineCursor: 50 });
+    harness.cloud.pullSnapshot
+      .mockResolvedValueOnce({ snapshotId: "snapshot-b", baselineCursor: 50, done: false, nextCursor: "next", changes: [{ type: "character", id: "staged-only", revision: 1, updatedAt: "2026-10-18T00:00:00.000Z", payload: { id: "staged-only" } }] })
+      .mockRejectedValueOnce(new Error("snapshot unavailable"));
+    const coordinator = await loadCoordinator();
+    await coordinator.initializeSyncCoordinator(createDependencies());
+    await coordinator.runSync();
+    expect(await getLocalRecord("characters", "staged-only")).toBeUndefined();
+    expect(await loadSyncCursor()).toBe(0);
+    expect(coordinator.getSyncViewModel()).toMatchObject({ status: "error", message: "snapshot unavailable" });
+  });
+});
+
 function createHarness(initialOnline: boolean, initialSession: CloudSession) {
   let online = initialOnline;
   const listeners: Record<"online" | "offline", Array<() => void>> = { online: [], offline: [] };
@@ -296,6 +366,7 @@ function createHarness(initialOnline: boolean, initialSession: CloudSession) {
       getConfig: cloudClient.getCloudConfig,
       getSession: cloudClient.getCloudSession,
       pull: cloudClient.pullCloudChanges,
+      pullSnapshot: cloudClient.pullCloudSnapshot,
       push: cloudClient.pushCloudChanges,
       signIn: cloudClient.signInWithGoogle,
       signOut: cloudClient.signOutCloud,
@@ -328,7 +399,8 @@ function createHarness(initialOnline: boolean, initialSession: CloudSession) {
   cloudClient.downloadCloudMedia.mockResolvedValue({ bytes: new ArrayBuffer(0), mimeType: "image/png" });
   cloudClient.getCloudConfig.mockResolvedValue({ googleClientId: "test-client", syncEnabled: true });
   cloudClient.getCloudSession.mockResolvedValue(initialSession);
-  cloudClient.pullCloudChanges.mockImplementation(async (cursor: number) => ({ cursor, changes: [] }));
+  cloudClient.pullCloudChanges.mockImplementation(async (cursor: number) => ({ mode: "incremental", cursor, changes: [], hasMore: false }));
+  cloudClient.pullCloudSnapshot.mockResolvedValue({ snapshotId: "snapshot", baselineCursor: 0, changes: [], done: true });
   cloudClient.pushCloudChanges.mockImplementation(async (changes: SyncPushChange[]) => {
     harness.lastPushed = changes;
     const applied: SyncEnvelope[] = changes.map((change) => ({
@@ -402,7 +474,7 @@ function getLocalRecord(storeName: string, key: IDBValidKey): Promise<unknown> {
 
 function withLocalStore(storeName: string, mode: IDBTransactionMode, operation: (store: IDBObjectStore) => IDBRequest): Promise<unknown> {
   return new Promise((resolve, reject) => {
-    const open = indexedDB.open("soulforge", 5);
+    const open = indexedDB.open("soulforge", 6);
     open.onerror = () => reject(open.error);
     open.onsuccess = () => {
       const database = open.result;

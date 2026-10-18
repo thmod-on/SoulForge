@@ -241,8 +241,10 @@ a exclusão de forma idempotente.
 Cada execução registra somente contagens agregadas de sessões expiradas,
 mídias enfileiradas, objetos removidos e itens pendentes para retry. IDs de
 usuário, e-mails, chaves R2, fichas, tokens e payloads não são registrados.
-`sync_changes`, tombstones e registros com `deleted_at` não participam dessa
-limpeza; sua retenção continua reservada ao CLD-009.
+Até a versão `0.39.0`, `sync_changes`, tombstones e registros com `deleted_at`
+não participavam dessa limpeza. A entrega `0.40.0` acrescenta essa etapa com
+retenção de 90 dias; ela passa a ser efetiva depois que o workflow publicar o
+Worker e aplicar sua migration no D1 de produção.
 
 Em **18 de outubro de 2026**, a primeira execução real da versão `0.39.0`,
 commit `64ff659`, apareceu em **Workers & Pages > soulforge > Observability**
@@ -253,6 +255,34 @@ A rotina terminou em **241 ms**, com `expiredSessions: 0`, `mediaQueued: 0`,
 mídias elegíveis naquela execução; o evento contém somente contagens agregadas
 e metadados técnicos da invocação, sem contas, e-mails, tokens, cookies, chaves
 R2, fichas ou payloads. Com essa evidência, CLD-006 foi concluído.
+
+### Retenção do histórico de sincronização
+
+A partir da versão `0.40.0`, a CLD-009 identifica cada instalação com um UUID aleatório,
+armazenado no IndexedDB, e registra no D1 somente o cursor confirmado e a data
+da última sincronização concluída. Não são coletados nome do dispositivo,
+navegador, IP ou outros atributos pessoais.
+
+Dispositivos ativos protegem seu histórico por **90 dias**. O cron calcula o
+menor cursor confirmado por conta e compacta no máximo 500 alterações antigas
+por execução. Tombstones só são removidos depois que seu evento já estiver na
+faixa compactada. Dispositivos ausentes por mais de 90 dias deixam de bloquear
+a limpeza; ao retornar, recebem `reset-required` e reconstroem automaticamente
+os dados sincronizáveis por meio de um snapshot autenticado e paginado.
+
+A reconstrução usa uma área temporária no IndexedDB e só troca o estado visível
+depois de baixar todas as páginas e imagens. Criações novas permanecem na fila;
+uma edição pendente de um registro já removido vira conflito explícito. Pushes
+com cursor anterior ao piso compactado retornam `409 sync_reset_required` sem
+gravar dados. Pulls incrementais agora percorrem todas as páginas em vez de
+parar nos primeiros 500 eventos.
+
+O cron registra apenas quantidades agregadas de dispositivos e snapshots
+expirados, linhas e tombstones compactados, além dos contadores já existentes.
+A CLD-009 permanece **Em andamento** até a migration e o Worker da versão
+`0.40.0` serem publicados e a primeira execução real desse cron ser confirmada sem erros. Como nenhuma
+alteração pode ter menos de 90 dias no momento da estreia, não é necessário
+aguardar a primeira poda efetiva para encerrar o item.
 
 ### Reverter o Worker
 
@@ -313,8 +343,9 @@ excluídos.
 Não remova manualmente apenas o registro D1 ou apenas os objetos R2: isso pode
 deixar mídias órfãs ou referências quebradas. A manutenção diária aguarda 24
 horas desde a perda da última referência e usa uma fila persistente entre D1 e
-R2. Até existir a política segura de cursores prevista em CLD-009, não podar
-`sync_changes` nem tombstones.
+R2. A compactação de `sync_changes` e tombstones deve ocorrer exclusivamente
+pelo cron da CLD-009; não avance manualmente o piso de retenção nem apague
+dispositivos para forçar uma poda.
 
 ## Migração do GitHub Pages
 

@@ -4,6 +4,7 @@ import worker from "../index";
 
 export const testOrigin = "https://soulforge.test";
 export const testClientId = "soulforge-worker-tests.apps.googleusercontent.com";
+export const testDeviceId = "00000000-0000-4000-8000-000000000001";
 
 type TestClaims = {
   sub: string;
@@ -66,6 +67,10 @@ export async function signGoogleToken(privateKey: CryptoKey, overrides: Partial<
 export async function request(path: string, init: RequestInit = {}, cookie?: string, workerEnv: Env = env as Env): Promise<Response> {
   const headers = new Headers(init.headers);
   if (init.method && init.method !== "GET" && !headers.has("Origin")) headers.set("Origin", testOrigin);
+  if (path.startsWith("/api/sync/") && !path.startsWith("/api/sync/snapshot/")) {
+    if (!headers.has("X-SoulForge-Device-Id")) headers.set("X-SoulForge-Device-Id", testDeviceId);
+    if (!headers.has("X-SoulForge-Sync-Cursor")) headers.set("X-SoulForge-Sync-Cursor", new URL(`${testOrigin}${path}`).searchParams.get("cursor") ?? "0");
+  }
   if (cookie) headers.set("Cookie", cookie);
   return worker.fetch(new Request(`${testOrigin}${path}`, { ...init, headers }), workerEnv);
 }

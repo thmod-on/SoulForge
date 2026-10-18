@@ -5,7 +5,7 @@ import { ensureSyncStores } from "./syncRepository";
 const databaseName = "soulforge";
 const storeName = "customDefinitions";
 const overrideStoreName = "definitionOverrides";
-const databaseVersion = 5;
+const databaseVersion = 6;
 
 /** Complemento local de metadados para conteudo de packs, sem alterar a fonte original. */
 export type CardMarkerOverride = {

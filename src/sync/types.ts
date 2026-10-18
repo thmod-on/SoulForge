@@ -37,9 +37,27 @@ export type SyncPushResponse = {
   conflicts: SyncConflict[];
 };
 
-export type SyncPullResponse = {
+export type SyncIncrementalPullResponse = {
+  mode: "incremental";
   cursor: number;
   changes: SyncEnvelope[];
+  hasMore: boolean;
+};
+
+export type SyncResetPullResponse = {
+  mode: "reset-required";
+  snapshotId: string;
+  baselineCursor: number;
+};
+
+export type SyncPullResponse = SyncIncrementalPullResponse | SyncResetPullResponse;
+
+export type SyncSnapshotResponse = {
+  snapshotId: string;
+  baselineCursor: number;
+  changes: SyncEnvelope[];
+  nextCursor?: string;
+  done: boolean;
 };
 
 export type CloudUser = {

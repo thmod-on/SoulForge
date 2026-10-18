@@ -2,14 +2,17 @@ import type { Character, Definition } from "../domain/types";
 import type { CardMarkerOverride } from "../storage/compendiumRepository";
 import {
   acceptAppliedSync,
+  applyRemoteSyncPage,
+  beginSyncSnapshot,
+  commitSyncSnapshot,
   enqueueSyncChange,
   listQueuedSyncChanges,
   listSyncConflicts,
-  loadSyncCursor,
+  loadSyncIdentity,
   removeSyncConflict,
   resetSyncTracking,
   saveSyncConflicts,
-  saveSyncCursor,
+  stageSyncSnapshot,
   setRemoteMetadata
 } from "../storage/syncRepository";
 import {
@@ -18,6 +21,7 @@ import {
   getCloudConfig,
   getCloudSession,
   pullCloudChanges,
+  pullCloudSnapshot,
   pushCloudChanges,
   signInWithGoogle,
   signOutCloud,
@@ -112,7 +116,9 @@ async function performSync(): Promise<void> {
   updateView({ status: "syncing", message: "Enviando alterações e verificando a nuvem…" });
   try {
     await seedFirstSync();
-    const queued = await listQueuedSyncChanges();
+    let changed = await receiveRemoteChanges();
+    const conflictKeys = new Set((await listSyncConflicts()).map((conflict) => conflict.key));
+    const queued = (await listQueuedSyncChanges()).filter((change) => !conflictKeys.has(change.key));
     if (queued.length) {
       const prepared: SyncPushChange[] = [];
       for (const change of queued) {
@@ -126,23 +132,13 @@ async function performSync(): Promise<void> {
         });
       }
       for (const batch of splitSyncPushBatches(prepared)) {
-        const pushed = await pushCloudChanges(batch);
+        const identity = await loadSyncIdentity();
+        const pushed = await pushCloudChanges(batch, identity.deviceId, identity.cursor);
         await acceptAppliedSync(pushed.applied, new Map(batch.map((change) => [`${change.type}:${change.id}`, change.mutationId])));
         await saveSyncConflicts(pushed.conflicts);
       }
     }
-    const pulled = await pullCloudChanges(loadSyncCursor());
-    const pendingKeys = new Set((await listQueuedSyncChanges()).map((change) => change.key));
-    const conflictKeys = new Set((await listSyncConflicts()).map((conflict) => conflict.key));
-    let changed = false;
-    for (const envelope of pulled.changes) {
-      const key = `${envelope.type}:${envelope.id}`;
-      if (pendingKeys.has(key) || conflictKeys.has(key)) continue;
-      await applyRemoteEnvelope(envelope);
-      await setRemoteMetadata(envelope);
-      changed = true;
-    }
-    saveSyncCursor(pulled.cursor);
+    changed = await receiveRemoteChanges() || changed;
     if (changed) await dependencies.afterRemoteChange();
     view.conflicts = await listSyncConflicts();
     retryCount = 0;
@@ -152,6 +148,42 @@ async function performSync(): Promise<void> {
     updateView({ status: navigator.onLine ? "error" : "offline", message: errorMessage(error) });
     if (navigator.onLine && retryCount <= 5) scheduleSync(Math.min(30_000, 1_000 * 2 ** retryCount));
   }
+}
+
+async function receiveRemoteChanges(): Promise<boolean> {
+  let changed = false;
+  while (true) {
+    const identity = await loadSyncIdentity();
+    const pulled = await pullCloudChanges(identity.cursor, identity.deviceId);
+    if (pulled.mode === "reset-required") {
+      changed = await rebuildFromSnapshot(pulled.snapshotId, pulled.baselineCursor) || changed;
+      continue;
+    }
+    const prepared: SyncEnvelope[] = [];
+    for (const envelope of pulled.changes) {
+      prepared.push(envelope.deletedAt ? envelope : { ...envelope, payload: await replaceMediaWithDataUrls(envelope.payload, downloadCloudMedia) });
+    }
+    changed = (await applyRemoteSyncPage(prepared, pulled.cursor)).changed || changed;
+    if (!pulled.hasMore) return changed;
+  }
+}
+
+async function rebuildFromSnapshot(snapshotId: string, baselineCursor: number): Promise<boolean> {
+  updateView({ status: "syncing", message: "Atualizando dados da nuvem…" });
+  await beginSyncSnapshot(snapshotId, baselineCursor);
+  let after: string | undefined;
+  while (true) {
+    const page = await pullCloudSnapshot(snapshotId, after);
+    const prepared: SyncEnvelope[] = [];
+    for (const envelope of page.changes) {
+      prepared.push(envelope.deletedAt ? envelope : { ...envelope, payload: await replaceMediaWithDataUrls(envelope.payload, downloadCloudMedia) });
+    }
+    await stageSyncSnapshot(prepared);
+    if (page.done) break;
+    if (!page.nextCursor) throw new Error("A reconstrução da nuvem retornou uma página incompleta.");
+    after = page.nextCursor;
+  }
+  return (await commitSyncSnapshot(baselineCursor)).changed;
 }
 
 export function splitSyncPushBatches(changes: SyncPushChange[]): SyncPushChange[][] {
@@ -175,7 +207,7 @@ function syncPushBodySize(changes: SyncPushChange[]): number {
 }
 
 async function seedFirstSync(): Promise<void> {
-  if (!dependencies || loadSyncCursor() !== 0 || (await listQueuedSyncChanges()).length) return;
+  if (!dependencies || (await loadSyncIdentity()).cursor !== 0 || (await listQueuedSyncChanges()).length) return;
   const snapshot = await dependencies.snapshot();
   await Promise.all([
     ...snapshot.characters.map((character) => enqueueSyncChange("character", character.id, character)),

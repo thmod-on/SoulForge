@@ -4,6 +4,34 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.40.0]
+
+### Adicionado
+
+- cada instalação passa a usar um identificador anônimo e a confirmar seu cursor
+  de sincronização, permitindo proteger dispositivos ativos por 90 dias sem
+  coletar nome do aparelho, navegador ou endereço IP;
+- dispositivos que retornarem após a compactação reconstroem automaticamente os
+  recursos sincronizáveis por um snapshot autenticado, paginado e aplicado de
+  forma transacional no IndexedDB.
+
+### Alterado
+
+- pulls incrementais agora percorrem todas as páginas disponíveis, em vez de
+  parar nos primeiros 500 eventos, e respeitam também um limite de tamanho por
+  resposta;
+- a manutenção diária ganhou compactação limitada do histórico e de tombstones,
+  sem remover eventos com menos de 90 dias e sem permitir que um dispositivo
+  atrasado ressuscite dados excluídos;
+- o cursor de sincronização migra do `localStorage` para o IndexedDB, onde passa
+  a ser confirmado na mesma transação que aplica os dados locais.
+
+### Segurança
+
+- pushes anteriores ao piso já compactado são rejeitados sem gravar dados;
+  snapshots são isolados por conta e os novos logs do cron mantêm somente
+  contagens operacionais agregadas.
+
 ## [0.39.0]
 
 ### Adicionado

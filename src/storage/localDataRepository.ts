@@ -3,7 +3,7 @@ import type { CardMarkerOverride } from "./compendiumRepository";
 import { ensureSyncStores } from "./syncRepository";
 
 const databaseName = "soulforge";
-const databaseVersion = 5;
+const databaseVersion = 6;
 const storeNames = ["characters", "installedPacks", "customDefinitions", "definitionOverrides"] as const;
 const legacyDemoCharacterIds = new Set(["character.kael-ironheart", "character.kael-ironheart-ii"]);
 const legacyDemoPackId = "pack.demo.soulforge";
