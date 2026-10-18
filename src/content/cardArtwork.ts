@@ -21,11 +21,31 @@ const artworkByCardId: Readonly<Record<string, string>> = {
   "card.hope-fear.dread.spectral-mist": "spectral-mist.jpg"
 };
 
+/**
+ * Arquivos em `public/` preservam o nome entre releases. A revisão explícita
+ * impede que uma resposta antiga do cache do navegador/PWA esconda a arte
+ * aprovada mais recentemente. Imagens próprias do Pack ou da pessoa usuária
+ * nunca passam por este fallback e continuam sem alteração.
+ */
+const artworkRevisionByCardId: Readonly<Record<string, string>> = {
+  "card.core.codex.p2-1": "20261011-r2",
+  "card.core.codex.p2-2": "20261011-r2",
+  "card.core.codex.p2-3": "20261011-r2",
+  "card.core.splendor.p3-4": "20261010-r2",
+  "card.core.splendor.p3-5": "20261010-r2",
+  "card.core.splendor.p3-6": "20261011-r3",
+  "card.core.valor.p3-7": "20261017-r3",
+  "card.core.valor.p3-8": "20261017-r2",
+  "card.core.valor.p3-9": "20261017-r1"
+};
+
 /** Presentation-only fallback for original SoulForge artwork; never persists it in imported definitions. */
 export function getCardArtwork(card: CardDefinition): string | undefined {
   if (card.image?.trim()) return card.image;
   const file = artworkByCardId[card.id];
-  return file ? `${import.meta.env.BASE_URL}assets/cards/generic/${file}` : undefined;
+  if (!file) return undefined;
+  const revision = artworkRevisionByCardId[card.id];
+  return `${import.meta.env.BASE_URL}assets/cards/generic/${file}${revision ? `?v=${revision}` : ""}`;
 }
 
 export function applyCardContentDefaults(card: CardDefinition, markerOverride?: GameMarkerDefinition[]): CardDefinition {

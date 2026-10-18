@@ -56,6 +56,12 @@ resolução central por ID preserva a prioridade de imagens fornecidas pelo usu�
 ou pelo Pack. A geração usou a ferramenta de imagem integrada do Codex, com as
 artes já incorporadas ao SoulForge apenas como referência de família visual.
 
+As revisões aprovadas de Códice, Esplendor e Valor usam uma versão explícita na
+URL do fallback genérico. Como os arquivos de `public/` mantêm seus nomes, esse
+parâmetro evita que uma cópia anterior em cache seja exibida após uma atualização;
+imagens próprias de Packs ou da pessoa usuária continuam prioritárias e não são
+alteradas.
+
 O tríptico horizontal tornou-se o padrão para grimórios com três efeitos: uma
 magia por faixa, personagens e objetos importantes dentro da área central do
 recorte 2:3, códice fisicamente coerente, expressões próprias para cada ação e

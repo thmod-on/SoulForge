@@ -39,6 +39,14 @@ describe("card artwork", () => {
     expect(existsSync(new URL(`../../public/assets/cards/generic/${file}`, import.meta.url))).toBe(true);
   });
 
+  it.each([
+    ["card.core.codex.p2-1", "20261011-r2"],
+    ["card.core.splendor.p3-6", "20261011-r3"],
+    ["card.core.valor.p3-7", "20261017-r3"]
+  ])("versions the revised fallback artwork for %s", (id, revision) => {
+    expect(getCardArtwork({ ...card, id })).toContain(`?v=${revision}`);
+  });
+
   it("preserves artwork provided by a definition", () => {
     expect(getCardArtwork({ ...card, image: "custom.webp" })).toBe("custom.webp");
   });
