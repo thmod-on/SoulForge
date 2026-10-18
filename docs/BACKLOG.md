@@ -1,6 +1,6 @@
 # Backlog do SoulForge
 
-Última revisão: 17 de outubro de 2026.
+Última revisão: 18 de outubro de 2026.
 
 ## Objetivo
 
@@ -58,7 +58,6 @@ de outubro de 2026.
 | ART-001 | P1 | Condicional | Artes | Criar manifesto de artes e verificador automatizado antes de ultrapassar 40 imagens incorporadas. | Build valida ID, caminho, dimensões, formato, peso e associação de cada arte. Gatilho: lote que levaria o projeto além de 40 imagens. |
 | ART-003 | P2 | Condicional | Artes e PWA | Medir memória, carregamento, rolagem no iPad e reutilização do cache sob demanda após lotes relevantes. | Resultados registrados e limites da política revistos quando necessário. Gatilho: conclusão de um lote relevante. |
 | ART-004 | P2 | A definir | Artes e fluxo de autoria | Criar um comando de preparação de arte orientado pelo ID estável de uma Definition. A pessoa usuária solicita a arte em linguagem natural; após a imagem-mestre ser aprovada, o comando recebe somente o ID e a origem, define os caminhos adequados, gera detalhe e miniatura WebP e valida a entrega. | O fluxo não exige que a pessoa usuária informe caminhos, dimensões ou formato; o ID é validado contra o catálogo e determina tipo/coleção e destinos; a ferramenta reutiliza ART-002, impede sobrescrita acidental sem confirmação, informa os arquivos gerados e não altera a Definition, associação visual ou Pack sem ação explícita posterior. |
-| CLD-006 | P1 | Pronto | Cloudflare e recuperação | Formalizar recuperação e limpeza operacional sem comprometer dispositivos offline. | Runbook documenta consulta e restauração pelo D1 Time Travel; tarefa diária remove sessões expiradas e mídias sem referência há mais de 24 horas; `sync_changes` e tombstones não são podados até existir política segura de cursores. |
 | CLD-007 | P1 | Pronto | Cloudflare e migração | Concluir a mudança de origem do GitHub Pages para o Worker. | O endereço antigo exibe aviso, link oficial e instruções de backup/restauração durante 30 dias; após validação da janela, o workflow e o GitHub Pages são desativados em 9 de novembro de 2026. |
 | CLD-008 | P2 | Pronto | Cloudflare e ambientes | Criar ambiente de preview isolado da produção. | Worker, D1 e R2 próprios recebem builds de teste sem ler ou alterar dados de produção; promoção para `main` continua sendo a única rota para o deploy oficial. |
 | CLD-009 | P2 | A definir | Cloudflare e retenção | Projetar retenção e compactação do log incremental e dos tombstones. | Dispositivos e cursores possuem contrato suficiente para podar dados antigos sem perder alterações nem ressuscitar exclusões após longos períodos offline. |
@@ -92,6 +91,7 @@ rastreabilidade. O changelog continua sendo o histórico definitivo das entregas
 
 | ID | Conclusão | Resultado |
 | --- | --- | --- |
+| CLD-006 | 18/10/2026 · `0.39.0` | O Worker passou a executar manutenção diária às 03:17 UTC, removendo sessões expiradas e mídias sem referência há mais de 24 horas por meio de uma fila persistente entre D1 e R2, sem podar `sync_changes` ou tombstones. A primeira execução real foi concluída às 00:17:40 BRT, em 241 ms, com zero sessões expiradas, mídias enfileiradas, objetos removidos e itens pendentes para retry; a observabilidade registrou um sucesso, nenhum erro e somente dados operacionais agregados. O runbook também documenta congelamento da sincronização e recuperação pelo D1 Time Travel. |
 | RST-001 | 16/10/2026 · decisão de escopo | A regra oficial permite escolher o mesmo movimento de descanso duas vezes, e o SoulForge já suporta essa seleção no descanso longo. Projetos e seus contadores são conduzidos narrativamente pelo mestre e não alteram a ficha de forma automática; por decisão de produto, não haverá acompanhamento, persistência ou interface própria para eles. |
 | CMP-002 | 17/10/2026 · decisão de produto | Não haverá capítulo independente para Features. Elas permanecem consultadas e editadas no contexto da Classe, Subclasse, Ancestralidade ou Comunidade que as concede, preservando origem, tier e regras associadas e evitando Features avulsas sem vínculo válido. A decisão só deve ser reaberta se Features passarem a ser escolhidas independentemente, se a busca global se tornar uma necessidade comprovada em mesa, ou se uma Feature precisar ser reutilizada com segurança por múltiplas origens. |
 | CND-001 | 13/10/2026 · `0.38.0` | A ficha ganhou a faixa permanente Estados em cena, que mantém Condições e efeitos de habilidade separados, porém próximos. Condições podem ser aplicadas com origem narrativa opcional, consultadas em detalhe e removidas por origem; Pack ausente preserva ID e nome. Vulnerável recebe origem automática ao preencher Estresse e a perde somente ao limpar ao menos uma marca, sem encerrar uma origem de cena ainda ativa. |

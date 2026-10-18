@@ -244,9 +244,15 @@ usuário, e-mails, chaves R2, fichas, tokens e payloads não são registrados.
 `sync_changes`, tombstones e registros com `deleted_at` não participam dessa
 limpeza; sua retenção continua reservada ao CLD-009.
 
-CLD-006 somente poderá ser movido para concluído depois que a primeira execução
-real aparecer como bem-sucedida em **Workers & Pages > soulforge >
-Observability** e as contagens do D1 e R2 forem conferidas.
+Em **18 de outubro de 2026**, a primeira execução real da versão `0.39.0`,
+commit `64ff659`, apareceu em **Workers & Pages > soulforge > Observability**
+às **03:17:40 UTC** — 00:17:40 BRT — como `cloud_maintenance_completed`.
+A rotina terminou em **241 ms**, com `expiredSessions: 0`, `mediaQueued: 0`,
+`mediaDeleted: 0` e `mediaPendingRetry: 0`. A consulta filtrada apresentou
+**1 sucesso e 0 erros**. Os zeros são coerentes com a ausência de sessões ou
+mídias elegíveis naquela execução; o evento contém somente contagens agregadas
+e metadados técnicos da invocação, sem contas, e-mails, tokens, cookies, chaves
+R2, fichas ou payloads. Com essa evidência, CLD-006 foi concluído.
 
 ### Reverter o Worker
 
