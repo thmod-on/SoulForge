@@ -8,6 +8,7 @@ declare global {
       ASSETS: Fetcher;
       DB: D1Database;
       MEDIA: R2Bucket;
+      PACK_LIBRARY: R2Bucket;
       GOOGLE_CLIENT_ID: string;
       SYNC_ENABLED: string;
       TEST_MIGRATIONS: D1Migration[];

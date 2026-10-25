@@ -168,7 +168,7 @@ Salvar uma comunidade local cria/atualiza sua Definition e a Feature vinculada d
 
 - [ ] Confirmar comportamento ao remover/atualizar Packs usados por personagens.
 - [x] Testar criação com Pack ausente, comunidade local, conteúdo importado e ficha legada.
-- [ ] Validar em iPad paisagem e desktop.
+- [x] Validar em desktop (1440 × 900) e viewport de iPad paisagem (1194 × 834): busca, filtro, seleção, revisão, criação e detalhe/reabertura da Comunidade preservam leitura e contexto sem corte ou sobreposição.
 - [x] Atualizar documentação de Packs, modelo de domínio, criação de personagem e changelog da versão de entrega.
 
 ### Matriz de compatibilidade — COM-002

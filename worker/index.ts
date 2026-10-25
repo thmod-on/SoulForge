@@ -4,6 +4,7 @@ export interface Env {
   ASSETS: Fetcher;
   DB: D1Database;
   MEDIA: R2Bucket;
+  PACK_LIBRARY: R2Bucket;
   GOOGLE_CLIENT_ID?: string;
   SYNC_ENABLED?: string;
 }
@@ -14,6 +15,7 @@ type GoogleClaims = { sub: string; email: string; email_verified: boolean; name?
 const maxImageBytes = 1_500_000;
 const maxGoogleLoginBytes = 32 * 1024;
 const maxSyncPushBytes = 2_000_000;
+const maxLibraryCatalogBytes = 200_000;
 const accountMediaQuota = 100_000_000;
 const orphanGraceMs = 24 * 60 * 60 * 1000;
 const cleanupBatchLimit = 100;
@@ -89,7 +91,9 @@ async function handleApiRequest(request: Request, url: URL, env: Env): Promise<R
   const isSyncSnapshot = url.pathname.startsWith("/api/sync/snapshot/") && request.method === "GET";
   const isMediaUpload = url.pathname === "/api/media" && request.method === "POST";
   const isMediaDownload = url.pathname.startsWith("/api/media/") && request.method === "GET";
-  if (!isGoogleLogin && !isAccountDeletion && !isSyncPush && !isSyncPull && !isSyncSnapshot && !isMediaUpload && !isMediaDownload) return json({ error: "Rota não encontrada." }, 404);
+  const isLibraryCatalog = url.pathname === "/api/library/catalog" && request.method === "GET";
+  const isLibraryPack = url.pathname.startsWith("/api/library/packs/") && request.method === "GET";
+  if (!isGoogleLogin && !isAccountDeletion && !isSyncPush && !isSyncPull && !isSyncSnapshot && !isMediaUpload && !isMediaDownload && !isLibraryCatalog && !isLibraryPack) return json({ error: "Rota não encontrada." }, 404);
   if (!isSyncEnabled(env)) throw new HttpError(503, "A sincronização está temporariamente indisponível.");
   if (isGoogleLogin) return googleLogin(request, env);
   const auth = await requireSession(request, env);
@@ -98,6 +102,8 @@ async function handleApiRequest(request: Request, url: URL, env: Env): Promise<R
   if (isSyncPull) return pullChanges(request, auth, env);
   if (isSyncSnapshot) return pullSnapshot(url, auth, env);
   if (isMediaUpload) return uploadMedia(request, auth, env);
+  if (isLibraryCatalog) return privateLibraryCatalog(auth, env);
+  if (isLibraryPack) return privateLibraryPack(url, auth, env);
   return downloadMedia(decodeURIComponent(url.pathname.slice("/api/media/".length)), auth, env);
 }
 
@@ -107,7 +113,7 @@ async function sessionResponse(request: Request, env: Env): Promise<Response> {
     const user = await env.DB.prepare("SELECT id, email, name, picture FROM users WHERE id = ?").bind(auth.userId).first<{ id: string; email: string; name: string; picture?: string }>();
     return json(user ? { authenticated: true, user } : { authenticated: false });
   } catch (error) {
-    if (isHttpError(error) && error.status === 401) return json({ authenticated: false });
+    if (isHttpError(error) && (error.status === 401 || error.status === 403)) return json({ authenticated: false });
     throw error;
   }
 }
@@ -117,15 +123,17 @@ async function googleLogin(request: Request, env: Env): Promise<Response> {
   const body = await readJsonBody<{ credential?: string }>(request, maxGoogleLoginBytes);
   if (!body.credential) throw new HttpError(400, "Credencial do Google ausente.");
   const claims = await verifyGoogleCredential(body.credential, env.GOOGLE_CLIENT_ID);
+  const email = normalizeEmail(claims.email);
+  if (!await isAuthorizedEmail(email, env)) throw new HttpError(403, "Esta conta não está autorizada para o período privado de testes.");
   const userId = await sha256Hex(`google:${claims.sub}`);
   const now = new Date().toISOString();
   await env.DB.prepare("INSERT INTO users (id, google_sub, email, name, picture, created_at, last_login_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(google_sub) DO UPDATE SET email = excluded.email, name = excluded.name, picture = excluded.picture, last_login_at = excluded.last_login_at")
-    .bind(userId, claims.sub, claims.email, claims.name ?? claims.email, claims.picture ?? null, now, now).run();
+    .bind(userId, claims.sub, email, claims.name ?? email, claims.picture ?? null, now, now).run();
   const token = randomToken();
   const sessionId = crypto.randomUUID();
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
   await env.DB.prepare("INSERT INTO sessions (id, user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?)").bind(sessionId, userId, await sha256Hex(token), expiresAt, now).run();
-  return json({ authenticated: true, user: { id: userId, email: claims.email, name: claims.name ?? claims.email, picture: claims.picture } }, 200, { "Set-Cookie": cookie(token, expiresAt) });
+  return json({ authenticated: true, user: { id: userId, email, name: claims.name ?? email, picture: claims.picture } }, 200, { "Set-Cookie": cookie(token, expiresAt) });
 }
 
 async function logout(request: Request, env: Env): Promise<Response> {
@@ -137,9 +145,71 @@ async function logout(request: Request, env: Env): Promise<Response> {
 async function requireSession(request: Request, env: Env): Promise<AuthenticatedRequest> {
   const token = readCookie(request, sessionCookie);
   if (!token) throw new HttpError(401, "Entre com Google para usar a nuvem.");
-  const session = await env.DB.prepare("SELECT id, user_id FROM sessions WHERE token_hash = ? AND expires_at > ?").bind(await sha256Hex(token), new Date().toISOString()).first<{ id: string; user_id: string }>();
+  const session = await env.DB.prepare("SELECT sessions.id, sessions.user_id, users.email FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.token_hash = ? AND sessions.expires_at > ?").bind(await sha256Hex(token), new Date().toISOString()).first<{ id: string; user_id: string; email: string }>();
   if (!session) throw new HttpError(401, "Sua sessão expirou. Entre novamente.");
+  if (!await isAuthorizedEmail(session.email, env)) {
+    await env.DB.prepare("DELETE FROM sessions WHERE id = ?").bind(session.id).run();
+    throw new HttpError(403, "Esta conta não está autorizada para o período privado de testes.");
+  }
   return { userId: session.user_id, sessionId: session.id };
+}
+
+async function privateLibraryCatalog(_auth: AuthenticatedRequest, env: Env): Promise<Response> {
+  const object = await env.PACK_LIBRARY.get("catalog.json");
+  if (!object) throw new HttpError(404, "A biblioteca privada ainda não foi publicada.");
+  const bytes = await readLimitedR2Object(object, maxLibraryCatalogBytes);
+  const catalog = validatePrivateLibraryCatalog(JSON.parse(new TextDecoder().decode(bytes)));
+  return json(catalog, 200, { "Cache-Control": "private, no-store" });
+}
+
+async function privateLibraryPack(url: URL, _auth: AuthenticatedRequest, env: Env): Promise<Response> {
+  const match = /^\/api\/library\/packs\/([^/]+)\/([^/]+)$/.exec(url.pathname);
+  if (!match) throw new HttpError(404, "Pack não encontrado.");
+  const id = decodeURIComponent(match[1]);
+  const version = decodeURIComponent(match[2]);
+  const catalogObject = await env.PACK_LIBRARY.get("catalog.json");
+  if (!catalogObject) throw new HttpError(404, "A biblioteca privada ainda não foi publicada.");
+  const catalog = validatePrivateLibraryCatalog(JSON.parse(new TextDecoder().decode(await readLimitedR2Object(catalogObject, maxLibraryCatalogBytes))));
+  if (!catalog.packs.some((entry) => entry.id === id && entry.version === version)) throw new HttpError(404, "Pack não encontrado.");
+  const object = await env.PACK_LIBRARY.get(`packs/${id}/${version}.soulforge-pack.json`);
+  if (!object) throw new HttpError(404, "Pack não encontrado.");
+  return new Response(object.body, { headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "private, no-store", "Content-Disposition": "attachment; filename=pack.soulforge-pack.json", "X-Content-Type-Options": "nosniff" } });
+}
+
+type PrivateLibraryCatalog = { format: "soulforge-private-library-v1"; publishedAt: string; packs: Array<{ id: string; name: string; version: string; checksum: string; changes: string; definitionCount: number }> };
+
+function validatePrivateLibraryCatalog(value: unknown): PrivateLibraryCatalog {
+  if (!value || typeof value !== "object") throw new HttpError(503, "O catálogo privado está inválido.");
+  const catalog = value as Partial<PrivateLibraryCatalog>;
+  if (catalog.format !== "soulforge-private-library-v1" || typeof catalog.publishedAt !== "string" || !Array.isArray(catalog.packs) || !catalog.packs.length) throw new HttpError(503, "O catálogo privado está inválido.");
+  const ids = new Set<string>();
+  const packs = catalog.packs.map((entry) => {
+    if (!entry || typeof entry !== "object") throw new HttpError(503, "O catálogo privado está inválido.");
+    const pack = entry as Partial<PrivateLibraryCatalog["packs"][number]>;
+    if (typeof pack.id !== "string" || !/^[a-z0-9][a-z0-9.-]{1,150}$/i.test(pack.id) || ids.has(pack.id) || typeof pack.name !== "string" || !pack.name || typeof pack.version !== "string" || !/^[a-z0-9][a-z0-9.+-]{0,80}$/i.test(pack.version) || typeof pack.checksum !== "string" || !/^[a-f0-9]{64}$/i.test(pack.checksum) || typeof pack.changes !== "string" || !pack.changes.trim() || !Number.isInteger(pack.definitionCount) || Number(pack.definitionCount) < 1) throw new HttpError(503, "O catálogo privado está inválido.");
+    const id = pack.id as string;
+    const name = pack.name as string;
+    const version = pack.version as string;
+    const checksum = pack.checksum as string;
+    const changes = pack.changes as string;
+    const definitionCount = pack.definitionCount as number;
+    ids.add(id);
+    return { id, name, version, checksum, changes, definitionCount };
+  });
+  return { format: "soulforge-private-library-v1", publishedAt: catalog.publishedAt, packs };
+}
+
+async function readLimitedR2Object(object: R2ObjectBody, maxBytes: number): Promise<Uint8Array> {
+  if (object.size > maxBytes) throw new HttpError(503, "O catálogo privado excede o limite permitido.");
+  return new Uint8Array(await object.arrayBuffer());
+}
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+async function isAuthorizedEmail(email: string, env: Env): Promise<boolean> {
+  return Boolean(await env.DB.prepare("SELECT email FROM authorized_emails WHERE email = ?").bind(normalizeEmail(email)).first());
 }
 
 async function pushChanges(request: Request, auth: AuthenticatedRequest, env: Env): Promise<Response> {

@@ -57,7 +57,7 @@ O SoulForge exporta uma ficha por vez em um arquivo `.soulforge-character.json`.
 
 Ao importar, o SoulForge valida a estrutura antes de salvar. Se já existir uma ficha com o mesmo identificador neste dispositivo, cria uma cópia com novo identificador em vez de sobrescrever a ficha local. Exportações em JSON simples de versões anteriores também são aceitas quando a estrutura da ficha for válida.
 
-O arquivo carrega referências a Definitions de Packs, mas não instala Packs automaticamente. Para que cartas, classes, itens ou ancestralidades apareçam corretamente, os Packs correspondentes também devem estar instalados no dispositivo de destino.
+O arquivo carrega referências a Definitions de Packs, mas não instala Packs automaticamente. Para que cartas, classes, itens ou ancestralidades apareçam corretamente, os Packs correspondentes também devem estar instalados no dispositivo de destino. Em contas autorizadas, a Biblioteca privada pode instalar o catálogo do grupo no primeiro dispositivo; essa origem permanece local, não é sincronizada pela conta e atualizações futuras exigem confirmação.
 
 Além da ficha, a seção **Backup e compartilhamento** das Configurações oferece **Criar backup completo**, que gera um `.soulforge-backup.json` com todas as fichas, Packs instalados, Definitions locais e complementos de cartas. **Restaurar backup** valida o arquivo, baixa uma cópia de segurança automática do estado atual e substitui as quatro coleções locais em uma única transação.
 

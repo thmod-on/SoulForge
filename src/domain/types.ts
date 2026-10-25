@@ -292,6 +292,10 @@ export type PackManifest = {
   distribution?: "private-local-only" | "shared";
   contentFormat?: string;
   source?: { name: string; url: string; version: string; reviewedAt: string };
+  /** Como este Pack chegou ao dispositivo; não altera o conteúdo do Pack. */
+  installationSource?: "library" | "local";
+  /** Integridade da cópia entregue pela biblioteca privada. */
+  libraryChecksum?: string;
 };
 
 export type PackBundle = {

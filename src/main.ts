@@ -12,7 +12,9 @@ import { handleGameMarkerAction } from "./features/game-markers/gameMarkerAction
 import { renderGameMarkerDiceDialog } from "./features/game-markers/renderDiceDialog";
 import { handleStoredDiceAction, renderStoredDiceDialog, type StoredDiceDialogState } from "./features/game-markers/storedDice";
 import type { CardMarkerOverride } from "./storage/compendiumRepository";
-import { loadInstalledPacks } from "./storage/packRepository";
+import { loadInstalledPacks, removeAllLocalPacks } from "./storage/packRepository";
+import { getPrivateLibraryBootstrapComplete, installMissingPrivateLibrary, markPrivateLibraryBootstrapComplete, refreshPrivateLibraryState, reinstallPrivateLibrary, updatePrivateLibraryPack } from "./features/packs/privateLibrary";
+import type { PrivateLibraryView } from "./features/packs/privateLibrary";
 import { purgeLegacyDemoContent } from "./storage/localDataRepository";
 import { renderSettings as renderSettingsPage } from "./features/settings/renderSettings";
 import { getPackDisplayDescription, getPackDisplayName, getPackOriginName } from "./features/compendium/packPresentation";
@@ -305,6 +307,7 @@ const state: {
   packImportError?: string;
   removeAllInstalledPacksOpen: boolean;
   removeAllInstalledPacksError?: string;
+  privateLibrary: PrivateLibraryView;
   characterImportOpen: boolean;
   pendingCharacterImport?: Character;
   characterImportError?: string;
@@ -369,6 +372,7 @@ const state: {
   installedPacks: [],
   packImportOpen: false,
   removeAllInstalledPacksOpen: false,
+  privateLibrary: { loading: false, bootstrapComplete: getPrivateLibraryBootstrapComplete() },
   characterImportOpen: false, characterScarsOpen: false,
   backupRestoreOpen: false, contentImportOpen: false, acceptedContentConflictIds: []
 };
@@ -548,23 +552,19 @@ function getCharacterTransformationDependencies(): CharacterTransformationDepend
     getPackDisplayDescription,
     sync: getSyncViewModel()
   });
-}
-
-function getCharacterConditionDependencies(): CharacterConditionDependencies {
+} function getCharacterConditionDependencies(): CharacterConditionDependencies {
   return { state, catalog, escapeHtml, saveCharacter: async (character) => { state.character = character; await saveCharacter(character); }, render: () => render({ preserveMainScroll: true }) };
-}
-
-function getPackManagementDependencies(): PackManagementDependencies {
+} function getPackManagementDependencies(): PackManagementDependencies {
   return {
     state,
     getCatalog: () => catalog,
     refreshCatalog,
     escapeHtml,
     render: () => render({ preserveMainScroll: true }),
-    afterImport: async () => undefined
+    afterImport: async () => undefined,
+    removeAllPacks: async () => { await removeAllLocalPacks(); markPrivateLibraryBootstrapComplete(); state.privateLibrary = { ...state.privateLibrary, bootstrapComplete: true }; }
   };
-}
-
+} function getPrivateLibraryDependencies() { return { authenticated: () => getSyncViewModel().session.authenticated, installedPacks: () => state.installedPacks, view: () => state.privateLibrary, setView: (view: PrivateLibraryView) => { state.privateLibrary = view; }, refreshCatalog }; }
 function getLocalBackupDependencies() { return { state, appVersion, loadCharacter, listCharacters, availableDefinitions: () => catalog.definitions, refreshCatalog, render: () => render({ preserveMainScroll: true }), showError: (message: string) => window.alert(message), afterLocalDataChange: queueLocalSnapshot }; }
 function renderEmptyInline(message: string): string { return `<p class="empty-inline sf-state sf-state--empty sf-state--inline">${escapeHtml(message)}</p>`; }
 
@@ -1498,6 +1498,24 @@ function bindEvents(): void {
     if (handleLocalBackupAction(target, getLocalBackupDependencies())) return;
 
     if (handleCloudAction(target)) return;
+
+    if (target.closest('[data-action="refresh-private-library"]')) {
+      void refreshPrivateLibraryState(getPrivateLibraryDependencies()).then(() => render({ preserveMainScroll: true }));
+      return;
+    }
+    if (target.closest('[data-action="install-private-library"]')) {
+      void installMissingPrivateLibrary(getPrivateLibraryDependencies()).then(() => render({ preserveMainScroll: true }));
+      return;
+    }
+    if (target.closest('[data-action="reinstall-private-library"]')) {
+      void reinstallPrivateLibrary(getPrivateLibraryDependencies()).then(() => render({ preserveMainScroll: true }));
+      return;
+    }
+    const privateLibraryUpdate = target.closest<HTMLElement>('[data-action="update-private-library-pack"]');
+    if (privateLibraryUpdate?.dataset.packId) {
+      void updatePrivateLibraryPack(getPrivateLibraryDependencies(), privateLibraryUpdate.dataset.packId).then(() => render({ preserveMainScroll: true }));
+      return;
+    }
 
     if (target.closest('[data-action="open-character-import"]')) {
       state.characterImportOpen = true;
@@ -2641,7 +2659,8 @@ async function boot(): Promise<void> {
   // A sessão sempre começa no seletor: abrir uma ficha é uma ação consciente do jogador.
   state.character = undefined;
   state.characterSelectionOpen = true;
-  await initializeCloudIntegration({ afterRemoteChange: async () => { const applied = await refreshCloudAppliedState(state.character?.id, refreshCatalog); state.characters = applied.characters; state.character = applied.character; }, stateChanged: () => { if (state.page === "settings") render({ preserveMainScroll: true }); } });
+  await initializeCloudIntegration({ afterRemoteChange: async () => { const applied = await refreshCloudAppliedState(state.character?.id, refreshCatalog); state.characters = applied.characters; state.character = applied.character; }, stateChanged: () => { void refreshPrivateLibraryState(getPrivateLibraryDependencies(), true).then(() => { if (state.page === "settings") render({ preserveMainScroll: true }); }); } });
+  await refreshPrivateLibraryState(getPrivateLibraryDependencies(), true);
   render();
 }
 

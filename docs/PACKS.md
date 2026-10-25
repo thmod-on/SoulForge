@@ -108,6 +108,34 @@ conteúdo cuja origem não pertence à pessoa que exporta.
 
 Remover um Pack não deve alterar silenciosamente um personagem. Caso alguma referência deixe de estar disponível, a aplicação deve informar a situação e aplicar uma regra explícita de compatibilidade.
 
+### Biblioteca privada
+
+Durante o período privado de testes, os 11 Packs do grupo podem ser
+disponibilizados pela **Biblioteca privada**. Os bundles continuam fora do Git,
+do build, do Service Worker e de URLs públicas: o Worker os lê de um bucket R2
+privado somente depois de validar uma sessão de uma conta autorizada.
+
+Em um dispositivo novo, a biblioteca é instalada uma única vez após o login.
+Depois disso, a consulta remota apenas informa atualizações. Cada atualização
+exibe versão, nota e quantidade de Definitions; baixar, validar checksum e
+aplicar o novo bundle depende de confirmação explícita. Um Pack importado por
+arquivo permanece `local` e nunca é convertido ou sobrescrito pela biblioteca
+sem essa ação da pessoa usuária.
+
+Para publicar uma revisão, mantenha os bundles em `local-packs/imports/`, crie
+`local-packs/library-release.json` a partir de
+`docs/PACK_LIBRARY_RELEASE.example.json` e execute primeiro:
+
+```bash
+pnpm run packs:publish -- --dry-run
+pnpm run packs:publish
+```
+
+O publicador exige exatamente 11 bundles, manifestos de distribuição privada,
+fonte declarada, notas de atualização, checksum SHA-256 e uma declaração de
+que as artes são originais ou licenciadas. Ele envia versões imutáveis para o
+bucket privado e publica o catálogo somente ao final.
+
 ## Validação antes de instalar ou publicar
 
 - validar sintaxe JSON;

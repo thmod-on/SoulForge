@@ -8,7 +8,8 @@ describe("renderSettings", () => {
       state: {
         installedPacks: [],
         packImportOpen: false,
-        removeAllInstalledPacksOpen: false
+        removeAllInstalledPacksOpen: false,
+        privateLibrary: { loading: false, bootstrapComplete: false }
       },
       escapeHtml: (value) => value,
       getPackDisplayName: (packId) => packId,
@@ -26,6 +27,8 @@ describe("renderSettings", () => {
     expect(html).toContain("Role para ver mais");
     expect(html).toContain("Voltar ao topo");
     expect(html).toContain("0 Packs instalados");
+    expect(html).toContain("Biblioteca privada");
+    expect(html).toContain("conta autorizada");
     expect(html).toContain('data-action="create-full-backup"');
     expect(html).not.toContain('data-action="open-character-import"');
     expect(html).not.toContain('data-action="export-character"');

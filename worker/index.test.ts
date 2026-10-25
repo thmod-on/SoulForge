@@ -117,6 +117,48 @@ describe("Google authentication and sessions", () => {
     expect(await env.DB.prepare("SELECT COUNT(*) AS count FROM sessions").first<{ count: number }>()).toEqual({ count: 0 });
     await expect((await request("/api/session", {}, cookie)).json()).resolves.toEqual({ authenticated: false });
   });
+
+  it("rejects a valid Google identity that is not in the private allowlist", async () => {
+    const credential = await signGoogleToken(signingKey.privateKey, { email: "blocked@example.invalid" });
+    const response = await request("/api/auth/google", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ credential }) });
+    expect(response.status).toBe(403);
+    expect(await env.DB.prepare("SELECT id FROM users WHERE email = ?").bind("blocked@example.invalid").first()).toBeNull();
+  });
+
+  it("invalidates the session when an authorized email is revoked", async () => {
+    const { cookie } = await login(signingKey.privateKey);
+    await env.DB.prepare("DELETE FROM authorized_emails WHERE email = ?").bind("user-a@example.invalid").run();
+    await expect((await request("/api/session", {}, cookie)).json()).resolves.toEqual({ authenticated: false });
+    expect(await env.DB.prepare("SELECT id FROM sessions").first()).toBeNull();
+  });
+});
+
+describe("private Pack library", () => {
+  const catalog = {
+    format: "soulforge-private-library-v1",
+    publishedAt: "2026-10-25T12:00:00.000Z",
+    packs: [{ id: "pack.private.core", name: "Core privado", version: "1.0.0", checksum: "a".repeat(64), changes: "Versão inicial.", definitionCount: 1 }]
+  } as const;
+
+  it("requires an authorized session and never exposes the R2 object by URL", async () => {
+    await env.PACK_LIBRARY.put("catalog.json", JSON.stringify(catalog));
+    await env.PACK_LIBRARY.put("packs/pack.private.core/1.0.0.soulforge-pack.json", "{\"format\":\"soulforge-pack-v1\"}");
+    expect((await request("/api/library/catalog")).status).toBe(401);
+    const { cookie } = await login(signingKey.privateKey);
+    await expect((await request("/api/library/catalog", {}, cookie)).json()).resolves.toEqual(catalog);
+    const pack = await request("/api/library/packs/pack.private.core/1.0.0", {}, cookie);
+    expect(pack.status).toBe(200);
+    expect(pack.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(pack.headers.get("Content-Type")).toContain("application/json");
+  });
+
+  it("rejects unpublished paths and malformed catalog data safely", async () => {
+    const { cookie } = await login(signingKey.privateKey);
+    await env.PACK_LIBRARY.put("catalog.json", JSON.stringify({ format: "wrong" }));
+    expect((await request("/api/library/catalog", {}, cookie)).status).toBe(503);
+    await env.PACK_LIBRARY.put("catalog.json", JSON.stringify(catalog));
+    expect((await request("/api/library/packs/pack.private.core/9.9.9", {}, cookie)).status).toBe(404);
+  });
 });
 
 describe("sync revisions and account isolation", () => {

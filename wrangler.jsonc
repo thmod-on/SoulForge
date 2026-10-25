@@ -35,6 +35,10 @@
     {
       "binding": "MEDIA",
       "bucket_name": "soulforge-media"
+    },
+    {
+      "binding": "PACK_LIBRARY",
+      "bucket_name": "soulforge-pack-library"
     }
   ]
 }

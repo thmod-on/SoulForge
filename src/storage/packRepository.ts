@@ -40,6 +40,15 @@ export async function installLocalPack(manifest: PackManifest, definitions: Defi
 
 /** Instala ou atualiza um lote inteiro dentro de uma unica transacao. */
 export async function installLocalPacks(packs: PackBundle[]): Promise<void> {
+  await installPacks(packs, "local");
+}
+
+/** Instala bundles recebidos da biblioteca privada sem misturá-los à autoria local. */
+export async function installLibraryPacks(packs: Array<{ bundle: PackBundle; checksum: string }>): Promise<void> {
+  await installPacks(packs.map(({ bundle, checksum }) => ({ ...bundle, manifest: { ...bundle.manifest, installationSource: "library", libraryChecksum: checksum } })), "library");
+}
+
+async function installPacks(packs: PackBundle[], source: "local" | "library"): Promise<void> {
   const database = await openDatabase();
   await new Promise<void>((resolve, reject) => {
     const transaction = database.transaction([packStoreName, definitionStoreName], "readwrite");
@@ -48,7 +57,7 @@ export async function installLocalPacks(packs: PackBundle[]): Promise<void> {
     const importedPackIds = new Set(packs.map((pack) => pack.manifest.id));
     const incomingIds = new Set(packs.flatMap((pack) => pack.definitions.map((definition) => definition.id)));
 
-    packs.forEach((pack) => packsStore.put(pack.manifest));
+    packs.forEach((pack) => packsStore.put({ ...pack.manifest, installationSource: source, ...(source === "local" ? { libraryChecksum: undefined } : {}) }));
 
     // Uma versao mais nova substitui somente o conteudo dos Packs presentes
     // no lote, preservando fichas, overrides e Definitions dos demais Packs.

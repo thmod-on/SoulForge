@@ -51,6 +51,13 @@ O GitHub Pages é distribuição pública. O SoulForge não deve publicar Packs 
 
 Packs oficiais para uso privado devem ficar exclusivamente em `local-packs/`, que é ignorada pelo Git. Eles não podem ser importados pelo build público, enviados ao repositório, incluídos no Service Worker ou oferecidos para download pelo aplicativo.
 
+Exceção controlada: durante o período privado de testes, bundles revisados
+podem ser enviados manualmente ao bucket R2 privado da Biblioteca privada. O
+Worker só os entrega a sessões de e-mails previamente autorizados no D1; não há
+URL pública, cache público, inclusão no build ou compartilhamento por exportação
+de conteúdo. Esta exceção não equivale a autorização de distribuição pública e
+deve ser removida ou reavaliada antes de abrir o login ao público.
+
 O uso em uma mesa privada, não comercial, deve permanecer limitado ao grupo e ao dispositivo autorizado pelo usuário. Em caso de dúvida, tratar o conteúdo como não distribuível.
 
 ## Atribuição e marca

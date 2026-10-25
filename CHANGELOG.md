@@ -4,6 +4,28 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.41.0]
+
+### Adicionado
+
+- contas autorizadas agora podem instalar os 11 Packs da biblioteca privada em
+  um dispositivo novo, mantendo-os disponíveis offline após a instalação;
+- Configurações passou a informar a procedência de cada Pack e a oferecer a
+  conclusão/reinstalação explícita da biblioteca privada.
+
+### Alterado
+
+- atualizações de Packs da biblioteca são apenas informadas: a pessoa pode
+  revisar a versão, o resumo e o impacto antes de aceitar, manter a versão
+  atual ou adiar a decisão;
+- importações locais permanecem locais até que a pessoa escolha usar a versão
+  correspondente da biblioteca.
+
+### Segurança
+
+- catálogo e downloads da biblioteca privada são protegidos por sessão e
+  allowlist; a revogação de uma conta invalida suas sessões ativas.
+
 ## [0.40.0]
 
 ### Adicionado

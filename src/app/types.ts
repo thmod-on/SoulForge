@@ -1,4 +1,5 @@
 import type { CharacterMulticlass, ItemDefinition, PackBundle, PackManifest, ProgressionAdvanceKind } from "../domain/types";
+import type { PrivateLibraryView } from "../features/packs/privateLibrary";
 
 export type Page = "overview" | "skills" | "inventory" | "progression" | "notes" | "compendium" | "settings" | "storedCards";
 export type InventoryFilter = "todos" | ItemDefinition["category"];
@@ -28,4 +29,5 @@ export type SettingsViewState = {
   deletingInstalledPackId?: string;
   removeAllInstalledPacksOpen: boolean;
   removeAllInstalledPacksError?: string;
+  privateLibrary: PrivateLibraryView;
 };

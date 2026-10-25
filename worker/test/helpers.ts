@@ -18,6 +18,7 @@ type TestClaims = {
 
 export async function resetCloudStorage(): Promise<void> {
   await env.DB.batch([
+    env.DB.prepare("DELETE FROM authorized_emails"),
     env.DB.prepare("DELETE FROM media_cleanup_queue"),
     env.DB.prepare("DELETE FROM media_references"),
     env.DB.prepare("DELETE FROM media_assets"),
@@ -32,6 +33,12 @@ export async function resetCloudStorage(): Promise<void> {
   do {
     const page = await env.MEDIA.list({ cursor });
     if (page.objects.length) await env.MEDIA.delete(page.objects.map((object) => object.key));
+    cursor = page.truncated ? page.cursor : undefined;
+  } while (cursor);
+  cursor = undefined;
+  do {
+    const page = await env.PACK_LIBRARY.list({ cursor });
+    if (page.objects.length) await env.PACK_LIBRARY.delete(page.objects.map((object) => object.key));
     cursor = page.truncated ? page.cursor : undefined;
   } while (cursor);
 }
@@ -76,7 +83,9 @@ export async function request(path: string, init: RequestInit = {}, cookie?: str
 }
 
 export async function login(privateKey: CryptoKey, claims: Partial<TestClaims> = {}): Promise<{ cookie: string; response: Response }> {
-  const credential = await signGoogleToken(privateKey, claims);
+  const email = (claims.email ?? "user-a@example.invalid").trim().toLowerCase();
+  await env.DB.prepare("INSERT INTO authorized_emails (email, created_at) VALUES (?, ?)").bind(email, new Date().toISOString()).run();
+  const credential = await signGoogleToken(privateKey, { ...claims, email });
   const response = await request("/api/auth/google", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

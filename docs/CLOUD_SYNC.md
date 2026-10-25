@@ -33,7 +33,9 @@ Os demais itens operacionais e de segurança estão detalhados no
 - Cloudflare Worker: entrega a PWA e atende `/api/*`;
 - D1: contas, sessões, fichas, Definitions locais, complementos, revisões e
   tombstones;
-- R2 privado: retratos e imagens de criações locais;
+- R2 privado `soulforge-media`: retratos e imagens de criações locais;
+- R2 privado `soulforge-pack-library`: catálogo e bundles da Biblioteca
+  privada, isolados de mídia e entregues exclusivamente pelo Worker autenticado;
 - Google Identity Services: comprova a identidade; o SoulForge emite sua
   própria sessão segura e não armazena tokens Google;
 - IndexedDB: fonte primária no dispositivo e base do funcionamento offline.
@@ -47,7 +49,10 @@ Os recursos de produção já foram criados. Esta lista registra a configuraçã
 necessária para reproduzir o ambiente sem expor credenciais:
 
 1. Banco D1 `soulforge`, ligado ao binding `DB` em `wrangler.jsonc`.
-2. Bucket R2 privado `soulforge-media`, ligado ao binding `MEDIA`.
+2. Bucket R2 privado `soulforge-media`, ligado ao binding `MEDIA`, e bucket
+   `soulforge-pack-library`, ligado ao binding `PACK_LIBRARY`. O segundo deve
+   ser criado antes do primeiro deploy desta feature com
+   `pnpm exec wrangler r2 bucket create soulforge-pack-library`.
 3. OAuth Client ID Web do Google com a origem HTTPS do Worker autorizada. O
    `GOOGLE_CLIENT_ID` é público e não deve ser tratado como segredo.
 4. Para desenvolvimento, cópia de `.dev.vars.example` como `.dev.vars`, com o
@@ -68,6 +73,22 @@ O login feito por uma pessoa no aplicativo não dá ao navegador acesso a esse
 token. A sessão Google comprova a identidade para o Worker; somente o GitHub
 Actions usa o token da Cloudflare para publicar a aplicação e aplicar
 migrações.
+
+### Biblioteca privada e contas autorizadas
+
+As rotas `/api/library/catalog` e `/api/library/packs/:id/:version` exigem uma
+sessão válida. O login consulta a tabela D1 `authorized_emails` antes de criar
+usuário ou sessão e a confere novamente em cada acesso autenticado; remover um
+e-mail dessa tabela invalida a próxima utilização da sessão. Para convidar uma
+conta, use o Console D1 ou execute uma instrução equivalente a:
+
+```sql
+INSERT INTO authorized_emails (email, created_at)
+VALUES ('pessoa@example.com', datetime('now'));
+```
+
+Os bundles não são sincronizados entre contas nem expostos por R2 público. A
+publicação local usa `pnpm run packs:publish`; ela não integra o deploy da PWA.
 
 ## Desenvolvimento e publicação
 
