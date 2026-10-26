@@ -4,6 +4,25 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.41.1]
+
+### Adicionado
+
+- as três cartas de nível 1 dos domínios Arcano e Lâmina receberam artes
+  originais do SoulForge, associadas por IDs estáveis e disponíveis também no
+  uso offline da PWA;
+- a coleção de Lâmina introduz uma duelista recorrente em uma taberna, enquanto
+  Arcano usa composições próprias para Proteção Rúnica, Liberar Caos e Caminhar
+  pelas Paredes.
+
+### Alterado
+
+- as URLs das artes revisadas passaram a usar revisões explícitas, atualizando
+  corretamente imagens antigas armazenadas no cache sem substituir imagens de
+  Packs ou da pessoa usuária;
+- README, política de assets e catálogo de artes foram reconciliados com as
+  imagens aprovadas.
+
 ## [0.41.0]
 
 ### Adicionado
