@@ -13,8 +13,9 @@ import { renderGameMarkerDiceDialog } from "./features/game-markers/renderDiceDi
 import { handleStoredDiceAction, renderStoredDiceDialog, type StoredDiceDialogState } from "./features/game-markers/storedDice";
 import type { CardMarkerOverride } from "./storage/compendiumRepository";
 import { loadInstalledPacks, removeAllLocalPacks } from "./storage/packRepository";
-import { getPrivateLibraryBootstrapComplete, installMissingPrivateLibrary, markPrivateLibraryBootstrapComplete, refreshPrivateLibraryState, reinstallPrivateLibrary, updatePrivateLibraryPack } from "./features/packs/privateLibrary";
+import { cancelPrivateLibraryUpdate, confirmPrivateLibraryUpdate, getPrivateLibraryBootstrapComplete, installMissingPrivateLibrary, markPrivateLibraryBootstrapComplete, preparePrivateLibraryUpdate, refreshPrivateLibraryState, reinstallPrivateLibrary } from "./features/packs/privateLibrary";
 import type { PrivateLibraryView } from "./features/packs/privateLibrary";
+import type { PackUsageImpact } from "./features/packs/packUsage";
 import { purgeLegacyDemoContent } from "./storage/localDataRepository";
 import { renderSettings as renderSettingsPage } from "./features/settings/renderSettings";
 import { getPackDisplayDescription, getPackDisplayName, getPackOriginName } from "./features/compendium/packPresentation";
@@ -101,8 +102,10 @@ import { handleFeatureEffectAction, renderFeatureTokenActivationDialog, type Fea
 import { renderCharacterIdentityModal as renderCharacterIdentityModalView } from "./features/character-identity/renderCharacterIdentityModal";
 import { getSubclassStageSkills } from "./features/player/subclassTrack";
 import type { RestKind, RestMoveChoice } from "./features/rest/restRules";
-import { renderRestModal as renderRestModalView, renderRestModalInPlace } from "./features/rest/renderRest";
+import type { RestLoadoutStage } from "./features/rest/restLoadout";
+import { renderRestLoadoutCardDetailModal, renderRestModal as renderRestModalView, renderRestModalInPlace } from "./features/rest/renderRest";
 import { handleRestAction, handleRestDefinitionChoiceInput, handleRestRollInput } from "./features/rest/restActions";
+import { bindRestLoadoutDragEvents, consumeRestLoadoutDragClickSuppression } from "./features/rest/bindRestLoadoutDrag";
 import {
   renderEditorHeader as renderEditorHeaderView,
   renderResourceIndicator as renderResourceIndicatorView,
@@ -275,7 +278,7 @@ const state: {
   characterIdentityModalSection?: "character" | "class" | "ancestry" | "community";
   gameMarkerDieDialog?: { markerKey: string; dieId: string; mode: "result" | "consume" };
   storedDiceDialog?: StoredDiceDialogState;
-  restDialogKind?: RestKind;
+  restDialogKind?: RestKind; restLoadoutStage?: RestLoadoutStage; restLoadoutDraftIds?: string[]; restLoadoutDetailCardId?: string;
   restChoices: RestMoveChoice[];
   restError?: string;
   characterCreationOpen: boolean;
@@ -305,7 +308,9 @@ const state: {
   packImportOpen: boolean;
   pendingPackBundles?: PackBundle[];
   packImportError?: string;
+  pendingPackImportImpact?: PackUsageImpact;
   removeAllInstalledPacksOpen: boolean;
+  removeAllInstalledPacksImpact?: PackUsageImpact;
   removeAllInstalledPacksError?: string;
   privateLibrary: PrivateLibraryView;
   characterImportOpen: boolean;
@@ -314,6 +319,8 @@ const state: {
   backupRestoreOpen: boolean; pendingBackup?: SoulforgeBackupBundle; backupError?: string;
   contentImportOpen: boolean; pendingContentImport?: ContentImportPreview; contentImportError?: string; acceptedContentConflictIds: string[];
   deletingInstalledPackId?: string;
+  deletingInstalledPackImpact?: PackUsageImpact;
+  deletingInstalledPackError?: string;
   character?: Character; characterScarsOpen: boolean; deletingCharacterScarId?: string;
 } = {
   page: "overview",
@@ -558,13 +565,14 @@ function getCharacterTransformationDependencies(): CharacterTransformationDepend
   return {
     state,
     getCatalog: () => catalog,
+    getCharacters: () => state.characters,
     refreshCatalog,
     escapeHtml,
     render: () => render({ preserveMainScroll: true }),
     afterImport: async () => undefined,
     removeAllPacks: async () => { await removeAllLocalPacks(); markPrivateLibraryBootstrapComplete(); state.privateLibrary = { ...state.privateLibrary, bootstrapComplete: true }; }
   };
-} function getPrivateLibraryDependencies() { return { authenticated: () => getSyncViewModel().session.authenticated, installedPacks: () => state.installedPacks, view: () => state.privateLibrary, setView: (view: PrivateLibraryView) => { state.privateLibrary = view; }, refreshCatalog }; }
+} function getPrivateLibraryDependencies() { return { authenticated: () => getSyncViewModel().session.authenticated, installedPacks: () => state.installedPacks, catalog: () => catalog, characters: () => state.characters, view: () => state.privateLibrary, setView: (view: PrivateLibraryView) => { state.privateLibrary = view; }, refreshCatalog }; }
 function getLocalBackupDependencies() { return { state, appVersion, loadCharacter, listCharacters, availableDefinitions: () => catalog.definitions, refreshCatalog, render: () => render({ preserveMainScroll: true }), showError: (message: string) => window.alert(message), afterLocalDataChange: queueLocalSnapshot }; }
 function renderEmptyInline(message: string): string { return `<p class="empty-inline sf-state sf-state--empty sf-state--inline">${escapeHtml(message)}</p>`; }
 
@@ -667,18 +675,7 @@ function getInventoryActionDependencies(): InventoryActionDependencies {
 }
 
 function getInventoryDragDependencies(): InventoryDragDependencies {
-  return {
-    getCharacter: () => state.character,
-    getItemEntries: (character) => getInventoryItemEntries(character, catalog),
-    getInventoryCompartments,
-    getEntryCompartmentId,
-    canCompartmentAcceptItem,
-    wouldFitCompartment,
-    moveItemToCompartment: (entryId, targetCompartmentId) =>
-      moveItemToCompartmentAction(entryId, targetCompartmentId, getInventoryActionDependencies()),
-    mergeInventoryStacks: (sourceEntryId, targetEntryId) =>
-      mergeInventoryStacksAction(sourceEntryId, targetEntryId, getInventoryActionDependencies())
-  };
+  return { getCharacter: () => state.character, getItemEntries: (character) => getInventoryItemEntries(character, catalog), getInventoryCompartments, getEntryCompartmentId, canCompartmentAcceptItem, wouldFitCompartment, moveItemToCompartment: (entryId, targetCompartmentId) => moveItemToCompartmentAction(entryId, targetCompartmentId, getInventoryActionDependencies()), mergeInventoryStacks: (sourceEntryId, targetEntryId) => mergeInventoryStacksAction(sourceEntryId, targetEntryId, getInventoryActionDependencies()) };
 }
 
 function renderCompendium(): string {
@@ -1003,7 +1000,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
     ${renderGameMarkerDiceDialog(state.gameMarkerDieDialog, state.character, catalog, escapeHtml)}
     ${renderStoredDiceDialog({ state, catalog, escapeHtml })}
     ${renderFeatureTokenActivationDialog({ state, catalog, escapeHtml })}
-    ${renderRestModalView(character, state.restDialogKind, state.restChoices, state.restError, { escapeHtml, catalog })}
+    ${renderRestModalView(character, state.restDialogKind, state.restChoices, state.restError, { escapeHtml, catalog }, state.restLoadoutStage, state.restLoadoutDraftIds)}${renderRestLoadoutCardDetailModal(state.restLoadoutDetailCardId, { escapeHtml, catalog })}
       ${renderPackManagementDialogs(getPackManagementDependencies())}
     ${renderLocalBackupDialogs(state, escapeHtml)}
     ${renderCharacterImportModal({ isOpen: state.characterImportOpen, character: state.pendingCharacterImport, error: state.characterImportError, escapeHtml })}
@@ -1040,7 +1037,7 @@ const renderCharacterCreationInPlace = (options: { resetScroll?: boolean; reveal
     render({ resetCreationScroll: options.resetScroll });
   }
 };
-const renderRestInPlace = (): void => { if (!renderRestModalInPlace(appRoot, state.character, state.restDialogKind, state.restChoices, state.restError, { escapeHtml, catalog })) render({ preserveMainScroll: true }); };
+const renderRestInPlace = (): void => { if (!renderRestModalInPlace(appRoot, state.character, state.restDialogKind, state.restChoices, state.restError, { escapeHtml, catalog }, state.restLoadoutStage, state.restLoadoutDraftIds)) render({ preserveMainScroll: true }); };
 function focusInventorySearch(): void {
   requestAnimationFrame(() => {
     const input = document.querySelector<HTMLInputElement>("[data-inventory-search]");
@@ -1154,7 +1151,7 @@ function getCardFormValue(selector: string): string {
   return element?.value.trim() ?? "";
 }
 
-async function activateStoredCard(mode: "rest" | "stress", selectedSwapCardId?: string): Promise<void> {
+async function activateStoredCard(selectedSwapCardId?: string): Promise<void> {
   const character = state.character;
   const definition = state.activatingStoredCardId ? findDefinition(catalog, state.activatingStoredCardId) : undefined;
   if (!character || definition?.type !== "card") {
@@ -1169,7 +1166,7 @@ async function activateStoredCard(mode: "rest" | "stress", selectedSwapCardId?: 
   }
   const recallCost = definition.recallCost ?? 0;
   const stress = character.resources.find((resource) => resource.id === "stress");
-  if (mode === "stress" && (!stress || stress.value + recallCost > stress.max)) {
+  if (!stress || stress.value + recallCost > stress.max) {
     state.cardActivationError = "Nao ha espacos de Stress suficientes para ativar esta carta agora.";
     render();
     return;
@@ -1185,7 +1182,7 @@ async function activateStoredCard(mode: "rest" | "stress", selectedSwapCardId?: 
   } else {
     activeCardIds.push(definition.id);
   }
-  const resources = mode === "stress" && stress
+  const resources = stress
     ? character.resources.map((resource) => resource.id === stress.id ? { ...resource, value: resource.value + recallCost } : resource)
     : character.resources;
   const updatedCharacter = pruneUnavailableCards({ ...character, resources, deck: { ...character.deck, activeCardIds } });
@@ -1248,10 +1245,8 @@ function bindEvents(): void {
       return;
     }
 
-    if (consumeInventoryDragClickSuppression()) {
-      event.preventDefault();
-      return;
-    }
+    if (consumeInventoryDragClickSuppression()) { event.preventDefault(); return; }
+    if (consumeRestLoadoutDragClickSuppression()) { event.preventDefault(); return; }
 
     if (handleCharacterFieldAction(target, { catalog, character: state.character, update: (character) => { state.character = character; void saveCharacter(character).then(() => render({ preserveMainScroll: true })); } })) return;
     if (handleCharacterScarAction(target, getCharacterScarDependencies())) { event.preventDefault(); return; } if (handleAncestryAction(target, getAncestryFeatureDependencies())) return;
@@ -1309,6 +1304,8 @@ function bindEvents(): void {
       render({ preserveMainScroll: true });
       return;
     }
+
+    if (target.matches("[data-rest-loadout-detail-backdrop]") || target.closest('[data-action="close-rest-loadout-card-detail"]')) { state.restLoadoutDetailCardId = undefined; render({ preserveMainScroll: true }); return; }
 
     if (handleCustomResourceAction(target, { state, escapeHtml, saveCharacter, render: () => render({ preserveMainScroll: true }) })) return;
 
@@ -1372,7 +1369,7 @@ function bindEvents(): void {
       state.characterImportOpen = false;
       state.pendingCharacterImport = undefined;
       state.characterImportError = undefined;
-      state.deletingInstalledPackId = undefined;
+      state.deletingInstalledPackId = undefined; state.deletingInstalledPackImpact = undefined; state.deletingInstalledPackError = undefined; state.removeAllInstalledPacksImpact = undefined;
       state.deletingCharacterId = undefined;
       state.characterPortraitModalOpen = false;
       state.characterPortraitPreviewOpen = false;
@@ -1380,7 +1377,7 @@ function bindEvents(): void {
       state.characterIdentityModalSection = undefined;
       state.gameMarkerDieDialog = undefined;
       state.storedDiceDialog = undefined;
-      state.restDialogKind = undefined;
+      state.restDialogKind = undefined; state.restLoadoutStage = undefined; state.restLoadoutDraftIds = undefined; state.restLoadoutDetailCardId = undefined;
       state.restChoices = [];
       state.restError = undefined;
       state.characterConditionPickerOpen = false;
@@ -1452,7 +1449,7 @@ function bindEvents(): void {
       state.characterImportOpen = false;
       state.pendingCharacterImport = undefined;
       state.characterImportError = undefined;
-      state.deletingInstalledPackId = undefined;
+      state.deletingInstalledPackId = undefined; state.deletingInstalledPackImpact = undefined; state.deletingInstalledPackError = undefined; state.removeAllInstalledPacksImpact = undefined;
       state.deletingCharacterId = undefined;
       state.characterPortraitModalOpen = false;
       state.characterPortraitPreviewOpen = false;
@@ -1460,7 +1457,7 @@ function bindEvents(): void {
       state.characterIdentityModalSection = undefined;
       state.gameMarkerDieDialog = undefined;
       state.storedDiceDialog = undefined;
-      state.restDialogKind = undefined;
+      state.restDialogKind = undefined; state.restLoadoutStage = undefined; state.restLoadoutDraftIds = undefined; state.restLoadoutDetailCardId = undefined;
       state.restChoices = [];
       state.restError = undefined;
       state.characterConditionPickerOpen = false;
@@ -1483,6 +1480,8 @@ function bindEvents(): void {
 
     if (handleStoredDiceAction(target, { state, catalog, saveCharacter, render: () => render({ preserveMainScroll: true }), escapeHtml })) return;
 
+    const restLoadoutDetail = target.closest<HTMLElement>('[data-action="view-rest-loadout-card"]'); if (restLoadoutDetail?.dataset.cardId && state.restLoadoutStage === "loadout") { state.restLoadoutDetailCardId = restLoadoutDetail.dataset.cardId; render({ preserveMainScroll: true }); return; }
+
     if (handleRestAction(target, state, { catalog, saveCharacter, render: renderRestInPlace })) {
       return;
     }
@@ -1499,23 +1498,16 @@ function bindEvents(): void {
 
     if (handleCloudAction(target)) return;
 
-    if (target.closest('[data-action="refresh-private-library"]')) {
-      void refreshPrivateLibraryState(getPrivateLibraryDependencies()).then(() => render({ preserveMainScroll: true }));
-      return;
-    }
-    if (target.closest('[data-action="install-private-library"]')) {
-      void installMissingPrivateLibrary(getPrivateLibraryDependencies()).then(() => render({ preserveMainScroll: true }));
-      return;
-    }
-    if (target.closest('[data-action="reinstall-private-library"]')) {
-      void reinstallPrivateLibrary(getPrivateLibraryDependencies()).then(() => render({ preserveMainScroll: true }));
-      return;
-    }
+    if (target.closest('[data-action="refresh-private-library"]')) { void refreshPrivateLibraryState(getPrivateLibraryDependencies()).then(() => render({ preserveMainScroll: true })); return; }
+    if (target.closest('[data-action="install-private-library"]')) { void installMissingPrivateLibrary(getPrivateLibraryDependencies()).then(() => render({ preserveMainScroll: true })); return; }
+    if (target.closest('[data-action="reinstall-private-library"]')) { void reinstallPrivateLibrary(getPrivateLibraryDependencies()).then(() => render({ preserveMainScroll: true })); return; }
     const privateLibraryUpdate = target.closest<HTMLElement>('[data-action="update-private-library-pack"]');
     if (privateLibraryUpdate?.dataset.packId) {
-      void updatePrivateLibraryPack(getPrivateLibraryDependencies(), privateLibraryUpdate.dataset.packId).then(() => render({ preserveMainScroll: true }));
+      void preparePrivateLibraryUpdate(getPrivateLibraryDependencies(), privateLibraryUpdate.dataset.packId).then(() => render({ preserveMainScroll: true }));
       return;
     }
+    if (target.closest('[data-action="confirm-private-library-update"]')) { void confirmPrivateLibraryUpdate(getPrivateLibraryDependencies()).then(() => render({ preserveMainScroll: true })); return; }
+    if (target.closest('[data-action="cancel-private-library-update"]')) { cancelPrivateLibraryUpdate(getPrivateLibraryDependencies()); render({ preserveMainScroll: true }); return; }
 
     if (target.closest('[data-action="open-character-import"]')) {
       state.characterImportOpen = true;
@@ -2348,9 +2340,8 @@ function bindEvents(): void {
     }
 
     if (target.closest('[data-action="confirm-stored-card-activation"]')) {
-      const mode = appRoot.querySelector<HTMLInputElement>("[data-card-activation-mode]:checked")?.value;
       const swapCardId = appRoot.querySelector<HTMLInputElement>("[data-recall-swap-card]:checked")?.value;
-      if (mode === "rest" || mode === "stress") void activateStoredCard(mode, swapCardId);
+      void activateStoredCard(swapCardId);
       return;
     }
 
@@ -2372,6 +2363,7 @@ function bindEvents(): void {
     if (handleCharacterScarEscape(event, getCharacterScarDependencies())) return; if (state.character && handleCharacterTransformationEscape(event, getCharacterTransformationDependencies())) return;
     if (handleAttributeDetailEscape(event, state, () => render({ preserveMainScroll: true }))) return;
     if (handleCustomResourceEscape(event, state, () => render({ preserveMainScroll: true }))) return;
+    if (event.key === "Escape" && state.restLoadoutDetailCardId) { state.restLoadoutDetailCardId = undefined; render({ preserveMainScroll: true }); return; }
     if (event.key === "Escape" && state.modalCardId) {
       const restoreActiveCardFocus = isRememberedActiveCard(state.character?.id, state.modalCardId);
       state.modalCardId = undefined;
@@ -2535,7 +2527,7 @@ function bindEvents(): void {
 
   document.addEventListener("change", (event) => {
     const target = event.target;
-    if (target instanceof HTMLInputElement && (target.matches("[data-recall-swap-card]") || target.matches("[data-card-activation-mode]"))) {
+    if (target instanceof HTMLInputElement && target.matches("[data-recall-swap-card]")) {
       syncCardActivationDialog(appRoot);
       return;
     }
@@ -2651,6 +2643,7 @@ async function boot(): Promise<void> {
   render();
   bindEvents();
   bindInventoryDragEvents(getInventoryDragDependencies());
+  bindRestLoadoutDragEvents({ isActive: () => Boolean(state.character && state.restDialogKind && state.restLoadoutStage === "loadout" && !state.restLoadoutDetailCardId), getDraft: () => state.restLoadoutDraftIds, setDraft: (draft) => { state.restLoadoutDraftIds = draft; renderRestInPlace(); } });
   await migrateLegacyRestTimings();
   await refreshCatalog();
   await Promise.all([deleteStoredCharacter("character.kael-ironheart"), deleteStoredCharacter("character.kael-ironheart-ii")]);

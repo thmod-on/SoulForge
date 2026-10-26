@@ -5,8 +5,9 @@ import { endFeatureEffectsForCondition } from "../feature-effects/featureEffects
 import { reactivateCardsForEvent } from "../player/cardAvailability";
 import { applyDefinitionRestMoveChoice, createDefinitionRestMoveChoice, getActiveDefinitionRestAction, isDefinitionRestMoveChoiceComplete, updateDefinitionRestMoveChoice } from "../transformations/transformationChoices";
 import { applyRestMoves, getRestMoveLimit, requiresRestRoll, type RestKind, type RestMoveChoice, type RestMoveId } from "./restRules";
+import { addRestLoadoutCard, applyRestLoadout, canContinueRestLoadout, getRestLoadoutDraft, getRestVaultCardIds, moveRestLoadoutCard, removeRestLoadoutCard, type RestLoadoutStage } from "./restLoadout";
 
-export type RestActionState = { character?: Character; restDialogKind?: RestKind; restChoices: RestMoveChoice[]; restError?: string };
+export type RestActionState = { character?: Character; restDialogKind?: RestKind; restLoadoutStage?: RestLoadoutStage; restLoadoutDraftIds?: string[]; restLoadoutDetailCardId?: string; restChoices: RestMoveChoice[]; restError?: string };
 export type RestActionDependencies = { catalog: Catalog; saveCharacter: (character: Character) => Promise<void>; render: () => void };
 
 /** A ordem preserva o antigo ciclo: regras genéricas primeiro, depois o descanso específico. */
@@ -20,6 +21,16 @@ export function handleRestAction(target: HTMLElement, state: RestActionState, de
   if (target.closest('[data-action="rest-long"]')) { openRestDialog("long", state, dependencies); return true; }
   const kind = target.closest<HTMLElement>('[data-action="set-rest-kind"]');
   if (kind) { openRestDialog(kind.dataset.restKind as RestKind, state, dependencies); return true; }
+  const addLoadoutCard = target.closest<HTMLElement>('[data-action="rest-loadout-add"]');
+  if (addLoadoutCard && state.character && state.restLoadoutStage === "loadout") { state.restLoadoutDraftIds = addRestLoadoutCard(state.restLoadoutDraftIds ?? getRestLoadoutDraft(state.character), addLoadoutCard.dataset.cardId ?? ""); dependencies.render(); return true; }
+  const removeLoadoutCard = target.closest<HTMLElement>('[data-action="rest-loadout-remove"]');
+  if (removeLoadoutCard && state.character && state.restLoadoutStage === "loadout") { state.restLoadoutDraftIds = removeRestLoadoutCard(state.restLoadoutDraftIds ?? getRestLoadoutDraft(state.character), removeLoadoutCard.dataset.cardId ?? ""); dependencies.render(); return true; }
+  const moveLoadoutCard = target.closest<HTMLElement>('[data-action="rest-loadout-move"]');
+  if (moveLoadoutCard && state.character && state.restLoadoutStage === "loadout") { state.restLoadoutDraftIds = moveRestLoadoutCard(state.restLoadoutDraftIds ?? getRestLoadoutDraft(state.character), moveLoadoutCard.dataset.cardId ?? "", Number(moveLoadoutCard.dataset.direction) as -1 | 1); dependencies.render(); return true; }
+  if (target.closest('[data-action="continue-rest-moves"]')) {
+    if (state.character && canContinueRestLoadout(state.character, state.restLoadoutDraftIds ?? getRestLoadoutDraft(state.character))) { state.restLoadoutStage = "moves"; state.restError = undefined; dependencies.render(); }
+    return true;
+  }
   const move = target.closest<HTMLElement>('[data-action="choose-rest-move"]');
   if (move) { if (state.character && state.restChoices.length < getRestMoveLimit(state.character, dependencies.catalog)) { state.restChoices = [...state.restChoices, { id: move.dataset.restMove as RestMoveId }]; state.restError = undefined; dependencies.render(); } return true; }
   const definitionAction = target.closest<HTMLElement>('[data-action="choose-definition-rest-action"]');
@@ -62,20 +73,30 @@ export function handleRestDefinitionChoiceInput(target: HTMLSelectElement, state
   return true;
 }
 
-function openRestDialog(kind: RestKind, state: RestActionState, dependencies: RestActionDependencies): void { state.restDialogKind = kind; state.restChoices = []; state.restError = undefined; dependencies.render(); }
+function openRestDialog(kind: RestKind, state: RestActionState, dependencies: RestActionDependencies): void {
+  const character = state.character;
+  state.restDialogKind = kind; state.restLoadoutDetailCardId = undefined; state.restChoices = []; state.restError = undefined;
+  const draft = character ? getRestLoadoutDraft(character) : undefined;
+  state.restLoadoutDraftIds = draft;
+  state.restLoadoutStage = character && draft && getRestVaultCardIds(character, draft).length ? "loadout" : "moves";
+  dependencies.render();
+}
 function setRestRoll(index: number, roll: number, state: RestActionState, dependencies: RestActionDependencies): void { if (!Number.isInteger(roll) || roll < 1 || roll > 4) return; state.restChoices = state.restChoices.map((choice, choiceIndex) => choiceIndex === index ? { ...choice, roll } : choice); state.restError = undefined; dependencies.render(); }
 async function confirmRest(state: RestActionState, dependencies: RestActionDependencies): Promise<void> {
   const character = state.character, kind = state.restDialogKind;
   if (!character || !kind || state.restChoices.length !== getRestMoveLimit(character, dependencies.catalog)) return;
   if (state.restChoices.some((choice) => choice.id !== "definition-action" && requiresRestRoll(kind, choice.id) && !choice.roll)) { state.restError = "Role ou informe o resultado de cada d4 antes de concluir."; dependencies.render(); return; }
   if (state.restChoices.some((choice) => choice.id === "definition-action" && !isDefinitionRestMoveChoiceComplete(choice, dependencies.catalog.transformations.find((entry) => entry.id === choice.sourceDefinitionId)))) { state.restError = "Complete as escolhas do movimento de descanso antes de concluir."; dependencies.render(); return; }
-  let updated = applyRestMoves(character, kind, state.restChoices);
+  const activeCardIds = state.restLoadoutDraftIds ?? getRestLoadoutDraft(character);
+  if (!canContinueRestLoadout(character, activeCardIds)) { state.restError = "O Loadout temporário não é válido."; dependencies.render(); return; }
+  let updated = applyRestLoadout(character, activeCardIds);
+  updated = applyRestMoves(updated, kind, state.restChoices);
   for (const choice of state.restChoices) if (choice.id === "definition-action") updated = applyDefinitionRestMoveChoice(updated, choice);
   updated = reactivateCardsForEvent(updated, kind === "long" ? "long-rest" : "rest");
   for (const event of getRestResetEvents(kind)) {
     updated = endFeatureEffectsForCondition(updated, dependencies.catalog, event);
     updated = applyGameMarkerEvent(updated, dependencies.catalog, event);
   }
-  state.character = updated; state.restDialogKind = undefined; state.restChoices = []; state.restError = undefined;
+  state.character = updated; state.restDialogKind = undefined; state.restLoadoutStage = undefined; state.restLoadoutDraftIds = undefined; state.restLoadoutDetailCardId = undefined; state.restChoices = []; state.restError = undefined;
   await dependencies.saveCharacter(updated); dependencies.render();
 }

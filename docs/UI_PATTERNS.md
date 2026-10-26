@@ -80,6 +80,8 @@ O Loadout da ficha e a seleção de personagens seguem esse padrão. O Vault con
 - escolhas de conteúdo da transformação aparecem em modo somente leitura na ficha; alterações que custem um movimento pertencem ao fluxo de descanso, sem botão redundante na seção da transformação;
 - ações contextuais de descanso permanecem visíveis quando indisponíveis, usando `aria-disabled` e uma explicação acessível sobre o requisito, para antecipar capacidades sem simular uma ação funcional;
 - escolhas dentro do descanso atualizam somente o próprio diálogo, preservando a ficha ao fundo e evitando flashes causados por uma remontagem completa.
+- quando houver cartas no Vault, o descanso começa com a organização opcional do Loadout. Essa etapa não consome movimento, mantém no máximo cinco cartas ativas e só persiste sua composição junto da confirmação final do descanso.
+- o editor visual de Loadout usa cinco espaços com miniatura e uma grade rolável para o Vault. Arrastar é a interação principal, mas cada carta ativa preserva controles de teclado para mudar de posição ou retornar ao Vault; o detalhe integral abre sobre a etapa, sem descartá-la.
 - a prévia de importação diferencia Packs novos de atualizações e mostra a transição de versão antes da confirmação.
 - na ficha, a forma assumida usa o selo contextual da transformação; no detalhe, ancestralidade e Feature formam um painel próprio, visualmente separado das regras gerais.
 

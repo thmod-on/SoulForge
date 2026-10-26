@@ -59,4 +59,16 @@ describe("rest actions", () => {
     await vi.waitFor(() => expect(saveCharacter).toHaveBeenCalledOnce());
     expect(state.restDialogKind).toBeUndefined();
   });
+
+  it("abre a organização quando há Vault, descarta o rascunho ao cancelar e persiste somente na confirmação", async () => {
+    const learnedCardIds = ["card-a", "card-b"];
+    const character = { ...demoCharacter, deck: { ...demoCharacter.deck, learnedCardIds, activeCardIds: ["card-a"] } };
+    const saveCharacter = vi.fn(async () => undefined);
+    const dependencies = { catalog: createCatalog([], []), saveCharacter, render: vi.fn() };
+    const state: RestActionState = { character, restChoices: [] };
+    handleRestAction(actionTarget("open-rest"), state, dependencies);
+    expect(state.restLoadoutStage).toBe("loadout");
+    expect(state.restLoadoutDraftIds).toEqual(character.deck.activeCardIds);
+    expect(state.character).toBe(character);
+  });
 });

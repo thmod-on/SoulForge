@@ -166,7 +166,7 @@ Salvar uma comunidade local cria/atualiza sua Definition e a Feature vinculada d
 
 ### Fase 4 — Segurança e qualidade
 
-- [ ] Confirmar comportamento ao remover/atualizar Packs usados por personagens.
+- [x] A remoção e a atualização de qualquer Pack mostram o impacto por ficha e preservam `primaryCommunityId` e as demais referências; a reinstalação do mesmo conteúdo volta a resolvê-las.
 - [x] Testar criação com Pack ausente, comunidade local, conteúdo importado e ficha legada.
 - [x] Validar em desktop (1440 × 900) e viewport de iPad paisagem (1194 × 834): busca, filtro, seleção, revisão, criação e detalhe/reabertura da Comunidade preservam leitura e contexto sem corte ou sobreposição.
 - [x] Atualizar documentação de Packs, modelo de domínio, criação de personagem e changelog da versão de entrega.

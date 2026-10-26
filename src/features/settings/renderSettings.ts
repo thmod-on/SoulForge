@@ -1,5 +1,6 @@
 import type { Definition, PackManifest } from "../../domain/types";
 import type { SettingsViewState } from "../../app/types";
+import { hasPackUsageImpact, type PackUsageImpact } from "../packs/packUsage";
 import type { SyncViewModel } from "../../sync/syncCoordinator";
 import { getLibraryUpdates, getMissingLibraryEntries } from "../packs/privateLibrary";
 
@@ -41,7 +42,15 @@ function renderPrivateLibrary(state: SettingsViewState, sync: SyncViewModel, esc
     : managed < library.catalog.packs.length
       ? '<button class="sf-action sf-action--primary" type="button" data-action="reinstall-private-library">Usar versão da biblioteca</button>'
       : '<span class="private-library-ready">Biblioteca instalada</span>';
-  return `<section class="private-library"><div><h3>Biblioteca privada</h3><p>${library.catalog.packs.length} Packs autorizados${local ? ` · ${local} local${local === 1 ? "" : "is"} preservado${local === 1 ? "" : "s"}` : ""}.</p></div><div class="private-library-actions">${installAction}<button class="sf-action sf-action--secondary" type="button" data-action="refresh-private-library">Verificar atualizações</button></div>${updates.length ? `<div class="private-library-updates"><strong>${updates.length} ${updates.length === 1 ? "atualização disponível" : "atualizações disponíveis"}</strong>${updateCards}</div>` : ""}</section>`;
+  const pending = library.pendingUpdate;
+  const pendingUpdate = pending ? `<section class="pack-update-impact"><h3>Confirmar atualização</h3><p><strong>${escapeHtml(pending.entry.name)}</strong> será atualizado para v${escapeHtml(pending.entry.version)}.</p>${renderUpdateImpact(pending.impact, escapeHtml)}<div class="settings-actions"><button class="sf-action sf-action--secondary" type="button" data-action="cancel-private-library-update">Cancelar</button><button class="sf-action ${hasPackUsageImpact(pending.impact) ? "sf-action--danger danger-action" : "sf-action--primary primary-action"}" type="button" data-action="confirm-private-library-update">${hasPackUsageImpact(pending.impact) ? "Atualizar mesmo assim" : "Confirmar atualização"}</button></div></section>` : "";
+  return `<section class="private-library"><div><h3>Biblioteca privada</h3><p>${library.catalog.packs.length} Packs autorizados${local ? ` · ${local} local${local === 1 ? "" : "is"} preservado${local === 1 ? "" : "s"}` : ""}.</p></div><div class="private-library-actions">${installAction}<button class="sf-action sf-action--secondary" type="button" data-action="refresh-private-library">Verificar atualizações</button></div>${pendingUpdate}${updates.length && !pending ? `<div class="private-library-updates"><strong>${updates.length} ${updates.length === 1 ? "atualização disponível" : "atualizações disponíveis"}</strong>${updateCards}</div>` : ""}</section>`;
+}
+
+function renderUpdateImpact(impact: PackUsageImpact, escapeHtml: (value: string) => string): string {
+  if (!hasPackUsageImpact(impact)) return `<p class="settings-panel-copy">${impact.changedDefinitionIds.length ? `${impact.changedDefinitionIds.length} Definition${impact.changedDefinitionIds.length === 1 ? " será alterada" : "s serão alteradas"}; nenhuma referência de ficha será perdida.` : "Nenhuma referência de ficha será removida."}</p>`;
+  const characters = [...new Map(impact.references.map((reference) => [reference.characterId, reference.characterName])).values()];
+  return `<div class="pack-usage-impact"><strong>${characters.length} ${characters.length === 1 ? "ficha afetada" : "fichas afetadas"}</strong><p>As fichas não serão alteradas; suas referências voltam a funcionar quando o conteúdo for reinstalado.</p><ul>${characters.map((name) => `<li>${escapeHtml(name)}</li>`).join("")}</ul></div>`;
 }
 
 function renderCloudSettings(sync: SyncViewModel, escapeHtml: (value: string) => string): string {

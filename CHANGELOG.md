@@ -4,6 +4,25 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.42.0]
+
+### Adicionado
+
+- todo descanso agora pode começar por uma etapa opcional para organizar o
+  Loadout: cartas do Vault podem entrar, sair ou mudar de posição livremente
+  antes dos movimentos, sem consumir Estresse ou movimento de descanso;
+- o editor usa miniaturas, detalhe integral da carta e arrasto com alternativa
+  por botões; vagas disponíveis ganham indicação visual durante o gesto;
+- antes de remover, atualizar ou importar um Pack que possa afetar fichas, a
+  aplicação informa as personagens envolvidas e exige confirmação reforçada.
+
+### Alterado
+
+- a troca avulsa entre Vault e Loadout passou a cobrar imediatamente o Recall
+  em Estresse; a reorganização gratuita fica restrita ao início do descanso;
+- remoções e atualizações de Packs preservam integralmente as referências das
+  fichas, que voltam a ser resolvidas ao reinstalar o conteúdo correspondente.
+
 ## [0.41.1]
 
 ### Adicionado

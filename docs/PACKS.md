@@ -106,7 +106,13 @@ ambiente. Já o arquivo de conteúdo compartilhável nunca inclui Packs externos
 ele compartilha somente Definitions `local` e complementos, evitando redistribuir
 conteúdo cuja origem não pertence à pessoa que exporta.
 
-Remover um Pack não deve alterar silenciosamente um personagem. Caso alguma referência deixe de estar disponível, a aplicação deve informar a situação e aplicar uma regra explícita de compatibilidade.
+Remover ou atualizar um Pack não altera silenciosamente um personagem. Antes da
+confirmação, o SoulForge analisa as Definitions que podem desaparecer e mostra,
+por ficha, as referências afetadas: identidade, Domínios, cartas, itens,
+Condições, Transformações, Features, marcadores e escolhas persistidas. A ação
+continua disponível mediante confirmação reforçada; personagens, estados e
+overrides nunca são apagados. Se o mesmo ID voltar a ser instalado, a referência
+é resolvida novamente de forma automática.
 
 ### Biblioteca privada
 

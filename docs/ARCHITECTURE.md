@@ -45,7 +45,7 @@ Cicatrizes são persistidas como registros narrativos da personagem e gerenciada
 
 A VisÃ£o Geral, a trilha de subclasse e o Vault ficam em `src/features/player/renderPlayerOverview.ts`, preservando no orquestrador apenas a origem dos dados e os eventos das cartas. O comportamento responsivo das cartas ativas é isolado em `src/features/player/activeCardCarousel.ts`.
 
-A troca entre Vault e Loadout é renderizada por `src/features/player/renderCardActivation.ts`; o módulo mantém as escolhas de carta e momento, o resumo e a habilitação da confirmação sincronizados sem incorporar regras de persistência.
+A troca avulsa entre Vault e Loadout é renderizada por `src/features/player/renderCardActivation.ts`; fora do descanso, ela sempre aplica o Recall em Estresse. A reorganização gratuita que antecede qualquer descanso pertence a `src/features/rest/restLoadout.ts`: sua composição é um rascunho e só alcança a ficha na confirmação final do descanso.
 
 A indisponibilidade temporária de cartas do Loadout é controlada por `src/features/player/cardAvailability.ts`. O estado pertence ao `Character.deck`, nunca à Definition, e é encerrado somente pelo descanso, descanso longo, nova sessão ou comando manual escolhido. Cartas indisponíveis deixam de fornecer marcadores e modificadores passivos até a reativação. O fluxo de descanso deriva sua capacidade em `restRules.ts`: parte de dois movimentos e soma modificadores ativos `rest-move-bonus`, evitando limites divergentes entre renderização, seleção e confirmação.
 

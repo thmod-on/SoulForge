@@ -1,5 +1,7 @@
-import type { PackBundle, PackManifest } from "../../domain/types";
+import type { Catalog } from "../../domain/catalog";
+import type { Character, PackBundle, PackManifest } from "../../domain/types";
 import { validatePackBundle } from "./packValidation";
+import { analyzePackUpdate, type PackUsageImpact } from "./packUsage";
 import { installLibraryPacks } from "../../storage/packRepository";
 
 export type PrivateLibraryEntry = {
@@ -23,11 +25,14 @@ export type PrivateLibraryView = {
   error?: string;
   lastCheckedAt?: string;
   bootstrapComplete: boolean;
+  pendingUpdate?: { entry: PrivateLibraryEntry; impact: PackUsageImpact };
 };
 
 export type PrivateLibraryControllerDependencies = {
   authenticated(): boolean;
   installedPacks(): PackManifest[];
+  catalog(): Catalog;
+  characters(): Character[];
   view(): PrivateLibraryView;
   setView(view: PrivateLibraryView): void;
   refreshCatalog(): Promise<void>;
@@ -126,10 +131,26 @@ export async function reinstallPrivateLibrary(deps: PrivateLibraryControllerDepe
   await installPrivateLibraryEntries(deps, catalog.packs, "Não foi possível reinstalar a biblioteca privada.");
 }
 
-export async function updatePrivateLibraryPack(deps: PrivateLibraryControllerDependencies, id: string): Promise<void> {
+export async function preparePrivateLibraryUpdate(deps: PrivateLibraryControllerDependencies, id: string): Promise<void> {
   const entry = deps.view().catalog?.packs.find((pack) => pack.id === id);
   if (!entry) return;
-  await installPrivateLibraryEntries(deps, [entry], "Não foi possível atualizar o Pack.");
+  deps.setView({ ...deps.view(), loading: true, error: undefined, pendingUpdate: undefined });
+  try {
+    const bundle = await downloadPrivateLibraryBundle(entry);
+    deps.setView({ ...deps.view(), loading: false, pendingUpdate: { entry, impact: analyzePackUpdate(deps.characters(), deps.catalog(), [bundle]) } });
+  } catch (error) {
+    deps.setView({ ...deps.view(), loading: false, error: error instanceof Error ? error.message : "Não foi possível preparar a atualização." });
+  }
+}
+
+export async function confirmPrivateLibraryUpdate(deps: PrivateLibraryControllerDependencies): Promise<void> {
+  const pending = deps.view().pendingUpdate;
+  if (!pending) return;
+  await installPrivateLibraryEntries(deps, [pending.entry], "Não foi possível atualizar o Pack.");
+}
+
+export function cancelPrivateLibraryUpdate(deps: PrivateLibraryControllerDependencies): void {
+  deps.setView({ ...deps.view(), pendingUpdate: undefined });
 }
 
 async function installPrivateLibraryEntries(deps: PrivateLibraryControllerDependencies, entries: PrivateLibraryEntry[], fallback: string): Promise<void> {
@@ -137,7 +158,7 @@ async function installPrivateLibraryEntries(deps: PrivateLibraryControllerDepend
   try {
     await installPrivateLibrary(entries);
     await deps.refreshCatalog();
-    deps.setView({ ...deps.view(), loading: false, bootstrapComplete: true });
+    deps.setView({ ...deps.view(), loading: false, bootstrapComplete: true, pendingUpdate: undefined });
   } catch (error) {
     deps.setView({ ...deps.view(), loading: false, error: error instanceof Error ? error.message : fallback });
   }

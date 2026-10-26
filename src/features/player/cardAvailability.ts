@@ -33,8 +33,8 @@ export function reactivateCardsForEvent(character: Character, event: Exclude<Car
 }
 
 export function pruneUnavailableCards(character: Character): Character {
-  const activeCardIds = new Set(character.deck.activeCardIds);
-  return removeUnavailableCards(character, (entry) => !activeCardIds.has(entry.cardId));
+  const learnedCardIds = new Set(character.deck.learnedCardIds);
+  return removeUnavailableCards(character, (entry) => !learnedCardIds.has(entry.cardId));
 }
 
 export function hasCardsAwaitingReactivation(character: Character, reactivation: CardReactivationTiming): boolean {

@@ -1,5 +1,6 @@
 import type { CharacterMulticlass, ItemDefinition, PackBundle, PackManifest, ProgressionAdvanceKind } from "../domain/types";
 import type { PrivateLibraryView } from "../features/packs/privateLibrary";
+import type { PackUsageImpact } from "../features/packs/packUsage";
 
 export type Page = "overview" | "skills" | "inventory" | "progression" | "notes" | "compendium" | "settings" | "storedCards";
 export type InventoryFilter = "todos" | ItemDefinition["category"];
@@ -27,7 +28,11 @@ export type SettingsViewState = {
   pendingPackBundles?: PackBundle[];
   packImportError?: string;
   deletingInstalledPackId?: string;
+  deletingInstalledPackImpact?: PackUsageImpact;
+  deletingInstalledPackError?: string;
   removeAllInstalledPacksOpen: boolean;
+  removeAllInstalledPacksImpact?: PackUsageImpact;
   removeAllInstalledPacksError?: string;
+  pendingPackImportImpact?: PackUsageImpact;
   privateLibrary: PrivateLibraryView;
 };

@@ -45,7 +45,7 @@ describe("gestão visual de packs", () => {
 
     await readPackImportFiles(
       [createFile("primeiro.soulforge-pack.json", createBundle("pack.first", "Primeiro")), createFile("segundo.soulforge-pack.json", createBundle("pack.second", "Segundo"))],
-      { state, getCatalog: () => createCatalog([], []) }
+      { state, getCatalog: () => createCatalog([], []), getCharacters: () => [] }
     );
 
     expect(state.pendingPackBundles).toHaveLength(2);
@@ -62,7 +62,7 @@ describe("gestão visual de packs", () => {
 
     await readPackImportFiles(
       [createFile("a.soulforge-pack.json", bundle), createFile("b.soulforge-pack.json", bundle)],
-      { state, getCatalog: () => createCatalog([], []) }
+      { state, getCatalog: () => createCatalog([], []), getCharacters: () => [] }
     );
 
     expect(state.pendingPackBundles).toBeUndefined();
@@ -76,7 +76,7 @@ describe("gestão visual de packs", () => {
     state.installedPacks = [previous.manifest];
     const update = { ...createBundle("pack.first", "Primeiro"), manifest: { ...previous.manifest, version: "1.1.0" } };
 
-    await readPackImportFiles([createFile("primeiro.soulforge-pack.json", update)], { state, getCatalog: () => createCatalog([previous.manifest], previous.definitions) });
+    await readPackImportFiles([createFile("primeiro.soulforge-pack.json", update)], { state, getCatalog: () => createCatalog([previous.manifest], previous.definitions), getCharacters: () => [] });
 
     expect(state.pendingPackBundles).toEqual([update]);
     const html = renderPackManagementDialogs({ state, escapeHtml });
@@ -91,6 +91,20 @@ describe("gestão visual de packs", () => {
     state.deletingInstalledPackId = "pack.test";
 
     expect(renderPackManagementDialogs({ state, escapeHtml })).toContain("Pack &lt;Teste&gt;");
+  });
+
+  it("explica por ficha o impacto de remover um Pack usado", () => {
+    const state = createState();
+    state.installedPacks = [{ id: "pack.test", name: "Pack", version: "1.0.0", description: "" }];
+    state.deletingInstalledPackId = "pack.test";
+    state.deletingInstalledPackImpact = { removedDefinitionIds: ["card.test"], changedDefinitionIds: [], references: [{ characterId: "character.1", characterName: "Nara", packId: "pack.test", definitionId: "card.test", definitionName: "Luz", kind: "Carta no Loadout" }] };
+
+    const html = renderPackManagementDialogs({ state, escapeHtml });
+
+    expect(html).toContain("1 ficha afetada");
+    expect(html).toContain("Nara");
+    expect(html).not.toContain("Carta no Loadout");
+    expect(html).toContain("Remover mesmo assim");
   });
 
   it("explica o escopo e lista os Packs antes da remoção em lote", () => {
@@ -119,6 +133,7 @@ describe("gestão visual de packs", () => {
     const removed = await confirmRemoveAllInstalledPacks({
       state,
       getCatalog: () => createCatalog([], []),
+      getCharacters: () => [],
       escapeHtml,
       render: () => undefined,
       removeAllPacks: async () => { calls.push("remove"); },
@@ -138,6 +153,7 @@ describe("gestão visual de packs", () => {
     const removed = await confirmRemoveAllInstalledPacks({
       state,
       getCatalog: () => createCatalog([], []),
+      getCharacters: () => [],
       escapeHtml,
       render: () => undefined,
       removeAllPacks: async () => { throw new Error("falha"); },

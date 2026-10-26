@@ -33,10 +33,12 @@ describe("disponibilidade manual de cartas", () => {
     expect(getUnavailableCard(reactivateCardManually(unavailable, cardIds[0]), cardIds[0])).toBeUndefined();
   });
 
-  it("descarta estados órfãos quando uma carta deixa o Loadout", () => {
+  it("preserva indisponibilidade ao guardar a carta e descarta somente estado de carta não aprendida", () => {
     const unavailable = deactivateCard(demoCharacter, cardIds[0], "manual");
     const stored = { ...unavailable, deck: { ...unavailable.deck, activeCardIds: cardIds.slice(1) } };
+    expect(pruneUnavailableCards(stored).deck.unavailableCards).toHaveLength(1);
+    const removed = { ...stored, deck: { ...stored.deck, learnedCardIds: stored.deck.learnedCardIds.filter((cardId) => cardId !== cardIds[0]) } };
 
-    expect(pruneUnavailableCards(stored).deck.unavailableCards).toEqual([]);
+    expect(pruneUnavailableCards(removed).deck.unavailableCards).toEqual([]);
   });
 });
