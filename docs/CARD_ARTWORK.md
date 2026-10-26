@@ -1,5 +1,77 @@
 # Artes de cartas
 
+## Lâmina — nível 1
+
+Em 26 de outubro de 2026, as três cartas de nível 1 do domínio Lâmina receberam
+uma revisão visual original do SoulForge. Uma duelista adulta recorrente une a
+coleção sem confundi-la com o guardião de Valor: duas cimitarras, tecidos
+azul-petróleo, couro escuro desgastado e faixas vermelho-terrosas discretas dão
+uma silhueta inspirada em odalisca, adaptada para combate prático. As três cenas
+ocorrem em uma taberna escura de escala humana, sem magia, runas, sangue
+explícito, partículas ou brilho difuso.
+
+### Levante-se
+
+A duelista se ergue de um joelho no piso de madeira da taberna, com uma mão
+completa e firme no chão e a outra recuperando uma cimitarra. A segunda fica
+visível na bainha; um inimigo único, fora de foco ao fundo, estabelece o perigo
+sem disputar a leitura de persistência.
+
+### Não é Suficiente
+
+O escudo de um único adversário domina o primeiro plano. Uma das cimitarras
+desaparece atrás dele, sem reaparecer perto do adversário nem perfurar objeto ou
+pessoa; o braço que sustenta a defesa está aberto, expondo uma falha na guarda.
+A segunda cimitarra fica pronta para aproveitar essa abertura, com as duas mãos
+e todos os dedos da duelista legíveis.
+
+### Redemoinho
+
+A duelista aparece sozinha em uma área livre da taberna. O pé esquerdo sustenta
+o giro horário e o direito avança em um passo curto; ambas as sandálias ficam
+visíveis. Uma cimitarra se eleva atrás da cabeça e a outra conduz o corte à
+frente, cada uma presa a uma mão completa. A mão erguida envolve o cabo com os
+dedos fechados e o polegar oposto, alinhada ao punho e ao antebraço. Cabelo,
+saia, faixas, um pouco de bebida deslocada e reflexos discretos no aço comunicam
+a amplitude do golpe.
+Personagem e lâminas cabem no recorte central 2:3, sem rastros mágicos.
+
+| ID | Arquivo | Dimensões | Tamanho |
+| --- | --- | ---: | ---: |
+| `card.core.blade.p1-4` | `get-back-up.webp` | 960 × 960 | 107.084 bytes |
+| `card.core.blade.p1-5` | `not-good-enough.webp` | 960 × 960 | 101.964 bytes |
+| `card.core.blade.p1-6` | `whirlwind.webp` | 960 × 960 | 88.626 bytes |
+
+As três imagens são WebP opacos abaixo de 150 KB. O resolvedor usa URLs com
+revisão explícita e mantém a prioridade de imagens fornecidas por Packs ou pela
+pessoa usuária.
+
+### Prompts finais
+
+**Levante-se:** duelista adulta de duas cimitarras se erguendo de um joelho no
+piso de madeira de uma taberna, uma mão de cinco dedos apoiada no solo, outra com
+cimitarra completa e a segunda na bainha; tecidos azul-petróleo, couro escuro e
+faixas vermelho-terrosas, lanternas baixas, inimigo único desfocado ao fundo.
+
+**Não é Suficiente:** escudo de madeira gasto em primeiro plano oculta a lâmina
+da cimitarra após o trecho visível entre a mão da duelista e o escudo; nenhuma
+ponta reaparece do outro lado. A largura e o ângulo da lâmina permanecem
+coerentes até a oclusão, sem penetração. A guarda do adversário único se
+abre; a segunda cimitarra fica pronta, ambas as mãos com cinco dedos conectados,
+interior de taberna, sem ferimento, sangue, magia ou armas duplicadas.
+
+**Redemoinho:** uma única duelista adulta em uma taberna escura, usando o visual
+de Levante-se. Silhueta dinâmica inspirada apenas no gesto da referência enviada:
+pé esquerdo apoiado como pivô, direito avançando, cimitarra esquerda elevada
+atrás da cabeça e direita varrendo o espaço à frente. A mão erguida segura o
+cabo com quatro dedos curvados e polegar oposto; punho ligado ao antebraço. Duas
+mãos de cinco dedos, duas sandálias distintas e duas lâminas completas dentro da
+faixa central 2:3.
+Cabelo, saia e faixas acompanham o giro; bebida deslocada no piso e reflexos
+contidos no aço sugerem velocidade. Uma lanterna lateral fornece luz prática
+baixa sobre o piso escuro, sem outros personagens, rastro luminoso, vórtice,
+sangue ou brilho difuso.
+
 ## Arcano — nível 1
 
 Em 26 de outubro de 2026, as três cartas de nível 1 do domínio Arcano receberam

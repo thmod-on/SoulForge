@@ -20,6 +20,9 @@ describe("card artwork", () => {
     ["card.core.arcana.p1-1", "rune-ward.webp"],
     ["card.core.arcana.p1-2", "unleash-chaos.webp"],
     ["card.core.arcana.p1-3", "wall-walk.webp"],
+    ["card.core.blade.p1-4", "get-back-up.webp"],
+    ["card.core.blade.p1-5", "not-good-enough.webp"],
+    ["card.core.blade.p1-6", "whirlwind.webp"],
     ["card.core.codex.p2-1", "book-of-ava.webp"],
     ["card.core.codex.p2-2", "book-of-illiat.webp"],
     ["card.core.codex.p2-3", "book-of-tyfar.webp"],
@@ -45,6 +48,9 @@ describe("card artwork", () => {
   it.each([
     ["card.core.arcana.p1-1", "20261026-r2"],
     ["card.core.arcana.p1-3", "20261026-r2"],
+    ["card.core.blade.p1-4", "20261026-r2"],
+    ["card.core.blade.p1-5", "20261026-r3"],
+    ["card.core.blade.p1-6", "20261026-r7"],
     ["card.core.codex.p2-1", "20261011-r2"],
     ["card.core.splendor.p3-6", "20261011-r3"],
     ["card.core.valor.p3-7", "20261017-r3"]

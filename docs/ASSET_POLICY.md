@@ -308,6 +308,15 @@ Após a integração, o build contém 72 entradas e 5.315,06 KiB no precache,
 ainda dentro da faixa saudável do Estágio 1. A direção visual está registrada
 em [Artes de cartas](CARD_ARTWORK.md).
 
+Em 26 de outubro de 2026, Levante-se, Não é Suficiente e Redemoinho completaram
+as artes de nível 1 do domínio Lâmina. As três imagens WebP de 960 × 960
+totalizam 297.674 bytes e mostram a mesma duelista com duas cimitarras, em
+ações estritamente marciais dentro de uma taberna, com vermelho-terroso localizado
+e sem efeitos sobrenaturais. As URLs recebem versões explícitas para atualizar
+com segurança o cache de artes genéricas; imagens de Packs ou da pessoa usuária
+seguem prioritárias. O resultado do build permaneceu com 75 entradas e passou a
+5.605,99 KiB no precache, ainda dentro da faixa saudável do Estágio 1.
+
 ## Pendências planejadas
 
 1. Criar o manifesto e o verificador automatizado antes de ultrapassar 40 artes.
