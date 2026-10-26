@@ -2,6 +2,9 @@ import type { CardDefinition, GameMarkerDefinition } from "../domain/types";
 import { getOfficialCardMarkers } from "./officialCardMarkers";
 
 const artworkByCardId: Readonly<Record<string, string>> = {
+  "card.core.arcana.p1-1": "rune-ward.webp",
+  "card.core.arcana.p1-2": "unleash-chaos.webp",
+  "card.core.arcana.p1-3": "wall-walk.webp",
   "card.core.codex.p2-1": "book-of-ava.webp",
   "card.core.codex.p2-2": "book-of-illiat.webp",
   "card.core.codex.p2-3": "book-of-tyfar.webp",
@@ -28,6 +31,9 @@ const artworkByCardId: Readonly<Record<string, string>> = {
  * nunca passam por este fallback e continuam sem alteração.
  */
 const artworkRevisionByCardId: Readonly<Record<string, string>> = {
+  "card.core.arcana.p1-1": "20261026-r2",
+  "card.core.arcana.p1-2": "20261026-r1",
+  "card.core.arcana.p1-3": "20261026-r2",
   "card.core.codex.p2-1": "20261011-r2",
   "card.core.codex.p2-2": "20261011-r2",
   "card.core.codex.p2-3": "20261011-r2",

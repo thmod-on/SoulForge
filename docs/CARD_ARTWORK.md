@@ -1,5 +1,67 @@
 # Artes de cartas
 
+## Arcano — nível 1
+
+Em 26 de outubro de 2026, as três cartas de nível 1 do domínio Arcano receberam
+artes originais do SoulForge. A família visual usa violeta profundo, azul-noite,
+carvão e aço fosco, mantendo a energia sobrenatural localizada para que cada
+efeito permaneça legível no recorte central 2:3.
+
+### Proteção Rúnica
+
+Um medalhão antigo de cobre escurecido, segurado em primeiro plano por uma mão
+com cinco dedos legíveis, projeta um pequeno segmento violeta translúcido. A
+ponta de uma lâmina comprime a proteção sem atravessá-la, formando uma única
+ondulação curta no ponto de impacto. O corredor úmido e a tocha lateral baixa
+mantêm a cena íntima e o objeto pessoal no centro da leitura.
+
+### Liberar Caos
+
+Uma conjuradora libera um feixe arcano violeta curto e irregular contra um
+único alvo distante em um pátio de fortaleza molhado. Duas ou três faíscas
+densas junto ao pulso sugerem energia acumulada, sem dados, múltiplos projéteis
+ou enxame de partículas.
+
+### Caminhar pelas Paredes
+
+Uma druida adulta caminha com confiança por uma parede vertical de pedra úmida,
+em uma passagem estreita coberta de raízes e musgo. Ela olha diretamente para
+quem segura a carta, com expressão firme, e traz terra seca de uma travessia
+apressada no abdômen, pernas, botas e vestes. Folhas, fibras, couro, peles e
+pequenos ornamentos naturais compõem um visual selvagem com barriga exposta e
+cobertura adequada; só pequenas faixas violetas sob as botas mostram a aderência
+mágica.
+
+| ID | Arquivo | Dimensões | Tamanho |
+| --- | --- | ---: | ---: |
+| `card.core.arcana.p1-1` | `rune-ward.webp` | 960 × 960 | 72.442 bytes |
+| `card.core.arcana.p1-2` | `unleash-chaos.webp` | 960 × 960 | 124.860 bytes |
+| `card.core.arcana.p1-3` | `wall-walk.webp` | 960 × 960 | 106.520 bytes |
+
+Os três arquivos são WebP opacos, ficam abaixo de 150 KB e preservam a
+prioridade de imagens fornecidas pelo Pack ou pela pessoa usuária.
+
+### Prompts finais
+
+**Proteção Rúnica:** medalhão antigo de cobre escurecido em mão adulta com cinco
+dedos humanos legíveis; polegar e indicador prendem o aro, enquanto médio,
+anelar e mínimo curvam-se ao redor do objeto. Segmento pequeno e violeta de
+proteção suspenso à frente dele recebe a ponta de uma lâmina, com ondulação curta
+e duas ou três fagulhas no impacto, sem penetração; corredor de pedra úmida,
+tocha baixa, sem escudo grande, runas, texto, partículas ou brilho difuso.
+
+**Liberar Caos:** conjuradora adulta lançando feixe violeta curto e irregular
+contra único alvo distante em pátio de fortaleza molhado; duas ou três faíscas
+densas junto ao pulso, luz prática baixa, sem portal, explosão, halo, dados,
+múltiplos projéteis ou partículas espalhadas.
+
+**Caminhar pelas Paredes:** druida adulta caminhando naturalmente em parede
+vertical de pedra úmida, encarando diretamente a câmera com expressão firme;
+passagem estreita com raízes, musgo e lanterna baixa. Vestes selvagens de folhas,
+fibras, couro e peles, barriga adulta exposta com cobertura adequada; terra seca
+de viagem no abdômen, pernas, botas, mãos e bordas das vestes. Faixas violetas
+mínimas apenas sob as botas, sem runas, aura, pose acrobática ou nudez.
+
 ## Códice — nível 1
 
 Em 10 de outubro de 2026, as três cartas de nível 1 do domínio Códice receberam

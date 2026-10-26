@@ -299,6 +299,15 @@ o build contém 69 entradas e 5.004,32 KiB no precache, ainda dentro da faixa
 saudável do Estágio 1. A direção visual está registrada em
 [Artes de cartas](CARD_ARTWORK.md).
 
+Em 26 de outubro de 2026, Proteção Rúnica, Liberar Caos e Caminhar pelas
+Paredes completaram as artes de nível 1 do domínio Arcano. As três imagens WebP
+de 960 × 960 totalizam 303.822 bytes e usam violeta profundo apenas nos pontos
+de efeito, com cenários de escala humana e ação única legível. As URLs recebem
+versões explícitas para evitar que caches antigos ocultem uma arte aprovada.
+Após a integração, o build contém 72 entradas e 5.315,06 KiB no precache,
+ainda dentro da faixa saudável do Estágio 1. A direção visual está registrada
+em [Artes de cartas](CARD_ARTWORK.md).
+
 ## Pendências planejadas
 
 1. Criar o manifesto e o verificador automatizado antes de ultrapassar 40 artes.
