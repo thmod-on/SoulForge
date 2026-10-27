@@ -33,6 +33,11 @@ Essas consultas seguem em segundo plano; offline, elas nunca bloqueiam a abertur
 Em um dispositivo autorizado sem Packs, a preparação aguarda a instalação e a
 validação da biblioteca privada antes de liberar a criação.
 
+Se o login ocorrer depois da abertura, a mesma preparação é iniciada assim que
+a sessão autorizada fica disponível. O navegador pode sinalizar offline de
+forma imprecisa; por isso, a sincronização autenticada confirma conectividade
+tentando o Worker e conserva a fila local quando essa tentativa falhar.
+
 Sem conta, uso offline não significa sincronização entre dispositivos. Com
 login Google opcional, alterações feitas offline entram em uma fila e são
 enviadas quando o app estiver aberto e recuperar a conexão.

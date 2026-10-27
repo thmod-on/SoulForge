@@ -87,6 +87,13 @@ INSERT INTO authorized_emails (email, created_at)
 VALUES ('pessoa@example.com', datetime('now'));
 ```
 
+Quando a pessoa autorizada faz login depois de abrir o aplicativo, a sessão
+notifica explicitamente a biblioteca privada: em um dispositivo sem Packs, o
+catálogo é consultado e a instalação inicial ocorre de forma transacional. O
+indicador `navigator.onLine` orienta a interface, mas não bloqueia uma tentativa
+de sincronização autenticada; uma resposta do Worker é a confirmação efetiva de
+conectividade.
+
 Os bundles não são sincronizados entre contas nem expostos por R2 público. A
 publicação local usa `pnpm run packs:publish`; ela não integra o deploy da PWA.
 

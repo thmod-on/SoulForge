@@ -39,6 +39,8 @@ export type SyncCoordinatorDependencies = {
   saveOverride(override: CardMarkerOverride): Promise<void>;
   deleteOverride(id: string): Promise<void>;
   afterRemoteChange(): Promise<void>;
+  /** Executado quando uma sessão autorizada fica disponível no boot ou após login. */
+  afterAuthenticated?(): Promise<void>;
   stateChanged(): void;
 };
 
@@ -81,7 +83,10 @@ export async function initializeSyncCoordinator(nextDependencies: SyncCoordinato
     const conflicts = await listSyncConflicts();
     Object.assign(view, { googleClientId: config.googleClientId, syncEnabled: config.syncEnabled, session, conflicts });
     updateView({ status: session.authenticated ? "pending" : navigator.onLine ? "local-only" : "offline", message: undefined });
-    if (session.authenticated) scheduleSync(0);
+    if (session.authenticated) {
+      await dependencies.afterAuthenticated?.();
+      scheduleSync(0);
+    }
   } catch (error) {
     updateView({ status: navigator.onLine ? "error" : "offline", message: errorMessage(error) });
   }
@@ -112,7 +117,6 @@ export async function runSync(): Promise<void> {
 
 async function performSync(): Promise<void> {
   if (!dependencies || !view.session.authenticated) return;
-  if (!navigator.onLine) { updateView({ status: "offline" }); return; }
   updateView({ status: "syncing", message: "Enviando alterações e verificando a nuvem…" });
   try {
     await seedFirstSync();
@@ -234,6 +238,7 @@ export async function signIn(credential: string): Promise<void> {
   const session = await signInWithGoogle(credential);
   if (session.user) await prepareAccountTracking(session.user.id);
   updateView({ session, status: "pending", message: "Conta conectada. Preparando a primeira sincronização…" });
+  if (session.authenticated) await dependencies?.afterAuthenticated?.();
   scheduleSync(0);
 }
 

@@ -573,7 +573,7 @@ function getCharacterTransformationDependencies(): CharacterTransformationDepend
     afterImport: async () => undefined,
     removeAllPacks: async () => { await removeAllLocalPacks(); markPrivateLibraryBootstrapComplete(); state.privateLibrary = { ...state.privateLibrary, bootstrapComplete: true }; }
   };
-} function getPrivateLibraryDependencies() { return { authenticated: () => getSyncViewModel().session.authenticated, installedPacks: () => state.installedPacks, catalog: () => catalog, characters: () => state.characters, view: () => state.privateLibrary, setView: (view: PrivateLibraryView) => { state.privateLibrary = view; }, refreshCatalog }; }
+} function getPrivateLibraryDependencies() { return { authenticated: () => getSyncViewModel().session.authenticated, installedPacks: () => state.installedPacks, catalog: () => catalog, characters: () => state.characters, view: () => state.privateLibrary, setView: (view: PrivateLibraryView) => { state.privateLibrary = view; if (state.bootReady && state.page === "settings") render({ preserveMainScroll: true }); }, refreshCatalog }; }
 function getLocalBackupDependencies() { return { state, appVersion, loadCharacter, listCharacters, availableDefinitions: () => catalog.definitions, refreshCatalog, render: () => render({ preserveMainScroll: true }), showError: (message: string) => window.alert(message), afterLocalDataChange: queueLocalSnapshot }; }
 function renderEmptyInline(message: string): string { return `<p class="empty-inline sf-state sf-state--empty sf-state--inline">${escapeHtml(message)}</p>`; }
 
@@ -2654,9 +2654,7 @@ async function boot(): Promise<void> {
   state.character = undefined;
   state.characterSelectionOpen = true;
   const initializeBackgroundServices = async (): Promise<void> => {
-    await initializeCloudIntegration({ afterRemoteChange: async () => { const applied = await refreshCloudAppliedState(state.character?.id, refreshCatalog); state.characters = applied.characters; state.character = applied.character; if (state.bootReady) render({ preserveMainScroll: true }); }, stateChanged: () => { if (state.bootReady && state.page === "settings") render({ preserveMainScroll: true }); } });
-    await refreshPrivateLibraryState(getPrivateLibraryDependencies(), true);
-    if (state.bootReady && state.page === "settings") render({ preserveMainScroll: true });
+    await initializeCloudIntegration({ afterRemoteChange: async () => { const applied = await refreshCloudAppliedState(state.character?.id, refreshCatalog); state.characters = applied.characters; state.character = applied.character; if (state.bootReady) render({ preserveMainScroll: true }); }, afterAuthenticated: async () => { await refreshPrivateLibraryState(getPrivateLibraryDependencies(), true); if (state.bootReady && state.page === "settings") render({ preserveMainScroll: true }); }, stateChanged: () => { if (state.bootReady && state.page === "settings") render({ preserveMainScroll: true }); } });
   };
   const requiresInitialLibrary = navigator.onLine && !snapshot.installedPacks.length && !snapshot.characters.length && !getPrivateLibraryBootstrapComplete();
   if (requiresInitialLibrary) { await initializeBackgroundServices(); state.bootReady = true; render(); return; }

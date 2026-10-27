@@ -4,6 +4,16 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.42.2]
+
+### Corrigido
+
+- uma conta autorizada que entra depois de abrir o SoulForge agora consulta a
+  Biblioteca privada e instala seus Packs iniciais no dispositivo novo, sem
+  exigir recarregar a aplicação;
+- a sincronização confirma conectividade tentando o Worker, em vez de ficar
+  bloqueada somente por um estado offline impreciso informado pelo navegador.
+
 ## [0.42.1]
 
 ### Alterado

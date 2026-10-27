@@ -63,16 +63,33 @@ describe("local-first sync lifecycle", () => {
   it("schedules synchronization when the app opens authenticated and after login", async () => {
     const authenticated = createHarness(true, authenticatedSession());
     let coordinator = await loadCoordinator();
-    await coordinator.initializeSyncCoordinator(createDependencies());
+    const authenticatedDependencies = createDependencies();
+    authenticatedDependencies.afterAuthenticated = vi.fn(async () => undefined);
+    await coordinator.initializeSyncCoordinator(authenticatedDependencies);
     expect(authenticated.timers.at(-1)?.delay).toBe(0);
+    expect(authenticatedDependencies.afterAuthenticated).toHaveBeenCalledOnce();
 
     const signedOut = createHarness(true, { authenticated: false });
     coordinator = await loadCoordinator();
-    await coordinator.initializeSyncCoordinator(createDependencies());
+    const signedOutDependencies = createDependencies();
+    signedOutDependencies.afterAuthenticated = vi.fn(async () => undefined);
+    await coordinator.initializeSyncCoordinator(signedOutDependencies);
     signedOut.timers.length = 0;
     await coordinator.signIn("test-credential");
     expect(signedOut.cloud.signIn).toHaveBeenCalledWith("test-credential");
+    expect(signedOutDependencies.afterAuthenticated).toHaveBeenCalledOnce();
     expect(signedOut.timers.at(-1)?.delay).toBe(0);
+  });
+
+  it("confirma conectividade pelo Worker mesmo quando o navegador reporta offline", async () => {
+    const harness = createHarness(false, authenticatedSession());
+    const coordinator = await loadCoordinator();
+    await coordinator.initializeSyncCoordinator(createDependencies());
+
+    await coordinator.runSync();
+
+    expect(harness.cloud.pull).toHaveBeenCalled();
+    expect(coordinator.getSyncViewModel().status).toBe("synced");
   });
 
   it("preserves the queue and caps exponential retries when the backend is unavailable", async () => {

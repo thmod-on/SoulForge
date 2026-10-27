@@ -46,7 +46,7 @@ export function handleCloudAction(target: HTMLElement): boolean {
   return true;
 }
 
-export async function initializeCloudIntegration(options: { afterRemoteChange(): Promise<void>; stateChanged(): void }): Promise<void> {
+export async function initializeCloudIntegration(options: { afterRemoteChange(): Promise<void>; afterAuthenticated?(): Promise<void>; stateChanged(): void }): Promise<void> {
   await initializeSyncCoordinator({
     snapshot: async () => {
       const snapshot = await loadLocalDataSnapshot();
@@ -59,6 +59,7 @@ export async function initializeCloudIntegration(options: { afterRemoteChange():
     saveOverride: putCardMarkerOverride,
     deleteOverride: deleteCardMarkerOverride,
     afterRemoteChange: options.afterRemoteChange,
+    afterAuthenticated: options.afterAuthenticated,
     stateChanged: options.stateChanged
   });
 }
