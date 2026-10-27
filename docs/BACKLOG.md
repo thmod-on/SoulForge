@@ -1,6 +1,6 @@
 # Backlog do SoulForge
 
-Última revisão: 26 de outubro de 2026.
+Última revisão: 27 de outubro de 2026.
 
 ## Objetivo
 
@@ -45,6 +45,7 @@ de outubro de 2026.
 
 | ID | Prioridade | Estado | Área | Pendência | Critério de conclusão |
 | --- | --- | --- | --- | --- | --- |
+| PERF-001 | P1 | Em andamento | Inicialização e desenvolvimento | Tornar a abertura local-first leve: snapshot único do IndexedDB, compatibilidade versionada, rede em segundo plano e ambientes `dev`/`dev:full` separados. | Testes automatizados cobrem snapshot e compatibilidade; CI aplica orçamento de assets; medição em PWA instalada, desktop e iPad, online/offline, registra lista de fichas em até 1,5 s com 11 Packs e dados locais. Se a meta ainda falhar, abrir PERF-002 para code splitting de áreas raras. |
 | ITM-001 | P3 | A definir | Itens e Packs | Confirmar se Ração e Cantil pertencem ao conteúdo Core antes de adicioná-los ao catálogo. | Fonte e classificação confirmadas; se oficiais, entram no Pack correspondente com referência revisada; se forem apenas equipamento mundano desejado pelo SoulForge, entram em conteúdo local ou compartilhado sem atribuição oficial indevida. |
 | CLS-003 | P1 | Pronto | Classes e Packs | Auditar as Features de todas as classes e subclasses locais contra a fonte oficial vigente. O primeiro defeito confirmado é no Mago: Padrões Estranhos duplica a descrição de Prestidigitação antes de sua própria regra do Dado de Dualidade. | As 13 classes e 26 subclasses têm Features conferidas contra fonte oficial identificada por versão e data; cada texto contém somente sua própria regra, sem parágrafos ausentes ou duplicados; escolhas persistentes e metadados mecânicos correspondem à Feature revisada; Packs são regenerados, importáveis e cobertos por testes de conteúdo. |
 | EFF-002 | P2 | A definir | Efeitos | Suportar modificadores temporários simples de Proficiência e atributos. | Novo contrato declarativo documentado e interpretado genericamente, sem conhecimento de classe na Engine. |

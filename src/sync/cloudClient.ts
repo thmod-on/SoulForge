@@ -1,5 +1,9 @@
 import type { CloudSession, SyncPullResponse, SyncPushChange, SyncPushResponse, SyncSnapshotResponse } from "./types";
 
+// `pnpm dev` prioriza a UI local. A integração real continua disponível em
+// `pnpm dev:full` e nos builds de produção.
+const localUiDevelopment = import.meta.env.MODE === "development";
+
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/api${path}`, { credentials: "same-origin", ...init, headers: { ...(init?.body ? { "Content-Type": "application/json" } : {}), ...init?.headers } });
   if (!response.ok) {
@@ -10,11 +14,12 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export function getCloudSession(): Promise<CloudSession> {
+  if (localUiDevelopment) return Promise.resolve({ authenticated: false });
   return api<CloudSession>("/session");
 }
 
 export function getCloudConfig(): Promise<{ googleClientId?: string; syncEnabled: boolean }> {
-  if (location.hostname.endsWith(".github.io")) return Promise.resolve({ syncEnabled: false });
+  if (localUiDevelopment || location.hostname.endsWith(".github.io")) return Promise.resolve({ syncEnabled: false });
   return api("/config");
 }
 

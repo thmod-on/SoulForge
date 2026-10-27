@@ -9965,6 +9965,7 @@ body:has(.modal-backdrop) {
 .remove-all-packs-modal {
   position: relative;
   display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   gap: 1rem;
   width: min(34rem, 92vw);
   max-height: var(--sf-modal-available-height, 88vh);
@@ -9976,6 +9977,23 @@ body:has(.modal-backdrop) {
 
 .remove-all-packs-modal > :is(h2, p) {
   margin: 0;
+}
+
+.remove-all-packs-body {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 0.35rem;
+  scrollbar-gutter: stable;
+}
+
+.remove-all-packs-body > :is(h2, p) { margin: 0; }
+
+@media (max-height: 44rem) {
+  .remove-all-packs-modal { height: var(--sf-modal-available-height); }
 }
 
 .remove-all-packs-list {

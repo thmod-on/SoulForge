@@ -4,6 +4,23 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.42.1]
+
+### Alterado
+
+- a abertura usa um snapshot único dos dados locais e deixa sincronização e
+  biblioteca privada em segundo plano para instalações já preparadas; o uso
+  offline não aguarda serviços remotos;
+- o ambiente de desenvolvimento foi separado entre `pnpm dev`, focado na UI
+  local, e `pnpm dev:full`, destinado a PWA, Worker, login e sincronização;
+- CI e deploys agora verificam orçamento de JavaScript, CSS e precache do
+  Service Worker para prevenir regressões de carregamento.
+
+### Corrigido
+
+- a confirmação de remoção de todos os Packs mantém as ações visíveis e torna
+  o conteúdo rolável em telas baixas, sem cortar a lista ou as fichas afetadas.
+
 ## [0.42.0]
 
 ### Adicionado

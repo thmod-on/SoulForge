@@ -27,6 +27,12 @@ Artes incorporadas devem respeitar os orçamentos e estágios definidos em [Pol�
 
 Depois de uma abertura bem-sucedida com internet, a aplicação deve iniciar novamente sem conexão. Os dados dos personagens continuam no IndexedDB do próprio navegador.
 
+Em uma instalação já preparada, a lista de fichas e o catálogo são carregados a
+partir de um único snapshot local antes de consultar nuvem ou biblioteca privada.
+Essas consultas seguem em segundo plano; offline, elas nunca bloqueiam a abertura.
+Em um dispositivo autorizado sem Packs, a preparação aguarda a instalação e a
+validação da biblioteca privada antes de liberar a criação.
+
 Sem conta, uso offline não significa sincronização entre dispositivos. Com
 login Google opcional, alterações feitas offline entram em uma fila e são
 enviadas quando o app estiver aberto e recuperar a conexão.
@@ -77,6 +83,17 @@ Antes de uma release, validar pelo menos:
 - atualização para uma versão publicada;
 - preservação dos dados locais após atualização normal.
 - fila offline, conflito entre duas revisões e isolamento entre duas contas.
+- com 11 Packs e fichas locais, medir o tempo até a lista de personagens em PWA
+  instalada, online e offline; a meta para conteúdo já preparado é 1,5 s.
+
+## Orçamento de desempenho
+
+Após `pnpm run build`, `pnpm run check:performance` mede os assets efetivamente
+referenciados pelo Service Worker. A linha de base da entrega PERF-001 é de
+**116,5 KiB** de JavaScript gzip, **37,2 KiB** de CSS gzip e **5.629,7 KiB** de
+precache. O CI limita JavaScript a 150 KiB gzip, CSS a 50 KiB gzip e o precache
+a 10 MiB. Não há telemetria externa: a medição de abertura continua manual nos
+dispositivos de referência.
 
 Para uma atualização de toolchain ou Service Worker, complementar a lista com:
 

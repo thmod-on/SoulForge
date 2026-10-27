@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => ({
     target: ["chrome111", "edge111", "firefox114", "safari16.4"]
   },
   plugins: [
-    ...(mode === "test" || legacyGitHubPages ? [] : [cloudflare()]),
+    ...(mode === "test" || mode === "development" || legacyGitHubPages ? [] : [cloudflare()]),
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg", "apple-touch-icon.png"],
@@ -64,7 +64,7 @@ export default defineConfig(({ mode }) => ({
         skipWaiting: true
       },
       devOptions: {
-        enabled: true
+        enabled: mode === "full"
       }
     })
   ]

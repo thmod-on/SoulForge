@@ -25,6 +25,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run check
       - run: pnpm run build
+      - run: pnpm run check:performance
       - name: Validate compiled Cloudflare configuration
         run: pnpm run check:cloudflare-build
       - name: Apply D1 migrations

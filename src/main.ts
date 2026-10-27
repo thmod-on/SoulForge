@@ -16,7 +16,7 @@ import { loadInstalledPacks, removeAllLocalPacks } from "./storage/packRepositor
 import { cancelPrivateLibraryUpdate, confirmPrivateLibraryUpdate, getPrivateLibraryBootstrapComplete, installMissingPrivateLibrary, markPrivateLibraryBootstrapComplete, preparePrivateLibraryUpdate, refreshPrivateLibraryState, reinstallPrivateLibrary } from "./features/packs/privateLibrary";
 import type { PrivateLibraryView } from "./features/packs/privateLibrary";
 import type { PackUsageImpact } from "./features/packs/packUsage";
-import { purgeLegacyDemoContent } from "./storage/localDataRepository";
+import { applyLocalDataCompatibility, loadLocalDataSnapshot, type LocalDataSnapshot } from "./storage/localDataRepository";
 import { renderSettings as renderSettingsPage } from "./features/settings/renderSettings";
 import { getPackDisplayDescription, getPackDisplayName, getPackOriginName } from "./features/compendium/packPresentation";
 import { renderCompendiumIndex as renderCompendiumIndexView } from "./features/compendium/renderCompendiumIndex";
@@ -170,8 +170,7 @@ import {
 } from "./features/compendium/ancestries";
 import type { CompendiumSpread, CompendiumView, InventoryFilter, Page, ProgressionDraftChoice, ProgressionFlowStep, ProgressionMulticlassDraft, ProgressionPicker, ProgressionTierNumber } from "./app/types";
 import { editorNavigation as sideNavItems, getPageFromEventTarget, isEditorPage, playerNavigation as topNavItems } from "./app/navigation";
-import { deleteLocalCharacter as deleteStoredCharacter, deleteSyncedCharacter, deleteSyncedDefinition as deleteCustomDefinition, getSyncViewModel, handleCloudAction, initializeCloudIntegration, loadCardMarkerOverrides, loadCustomDefinitions, mountGoogleSignIn, queueLocalSnapshot, refreshCloudAppliedState, saveSyncedCardMarkerOverride as saveCardMarkerOverride, saveSyncedCharacter, saveSyncedDefinition as saveCustomDefinition } from "./features/cloud/cloudIntegration";
-import { migrateLegacyRestTimings } from "./storage/compendiumRepository";
+import { deleteSyncedCharacter, deleteSyncedDefinition as deleteCustomDefinition, getSyncViewModel, handleCloudAction, initializeCloudIntegration, loadCardMarkerOverrides, loadCustomDefinitions, mountGoogleSignIn, queueLocalSnapshot, refreshCloudAppliedState, saveSyncedCardMarkerOverride as saveCardMarkerOverride, saveSyncedCharacter, saveSyncedDefinition as saveCustomDefinition } from "./features/cloud/cloudIntegration";
 import "./styles.css"; function getAppRoot(): HTMLDivElement {
   const element = document.querySelector<HTMLDivElement>("#app");
   if (!element) {
@@ -322,6 +321,7 @@ const state: {
   deletingInstalledPackImpact?: PackUsageImpact;
   deletingInstalledPackError?: string;
   character?: Character; characterScarsOpen: boolean; deletingCharacterScarId?: string;
+  bootReady: boolean;
 } = {
   page: "overview",
   inventoryFilter: "todos",
@@ -381,7 +381,8 @@ const state: {
   removeAllInstalledPacksOpen: false,
   privateLibrary: { loading: false, bootstrapComplete: getPrivateLibraryBootstrapComplete() },
   characterImportOpen: false, characterScarsOpen: false,
-  backupRestoreOpen: false, contentImportOpen: false, acceptedContentConflictIds: []
+  backupRestoreOpen: false, contentImportOpen: false, acceptedContentConflictIds: [],
+  bootReady: false
 };
 const appVersion = packageJson.version;
 const itemFilterLabels: Record<InventoryFilter, string> = {
@@ -870,6 +871,7 @@ function updateGameMarkerAuthoringForm(target: HTMLSelectElement): void {
   configureGameMarkerAuthoringForm(form);
 }
 function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: boolean; restoreActiveCardFocus?: boolean } = {}): void {
+  if (!state.bootReady) { appRoot.innerHTML = `<div class="boot-screen sf-state sf-state--loading" role="status"><i aria-hidden="true"></i><span>Preparando dados locais...</span></div>`; return; }
   if (state.character) rememberActiveCardCarousel(appRoot, state.character.id);
   const previousCharacterCreationScrollTop = !options.resetCreationScroll && state.characterSelectionOpen && state.characterCreationOpen
     ? appRoot.querySelector<HTMLElement>(".character-creation-scroll")?.scrollTop
@@ -1066,15 +1068,16 @@ async function refreshCatalog(): Promise<void> {
   const customDefinitions = await loadCustomDefinitions();
   state.installedPacks = await loadInstalledPacks();
   cardMarkerOverrides = await loadCardMarkerOverrides();
-  const overrideByDefinitionId = new Map(cardMarkerOverrides.map((override) => [override.definitionId, override]));
-  const definitions = [...baseCatalog.definitions, ...customDefinitions].map((definition) => {
-    if (definition.type !== "card") return definition;
-    const override = overrideByDefinitionId.get(definition.id);
-    return applyCardContentDefaults(definition, override?.gameMarkers);
-  });
-  catalog = createCatalog([...baseCatalog.packs, ...state.installedPacks], definitions);
+  applyCatalogSnapshot({ installedPacks: state.installedPacks, definitions: customDefinitions, overrides: cardMarkerOverrides });
 }
 
+function applyCatalogSnapshot(snapshot: Pick<LocalDataSnapshot, "installedPacks" | "definitions" | "overrides">): void {
+  state.installedPacks = snapshot.installedPacks;
+  cardMarkerOverrides = snapshot.overrides;
+  const overrideByDefinitionId = new Map(cardMarkerOverrides.map((override) => [override.definitionId, override]));
+  const definitions = [...baseCatalog.definitions, ...snapshot.definitions].map((definition) => definition.type !== "card" ? definition : applyCardContentDefaults(definition, overrideByDefinitionId.get(definition.id)?.gameMarkers));
+  catalog = createCatalog([...baseCatalog.packs, ...state.installedPacks], definitions);
+}
 async function openCharacter(characterId: string | undefined): Promise<void> {
   if (!characterId) {
     return;
@@ -2644,17 +2647,22 @@ async function boot(): Promise<void> {
   bindEvents();
   bindInventoryDragEvents(getInventoryDragDependencies());
   bindRestLoadoutDragEvents({ isActive: () => Boolean(state.character && state.restDialogKind && state.restLoadoutStage === "loadout" && !state.restLoadoutDetailCardId), getDraft: () => state.restLoadoutDraftIds, setDraft: (draft) => { state.restLoadoutDraftIds = draft; renderRestInPlace(); } });
-  await migrateLegacyRestTimings();
-  await refreshCatalog();
-  await Promise.all([deleteStoredCharacter("character.kael-ironheart"), deleteStoredCharacter("character.kael-ironheart-ii")]);
-  await purgeLegacyDemoContent();
-  state.characters = await listCharacters();
-  // A sessão sempre começa no seletor: abrir uma ficha é uma ação consciente do jogador.
+  await applyLocalDataCompatibility();
+  const snapshot = await loadLocalDataSnapshot();
+  state.characters = snapshot.characters;
+  applyCatalogSnapshot(snapshot);
   state.character = undefined;
   state.characterSelectionOpen = true;
-  await initializeCloudIntegration({ afterRemoteChange: async () => { const applied = await refreshCloudAppliedState(state.character?.id, refreshCatalog); state.characters = applied.characters; state.character = applied.character; }, stateChanged: () => { void refreshPrivateLibraryState(getPrivateLibraryDependencies(), true).then(() => { if (state.page === "settings") render({ preserveMainScroll: true }); }); } });
-  await refreshPrivateLibraryState(getPrivateLibraryDependencies(), true);
+  const initializeBackgroundServices = async (): Promise<void> => {
+    await initializeCloudIntegration({ afterRemoteChange: async () => { const applied = await refreshCloudAppliedState(state.character?.id, refreshCatalog); state.characters = applied.characters; state.character = applied.character; if (state.bootReady) render({ preserveMainScroll: true }); }, stateChanged: () => { if (state.bootReady && state.page === "settings") render({ preserveMainScroll: true }); } });
+    await refreshPrivateLibraryState(getPrivateLibraryDependencies(), true);
+    if (state.bootReady && state.page === "settings") render({ preserveMainScroll: true });
+  };
+  const requiresInitialLibrary = navigator.onLine && !snapshot.installedPacks.length && !snapshot.characters.length && !getPrivateLibraryBootstrapComplete();
+  if (requiresInitialLibrary) { await initializeBackgroundServices(); state.bootReady = true; render(); return; }
+  state.bootReady = true;
   render();
+  void initializeBackgroundServices();
 }
 
 void boot();

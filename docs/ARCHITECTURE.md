@@ -17,6 +17,12 @@ A interface é modular por responsabilidade, mesmo sendo uma PWA sem framework:
 - `src/domain/`: tipos e regras do domínio de jogo;
 - `src/storage/`: acesso ao IndexedDB e persistência local.
 
+Na inicialização, `localDataRepository` entrega personagens, Packs, Definitions
+e complementos em um único snapshot transacional. Compatibilidades locais usam
+um marcador versionado após sucesso; nuvem e biblioteca privada só são
+inicializadas depois de a interface local estar pronta, exceto no primeiro
+dispositivo autorizado ainda sem biblioteca instalada.
+
 `main.ts` deve atuar como orquestrador: inicializa dependências, mantém o estado transitório e conecta renderização a eventos. Novas telas não devem concentrar sua implementação completa nele.
 
 No InventÃ¡rio, `src/features/inventory/renderInventory.ts` concentra a renderizaÃ§Ã£o das grades, itens e modais. As alteraÃ§Ãµes de inventÃ¡rio, a persistÃªncia e o drag-and-drop continuam no orquestrador, onde o estado da ficha Ã© atualizado.

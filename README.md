@@ -2,7 +2,7 @@
 
 SoulForge é uma PWA *offline-first* para acompanhar personagens de Daggerheart sem depender de servidor durante a mesa.
 
-Versão atual: `0.42.0`.
+Versão atual: `0.42.1`.
 
 ## Recursos principais
 
@@ -75,13 +75,17 @@ pnpm install
 pnpm run dev
 ```
 
-O Vite exibirá o endereço local no terminal; normalmente é `http://localhost:5173/`.
+`pnpm run dev` inicia somente a UI local, sem Service Worker ou emulador
+Cloudflare. Para validar login, sincronização, biblioteca privada e PWA, use
+`pnpm run dev:full`. O Vite exibirá o endereço local no terminal; normalmente
+é `http://localhost:5173/`.
 
 ## Validação
 
 ```bash
 pnpm run check
 pnpm run build
+pnpm run check:performance
 ```
 
 O CI também executa essa validação em pull requests e antes dos deploys para

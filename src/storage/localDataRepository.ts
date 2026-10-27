@@ -1,5 +1,6 @@
 import type { Character, Definition, PackManifest } from "../domain/types";
 import type { CardMarkerOverride } from "./compendiumRepository";
+import { normalizeCardMarkerOverride, normalizeDefinitionRestTimings } from "../domain/restTimingMigration";
 import { ensureSyncStores } from "./syncRepository";
 
 const databaseName = "soulforge";
@@ -7,6 +8,8 @@ const databaseVersion = 6;
 const storeNames = ["characters", "installedPacks", "customDefinitions", "definitionOverrides"] as const;
 const legacyDemoCharacterIds = new Set(["character.kael-ironheart", "character.kael-ironheart-ii"]);
 const legacyDemoPackId = "pack.demo.soulforge";
+const localCompatibilityVersion = "2026-10-perf-001";
+const localCompatibilityKey = "soulforge.local-compatibility-version";
 
 export type LocalDataSnapshot = {
   characters: Character[];
@@ -14,6 +17,14 @@ export type LocalDataSnapshot = {
   definitions: Definition[];
   overrides: CardMarkerOverride[];
 };
+
+function compatibilityIsCurrent(): boolean {
+  return localStorage.getItem(localCompatibilityKey) === localCompatibilityVersion;
+}
+
+function markCompatibilityCurrent(): void {
+  localStorage.setItem(localCompatibilityKey, localCompatibilityVersion);
+}
 
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -92,39 +103,64 @@ export async function mergeLocalContent(definitions: Definition[], overrides: Ca
   }
 }
 
-/** Remove o conteúdo fictício distribuído nas primeiras versões do SoulForge. */
-export async function purgeLegacyDemoContent(): Promise<void> {
+/**
+ * Atualiza dados locais de versões anteriores uma única vez por contrato.
+ *
+ * Importações e restaurações continuam validando/normalizando seus próprios
+ * arquivos; este marcador evita repetir leituras e escritas de compatibilidade
+ * a cada abertura normal da aplicação.
+ */
+export async function applyLocalDataCompatibility(options: { force?: boolean } = {}): Promise<boolean> {
+  if (!options.force && compatibilityIsCurrent()) return false;
+
   const database = await openDatabase();
   try {
     await new Promise<void>((resolve, reject) => {
       const transaction = database.transaction(storeNames, "readwrite");
-      transaction.objectStore("characters").getAll().onsuccess = (event) => {
+      const characters = transaction.objectStore("characters");
+      const installedPacks = transaction.objectStore("installedPacks");
+      const definitions = transaction.objectStore("customDefinitions");
+      const overrides = transaction.objectStore("definitionOverrides");
+
+      characters.getAll().onsuccess = (event) => {
         for (const character of (event.target as IDBRequest<Character[]>).result) {
-          if (legacyDemoCharacterIds.has(character.id)) transaction.objectStore("characters").delete(character.id);
+          if (legacyDemoCharacterIds.has(character.id)) characters.delete(character.id);
         }
       };
-      transaction.objectStore("installedPacks").delete(legacyDemoPackId);
-      const definitions = transaction.objectStore("customDefinitions").openCursor();
-      definitions.onsuccess = () => {
-        const cursor = definitions.result;
-        if (!cursor) return;
-        const definition = cursor.value as Definition;
-        if (definition.packId === legacyDemoPackId || definition.id.includes(".demo.")) cursor.delete();
-        cursor.continue();
+      installedPacks.delete(legacyDemoPackId);
+      definitions.getAll().onsuccess = (event) => {
+        for (const definition of (event.target as IDBRequest<Definition[]>).result) {
+          if (definition.packId === legacyDemoPackId || definition.id.includes(".demo.")) {
+            definitions.delete(definition.id);
+            continue;
+          }
+          const normalized = normalizeDefinitionRestTimings(definition);
+          if (normalized !== definition) definitions.put(normalized);
+        }
       };
-      const overrides = transaction.objectStore("definitionOverrides").openCursor();
-      overrides.onsuccess = () => {
-        const cursor = overrides.result;
-        if (!cursor) return;
-        const override = cursor.value as CardMarkerOverride;
-        if (override.definitionId.includes(".demo.")) cursor.delete();
-        cursor.continue();
+      overrides.getAll().onsuccess = (event) => {
+        for (const override of (event.target as IDBRequest<CardMarkerOverride[]>).result) {
+          if (override.definitionId.includes(".demo.")) {
+            overrides.delete(override.id);
+            continue;
+          }
+          const normalized = normalizeCardMarkerOverride(override);
+          if (normalized !== override) overrides.put(normalized);
+        }
       };
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
       transaction.onabort = () => reject(transaction.error);
     });
+    // Só registra sucesso depois de a transação inteira ter sido concluída.
+    markCompatibilityCurrent();
+    return true;
   } finally {
     database.close();
   }
+}
+
+/** Remove o conteúdo fictício distribuído nas primeiras versões do SoulForge. */
+export async function purgeLegacyDemoContent(): Promise<void> {
+  await applyLocalDataCompatibility({ force: true });
 }

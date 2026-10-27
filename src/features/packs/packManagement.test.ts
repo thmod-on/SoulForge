@@ -121,6 +121,7 @@ describe("gestão visual de packs", () => {
     expect(html).toContain("2 Packs importados");
     expect(html).toContain("Primeiro");
     expect(html).toContain("Segundo");
+    expect(html).toContain('class="remove-all-packs-body"');
     expect(html).toContain("Personagens, conteúdo criado manualmente, configurações e complementos locais serão preservados");
   });
 

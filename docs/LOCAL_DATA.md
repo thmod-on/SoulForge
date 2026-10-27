@@ -37,6 +37,13 @@ Regras para migrações:
 - testar a abertura de um personagem salvo antes da mudança;
 - incrementar a versão do banco quando a estrutura do IndexedDB exigir uma alteração.
 
+Compatibilidades de Definitions e limpezas de conteúdo legado do aplicativo são
+executadas em uma única transação e recebem um marcador de versão local somente
+depois de concluídas. Assim, a abertura cotidiana reutiliza o snapshot já
+preparado, sem repetir essa manutenção a cada recarga. Importação de Pack,
+backup e conteúdo compartilhável continuam normalizando arquivos antigos antes
+de gravar, independentemente do marcador do dispositivo.
+
 A categoria legada `item` das anotações é normalizada para `lore` ao listar ou
 abrir fichas locais e ao importar uma ficha. A migração preserva identificador,
 título, conteúdo e datas, e é persistida novamente sem exigir ação manual.
