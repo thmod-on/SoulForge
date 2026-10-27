@@ -94,6 +94,15 @@ indicador `navigator.onLine` orienta a interface, mas não bloqueia uma tentativ
 de sincronização autenticada; uma resposta do Worker é a confirmação efetiva de
 conectividade.
 
+Uma falha de login permanece visível na seção **Nuvem**, sem remover o botão
+para tentar novamente. O Worker devolve uma mensagem segura para credencial
+inválida, conta não autorizada ou indisponibilidade temporária. Nos logs, o
+resultado é registrado somente como `google_login_succeeded`,
+`google_login_rejected` (configuração, credencial ou allowlist) ou
+`google_login_failed` (criação de sessão); e-mails, tokens, cookies e
+credenciais não são registrados. Uma falha ao consultar a biblioteca após um
+login aceito aparece separadamente e não encerra a sessão.
+
 Os bundles não são sincronizados entre contas nem expostos por R2 público. A
 publicação local usa `pnpm run packs:publish`; ela não integra o deploy da PWA.
 
@@ -375,17 +384,17 @@ R2. A compactação de `sync_changes` e tombstones deve ocorrer exclusivamente
 pelo cron da CLD-009; não avance manualmente o piso de retenção nem apague
 dispositivos para forçar uma poda.
 
-## Migração do GitHub Pages
+## Encerramento do GitHub Pages
 
-IndexedDB não atravessa origens. Antes de trocar de endereço, crie um backup
-completo no GitHub Pages; restaure-o no endereço `workers.dev`, entre com Google
-e só então ative a sincronização.
+O Cloudflare Worker é a única origem publicada do SoulForge. O workflow e o
+modo de build do GitHub Pages foram removidos em 27 de outubro de 2026, após a
+validação da migração e porque os builds legados não participavam mais do deploy
+oficial. O site histórico deve ser desativado no painel do repositório.
 
-O GitHub Pages deve publicar um aviso de mudança com acesso ao backup e às
-instruções de restauração. A origem antiga será mantida durante a janela de
-transição de 30 dias, até **9 de novembro de 2026**. Depois dessa data, o
-workflow e o Pages poderão ser desativados somente após confirmar que o aviso
-permaneceu disponível durante todo o período.
+IndexedDB não atravessa origens. Quem ainda possuir dados em uma instalação
+histórica deve exportar um backup completo antes de limpar o navegador e então
+restaurá-lo no endereço `workers.dev`; login e sincronização devem ser ativados
+somente após a restauração local.
 
 ## Conflitos e privacidade
 

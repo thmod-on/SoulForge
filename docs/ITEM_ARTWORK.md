@@ -35,7 +35,7 @@ Geradas com a ferramenta integrada de imagens (imagegen), sem CLI/API externa. A
 
 As primeiras saídas desenharam um quadriculado, sem transparência real. Foram corrigidas pelo gerador para fundo escuro #080d13. Estas artes não possuem alpha; não tratá-las como recortes transparentes. O painel usa fundo compatível e preserva o enquadramento com contain.
 
-Prioridade: imagem própria → alias exato e categoria compatível → símbolo. O resolvedor `src/features/items/itemArtwork.ts` é apenas de apresentação: não modifica inventário nem packs e usa BASE_URL para GitHub Pages. As três artes são incluídas no precache pelo padrão WebP existente da PWA. Não fazer correspondência por fragmentos de nomes para evitar atribuir couro a armadura metálica ou arte comum a item especial.
+Prioridade: imagem própria → alias exato e categoria compatível → símbolo. O resolvedor `src/features/items/itemArtwork.ts` é apenas de apresentação: não modifica inventário nem Packs e usa `BASE_URL` da origem publicada. As três artes são incluídas no precache pelo padrão WebP existente da PWA. Não fazer correspondência por fragmentos de nomes para evitar atribuir couro a armadura metálica ou arte comum a item especial.
 
 ## Prompts finais
 

@@ -128,13 +128,11 @@ O repositório canônico é `https://github.com/thmod-on/SoulForge.git`, informa
 Quando as ferramentas permitirem:
 
 - conferir o GitHub Actions;
-- conferir a publicação no Cloudflare Worker e, durante a transição, no
-  GitHub Pages;
+- conferir a publicação no Cloudflare Worker;
 - reportar falhas de CI ou publicação sem ocultar o estado do push já realizado.
 
-O GitHub Actions publica automaticamente a branch `main` no Cloudflare Worker
-e mantém a versão de transição no GitHub Pages. Não é necessário manter um
-servidor próprio em execução.
+O GitHub Actions publica automaticamente a branch `main` no Cloudflare Worker.
+Não é necessário manter um servidor próprio em execução.
 
 ## Condições de interrupção
 

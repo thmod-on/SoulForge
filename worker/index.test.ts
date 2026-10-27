@@ -91,6 +91,7 @@ describe("Google authentication and sessions", () => {
   });
 
   it("creates an opaque secure session and updates the same Google account", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
     const first = await login(signingKey.privateKey);
     expect(first.response.status).toBe(200);
     const setCookie = first.response.headers.get("Set-Cookie") ?? "";
@@ -106,6 +107,8 @@ describe("Google authentication and sessions", () => {
     expect(second.response.status).toBe(200);
     const users = await env.DB.prepare("SELECT email, name FROM users").all<{ email: string; name: string }>();
     expect(users.results).toEqual([{ email: "renamed@example.invalid", name: "Renamed Test User" }]);
+    expect(info).toHaveBeenCalledWith({ event: "google_login_succeeded" });
+    info.mockRestore();
   });
 
   it("invalidates the server session on logout", async () => {
@@ -119,10 +122,13 @@ describe("Google authentication and sessions", () => {
   });
 
   it("rejects a valid Google identity that is not in the private allowlist", async () => {
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const credential = await signGoogleToken(signingKey.privateKey, { email: "blocked@example.invalid" });
     const response = await request("/api/auth/google", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ credential }) });
     expect(response.status).toBe(403);
     expect(await env.DB.prepare("SELECT id FROM users WHERE email = ?").bind("blocked@example.invalid").first()).toBeNull();
+    expect(warning).toHaveBeenCalledWith({ event: "google_login_rejected", reason: "not_authorized" });
+    warning.mockRestore();
   });
 
   it("invalidates the session when an authorized email is revoked", async () => {

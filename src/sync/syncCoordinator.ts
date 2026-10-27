@@ -235,10 +235,23 @@ async function applyRemoteEnvelope(envelope: SyncEnvelope): Promise<void> {
 }
 
 export async function signIn(credential: string): Promise<void> {
-  const session = await signInWithGoogle(credential);
+  let session: CloudSession;
+  try {
+    session = await signInWithGoogle(credential);
+    if (!session.authenticated || !session.user) throw new Error("O login não retornou uma sessão válida.");
+  } catch (error) {
+    updateView({ session: { authenticated: false }, status: "error", message: errorMessage(error) });
+    throw error;
+  }
   if (session.user) await prepareAccountTracking(session.user.id);
   updateView({ session, status: "pending", message: "Conta conectada. Preparando a primeira sincronização…" });
-  if (session.authenticated) await dependencies?.afterAuthenticated?.();
+  if (session.authenticated) {
+    try {
+      await dependencies?.afterAuthenticated?.();
+    } catch (error) {
+      console.warn("A preparação da biblioteca privada falhou após o login.", error instanceof Error ? error.name : "UnknownError");
+    }
+  }
   scheduleSync(0);
 }
 
@@ -288,9 +301,14 @@ export async function resolveConflict(key: string, choice: "local" | "remote" | 
 export async function mountGoogleSignIn(): Promise<void> {
   const target = document.querySelector<HTMLElement>("[data-google-signin]");
   if (!target || !view.googleClientId || view.session.authenticated) return;
-  await loadGoogleScript();
-  window.google?.accounts.id.initialize({ client_id: view.googleClientId, callback: (response) => { void signIn(response.credential); } });
-  window.google?.accounts.id.renderButton(target, { theme: "filled_black", size: "large", text: "continue_with", shape: "rectangular", width: 280 });
+  try {
+    await loadGoogleScript();
+    if (!window.google) throw new Error("Não foi possível iniciar o login do Google.");
+    window.google.accounts.id.initialize({ client_id: view.googleClientId, callback: (response) => { void signIn(response.credential).catch(() => undefined); } });
+    window.google.accounts.id.renderButton(target, { theme: "filled_black", size: "large", text: "continue_with", shape: "rectangular", width: 280 });
+  } catch (error) {
+    updateView({ status: "error", message: errorMessage(error) });
+  }
 }
 
 function loadGoogleScript(): Promise<void> {

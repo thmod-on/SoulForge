@@ -45,9 +45,12 @@ Imagens usadas em Packs devem ser originais, licenciadas para redistribuição o
 
 Mesmo quando a distribuição for permitida, dimensões, formatos, associação, cache e orçamento seguem a [Política de artes e assets visuais](ASSET_POLICY.md).
 
-## GitHub Pages e distribuição pública
+## Distribuição pública e conteúdo privado
 
-O GitHub Pages é distribuição pública. O SoulForge não deve publicar Packs que reproduzam Public Game Content até haver confirmação de que esse formato é permitido pela DPCGL ou autorização escrita da Darrington Press.
+O repositório e qualquer origem pública do SoulForge são distribuição pública.
+O SoulForge não deve publicar Packs que reproduzam Public Game Content até haver
+confirmação de que esse formato é permitido pela DPCGL ou autorização escrita da
+Darrington Press.
 
 Packs oficiais para uso privado devem ficar exclusivamente em `local-packs/`, que é ignorada pelo Git. Eles não podem ser importados pelo build público, enviados ao repositório, incluídos no Service Worker ou oferecidos para download pelo aplicativo.
 

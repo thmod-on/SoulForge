@@ -119,21 +119,42 @@ async function sessionResponse(request: Request, env: Env): Promise<Response> {
 }
 
 async function googleLogin(request: Request, env: Env): Promise<Response> {
-  if (!env.GOOGLE_CLIENT_ID) throw new HttpError(503, "Login Google ainda não foi configurado.");
+  if (!env.GOOGLE_CLIENT_ID) {
+    console.warn({ event: "google_login_rejected", reason: "configuration_missing" });
+    throw new HttpError(503, "Login Google ainda não foi configurado.");
+  }
   const body = await readJsonBody<{ credential?: string }>(request, maxGoogleLoginBytes);
-  if (!body.credential) throw new HttpError(400, "Credencial do Google ausente.");
-  const claims = await verifyGoogleCredential(body.credential, env.GOOGLE_CLIENT_ID);
+  if (!body.credential) {
+    console.warn({ event: "google_login_rejected", reason: "credential_missing" });
+    throw new HttpError(400, "Credencial do Google ausente.");
+  }
+  let claims: GoogleClaims;
+  try {
+    claims = await verifyGoogleCredential(body.credential, env.GOOGLE_CLIENT_ID);
+  } catch (error) {
+    console.warn({ event: "google_login_rejected", reason: isHttpError(error) && error.status === 503 ? "google_verification_unavailable" : "credential_invalid" });
+    throw error;
+  }
   const email = normalizeEmail(claims.email);
-  if (!await isAuthorizedEmail(email, env)) throw new HttpError(403, "Esta conta não está autorizada para o período privado de testes.");
+  if (!await isAuthorizedEmail(email, env)) {
+    console.warn({ event: "google_login_rejected", reason: "not_authorized" });
+    throw new HttpError(403, "Esta conta não está autorizada para o período privado de testes.");
+  }
   const userId = await sha256Hex(`google:${claims.sub}`);
   const now = new Date().toISOString();
-  await env.DB.prepare("INSERT INTO users (id, google_sub, email, name, picture, created_at, last_login_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(google_sub) DO UPDATE SET email = excluded.email, name = excluded.name, picture = excluded.picture, last_login_at = excluded.last_login_at")
-    .bind(userId, claims.sub, email, claims.name ?? email, claims.picture ?? null, now, now).run();
-  const token = randomToken();
-  const sessionId = crypto.randomUUID();
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-  await env.DB.prepare("INSERT INTO sessions (id, user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?)").bind(sessionId, userId, await sha256Hex(token), expiresAt, now).run();
-  return json({ authenticated: true, user: { id: userId, email, name: claims.name ?? email, picture: claims.picture } }, 200, { "Set-Cookie": cookie(token, expiresAt) });
+  try {
+    await env.DB.prepare("INSERT INTO users (id, google_sub, email, name, picture, created_at, last_login_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(google_sub) DO UPDATE SET email = excluded.email, name = excluded.name, picture = excluded.picture, last_login_at = excluded.last_login_at")
+      .bind(userId, claims.sub, email, claims.name ?? email, claims.picture ?? null, now, now).run();
+    const token = randomToken();
+    const sessionId = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    await env.DB.prepare("INSERT INTO sessions (id, user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?)").bind(sessionId, userId, await sha256Hex(token), expiresAt, now).run();
+    console.info({ event: "google_login_succeeded" });
+    return json({ authenticated: true, user: { id: userId, email, name: claims.name ?? email, picture: claims.picture } }, 200, { "Set-Cookie": cookie(token, expiresAt) });
+  } catch (error) {
+    console.error({ event: "google_login_failed", reason: "session_creation_failed", errorName: error instanceof Error ? error.name : "UnknownError" });
+    throw error;
+  }
 }
 
 async function logout(request: Request, env: Env): Promise<Response> {

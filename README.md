@@ -2,7 +2,7 @@
 
 SoulForge é uma PWA *offline-first* para acompanhar personagens de Daggerheart sem depender de servidor durante a mesa.
 
-Versão atual: `0.42.3`.
+Versão atual: `0.42.4`.
 
 ## Recursos principais
 
@@ -56,8 +56,7 @@ A versão oficial é disponibilizada pela Cloudflare:
 - Em navegadores de desktop compatíveis, use a opção de instalar o app exibida na barra de endereços ou no menu do navegador.
 
 Consulte [PWA e uso offline](docs/PWA_OFFLINE.md) para detalhes sobre cache,
-atualizações e limitações. O GitHub Pages permanece temporariamente disponível
-para exportação dos dados locais armazenados na origem anterior.
+atualizações e limitações.
 
 ## Desenvolvimento local
 
@@ -90,8 +89,8 @@ pnpm run build
 pnpm run check:performance
 ```
 
-O CI também executa essa validação em pull requests e antes dos deploys para
-Cloudflare e GitHub Pages.
+O CI também executa essa validação em pull requests e antes do deploy para
+Cloudflare.
 
 ## Estrutura principal
 
@@ -127,5 +126,4 @@ Cloudflare e GitHub Pages.
 ## Publicação
 
 O workflow `deploy-cloudflare.yml` valida, migra o D1 e publica a PWA e a API
-como um único Cloudflare Worker. Durante a transição, `deploy.yml` mantém uma
-versão estática no GitHub Pages para exportação dos dados locais existentes.
+como um único Cloudflare Worker.

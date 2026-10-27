@@ -4,6 +4,23 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.42.4]
+
+### Corrigido
+
+- falhas no login Google agora permanecem visíveis em Configurações, com uma
+  mensagem segura e nova tentativa disponível, em vez de retornar
+  silenciosamente ao modo local;
+- a sessão autenticada não é descartada se somente a consulta ou instalação da
+  Biblioteca privada falhar; o erro da biblioteca continua independente;
+- o Worker passou a registrar, sem dados pessoais, o resultado técnico do
+  login para diferenciar credencial, allowlist, configuração e sessão.
+
+### Alterado
+
+- o GitHub Pages e seu workflow legado deixaram de integrar a publicação; o
+  Cloudflare Worker é a única origem de deploy do SoulForge.
+
 ## [0.42.3]
 
 ### Adicionado

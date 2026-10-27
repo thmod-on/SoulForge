@@ -154,7 +154,7 @@ bucket privado e publica o catálogo somente ao final.
 
 Packs que reproduzem conteúdo do Daggerheart SRD ou outro material da Darrington Press devem seguir [CONTENT_POLICY.md](CONTENT_POLICY.md).
 
-Em especial, um Pack oficial destinado exclusivamente ao uso privado deve ficar em `local-packs/`, fora do controle de versão e do build público. Ele nunca deve ser importado por `src/content/installedPacks.ts`, incluído em `packs/` ou enviado ao GitHub Pages sem uma revisão explícita da licença e autorização aplicável.
+Em especial, um Pack oficial destinado exclusivamente ao uso privado deve ficar em `local-packs/`, fora do controle de versão e do build público. Ele nunca deve ser importado por `src/content/installedPacks.ts`, incluído em `packs/` ou enviado a uma origem pública sem uma revisão explícita da licença e autorização aplicável.
 
 ### Organização de packs locais
 

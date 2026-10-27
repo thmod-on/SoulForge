@@ -2,16 +2,14 @@ import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { cloudflare } from "@cloudflare/vite-plugin";
 
-const legacyGitHubPages = process.env.SOULFORGE_LEGACY_PAGES === "true";
-
 export default defineConfig(({ mode }) => ({
-  base: legacyGitHubPages ? "/SoulForge/" : "/",
+  base: "/",
   build: {
     // Vite 8 baseline: Safari 16.4+, Chrome/Edge 111+ e Firefox 114+.
     target: ["chrome111", "edge111", "firefox114", "safari16.4"]
   },
   plugins: [
-    ...(mode === "test" || mode === "development" || legacyGitHubPages ? [] : [cloudflare()]),
+    ...(mode === "test" || mode === "development" ? [] : [cloudflare()]),
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg", "apple-touch-icon.png"],

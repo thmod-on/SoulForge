@@ -76,8 +76,8 @@ fichas, Packs instalados, criações locais e complementos. A restauração baix
 uma cópia de segurança antes de substituir o estado local. **Exportar conteúdo**
 produz um `.soulforge-content.json` para compartilhar apenas autoria local e
 complementos, sem copiar Packs de terceiros. Esses arquivos continuam sendo a
-rota de recuperação independente da conta e são obrigatórios ao migrar entre a
-origem antiga do GitHub Pages e o novo Worker.
+rota de recuperação independente da conta e de mudanças futuras de dispositivo
+ou origem.
 
 ## Critérios de validação
 

@@ -81,6 +81,38 @@ describe("local-first sync lifecycle", () => {
     expect(signedOut.timers.at(-1)?.delay).toBe(0);
   });
 
+  it("reports a rejected Google login without hiding the sign-in path", async () => {
+    const harness = createHarness(true, { authenticated: false });
+    harness.cloud.signIn.mockRejectedValueOnce(new Error("Esta conta não está autorizada para o período privado de testes."));
+    const coordinator = await loadCoordinator();
+    await coordinator.initializeSyncCoordinator(createDependencies());
+
+    await expect(coordinator.signIn("rejected-credential")).rejects.toThrow("Esta conta não está autorizada");
+
+    expect(coordinator.getSyncViewModel()).toMatchObject({
+      session: { authenticated: false },
+      status: "error",
+      message: "Esta conta não está autorizada para o período privado de testes."
+    });
+    expect(harness.timers).toHaveLength(0);
+  });
+
+  it("keeps the authenticated session when private-library preparation fails", async () => {
+    const harness = createHarness(true, { authenticated: false });
+    const coordinator = await loadCoordinator();
+    const dependencies = createDependencies();
+    dependencies.afterAuthenticated = vi.fn(async () => { throw new Error("library unavailable"); });
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    await coordinator.initializeSyncCoordinator(dependencies);
+    harness.timers.length = 0;
+
+    await coordinator.signIn("accepted-credential");
+
+    expect(coordinator.getSyncViewModel()).toMatchObject({ session: authenticatedSession(), status: "pending" });
+    expect(harness.timers.at(-1)?.delay).toBe(0);
+    warning.mockRestore();
+  });
+
   it("confirma conectividade pelo Worker mesmo quando o navegador reporta offline", async () => {
     const harness = createHarness(false, authenticatedSession());
     const coordinator = await loadCoordinator();
