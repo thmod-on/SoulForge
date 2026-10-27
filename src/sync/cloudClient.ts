@@ -1,4 +1,4 @@
-import type { CloudSession, SyncPullResponse, SyncPushChange, SyncPushResponse, SyncSnapshotResponse } from "./types";
+import type { CloudAccessGrant, CloudSession, SyncPullResponse, SyncPushChange, SyncPushResponse, SyncSnapshotResponse } from "./types";
 
 // `pnpm dev` prioriza a UI local. A integração real continua disponível em
 // `pnpm dev:full` e nos builds de produção.
@@ -33,6 +33,18 @@ export function signOutCloud(): Promise<void> {
 
 export function deleteCloudAccount(): Promise<void> {
   return api("/account", { method: "DELETE", body: "{}" });
+}
+
+export function getAccessGrants(): Promise<{ grants: CloudAccessGrant[] }> {
+  return api("/access/grants");
+}
+
+export function grantAccess(email: string): Promise<void> {
+  return api("/access/grants", { method: "POST", body: JSON.stringify({ email }) });
+}
+
+export function revokeAccess(email: string): Promise<void> {
+  return api(`/access/grants/${encodeURIComponent(email)}`, { method: "DELETE", body: "{}" });
 }
 
 export function pushCloudChanges(changes: SyncPushChange[], deviceId: string, cursor: number): Promise<SyncPushResponse> {

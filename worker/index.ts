@@ -7,9 +7,11 @@ export interface Env {
   PACK_LIBRARY: R2Bucket;
   GOOGLE_CLIENT_ID?: string;
   SYNC_ENABLED?: string;
+  /** Lista privada, separada por vírgulas, das contas que administram convites. */
+  ACCESS_ADMIN_EMAILS?: string;
 }
 
-type AuthenticatedRequest = { userId: string; sessionId: string };
+type AuthenticatedRequest = { userId: string; sessionId: string; email: string };
 type GoogleClaims = { sub: string; email: string; email_verified: boolean; name?: string; picture?: string; iss: string; aud: string; exp: number };
 
 const maxImageBytes = 1_500_000;
@@ -93,7 +95,10 @@ async function handleApiRequest(request: Request, url: URL, env: Env): Promise<R
   const isMediaDownload = url.pathname.startsWith("/api/media/") && request.method === "GET";
   const isLibraryCatalog = url.pathname === "/api/library/catalog" && request.method === "GET";
   const isLibraryPack = url.pathname.startsWith("/api/library/packs/") && request.method === "GET";
-  if (!isGoogleLogin && !isAccountDeletion && !isSyncPush && !isSyncPull && !isSyncSnapshot && !isMediaUpload && !isMediaDownload && !isLibraryCatalog && !isLibraryPack) return json({ error: "Rota não encontrada." }, 404);
+  const isAccessGrantList = url.pathname === "/api/access/grants" && request.method === "GET";
+  const isAccessGrantCreate = url.pathname === "/api/access/grants" && request.method === "POST";
+  const isAccessGrantDelete = /^\/api\/access\/grants\/[^/]+$/.test(url.pathname) && request.method === "DELETE";
+  if (!isGoogleLogin && !isAccountDeletion && !isSyncPush && !isSyncPull && !isSyncSnapshot && !isMediaUpload && !isMediaDownload && !isLibraryCatalog && !isLibraryPack && !isAccessGrantList && !isAccessGrantCreate && !isAccessGrantDelete) return json({ error: "Rota não encontrada." }, 404);
   if (!isSyncEnabled(env)) throw new HttpError(503, "A sincronização está temporariamente indisponível.");
   if (isGoogleLogin) return googleLogin(request, env);
   const auth = await requireSession(request, env);
@@ -104,6 +109,9 @@ async function handleApiRequest(request: Request, url: URL, env: Env): Promise<R
   if (isMediaUpload) return uploadMedia(request, auth, env);
   if (isLibraryCatalog) return privateLibraryCatalog(auth, env);
   if (isLibraryPack) return privateLibraryPack(url, auth, env);
+  if (isAccessGrantList) return listAccessGrants(auth, env);
+  if (isAccessGrantCreate) return createAccessGrant(request, auth, env);
+  if (isAccessGrantDelete) return revokeAccessGrant(decodeURIComponent(url.pathname.slice("/api/access/grants/".length)), auth, env);
   return downloadMedia(decodeURIComponent(url.pathname.slice("/api/media/".length)), auth, env);
 }
 
@@ -111,7 +119,7 @@ async function sessionResponse(request: Request, env: Env): Promise<Response> {
   try {
     const auth = await requireSession(request, env);
     const user = await env.DB.prepare("SELECT id, email, name, picture FROM users WHERE id = ?").bind(auth.userId).first<{ id: string; email: string; name: string; picture?: string }>();
-    return json(user ? { authenticated: true, user } : { authenticated: false });
+    return json(user ? { authenticated: true, user, isAccessAdmin: isAccessAdmin(auth.email, env) } : { authenticated: false });
   } catch (error) {
     if (isHttpError(error) && (error.status === 401 || error.status === 403)) return json({ authenticated: false });
     throw error;
@@ -150,7 +158,7 @@ async function googleLogin(request: Request, env: Env): Promise<Response> {
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
     await env.DB.prepare("INSERT INTO sessions (id, user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?)").bind(sessionId, userId, await sha256Hex(token), expiresAt, now).run();
     console.info({ event: "google_login_succeeded" });
-    return json({ authenticated: true, user: { id: userId, email, name: claims.name ?? email, picture: claims.picture } }, 200, { "Set-Cookie": cookie(token, expiresAt) });
+    return json({ authenticated: true, user: { id: userId, email, name: claims.name ?? email, picture: claims.picture }, isAccessAdmin: isAccessAdmin(email, env) }, 200, { "Set-Cookie": cookie(token, expiresAt) });
   } catch (error) {
     console.error({ event: "google_login_failed", reason: "session_creation_failed", errorName: error instanceof Error ? error.name : "UnknownError" });
     throw error;
@@ -172,7 +180,53 @@ async function requireSession(request: Request, env: Env): Promise<Authenticated
     await env.DB.prepare("DELETE FROM sessions WHERE id = ?").bind(session.id).run();
     throw new HttpError(403, "Esta conta não está autorizada para o período privado de testes.");
   }
-  return { userId: session.user_id, sessionId: session.id };
+  return { userId: session.user_id, sessionId: session.id, email: normalizeEmail(session.email) };
+}
+
+type AccessGrant = { email: string; createdAt: string };
+
+function accessAdminEmails(env: Env): Set<string> {
+  return new Set((env.ACCESS_ADMIN_EMAILS ?? "").split(",").map(normalizeEmail).filter(Boolean));
+}
+
+function isAccessAdmin(email: string, env: Env): boolean {
+  return accessAdminEmails(env).has(normalizeEmail(email));
+}
+
+function assertAccessAdmin(auth: AuthenticatedRequest, env: Env): void {
+  if (!isAccessAdmin(auth.email, env)) throw new HttpError(403, "Sua conta não possui permissão para administrar acessos.");
+}
+
+function validateAccessEmail(value: unknown): string {
+  if (typeof value !== "string") throw new HttpError(400, "Informe um endereço de e-mail válido.");
+  const email = normalizeEmail(value);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) throw new HttpError(400, "Informe um endereço de e-mail válido.");
+  return email;
+}
+
+async function listAccessGrants(auth: AuthenticatedRequest, env: Env): Promise<Response> {
+  assertAccessAdmin(auth, env);
+  const grants = await env.DB.prepare("SELECT email, created_at FROM authorized_emails ORDER BY email COLLATE NOCASE").all<{ email: string; created_at: string }>();
+  return json({ grants: grants.results.map((grant): AccessGrant => ({ email: grant.email, createdAt: grant.created_at })) }, 200, { "Cache-Control": "private, no-store" });
+}
+
+async function createAccessGrant(request: Request, auth: AuthenticatedRequest, env: Env): Promise<Response> {
+  assertAccessAdmin(auth, env);
+  const body = await readJsonBody<{ email?: unknown }>(request, 4 * 1024);
+  const email = validateAccessEmail(body.email);
+  await env.DB.prepare("INSERT INTO authorized_emails (email, created_at) VALUES (?, ?) ON CONFLICT(email) DO NOTHING").bind(email, new Date().toISOString()).run();
+  return new Response(null, { status: 204 });
+}
+
+async function revokeAccessGrant(value: string, auth: AuthenticatedRequest, env: Env): Promise<Response> {
+  assertAccessAdmin(auth, env);
+  const email = validateAccessEmail(value);
+  if (isAccessAdmin(email, env)) throw new HttpError(400, "A conta administradora não pode ser removida por esta tela.");
+  await env.DB.batch([
+    env.DB.prepare("DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE email = ?)").bind(email),
+    env.DB.prepare("DELETE FROM authorized_emails WHERE email = ?").bind(email)
+  ]);
+  return new Response(null, { status: 204 });
 }
 
 async function privateLibraryCatalog(_auth: AuthenticatedRequest, env: Env): Promise<Response> {

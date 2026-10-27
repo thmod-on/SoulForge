@@ -1,5 +1,30 @@
 # Artes de cartas
 
+## Osso — nível 1
+
+Em 27 de outubro de 2026, três artes fornecidas pela pessoa usuária passaram a
+representar as habilidades iniciais de Osso. Elas mantêm ação física, arquitetura
+de fortaleza e iluminação de fogo prática: corrida para um ataque imediato,
+antecipação de flecha à distância e esquiva de golpe corpo a corpo.
+
+| ID | Arquivo | Dimensões | Tamanho |
+| --- | --- | ---: | ---: |
+| `card.core.bone.p1-7` | `deft-maneuvers.webp` | 960 × 960 | 73.594 bytes |
+| `card.core.bone.p1-8` | `i-see-it-coming.webp` | 960 × 960 | 84.262 bytes |
+| `card.core.bone.p1-9` | `untouchable.webp` | 960 × 960 | 114.044 bytes |
+
+## Códice — nível 2
+
+Os grimórios fornecidos pela pessoa usuária para Sitil e Vagrás usam três faixas
+visuais para organizar os três efeitos de cada carta. Sitil representa alteração
+de aparência, duplicação de alvo e ilusão; Vagrás representa tranca rúnica, porta
+arcana e revelação de magia oculta.
+
+| ID | Arquivo | Dimensões | Tamanho |
+| --- | --- | ---: | ---: |
+| `card.core.codex.p4-7` | `book-of-sitil.webp` | 960 × 960 | 105.936 bytes |
+| `card.core.codex.p4-8` | `book-of-vagras.webp` | 960 × 960 | 141.626 bytes |
+
 ## Sage — nível 1
 
 Em 27 de outubro de 2026, as três cartas de nível 1 do domínio Sage receberam
@@ -98,20 +123,17 @@ e todos os dedos da duelista legíveis.
 
 ### Redemoinho
 
-A duelista aparece sozinha em uma área livre da taberna. O pé esquerdo sustenta
-o giro horário e o direito avança em um passo curto; ambas as sandálias ficam
-visíveis. Uma cimitarra se eleva atrás da cabeça e a outra conduz o corte à
-frente, cada uma presa a uma mão completa. A mão erguida envolve o cabo com os
-dedos fechados e o polegar oposto, alinhada ao punho e ao antebraço. Cabelo,
-saia, faixas, um pouco de bebida deslocada e reflexos discretos no aço comunicam
-a amplitude do golpe.
-Personagem e lâminas cabem no recorte central 2:3, sem rastros mágicos.
+A imagem fornecida substitui a versão anterior. A duelista central gira com duas
+cimitarras em uma taberna, enquanto vários inimigos muito próximos são afastados
+pela amplitude física do golpe. Curvas de ar, detritos e água deslocada indicam
+velocidade; a personagem, as duas lâminas e a área de combate permanecem legíveis
+no recorte central.
 
 | ID | Arquivo | Dimensões | Tamanho |
 | --- | --- | ---: | ---: |
 | `card.core.blade.p1-4` | `get-back-up.webp` | 960 × 960 | 107.084 bytes |
 | `card.core.blade.p1-5` | `not-good-enough.webp` | 960 × 960 | 101.964 bytes |
-| `card.core.blade.p1-6` | `whirlwind.webp` | 960 × 960 | 88.626 bytes |
+| `card.core.blade.p1-6` | `whirlwind.webp` | 960 × 960 | 120.716 bytes |
 
 As três imagens são WebP opacos abaixo de 150 KB. O resolvedor usa URLs com
 revisão explícita e mantém a prioridade de imagens fornecidas por Packs ou pela
@@ -131,17 +153,10 @@ coerentes até a oclusão, sem penetração. A guarda do adversário único se
 abre; a segunda cimitarra fica pronta, ambas as mãos com cinco dedos conectados,
 interior de taberna, sem ferimento, sangue, magia ou armas duplicadas.
 
-**Redemoinho:** uma única duelista adulta em uma taberna escura, usando o visual
-de Levante-se. Silhueta dinâmica inspirada apenas no gesto da referência enviada:
-pé esquerdo apoiado como pivô, direito avançando, cimitarra esquerda elevada
-atrás da cabeça e direita varrendo o espaço à frente. A mão erguida segura o
-cabo com quatro dedos curvados e polegar oposto; punho ligado ao antebraço. Duas
-mãos de cinco dedos, duas sandálias distintas e duas lâminas completas dentro da
-faixa central 2:3.
-Cabelo, saia e faixas acompanham o giro; bebida deslocada no piso e reflexos
-contidos no aço sugerem velocidade. Uma lanterna lateral fornece luz prática
-baixa sobre o piso escuro, sem outros personagens, rastro luminoso, vórtice,
-sangue ou brilho difuso.
+**Redemoinho:** arte fornecida pela pessoa usuária. Duelista adulta de duas
+cimitarras gira no centro de uma taberna contra diversos adversários próximos;
+curvas de ar, poeira, água e fragmentos deslocados mostram a amplitude física do
+golpe. Não há texto, logotipo ou marca d'água.
 
 ## Dread — nível 1
 

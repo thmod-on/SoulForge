@@ -2,7 +2,7 @@ import type { Character, Definition, GameMarkerDefinition } from "../../domain/t
 import { deleteCharacter, listCharacters, loadCharacter, saveCharacter } from "../../storage/characterRepository";
 import { deleteCardMarkerOverride, deleteCustomDefinition, loadCardMarkerOverrides, loadCustomDefinitions, putCardMarkerOverride, saveCardMarkerOverride, saveCustomDefinition, type CardMarkerOverride } from "../../storage/compendiumRepository";
 import { loadLocalDataSnapshot } from "../../storage/localDataRepository";
-import { getSyncViewModel, initializeSyncCoordinator, markForSync, mountGoogleSignIn, queueLocalSnapshot, removeCloudAccount, resolveConflict, runSync, signOut } from "../../sync/syncCoordinator";
+import { getSyncViewModel, grantPrivateAccess, initializeSyncCoordinator, markForSync, mountGoogleSignIn, queueLocalSnapshot, refreshAccessGrants, removeCloudAccount, resolveConflict, revokePrivateAccess, runSync, signOut } from "../../sync/syncCoordinator";
 
 export { getSyncViewModel, mountGoogleSignIn, queueLocalSnapshot };
 
@@ -36,7 +36,18 @@ export function handleCloudAction(target: HTMLElement): boolean {
   else if (target.closest('[data-action="cloud-sign-out"]')) void signOut();
   else if (target.closest('[data-action="delete-cloud-account"]')) {
     if (window.confirm("Excluir permanentemente todas as fichas, criações e imagens da nuvem? Os dados deste dispositivo serão preservados.")) void removeCloudAccount();
+  } else if (target.closest('[data-action="refresh-private-access"]')) {
+    void refreshAccessGrants();
+  } else if (target.closest('[data-action="grant-private-access"]')) {
+    const input = document.querySelector<HTMLInputElement>("[data-private-access-email]");
+    if (!input) return true;
+    void grantPrivateAccess(input.value).then(() => { input.value = ""; }).catch(() => undefined);
   } else {
+    const revoke = target.closest<HTMLElement>("[data-action='revoke-private-access']");
+    if (revoke?.dataset.email) {
+      if (window.confirm(`Revogar o acesso de ${revoke.dataset.email}? A pessoa precisará de uma nova autorização para entrar novamente.`)) void revokePrivateAccess(revoke.dataset.email).catch(() => undefined);
+      return true;
+    }
     const button = target.closest<HTMLElement>("[data-sync-conflict]");
     const key = button?.dataset.syncConflict;
     const choice = button?.dataset.syncChoice;

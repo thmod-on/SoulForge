@@ -36,4 +36,20 @@ describe("renderSettings", () => {
     expect(html).not.toContain("Regras de Carga");
     expect(html).not.toContain("Progressão");
   });
+
+  it("mostra a administração de acesso somente para a conta administradora", () => {
+    const base = {
+      appVersion: "0.42.4",
+      state: { installedPacks: [], packImportOpen: false, removeAllInstalledPacksOpen: false, privateLibrary: { loading: false, bootstrapComplete: false } },
+      escapeHtml: (value: string) => value,
+      getPackDisplayName: (packId: string) => packId,
+      getPackDisplayDescription: () => ""
+    };
+    const member = renderSettings({ ...base, sync: { session: { authenticated: true, user: { id: "member", email: "member@example.invalid", name: "Member" } }, status: "synced", conflicts: [], syncEnabled: true } });
+    expect(member).not.toContain("Acesso privado");
+    const admin = renderSettings({ ...base, sync: { session: { authenticated: true, isAccessAdmin: true, user: { id: "admin", email: "admin@example.invalid", name: "Admin" } }, status: "synced", conflicts: [], syncEnabled: true, accessGrants: [{ email: "member@example.invalid", createdAt: "2026-10-27T00:00:00.000Z" }] } });
+    expect(admin).toContain("Acesso privado");
+    expect(admin).toContain('data-action="grant-private-access"');
+    expect(admin).toContain("member@example.invalid");
+  });
 });

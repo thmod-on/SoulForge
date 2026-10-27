@@ -79,13 +79,22 @@ migrações.
 As rotas `/api/library/catalog` e `/api/library/packs/:id/:version` exigem uma
 sessão válida. O login consulta a tabela D1 `authorized_emails` antes de criar
 usuário ou sessão e a confere novamente em cada acesso autenticado; remover um
-e-mail dessa tabela invalida a próxima utilização da sessão. Para convidar uma
-conta, use o Console D1 ou execute uma instrução equivalente a:
+e-mail dessa tabela invalida a próxima utilização da sessão. Quando a conta
+definida na secret privada `ACCESS_ADMIN_EMAILS` entra no SoulForge, a seção
+**Configurações → Nuvem → Acesso privado** permite autorizar ou revogar e-mails
+sem usar SQL. Essa secret é uma lista separada por vírgulas, configurada somente
+no Worker (por exemplo, `pnpm exec wrangler secret put ACCESS_ADMIN_EMAILS`);
+ela não pertence ao Git, ao bundle da PWA nem aos arquivos públicos. A
+revogação encerra imediatamente as sessões existentes da conta, sem apagar seus
+dados remotos.
 
-```sql
-INSERT INTO authorized_emails (email, created_at)
-VALUES ('pessoa@example.com', datetime('now'));
-```
+Enquanto o OAuth Google estiver no modo de teste, conceder acesso no SoulForge
+não substitui a inclusão manual da mesma conta em **Público-alvo → Usuários de
+teste** no Console Google. O Google prova a identidade; `authorized_emails`
+continua sendo a autorização efetiva para sincronização e biblioteca privada.
+O SoulForge não tenta automatizar, consultar ou espelhar essa lista do Google:
+ela não é uma API de autorização de conteúdo e não deve exigir credenciais
+administrativas Google no Worker.
 
 Quando a pessoa autorizada faz login depois de abrir o aplicativo, a sessão
 notifica explicitamente a biblioteca privada: em um dispositivo sem Packs, o

@@ -1,2 +1,4 @@
 GOOGLE_CLIENT_ID="your-google-web-client-id.apps.googleusercontent.com"
 SYNC_ENABLED="true"
+# Somente desenvolvimento local. Em produção, use uma secret do Worker.
+ACCESS_ADMIN_EMAILS="owner@example.com"

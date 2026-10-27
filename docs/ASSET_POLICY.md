@@ -336,6 +336,15 @@ As URLs revisionadas atualizam o cache sem substituir artes fornecidas por Packs
 ou pela pessoa usuária. Após a integração, o build contém 80 entradas e 6.177,82
 KiB no precache, ainda dentro da faixa saudável do Estágio 1.
 
+Em 27 de outubro de 2026, seis artes fornecidas pela pessoa usuária foram
+incorporadas após otimização: a nova versão de Redemoinho, os grimórios de Sitil
+e Vagrás e três habilidades de Osso. Os WebPs opacos de 960 × 960 ocupam juntos
+640.178 bytes; a substituição de Redemoinho preserva o arquivo estável e as cinco
+demais entradas usam novos IDs exatos. As URLs revisionadas preservam prioridade
+de imagem própria de Packs ou da pessoa usuária. Após a integração, o build contém
+85 entradas e 6.720,93 KiB no precache, ainda dentro da faixa saudável do Estágio
+1.
+
 ## Pendências planejadas
 
 1. Criar o manifesto e o verificador automatizado antes de ultrapassar 40 artes.

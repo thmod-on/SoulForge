@@ -70,6 +70,12 @@ export type CloudUser = {
 export type CloudSession = {
   authenticated: boolean;
   user?: CloudUser;
+  isAccessAdmin?: boolean;
+};
+
+export type CloudAccessGrant = {
+  email: string;
+  createdAt: string;
 };
 
 export function syncKey(type: SyncResourceType, id: string): string {

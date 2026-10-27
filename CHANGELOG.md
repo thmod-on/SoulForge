@@ -4,6 +4,24 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.43.0]
+
+### Adicionado
+
+- contas administrativas configuradas privadamente no Worker podem listar,
+  autorizar e revogar o acesso de participantes de testes pela seção **Acesso
+  privado** em Configurações → Nuvem; revogações encerram as sessões existentes
+  da conta imediatamente;
+- Livro de Sitil, Livro de Vagrás, Manobras Ágeis, Eu Vi Isso Chegando e
+  Intocável receberam artes otimizadas associadas a IDs estáveis.
+
+### Alterado
+
+- Redemoinho passa a usar a nova arte aprovada, com URL revisionada para evitar
+  que a cópia anterior da PWA permaneça em cache;
+- as artes de Sage foram refinadas com figurino ritual aberto e a postura de
+  caça revisada de Rastreador Talentoso.
+
 ## [0.42.4]
 
 ### Corrigido

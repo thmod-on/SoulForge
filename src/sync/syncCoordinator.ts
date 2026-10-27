@@ -18,17 +18,20 @@ import {
 import {
   deleteCloudAccount,
   downloadCloudMedia,
+  getAccessGrants,
   getCloudConfig,
   getCloudSession,
+  grantAccess as grantCloudAccess,
   pullCloudChanges,
   pullCloudSnapshot,
   pushCloudChanges,
   signInWithGoogle,
   signOutCloud,
+  revokeAccess as revokeCloudAccess,
   uploadCloudMedia
 } from "./cloudClient";
 import { replaceDataUrlsWithMedia, replaceMediaWithDataUrls } from "./mediaTransfer";
-import type { CloudSession, SyncConflict, SyncEnvelope, SyncPushChange, SyncResourceType, SyncStatus } from "./types";
+import type { CloudAccessGrant, CloudSession, SyncConflict, SyncEnvelope, SyncPushChange, SyncResourceType, SyncStatus } from "./types";
 
 export type SyncCoordinatorDependencies = {
   snapshot(): Promise<{ characters: Character[]; definitions: Definition[]; overrides: CardMarkerOverride[] }>;
@@ -51,6 +54,9 @@ export type SyncViewModel = {
   conflicts: SyncConflict[];
   googleClientId?: string;
   syncEnabled: boolean;
+  accessGrants?: CloudAccessGrant[];
+  accessLoading?: boolean;
+  accessError?: string;
 };
 
 const view: SyncViewModel = { session: { authenticated: false }, status: navigator.onLine ? "local-only" : "offline", conflicts: [], syncEnabled: false };
@@ -84,6 +90,7 @@ export async function initializeSyncCoordinator(nextDependencies: SyncCoordinato
     Object.assign(view, { googleClientId: config.googleClientId, syncEnabled: config.syncEnabled, session, conflicts });
     updateView({ status: session.authenticated ? "pending" : navigator.onLine ? "local-only" : "offline", message: undefined });
     if (session.authenticated) {
+      if (session.isAccessAdmin) void refreshAccessGrants();
       await dependencies.afterAuthenticated?.();
       scheduleSync(0);
     }
@@ -246,6 +253,7 @@ export async function signIn(credential: string): Promise<void> {
   if (session.user) await prepareAccountTracking(session.user.id);
   updateView({ session, status: "pending", message: "Conta conectada. Preparando a primeira sincronização…" });
   if (session.authenticated) {
+    if (session.isAccessAdmin) void refreshAccessGrants();
     try {
       await dependencies?.afterAuthenticated?.();
     } catch (error) {
@@ -257,7 +265,38 @@ export async function signIn(credential: string): Promise<void> {
 
 export async function signOut(): Promise<void> {
   await signOutCloud();
-  updateView({ session: { authenticated: false }, status: navigator.onLine ? "local-only" : "offline", message: "Os dados locais foram preservados." });
+  updateView({ session: { authenticated: false }, accessGrants: undefined, accessLoading: false, accessError: undefined, status: navigator.onLine ? "local-only" : "offline", message: "Os dados locais foram preservados." });
+}
+
+export async function refreshAccessGrants(): Promise<void> {
+  if (!view.session.authenticated || !view.session.isAccessAdmin) return;
+  updateView({ accessLoading: true, accessError: undefined });
+  try {
+    const result = await getAccessGrants();
+    updateView({ accessGrants: result.grants, accessLoading: false });
+  } catch (error) {
+    updateView({ accessLoading: false, accessError: errorMessage(error) });
+  }
+}
+
+export async function grantPrivateAccess(email: string): Promise<void> {
+  try {
+    await grantCloudAccess(email);
+    await refreshAccessGrants();
+  } catch (error) {
+    updateView({ accessError: errorMessage(error) });
+    throw error;
+  }
+}
+
+export async function revokePrivateAccess(email: string): Promise<void> {
+  try {
+    await revokeCloudAccess(email);
+    await refreshAccessGrants();
+  } catch (error) {
+    updateView({ accessError: errorMessage(error) });
+    throw error;
+  }
 }
 
 export async function removeCloudAccount(): Promise<void> {

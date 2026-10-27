@@ -139,6 +139,38 @@ describe("Google authentication and sessions", () => {
   });
 });
 
+describe("private access administration", () => {
+  async function loginAsAdmin(): Promise<{ cookie: string; workerEnv: Env }> {
+    const workerEnv = { ...env, ACCESS_ADMIN_EMAILS: "admin@example.invalid" } as Env;
+    await env.DB.prepare("INSERT INTO authorized_emails (email, created_at) VALUES (?, ?)").bind("admin@example.invalid", new Date().toISOString()).run();
+    const credential = await signGoogleToken(signingKey.privateKey, { email: "admin@example.invalid", sub: "access-admin" });
+    const response = await request("/api/auth/google", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ credential }) }, undefined, workerEnv);
+    expect(response.status).toBe(200);
+    return { cookie: (response.headers.get("Set-Cookie") ?? "").split(";")[0], workerEnv };
+  }
+
+  it("exposes grants only to the configured administrator and creates normalized entries", async () => {
+    const { cookie, workerEnv } = await loginAsAdmin();
+    await expect((await request("/api/session", {}, cookie, workerEnv)).json()).resolves.toMatchObject({ authenticated: true, isAccessAdmin: true });
+    expect((await request("/api/access/grants", {}, cookie)).status).toBe(403);
+    expect((await request("/api/access/grants", {}, cookie, workerEnv)).status).toBe(200);
+    expect((await request("/api/access/grants", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: "  Friend@Example.Invalid " }) }, cookie, workerEnv)).status).toBe(204);
+    expect((await request("/api/access/grants", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: "friend@example.invalid" }) }, cookie, workerEnv)).status).toBe(204);
+    await expect(env.DB.prepare("SELECT email FROM authorized_emails WHERE email = ?").bind("friend@example.invalid").first()).resolves.toEqual({ email: "friend@example.invalid" });
+    await expect(env.DB.prepare("SELECT COUNT(*) AS count FROM authorized_emails WHERE email = ?").bind("friend@example.invalid").first<{ count: number }>()).resolves.toEqual({ count: 1 });
+    expect((await request("/api/access/grants", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: "not-an-email" }) }, cookie, workerEnv)).status).toBe(400);
+  });
+
+  it("revokes an account immediately without allowing the administrator to lock themselves out", async () => {
+    const { cookie, workerEnv } = await loginAsAdmin();
+    const member = await login(signingKey.privateKey, { email: "member@example.invalid", sub: "access-member" });
+    expect((await request("/api/access/grants/member%40example.invalid", { method: "DELETE", body: "{}" }, cookie, workerEnv)).status).toBe(204);
+    expect((await request("/api/session", {}, member.cookie)).status).toBe(200);
+    await expect((await request("/api/session", {}, member.cookie)).json()).resolves.toEqual({ authenticated: false });
+    expect((await request("/api/access/grants/admin%40example.invalid", { method: "DELETE", body: "{}" }, cookie, workerEnv)).status).toBe(400);
+  });
+});
+
 describe("private Pack library", () => {
   const catalog = {
     format: "soulforge-private-library-v1",

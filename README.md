@@ -2,7 +2,7 @@
 
 SoulForge é uma PWA *offline-first* para acompanhar personagens de Daggerheart sem depender de servidor durante a mesa.
 
-Versão atual: `0.42.4`.
+Versão atual: `0.43.0`.
 
 ## Recursos principais
 
@@ -25,7 +25,8 @@ Versão atual: `0.42.4`.
   permitindo conteúdo customizado sem alterar o catálogo público; as 210 cartas
   Core e Hope & Fear foram revisadas com resumo para listagens e efeito integral
   para o detalhe, e cartas selecionadas de Arcano, Códice, Esplendor, Lâmina,
-  Sábio, Valor e Dread possuem artes originais do SoulForge; famílias
+  Osso, Sábio, Valor e Dread possuem artes originais ou fornecidas para o
+  SoulForge; famílias
   convencionais de armas e armaduras também recebem artes genéricas sem
   substituir imagens próprias;
 - descansos curtos e longos com movimentos declarativos, incluindo bônus
@@ -38,7 +39,8 @@ Versão atual: `0.42.4`.
   correspondente no seletor de personagens; contas autorizadas também recebem
   uma biblioteca privada de Packs, instalada em dispositivo novo — inclusive
   quando o login ocorre depois da abertura — e atualizada somente mediante
-  confirmação; remoções e atualizações de Packs usados
+  confirmação; contas administradoras configuradas no Worker podem autorizar ou
+  revogar o acesso privado de participantes; remoções e atualizações de Packs usados
   apresentam o impacto nas fichas, mas preservam suas referências;
 - login Google opcional para sincronizar fichas, criações locais e imagens sem
   tornar a mesa dependente da conexão; o Worker restringe origens, tamanhos de
