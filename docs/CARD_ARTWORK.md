@@ -1,5 +1,76 @@
 # Artes de cartas
 
+## Sage — nível 1
+
+Em 27 de outubro de 2026, as três cartas de nível 1 do domínio Sage receberam
+artes originais do SoulForge. Uma rastreadora adulta recorrente une a coleção:
+tranças longas, pintura de argila cinza com marcas vermelho-óxido, faixas nos
+antebraços, colares de contas de osso e saia assimétrica de peles e fibras. A
+revisão de figurino usa top mínimo de folhas, fibras e cordões com cobertura
+completa, ombros e abdômen expostos de forma adulta e prática. A referência de
+silhueta e materiais não foi copiada; não há cocar de penas. Floresta úmida,
+casca escura e verde-musgo localizado preservam uma fantasia naturalista sem
+brilho difuso, runas ou partículas.
+
+### Rastreador Talentoso
+
+A rastreadora assume posição baixa de caça sobre solo úmido, com rosto muito perto
+das folhas e pegadas recentes, quadris elevados e as duas mãos completas apoiadas
+no chão. Depois de farejar o rastro, ela olha diretamente para a pessoa que segura
+a carta. Cenho franzido, lábio superior levemente contraído e dentes discretamente
+visíveis sugerem instinto lupino sem transformação corporal. A mão dianteira tem
+dedos mais finos e unhas naturais sujas, mas sustenta o peso de modo físico.
+
+### Língua da Natureza
+
+Em uma pequena clareira, ela se ajoelha ao lado das raízes expostas de uma árvore
+antiga e apoia uma mão na casca. Uma única raposa escuta de perto, enquanto folhas
+e uma raiz se orientam sutilmente para a conversa. A cena comunica troca e escuta,
+não controle mágico.
+
+### Enredar Feroz
+
+Em uma ruína tomada pela floresta, a rastreadora finca uma mão no solo e raízes
+grossas com vinhas prendem as pernas e o braço armado de um único agressor. Ele
+permanece de pé, porém desequilibrado e fisicamente contido; sem ferimento gráfico.
+A seiva verde fica restrita às raízes ativas.
+
+| ID | Arquivo | Dimensões | Tamanho |
+| --- | --- | ---: | ---: |
+| `card.core.sage.p3-1` | `gifted-tracker.webp` | 960 × 960 | 131.984 bytes |
+| `card.core.sage.p3-2` | `natures-tongue.webp` | 960 × 960 | 120.626 bytes |
+| `card.core.sage.p3-3` | `vicious-entangle.webp` | 960 × 960 | 144.074 bytes |
+
+As artes são WebP opacos abaixo de 150 KB. O resolvedor usa IDs exatos e versões
+explícitas de URL, preservando a prioridade de imagens fornecidas por Packs ou
+pela pessoa usuária.
+
+### Prompts finais
+
+**Rastreador Talentoso:** rastreadora adulta humana abaixada em solo úmido,
+trilhas e pegadas recentes, ambas as mãos anatomicamente completas apoiadas no
+chão, rosto próximo do rastro, quadris elevados e olhar direto para a câmera após
+farejar; cenho franzido e leve mostrar de dentes, sem orelhas, focinho ou
+transformação. A mão dianteira tem cinco dedos mais finos, unhas naturais sujas e
+punho anatômico. Tranças longas, argila cinza, marcas vermelho-óxido, top de folhas
+e fibras com cordões, saia de peles e franjas, faixas de couro nos braços e pernas
+e adornos de osso; floresta de escala humana, sem brilho, runas, sangue, texto ou
+marcas d'água.
+
+**Língua da Natureza:** a mesma rastreadora se ajoelha diante de árvore antiga,
+mão completa na casca e uma única raposa adulta como interlocutora; veste top de
+fibras e folhas com cordões, saia assimétrica de peles e faixas de couro, todos
+práticos e com cobertura completa. Raiz e folhas respondem de forma sutil.
+Clareira úmida, luz baixa do dossel, verde-musgo em vegetação e seiva discreta,
+sem magia ostensiva, runas, texto ou marcas d'água.
+
+**Enredar Feroz:** a mesma rastreadora finca a mão no solo de ruína tomada por
+floresta; raízes espinhosas e vinhas reais prendem as pernas e o braço armado de
+um único agressor adulto. O top de fibras e a saia de peles e franjas permanecem
+visualmente distintos das vinhas. Ambos em escala humana e alcance próximo;
+anatomia física, seiva verde somente nas raízes, sem sangue, ferimentos gráficos,
+aura, portal, runas, texto ou marcas d'água.
+
 ## Lâmina — nível 1
 
 Em 26 de outubro de 2026, as três cartas de nível 1 do domínio Lâmina receberam
@@ -71,6 +142,61 @@ Cabelo, saia e faixas acompanham o giro; bebida deslocada no piso e reflexos
 contidos no aço sugerem velocidade. Uma lanterna lateral fornece luz prática
 baixa sobre o piso escuro, sem outros personagens, rastro luminoso, vórtice,
 sangue ou brilho difuso.
+
+## Dread — nível 1
+
+Em 27 de outubro de 2026, Golpe Maculador e Véu Umbrático receberam artes
+originais inspiradas na atmosfera de Voz do Pavor. A mesma conjuradora adulta,
+de cabelos negros e vestes preto-ameixa, une a coleção em ruínas góticas de
+escala humana. Azul-preto, violeta escuro e aço envelhecido mantêm o terror
+sobrenatural localizado, sem sangue, gore, runas ou brilho difuso.
+
+### Voz do Pavor
+
+A arte existente permanece a referência visual da personagem e do domínio:
+palavras convertidas em terror espectral contra um único adversário em ruínas
+úmidas à noite.
+
+### Golpe Maculador
+
+A conjuradora dirige um único arco violeta-escuro ao antebraço e à empunhadura
+de um adversário armado. Fissuras opacas contaminam somente metal e couro, e o
+braço abaixado comunica a perda de força do próximo ataque sem ferimento gráfico.
+
+### Véu Umbrático
+
+A conjuradora sustenta uma postura defensiva no corredor molhado. Uma flecha
+única perde o rumo no contato com uma faixa assimétrica de sombra azul-preta,
+marcada por violeta muito discreto. O véu não fecha uma cúpula nem forma uma
+armadura: é uma distorção curta que reduz a precisão do ataque.
+
+| ID | Arquivo | Dimensões | Tamanho |
+| --- | --- | ---: | ---: |
+| `card.hope-fear.dread.voice-of-dread` | `voice-of-dread.jpg` | 960 × 960 | 123.253 bytes |
+| `card.hope-fear.dread.blighting-strike` | `blighting-strike.webp` | 960 × 960 | 77.102 bytes |
+| `card.hope-fear.dread.umbral-veil` | `umbral-veil.webp` | 960 × 960 | 87.374 bytes |
+
+As duas novas imagens são WebP opacos abaixo de 150 KB. O resolvedor usa IDs
+exatos e URLs revisionadas, preservando a prioridade de imagens fornecidas pela
+pessoa usuária ou pelo Pack.
+
+### Prompts finais
+
+**Golpe Maculador:** conjuradora adulta recorrente de Dread, cabelos negros
+longos e vestes preto-ameixa, em ruínas góticas úmidas à noite. Um arco curto
+violeta-escuro sai da mão e atinge somente o antebraço e a empunhadura da espada
+de um adversário adulto. Fissuras opacas enfraquecem metal e couro; ele continua
+de pé, mas deixa a arma baixar. Pedra molhada, uma vela distante, anatomia e
+espada físicas, sem sangue, ferimento gráfico, explosão, portal, runas, texto,
+rostos espectrais ou brilho difuso.
+
+**Véu Umbrático:** a mesma conjuradora em postura defensiva dentro de corredor
+gótico de pedra úmida, com uma flecha única desviada perto da mão erguida. Uma
+faixa estreita e assimétrica de sombra azul-preta, com borda violeta mínima,
+distorce somente o ponto de contato. A mão erguida tem cinco dedos completos,
+conectados ao punho em gesto defensivo natural. Rosto, mão, flecha e desvio
+permanecem no recorte central; sem cúpula, aura integral, escudo sólido, sangue,
+partículas, runas, texto ou brilho amplo.
 
 ## Arcano — nível 1
 

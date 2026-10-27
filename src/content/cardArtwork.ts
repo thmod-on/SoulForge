@@ -14,6 +14,9 @@ const artworkByCardId: Readonly<Record<string, string>> = {
   "card.core.grace.p2-4": "deft-deceiver.webp",
   "card.core.grace.p2-5": "enrapture.webp",
   "card.core.grace.p2-6": "inspirational-words.jpg",
+  "card.core.sage.p3-1": "gifted-tracker.webp",
+  "card.core.sage.p3-2": "natures-tongue.webp",
+  "card.core.sage.p3-3": "vicious-entangle.webp",
   "card.core.splendor.p3-4": "bolt-beacon.webp",
   "card.core.splendor.p3-5": "mending-touch.webp",
   "card.core.splendor.p3-6": "reassurance.webp",
@@ -21,6 +24,8 @@ const artworkByCardId: Readonly<Record<string, string>> = {
   "card.core.valor.p3-8": "forceful-push.webp",
   "card.core.valor.p3-9": "i-am-your-shield.webp",
   "card.hope-fear.dread.voice-of-dread": "voice-of-dread.jpg",
+  "card.hope-fear.dread.blighting-strike": "blighting-strike.webp",
+  "card.hope-fear.dread.umbral-veil": "umbral-veil.webp",
   "card.hope-fear.dread.siphon-essence": "siphon-essence.jpg",
   "card.core.grace.p6-9": "hypnotic-shimmer.jpg",
   "card.hope-fear.dread.chains-of-affliction": "chains-of-affliction.jpg",
@@ -48,7 +53,12 @@ const artworkRevisionByCardId: Readonly<Record<string, string>> = {
   "card.core.splendor.p3-6": "20261011-r3",
   "card.core.valor.p3-7": "20261017-r3",
   "card.core.valor.p3-8": "20261017-r2",
-  "card.core.valor.p3-9": "20261017-r1"
+  "card.core.valor.p3-9": "20261017-r1",
+  "card.core.sage.p3-1": "20261027-r3",
+  "card.core.sage.p3-2": "20261027-r2",
+  "card.core.sage.p3-3": "20261027-r2",
+  "card.hope-fear.dread.blighting-strike": "20261027-r1",
+  "card.hope-fear.dread.umbral-veil": "20261027-r2"
 };
 
 /** Presentation-only fallback for original SoulForge artwork; never persists it in imported definitions. */

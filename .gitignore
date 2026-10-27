@@ -12,6 +12,7 @@ coverage/
 !.dev.vars.example
 .wrangler/
 /.tmp/
+/tmp/
 .vite-dev.*.log
 .codex-dev*.log
 /local-packs/

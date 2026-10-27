@@ -4,6 +4,20 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.42.3]
+
+### Adicionado
+
+- as três cartas de nível 1 de Sábio — Rastreador Talentoso, Língua da Natureza
+  e Enredar Feroz — receberam artes originais do SoulForge;
+- Golpe Maculador e Véu Umbrático completam o nível 1 de Dread ao lado da arte
+  existente de Voz do Pavor.
+
+### Alterado
+
+- as novas artes usam revisões explícitas nas URLs, atualizando corretamente o
+  cache da PWA sem substituir imagens fornecidas por Packs ou pela pessoa usuária.
+
 ## [0.42.2]
 
 ### Corrigido

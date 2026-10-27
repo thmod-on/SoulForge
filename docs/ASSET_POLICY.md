@@ -317,6 +317,25 @@ com segurança o cache de artes genéricas; imagens de Packs ou da pessoa usuár
 seguem prioritárias. O resultado do build permaneceu com 75 entradas e passou a
 5.605,99 KiB no precache, ainda dentro da faixa saudável do Estágio 1.
 
+Em 27 de outubro de 2026, Golpe Maculador e Véu Umbrático completaram o nível 1
+de Dread ao lado da arte existente de Voz do Pavor. As duas novas imagens WebP
+de 960 × 960 totalizam 164.476 bytes e preservam a mesma conjuradora, a paleta
+azul-preto e violeta contida e os cenários góticos de escala humana. As URLs
+revisionadas atualizam o cache sem sobrepor imagens de Packs ou da pessoa usuária.
+O build passou a 77 entradas e 5.789,24 KiB no precache, ainda dentro da faixa
+saudável do Estágio 1.
+
+Em 27 de outubro de 2026, Rastreador Talentoso, Língua da Natureza e Enredar
+Feroz completaram o nível 1 de Sage. As três imagens WebP opacas de 960 × 960
+totalizam 396.684 bytes e usam a mesma rastreadora adulta em cenas naturalistas:
+rastreamento, diálogo com uma raposa e contenção física por raízes. O figurino
+ritual aberto combina top de folhas e fibras com cobertura completa, faixas de
+couro, adornos de osso e saia assimétrica de peles e franjas. Verde-musgo
+permanece localizado em vegetação e seiva, sem brilho difuso, runas ou partículas.
+As URLs revisionadas atualizam o cache sem substituir artes fornecidas por Packs
+ou pela pessoa usuária. Após a integração, o build contém 80 entradas e 6.177,82
+KiB no precache, ainda dentro da faixa saudável do Estágio 1.
+
 ## Pendências planejadas
 
 1. Criar o manifesto e o verificador automatizado antes de ultrapassar 40 artes.
