@@ -8,7 +8,7 @@ Produção: <https://soulforge.guitojoker-cloudflare.workers.dev/>.
 
 ## Estado atual
 
-Estado revisado em **15 de outubro de 2026**, na versão **0.38.2**:
+Estado revisado em **29 de outubro de 2026**, na versão **0.43.1**:
 
 - o Worker `soulforge` entrega a PWA e atende às rotas `/api/*`;
 - o D1 `soulforge` está com a migração inicial aplicada;
@@ -22,9 +22,11 @@ Estado revisado em **15 de outubro de 2026**, na versão **0.38.2**:
 A Cloudflare é a produção oficial. O GitHub armazena o código e executa o
 deploy, mas não hospeda o backend nem os dados da produção.
 
-CLD-003, CLD-004 e CLD-005 estão concluídos. A observabilidade, a baseline
-operacional, os alertas de orçamento, a suíte de integração e o endurecimento
-HTTP estão ativos e documentados.
+CLD-003, CLD-004 e CLD-005 estão concluídos. A baseline operacional, os
+alertas de orçamento, a suíte de integração e o endurecimento HTTP permanecem
+documentados. A ingestão de Workers Logs foi desativada na configuração do
+projeto em 29 de outubro para não depender da assinatura separada de
+Observability; o aplicativo não depende dela para funcionar.
 Os demais itens operacionais e de segurança estão detalhados no
 [backlog](./BACKLOG.md).
 
@@ -105,12 +107,9 @@ conectividade.
 
 Uma falha de login permanece visível na seção **Nuvem**, sem remover o botão
 para tentar novamente. O Worker devolve uma mensagem segura para credencial
-inválida, conta não autorizada ou indisponibilidade temporária. Nos logs, o
-resultado é registrado somente como `google_login_succeeded`,
-`google_login_rejected` (configuração, credencial ou allowlist) ou
-`google_login_failed` (criação de sessão); e-mails, tokens, cookies e
-credenciais não são registrados. Uma falha ao consultar a biblioteca após um
-login aceito aparece separadamente e não encerra a sessão.
+inválida, conta não autorizada ou indisponibilidade temporária; ele não grava
+o resultado do login em Workers Logs. Uma falha ao consultar a biblioteca após
+um login aceito aparece separadamente e não encerra a sessão.
 
 Os bundles não são sincronizados entre contas nem expostos por R2 público. A
 publicação local usa `pnpm run packs:publish`; ela não integra o deploy da PWA.
@@ -220,17 +219,22 @@ comportamento relevante deve originar uma pendência própria.
 A evidência inicial é o [workflow do commit `d6f21d4`][cld-004-workflow], com
 315 testes da aplicação e 9 testes Worker/Cloudflare aprovados antes do deploy.
 
-## Observabilidade e custos
+## Métricas, custos e Observability
 
-A configuração de Workers Logs está explícita no `wrangler.jsonc`, com logs de
-invocação habilitados e `head_sampling_rate` igual a `1` (100%). A produção
-usa essa configuração desde o commit `d6f21d4`. Ela deve ser revisada antes da
-abertura ao público ou quando o uso atingir 10 mil requisições por dia.
-Consulte a documentação de [Workers Logs][workers-logs].
+Workers Logs e a amostragem de invocações foram úteis para validar a
+infraestrutura, mas não são necessários para executar a PWA, a sincronização,
+o D1, o R2 ou a manutenção diária. Em **29 de outubro de 2026**, o
+`wrangler.jsonc` passou a declarar `observability.enabled: false` e o Worker
+deixou de emitir eventos técnicos por `console`. Assim, o próximo deploy não
+ingerirá esses eventos na assinatura de Observability.
 
-Somente invocações e erros técnicos são registrados. Erros inesperados emitem
-apenas o tipo do erro; tokens, cookies, e-mails, IDs de usuário, fichas e
-payloads de sincronização não devem ser enviados aos logs.
+A baseline e as inspeções registradas abaixo são evidências históricas, não
+uma dependência operacional. O acompanhamento ordinário passa a usar os
+painéis de métricas de Worker, D1 e R2, a página de deploys e os alertas de
+orçamento da conta, sem consultas a Workers Logs. Antes do próximo deploy, a
+proprietária da conta deve também cancelar a assinatura de Observability ou
+migrá-la para o plano Free no painel Cloudflare; editar este repositório não
+altera cobranças nem assinaturas da conta.
 
 O acompanhamento operacional deverá registrar métricas do Worker, do D1 e do
 R2. Os alertas de orçamento de **US$ 1** e **US$ 5** são uma configuração
@@ -284,9 +288,11 @@ referência por mais de 24 horas. Objetos R2 são colocados antes em uma fila
 durável no D1: uma falha do bucket preserva a fila e a execução seguinte repete
 a exclusão de forma idempotente.
 
-Cada execução registra somente contagens agregadas de sessões expiradas,
-mídias enfileiradas, objetos removidos e itens pendentes para retry. IDs de
-usuário, e-mails, chaves R2, fichas, tokens e payloads não são registrados.
+Até 29 de outubro, cada execução registrava em Workers Logs somente contagens
+agregadas de sessões expiradas, mídias enfileiradas, objetos removidos e itens
+pendentes para retry. A rotina não emitirá mais esses eventos; falhas continuam
+marcadas pela execução agendada da Cloudflare e são cobertas pela suíte de
+integração, sem gravar identificadores ou payloads.
 Até a versão `0.39.0`, `sync_changes`, tombstones e registros com `deleted_at`
 não participavam dessa limpeza. A entrega `0.40.0` acrescenta essa etapa com
 retenção de 90 dias; ela passa a ser efetiva depois que o workflow publicar o
@@ -323,12 +329,12 @@ com cursor anterior ao piso compactado retornam `409 sync_reset_required` sem
 gravar dados. Pulls incrementais agora percorrem todas as páginas em vez de
 parar nos primeiros 500 eventos.
 
-O cron registra apenas quantidades agregadas de dispositivos e snapshots
-expirados, linhas e tombstones compactados, além dos contadores já existentes.
-A CLD-009 permanece **Em andamento** até a migration e o Worker da versão
-`0.40.0` serem publicados e a primeira execução real desse cron ser confirmada sem erros. Como nenhuma
-alteração pode ter menos de 90 dias no momento da estreia, não é necessário
-aguardar a primeira poda efetiva para encerrar o item.
+Até 29 de outubro, o cron também registrava em Workers Logs apenas quantidades
+agregadas de dispositivos e snapshots expirados, linhas e tombstones
+compactados, além dos contadores já existentes. Esses logs não serão ingeridos
+após o próximo deploy. A retenção continua protegida por migrations, limites
+transacionais e testes; nenhuma alteração com menos de 90 dias pode ser
+compactada.
 
 ### Reverter o Worker
 
@@ -419,6 +425,5 @@ OAuth para produção, disponibilizar política de privacidade e contato de
 suporte e concluir eventual verificação solicitada pelo Google.
 
 [d1-time-travel]: https://developers.cloudflare.com/d1/reference/time-travel/
-[workers-logs]: https://developers.cloudflare.com/workers/observability/logs/workers-logs/
 [budget-alerts]: https://developers.cloudflare.com/billing/manage/budget-alerts/
 [cld-004-workflow]: https://github.com/thmod-on/SoulForge/actions/runs/38077763131

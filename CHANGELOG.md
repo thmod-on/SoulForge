@@ -4,6 +4,16 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.43.1]
+
+### Alterado
+
+- o Worker deixa de ingerir Workers Logs/Observability e não emite mais eventos
+  técnicos por `console`; a PWA, sincronização, D1, R2 e manutenção diária
+  continuam independentes desse serviço;
+- a validação do artefato publicado agora garante que Observability permaneça
+  explicitamente desativada.
+
 ## [0.43.0]
 
 ### Adicionado

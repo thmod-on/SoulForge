@@ -91,7 +91,6 @@ describe("Google authentication and sessions", () => {
   });
 
   it("creates an opaque secure session and updates the same Google account", async () => {
-    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
     const first = await login(signingKey.privateKey);
     expect(first.response.status).toBe(200);
     const setCookie = first.response.headers.get("Set-Cookie") ?? "";
@@ -107,8 +106,6 @@ describe("Google authentication and sessions", () => {
     expect(second.response.status).toBe(200);
     const users = await env.DB.prepare("SELECT email, name FROM users").all<{ email: string; name: string }>();
     expect(users.results).toEqual([{ email: "renamed@example.invalid", name: "Renamed Test User" }]);
-    expect(info).toHaveBeenCalledWith({ event: "google_login_succeeded" });
-    info.mockRestore();
   });
 
   it("invalidates the server session on logout", async () => {
@@ -122,13 +119,10 @@ describe("Google authentication and sessions", () => {
   });
 
   it("rejects a valid Google identity that is not in the private allowlist", async () => {
-    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const credential = await signGoogleToken(signingKey.privateKey, { email: "blocked@example.invalid" });
     const response = await request("/api/auth/google", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ credential }) });
     expect(response.status).toBe(403);
     expect(await env.DB.prepare("SELECT id FROM users WHERE email = ?").bind("blocked@example.invalid").first()).toBeNull();
-    expect(warning).toHaveBeenCalledWith({ event: "google_login_rejected", reason: "not_authorized" });
-    warning.mockRestore();
   });
 
   it("invalidates the session when an authorized email is revoked", async () => {
@@ -359,12 +353,10 @@ describe("private media", () => {
         return env.DB.prepare(query);
       }
     } as unknown as D1Database;
-    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const response = await request("/api/media", mediaBody(bytes, await sha256Hex(bytes)), cookie, { ...env, DB: failedInsert } as Env);
 
     expect(response.status).toBe(500);
     expect((await env.MEDIA.list()).objects).toHaveLength(0);
-    expect(JSON.stringify(errorLog.mock.calls)).not.toContain("metadata unavailable");
   });
 });
 
@@ -424,20 +416,15 @@ describe("scheduled cloud maintenance", () => {
     await env.DB.prepare("INSERT INTO media_assets (id, user_id, object_key, checksum, mime_type, size_bytes, created_at, unreferenced_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
       .bind(orphanId, user!.id, orphanKey, "orphan-checksum", "image/png", 12, old, old).run();
     const failingMedia = { delete: vi.fn(async () => { throw new Error("R2 unavailable"); }) } as unknown as R2Bucket;
-    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     await expect(runScheduled(new Date("2026-10-17T03:17:00.000Z"), { ...env, MEDIA: failingMedia } as Env)).rejects.toThrow("R2 unavailable");
     expect(await env.DB.prepare("SELECT media_id FROM media_cleanup_queue WHERE media_id = ?").bind(orphanId).first()).not.toBeNull();
     expect(await env.DB.prepare("SELECT id FROM media_assets WHERE id = ?").bind(orphanId).first()).toBeNull();
     expect(await env.MEDIA.head(orphanKey)).not.toBeNull();
-    expect(JSON.stringify(errorLog.mock.calls)).not.toContain(orphanKey);
-
-    const infoLog = vi.spyOn(console, "info").mockImplementation(() => undefined);
     await runScheduled(new Date("2026-10-18T03:17:00.000Z"));
     expect(await env.DB.prepare("SELECT media_id FROM media_cleanup_queue WHERE media_id = ?").bind(orphanId).first()).toBeNull();
     expect(await env.MEDIA.head(orphanKey)).toBeNull();
     expect(await env.DB.prepare("SELECT id FROM media_assets WHERE id = ?").bind(referencedId).first()).not.toBeNull();
-    expect(Object.keys(infoLog.mock.calls.at(-1)?.[0] ?? {}).sort()).toEqual(["durationMs", "event", "expiredDevices", "expiredSessions", "expiredSnapshots", "mediaDeleted", "mediaPendingRetry", "mediaQueued", "syncChangesCompacted", "tombstonesCompacted"].sort());
   });
 });
 
@@ -532,14 +519,12 @@ describe("cloud maintenance mode", () => {
 
 describe("unexpected failures", () => {
   it("returns a generic error without exposing internal details", async () => {
-    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const brokenDb = new Proxy(env.DB, { get() { throw new Error("private database detail"); } });
     const response = await request("/api/session", { headers: { Cookie: "soulforge_session=test" } }, undefined, { ...env, DB: brokenDb } as Env);
     expect(response.status).toBe(500);
     const text = await response.text();
     expect(text).toContain("Falha interna do SoulForge");
     expect(text).not.toContain("private database detail");
-    expect(JSON.stringify(errorLog.mock.calls)).not.toContain("private database detail");
   });
 });
 

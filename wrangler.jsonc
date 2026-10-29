@@ -4,11 +4,7 @@
   "main": "./worker/index.ts",
   "compatibility_date": "2026-10-08",
   "observability": {
-    "enabled": true,
-    "head_sampling_rate": 1,
-    "logs": {
-      "invocation_logs": true
-    }
+    "enabled": false
   },
   "triggers": {
     "crons": ["17 3 * * *"]
