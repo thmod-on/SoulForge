@@ -4,11 +4,32 @@ import type { CloudAccessGrant, CloudSession, SyncPullResponse, SyncPushChange, 
 // `pnpm dev:full` e nos builds de produção.
 const localUiDevelopment = import.meta.env.MODE === "development";
 
+export const cloudSessionInvalidEvent = "soulforge:cloud-session-invalid";
+
+export class CloudApiError extends Error {
+  constructor(message: string, readonly status: number, readonly code?: string) {
+    super(message);
+    this.name = "CloudApiError";
+  }
+}
+
+export function isCloudAuthenticationError(error: unknown): error is CloudApiError {
+  return error instanceof CloudApiError && error.status === 401;
+}
+
+export async function readCloudApiError(response: Response, fallback: string): Promise<CloudApiError> {
+  const body = await response.json().catch(() => undefined) as { error?: string; code?: string } | undefined;
+  const error = new CloudApiError(body?.error ?? fallback, response.status, body?.code);
+  if (response.status === 401 && typeof window !== "undefined" && typeof window.dispatchEvent === "function" && typeof Event !== "undefined") {
+    window.dispatchEvent(new Event(cloudSessionInvalidEvent));
+  }
+  return error;
+}
+
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/api${path}`, { credentials: "same-origin", ...init, headers: { ...(init?.body ? { "Content-Type": "application/json" } : {}), ...init?.headers } });
   if (!response.ok) {
-    const body = await response.json().catch(() => undefined) as { error?: string } | undefined;
-    throw new Error(body?.error ?? `A nuvem respondeu com ${response.status}.`);
+    throw await readCloudApiError(response, `A nuvem respondeu com ${response.status}.`);
   }
   return response.status === 204 ? undefined as T : response.json() as Promise<T>;
 }
@@ -67,12 +88,12 @@ function syncHeaders(deviceId: string, cursor: number): HeadersInit {
 export async function uploadCloudMedia(media: { bytes: Uint8Array; mimeType: string; checksum: string }): Promise<{ id: string }> {
   const body = media.bytes.buffer.slice(media.bytes.byteOffset, media.bytes.byteOffset + media.bytes.byteLength) as ArrayBuffer;
   const response = await fetch("/api/media", { method: "POST", credentials: "same-origin", headers: { "Content-Type": media.mimeType, "X-Media-Checksum": media.checksum }, body });
-  if (!response.ok) throw new Error((await response.json().catch(() => ({ error: "Não foi possível enviar a imagem." })) as { error: string }).error);
+  if (!response.ok) throw await readCloudApiError(response, "Não foi possível enviar a imagem.");
   return response.json() as Promise<{ id: string }>;
 }
 
 export async function downloadCloudMedia(id: string): Promise<{ bytes: ArrayBuffer; mimeType: string }> {
   const response = await fetch(`/api/media/${encodeURIComponent(id)}`, { credentials: "same-origin" });
-  if (!response.ok) throw new Error("Não foi possível baixar uma imagem sincronizada.");
+  if (!response.ok) throw await readCloudApiError(response, "Não foi possível baixar uma imagem sincronizada.");
   return { bytes: await response.arrayBuffer(), mimeType: response.headers.get("Content-Type") ?? "image/webp" };
 }

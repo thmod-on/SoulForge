@@ -4,6 +4,33 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.44.0]
+
+### Adicionado
+
+- Arrombar e Puxar e Chuva de Lâminas, do domínio Meia-noite, receberam artes
+  otimizadas associadas a IDs estáveis;
+- um aviso global de sessão expirada informa que os dados locais foram
+  preservados, mostra quantas alterações aguardam envio e oferece entrar
+  novamente ou continuar offline sem fechar a PWA.
+
+### Alterado
+
+- sessões próprias passam a renovar 30 dias de inatividade perto do vencimento,
+  respeitando o limite absoluto de 90 dias desde o login interativo, e são
+  revalidadas quando a PWA volta ao primeiro plano;
+- **Sair da conta** passa a se chamar **Desconectar deste dispositivo**, com uma
+  explicação explícita sobre a preservação dos dados locais e remotos e com a
+  exclusão da nuvem isolada como ação destrutiva;
+- o backlog registra as próximas melhorias do Bestiário, dos filtros de itens,
+  dos limiares dinâmicos de armaduras, da busca no iPad e do fluxo de descanso.
+
+### Corrigido
+
+- respostas `401` deixam de manter uma conta aparentemente conectada ou iniciar
+  novas tentativas em loop; a fila local permanece intacta e volta a sincronizar
+  automaticamente após a autenticação.
+
 ## [0.43.1]
 
 ### Alterado

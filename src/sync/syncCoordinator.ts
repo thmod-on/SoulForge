@@ -17,11 +17,13 @@ import {
 } from "../storage/syncRepository";
 import {
   deleteCloudAccount,
+  cloudSessionInvalidEvent,
   downloadCloudMedia,
   getAccessGrants,
   getCloudConfig,
   getCloudSession,
   grantAccess as grantCloudAccess,
+  isCloudAuthenticationError,
   pullCloudChanges,
   pullCloudSnapshot,
   pushCloudChanges,
@@ -54,18 +56,22 @@ export type SyncViewModel = {
   conflicts: SyncConflict[];
   googleClientId?: string;
   syncEnabled: boolean;
+  pendingChanges: number;
+  sessionNoticeDismissed: boolean;
   accessGrants?: CloudAccessGrant[];
   accessLoading?: boolean;
   accessError?: string;
 };
 
-const view: SyncViewModel = { session: { authenticated: false }, status: navigator.onLine ? "local-only" : "offline", conflicts: [], syncEnabled: false };
+const view: SyncViewModel = { session: { authenticated: false }, status: navigator.onLine ? "local-only" : "offline", conflicts: [], syncEnabled: false, pendingChanges: 0, sessionNoticeDismissed: false };
 let dependencies: SyncCoordinatorDependencies | undefined;
 let syncTimer: number | undefined;
 let running: Promise<void> | undefined;
 let retryCount = 0;
 const maxSyncPushChanges = 100;
 const maxSyncPushBytes = 2_000_000;
+const syncUserKey = "soulforge.sync.user";
+const intentionalSignOutKey = "soulforge.sync.intentional-signout";
 
 declare global {
   interface Window {
@@ -81,14 +87,22 @@ export function getSyncViewModel(): SyncViewModel {
 
 export async function initializeSyncCoordinator(nextDependencies: SyncCoordinatorDependencies): Promise<void> {
   dependencies = nextDependencies;
-  window.addEventListener("online", () => { scheduleSync(0); });
+  window.addEventListener("online", () => { if (view.session.authenticated) scheduleSync(0); });
   window.addEventListener("offline", () => updateView({ status: "offline", message: "Alterações continuam salvas neste dispositivo." }));
+  window.addEventListener(cloudSessionInvalidEvent, () => { void expireCloudSession(); });
+  if (typeof document !== "undefined") document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") void revalidateCloudSession(); });
   try {
     const [config, session] = await Promise.all([getCloudConfig(), getCloudSession()]);
     if (session.user) await prepareAccountTracking(session.user.id);
     const conflicts = await listSyncConflicts();
-    Object.assign(view, { googleClientId: config.googleClientId, syncEnabled: config.syncEnabled, session, conflicts });
-    updateView({ status: session.authenticated ? "pending" : navigator.onLine ? "local-only" : "offline", message: undefined });
+    const pendingChanges = (await listQueuedSyncChanges()).length;
+    const previouslyAuthenticated = Boolean(localStorage.getItem(syncUserKey)) && localStorage.getItem(intentionalSignOutKey) !== "true";
+    Object.assign(view, { googleClientId: config.googleClientId, syncEnabled: config.syncEnabled, session, conflicts, pendingChanges });
+    updateView(session.authenticated
+      ? { status: "pending", message: undefined, sessionNoticeDismissed: false }
+      : previouslyAuthenticated
+        ? expiredSessionView(pendingChanges)
+        : { status: navigator.onLine ? "local-only" : "offline", message: undefined });
     if (session.authenticated) {
       if (session.isAccessAdmin) void refreshAccessGrants();
       await dependencies.afterAuthenticated?.();
@@ -101,7 +115,8 @@ export async function initializeSyncCoordinator(nextDependencies: SyncCoordinato
 
 export async function markForSync(type: SyncResourceType, id: string, payload?: unknown, deleted = false): Promise<void> {
   await enqueueSyncChange(type, id, payload, deleted);
-  updateView({ status: view.session.authenticated ? (navigator.onLine ? "pending" : "offline") : "local-only", message: view.session.authenticated ? "Alterações aguardando sincronização." : undefined });
+  const pendingChanges = await refreshPendingChanges();
+  updateView({ status: view.session.authenticated ? (navigator.onLine ? "pending" : "offline") : view.status === "session-expired" ? "session-expired" : "local-only", message: view.session.authenticated ? pendingMessage(pendingChanges) : view.message });
   if (view.session.authenticated) scheduleSync(900);
 }
 
@@ -113,6 +128,7 @@ export async function queueLocalSnapshot(): Promise<void> {
     ...snapshot.definitions.filter((definition) => definition.packId === "local").map((definition) => enqueueSyncChange("definition", definition.id, definition)),
     ...snapshot.overrides.map((override) => enqueueSyncChange("override", override.id, override))
   ]);
+  await refreshPendingChanges();
   if (view.session.authenticated) scheduleSync(0);
 }
 
@@ -130,6 +146,7 @@ async function performSync(): Promise<void> {
     let changed = await receiveRemoteChanges();
     const conflictKeys = new Set((await listSyncConflicts()).map((conflict) => conflict.key));
     const queued = (await listQueuedSyncChanges()).filter((change) => !conflictKeys.has(change.key));
+    let sentChanges = 0;
     if (queued.length) {
       const prepared: SyncPushChange[] = [];
       for (const change of queued) {
@@ -147,14 +164,20 @@ async function performSync(): Promise<void> {
         const pushed = await pushCloudChanges(batch, identity.deviceId, identity.cursor);
         await acceptAppliedSync(pushed.applied, new Map(batch.map((change) => [`${change.type}:${change.id}`, change.mutationId])));
         await saveSyncConflicts(pushed.conflicts);
+        sentChanges += pushed.applied.length;
       }
     }
     changed = await receiveRemoteChanges() || changed;
     if (changed) await dependencies.afterRemoteChange();
     view.conflicts = await listSyncConflicts();
+    const pendingChanges = await refreshPendingChanges();
     retryCount = 0;
-    updateView({ status: view.conflicts.length ? "conflict" : "synced", message: view.conflicts.length ? "Escolha qual versão deve ser mantida." : `Sincronizado às ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.` });
+    updateView({ status: view.conflicts.length ? "conflict" : "synced", pendingChanges, message: view.conflicts.length ? "Escolha qual versão deve ser mantida." : sentChanges ? `${sentChanges} ${sentChanges === 1 ? "alteração local foi enviada" : "alterações locais foram enviadas"} para a nuvem.` : `Sincronizado às ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.` });
   } catch (error) {
+    if (isCloudAuthenticationError(error)) {
+      await expireCloudSession();
+      return;
+    }
     retryCount += 1;
     updateView({ status: navigator.onLine ? "error" : "offline", message: errorMessage(error) });
     if (navigator.onLine && retryCount <= 5) scheduleSync(Math.min(30_000, 1_000 * 2 ** retryCount));
@@ -251,7 +274,8 @@ export async function signIn(credential: string): Promise<void> {
     throw error;
   }
   if (session.user) await prepareAccountTracking(session.user.id);
-  updateView({ session, status: "pending", message: "Conta conectada. Preparando a primeira sincronização…" });
+  localStorage.removeItem(intentionalSignOutKey);
+  updateView({ session, status: "pending", message: pendingMessage(view.pendingChanges, "Conta conectada. Preparando a sincronização…"), sessionNoticeDismissed: false });
   if (session.authenticated) {
     if (session.isAccessAdmin) void refreshAccessGrants();
     try {
@@ -265,7 +289,12 @@ export async function signIn(credential: string): Promise<void> {
 
 export async function signOut(): Promise<void> {
   await signOutCloud();
-  updateView({ session: { authenticated: false }, accessGrants: undefined, accessLoading: false, accessError: undefined, status: navigator.onLine ? "local-only" : "offline", message: "Os dados locais foram preservados." });
+  localStorage.setItem(intentionalSignOutKey, "true");
+  updateView({ session: { authenticated: false }, accessGrants: undefined, accessLoading: false, accessError: undefined, status: navigator.onLine ? "local-only" : "offline", message: "Conta desconectada. Seus dados locais e os dados já enviados à nuvem foram preservados.", sessionNoticeDismissed: false });
+}
+
+export function dismissSessionExpiredNotice(): void {
+  if (view.status === "session-expired") updateView({ sessionNoticeDismissed: true });
 }
 
 export async function refreshAccessGrants(): Promise<void> {
@@ -302,14 +331,16 @@ export async function revokePrivateAccess(email: string): Promise<void> {
 export async function removeCloudAccount(): Promise<void> {
   await deleteCloudAccount();
   await resetSyncTracking();
-  localStorage.removeItem("soulforge.sync.user");
-  updateView({ session: { authenticated: false }, status: "local-only", conflicts: [], message: "Dados da nuvem excluídos; dados locais preservados." });
+  localStorage.removeItem(syncUserKey);
+  localStorage.setItem(intentionalSignOutKey, "true");
+  updateView({ session: { authenticated: false }, status: "local-only", conflicts: [], pendingChanges: 0, message: "Dados da nuvem excluídos; dados locais preservados." });
 }
 
 async function prepareAccountTracking(userId: string): Promise<void> {
-  const previousUserId = localStorage.getItem("soulforge.sync.user");
+  const previousUserId = localStorage.getItem(syncUserKey);
   if (previousUserId && previousUserId !== userId) await resetSyncTracking();
-  localStorage.setItem("soulforge.sync.user", userId);
+  localStorage.setItem(syncUserKey, userId);
+  localStorage.removeItem(intentionalSignOutKey);
 }
 
 export async function resolveConflict(key: string, choice: "local" | "remote" | "copy"): Promise<void> {
@@ -338,13 +369,13 @@ export async function resolveConflict(key: string, choice: "local" | "remote" | 
 }
 
 export async function mountGoogleSignIn(): Promise<void> {
-  const target = document.querySelector<HTMLElement>("[data-google-signin]");
-  if (!target || !view.googleClientId || view.session.authenticated) return;
+  const targets = [...document.querySelectorAll<HTMLElement>("[data-google-signin]")];
+  if (!targets.length || !view.googleClientId || view.session.authenticated) return;
   try {
     await loadGoogleScript();
     if (!window.google) throw new Error("Não foi possível iniciar o login do Google.");
     window.google.accounts.id.initialize({ client_id: view.googleClientId, callback: (response) => { void signIn(response.credential).catch(() => undefined); } });
-    window.google.accounts.id.renderButton(target, { theme: "filled_black", size: "large", text: "continue_with", shape: "rectangular", width: 280 });
+    targets.forEach((target) => window.google?.accounts.id.renderButton(target, { theme: "filled_black", size: "large", text: "continue_with", shape: "rectangular", width: 280 }));
   } catch (error) {
     updateView({ status: "error", message: errorMessage(error) });
   }
@@ -367,6 +398,53 @@ function loadGoogleScript(): Promise<void> {
 function scheduleSync(delay: number): void {
   if (syncTimer !== undefined) window.clearTimeout(syncTimer);
   syncTimer = window.setTimeout(() => { syncTimer = undefined; void runSync(); }, delay);
+}
+
+async function revalidateCloudSession(): Promise<void> {
+  if (!view.session.authenticated || !navigator.onLine) return;
+  try {
+    const session = await getCloudSession();
+    if (!session.authenticated || !session.user) {
+      await expireCloudSession();
+      return;
+    }
+    await prepareAccountTracking(session.user.id);
+    updateView({ session });
+    scheduleSync(0);
+  } catch (error) {
+    if (isCloudAuthenticationError(error)) await expireCloudSession();
+    else updateView({ status: navigator.onLine ? "error" : "offline", message: errorMessage(error) });
+  }
+}
+
+async function expireCloudSession(): Promise<void> {
+  if (syncTimer !== undefined) window.clearTimeout(syncTimer);
+  syncTimer = undefined;
+  retryCount = 0;
+  localStorage.removeItem(intentionalSignOutKey);
+  const pendingChanges = await refreshPendingChanges();
+  updateView({ session: { authenticated: false }, accessGrants: undefined, accessLoading: false, accessError: undefined, ...expiredSessionView(pendingChanges) });
+}
+
+async function refreshPendingChanges(): Promise<number> {
+  const pendingChanges = (await listQueuedSyncChanges()).length;
+  view.pendingChanges = pendingChanges;
+  return pendingChanges;
+}
+
+function expiredSessionView(pendingChanges: number): Pick<SyncViewModel, "status" | "message" | "pendingChanges" | "sessionNoticeDismissed"> {
+  return {
+    status: "session-expired",
+    message: pendingChanges
+      ? `Sua sessão expirou. ${pendingChanges} ${pendingChanges === 1 ? "alteração continua salva" : "alterações continuam salvas"} neste dispositivo.`
+      : "Sua sessão expirou. Seus dados continuam salvos neste dispositivo.",
+    pendingChanges,
+    sessionNoticeDismissed: false
+  };
+}
+
+function pendingMessage(pendingChanges: number, fallback = "Alterações aguardando sincronização."): string {
+  return pendingChanges ? `${pendingChanges} ${pendingChanges === 1 ? "alteração aguarda" : "alterações aguardam"} envio para a nuvem.` : fallback;
 }
 
 function updateView(patch: Partial<SyncViewModel>): void {

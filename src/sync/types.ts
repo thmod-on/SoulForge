@@ -1,5 +1,5 @@
 export type SyncResourceType = "character" | "definition" | "override";
-export type SyncStatus = "local-only" | "pending" | "syncing" | "synced" | "offline" | "error" | "conflict";
+export type SyncStatus = "local-only" | "pending" | "syncing" | "synced" | "offline" | "error" | "conflict" | "session-expired";
 
 export type CloudMediaReference = {
   $soulforgeMedia: string;

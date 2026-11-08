@@ -11,7 +11,7 @@ export interface Env {
   ACCESS_ADMIN_EMAILS?: string;
 }
 
-type AuthenticatedRequest = { userId: string; sessionId: string; email: string };
+type AuthenticatedRequest = { userId: string; sessionId: string; email: string; renewedCookie?: string };
 type GoogleClaims = { sub: string; email: string; email_verified: boolean; name?: string; picture?: string; iss: string; aud: string; exp: number };
 
 const maxImageBytes = 1_500_000;
@@ -29,6 +29,9 @@ const tombstoneCompactionLimit = 100;
 const syncPullLimit = 20;
 const snapshotQueryLimit = 21;
 const snapshotResponseBytes = 1_800_000;
+const sessionIdleTtlMs = 30 * 24 * 60 * 60 * 1000;
+const sessionAbsoluteTtlMs = 90 * 24 * 60 * 60 * 1000;
+const sessionRenewalWindowMs = 7 * 24 * 60 * 60 * 1000;
 const sessionCookie = "soulforge_session";
 const allowedMediaTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
 const resourceTables: Record<SyncResourceType, string> = { character: "characters", definition: "definitions", override: "definition_overrides" };
@@ -92,24 +95,26 @@ async function handleApiRequest(request: Request, url: URL, env: Env): Promise<R
   if (!isSyncEnabled(env)) throw new HttpError(503, "A sincronização está temporariamente indisponível.");
   if (isGoogleLogin) return googleLogin(request, env);
   const auth = await requireSession(request, env);
-  if (isAccountDeletion) return deleteAccount(auth, env);
-  if (isSyncPush) return pushChanges(request, auth, env);
-  if (isSyncPull) return pullChanges(request, auth, env);
-  if (isSyncSnapshot) return pullSnapshot(url, auth, env);
-  if (isMediaUpload) return uploadMedia(request, auth, env);
-  if (isLibraryCatalog) return privateLibraryCatalog(auth, env);
-  if (isLibraryPack) return privateLibraryPack(url, auth, env);
-  if (isAccessGrantList) return listAccessGrants(auth, env);
-  if (isAccessGrantCreate) return createAccessGrant(request, auth, env);
-  if (isAccessGrantDelete) return revokeAccessGrant(decodeURIComponent(url.pathname.slice("/api/access/grants/".length)), auth, env);
-  return downloadMedia(decodeURIComponent(url.pathname.slice("/api/media/".length)), auth, env);
+  let response: Response;
+  if (isAccountDeletion) response = await deleteAccount(auth, env);
+  else if (isSyncPush) response = await pushChanges(request, auth, env);
+  else if (isSyncPull) response = await pullChanges(request, auth, env);
+  else if (isSyncSnapshot) response = await pullSnapshot(url, auth, env);
+  else if (isMediaUpload) response = await uploadMedia(request, auth, env);
+  else if (isLibraryCatalog) response = await privateLibraryCatalog(auth, env);
+  else if (isLibraryPack) response = await privateLibraryPack(url, auth, env);
+  else if (isAccessGrantList) response = await listAccessGrants(auth, env);
+  else if (isAccessGrantCreate) response = await createAccessGrant(request, auth, env);
+  else if (isAccessGrantDelete) response = await revokeAccessGrant(decodeURIComponent(url.pathname.slice("/api/access/grants/".length)), auth, env);
+  else response = await downloadMedia(decodeURIComponent(url.pathname.slice("/api/media/".length)), auth, env);
+  return isAccountDeletion ? response : withRenewedSession(response, auth);
 }
 
 async function sessionResponse(request: Request, env: Env): Promise<Response> {
   try {
     const auth = await requireSession(request, env);
     const user = await env.DB.prepare("SELECT id, email, name, picture FROM users WHERE id = ?").bind(auth.userId).first<{ id: string; email: string; name: string; picture?: string }>();
-    return json(user ? { authenticated: true, user, isAccessAdmin: isAccessAdmin(auth.email, env) } : { authenticated: false });
+    return withRenewedSession(json(user ? { authenticated: true, user, isAccessAdmin: isAccessAdmin(auth.email, env) } : { authenticated: false }), auth);
   } catch (error) {
     if (isHttpError(error) && (error.status === 401 || error.status === 403)) return json({ authenticated: false });
     throw error;
@@ -140,7 +145,7 @@ async function googleLogin(request: Request, env: Env): Promise<Response> {
     .bind(userId, claims.sub, email, claims.name ?? email, claims.picture ?? null, now, now).run();
   const token = randomToken();
   const sessionId = crypto.randomUUID();
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + sessionIdleTtlMs).toISOString();
   await env.DB.prepare("INSERT INTO sessions (id, user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?)").bind(sessionId, userId, await sha256Hex(token), expiresAt, now).run();
   return json({ authenticated: true, user: { id: userId, email, name: claims.name ?? email, picture: claims.picture }, isAccessAdmin: isAccessAdmin(email, env) }, 200, { "Set-Cookie": cookie(token, expiresAt) });
 }
@@ -154,13 +159,30 @@ async function logout(request: Request, env: Env): Promise<Response> {
 async function requireSession(request: Request, env: Env): Promise<AuthenticatedRequest> {
   const token = readCookie(request, sessionCookie);
   if (!token) throw new HttpError(401, "Entre com Google para usar a nuvem.");
-  const session = await env.DB.prepare("SELECT sessions.id, sessions.user_id, users.email FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.token_hash = ? AND sessions.expires_at > ?").bind(await sha256Hex(token), new Date().toISOString()).first<{ id: string; user_id: string; email: string }>();
+  const nowMs = Date.now();
+  const now = new Date(nowMs).toISOString();
+  const session = await env.DB.prepare("SELECT sessions.id, sessions.user_id, sessions.created_at, sessions.expires_at, users.email FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.token_hash = ? AND sessions.expires_at > ?").bind(await sha256Hex(token), now).first<{ id: string; user_id: string; email: string; created_at: string; expires_at: string }>();
   if (!session) throw new HttpError(401, "Sua sessão expirou. Entre novamente.");
+  const absoluteExpiryMs = new Date(session.created_at).getTime() + sessionAbsoluteTtlMs;
+  if (!Number.isFinite(absoluteExpiryMs) || absoluteExpiryMs <= nowMs) {
+    await env.DB.prepare("DELETE FROM sessions WHERE id = ?").bind(session.id).run();
+    throw new HttpError(401, "Sua sessão expirou. Entre novamente.");
+  }
   if (!await isAuthorizedEmail(session.email, env)) {
     await env.DB.prepare("DELETE FROM sessions WHERE id = ?").bind(session.id).run();
     throw new HttpError(403, "Esta conta não está autorizada para o período privado de testes.");
   }
-  return { userId: session.user_id, sessionId: session.id, email: normalizeEmail(session.email) };
+  let renewedCookie: string | undefined;
+  const currentExpiryMs = new Date(session.expires_at).getTime();
+  if (currentExpiryMs - nowMs <= sessionRenewalWindowMs) {
+    const renewedExpiryMs = Math.min(nowMs + sessionIdleTtlMs, absoluteExpiryMs);
+    if (renewedExpiryMs > currentExpiryMs) {
+      const renewedExpiry = new Date(renewedExpiryMs).toISOString();
+      await env.DB.prepare("UPDATE sessions SET expires_at = ? WHERE id = ?").bind(renewedExpiry, session.id).run();
+      renewedCookie = cookie(token, renewedExpiry);
+    }
+  }
+  return { userId: session.user_id, sessionId: session.id, email: normalizeEmail(session.email), ...(renewedCookie ? { renewedCookie } : {}) };
 }
 
 type AccessGrant = { email: string; createdAt: string };
@@ -675,6 +697,13 @@ function cookie(token: string, expiresAt: string): string {
 
 function clearCookie(): string {
   return `${sessionCookie}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
+}
+
+function withRenewedSession(response: Response, auth: AuthenticatedRequest): Response {
+  if (!auth.renewedCookie) return response;
+  const headers = new Headers(response.headers);
+  headers.set("Set-Cookie", auth.renewedCookie);
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
 
 function randomToken(): string {

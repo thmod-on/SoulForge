@@ -25,6 +25,20 @@ arcana e revelação de magia oculta.
 | `card.core.codex.p4-7` | `book-of-sitil.webp` | 960 × 960 | 105.936 bytes |
 | `card.core.codex.p4-8` | `book-of-vagras.webp` | 960 × 960 | 141.626 bytes |
 
+## Meia-noite — nível 1
+
+As duas artes fornecidas pela pessoa usuária representam o ladino felino do
+domínio em cenas noturnas de infiltração e combate. **Arrombar e Puxar** usa
+três quadros para reunir gazua, armadilha e furto sem perder o foco central;
+**Chuva de Lâminas** concentra as adagas conjuradas e os alvos próximos sob luz
+prática de tochas. As duas preservam o personagem, a ação e os elementos
+principais no recorte central 2:3.
+
+| ID | Arquivo | Dimensões | Tamanho |
+| --- | --- | ---: | ---: |
+| `card.core.midnight.p2-7` | `pick-and-pull.webp` | 960 × 960 | 138.916 bytes |
+| `card.core.midnight.p2-8` | `rain-of-blades.webp` | 960 × 960 | 148.080 bytes |
+
 ## Sage — nível 1
 
 Em 27 de outubro de 2026, as três cartas de nível 1 do domínio Sage receberam

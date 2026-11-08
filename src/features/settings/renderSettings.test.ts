@@ -14,7 +14,7 @@ describe("renderSettings", () => {
       escapeHtml: (value) => value,
       getPackDisplayName: (packId) => packId,
       getPackDisplayDescription: () => "",
-      sync: { session: { authenticated: false }, status: "local-only", conflicts: [], syncEnabled: false }
+      sync: { session: { authenticated: false }, status: "local-only", conflicts: [], syncEnabled: false, pendingChanges: 0, sessionNoticeDismissed: false }
     });
 
     expect(html).toContain('data-action="open-pack-import"');
@@ -45,11 +45,27 @@ describe("renderSettings", () => {
       getPackDisplayName: (packId: string) => packId,
       getPackDisplayDescription: () => ""
     };
-    const member = renderSettings({ ...base, sync: { session: { authenticated: true, user: { id: "member", email: "member@example.invalid", name: "Member" } }, status: "synced", conflicts: [], syncEnabled: true } });
+    const member = renderSettings({ ...base, sync: { session: { authenticated: true, user: { id: "member", email: "member@example.invalid", name: "Member" } }, status: "synced", conflicts: [], syncEnabled: true, pendingChanges: 0, sessionNoticeDismissed: false } });
     expect(member).not.toContain("Acesso privado");
-    const admin = renderSettings({ ...base, sync: { session: { authenticated: true, isAccessAdmin: true, user: { id: "admin", email: "admin@example.invalid", name: "Admin" } }, status: "synced", conflicts: [], syncEnabled: true, accessGrants: [{ email: "member@example.invalid", createdAt: "2026-10-27T00:00:00.000Z" }] } });
+    expect(member).toContain("Desconectar deste dispositivo");
+    expect(member).toContain("única ação desta seção");
+    const admin = renderSettings({ ...base, sync: { session: { authenticated: true, isAccessAdmin: true, user: { id: "admin", email: "admin@example.invalid", name: "Admin" } }, status: "synced", conflicts: [], syncEnabled: true, pendingChanges: 0, sessionNoticeDismissed: false, accessGrants: [{ email: "member@example.invalid", createdAt: "2026-10-27T00:00:00.000Z" }] } });
     expect(admin).toContain("Acesso privado");
     expect(admin).toContain('data-action="grant-private-access"');
     expect(admin).toContain("member@example.invalid");
+  });
+
+  it("explica a sessão expirada e mantém o caminho de novo login", () => {
+    const html = renderSettings({
+      appVersion: "0.43.1",
+      state: { installedPacks: [], packImportOpen: false, removeAllInstalledPacksOpen: false, privateLibrary: { loading: false, bootstrapComplete: false } },
+      escapeHtml: (value) => value,
+      getPackDisplayName: (packId) => packId,
+      getPackDisplayDescription: () => "",
+      sync: { session: { authenticated: false }, status: "session-expired", message: "Sua sessão expirou. 2 alterações continuam salvas neste dispositivo.", conflicts: [], syncEnabled: true, googleClientId: "client", pendingChanges: 2, sessionNoticeDismissed: false }
+    });
+    expect(html).toContain("Sessão expirada");
+    expect(html).toContain("2 alterações continuam salvas");
+    expect(html).toContain("data-google-signin");
   });
 });

@@ -2,9 +2,10 @@ import type { Character, Definition, GameMarkerDefinition } from "../../domain/t
 import { deleteCharacter, listCharacters, loadCharacter, saveCharacter } from "../../storage/characterRepository";
 import { deleteCardMarkerOverride, deleteCustomDefinition, loadCardMarkerOverrides, loadCustomDefinitions, putCardMarkerOverride, saveCardMarkerOverride, saveCustomDefinition, type CardMarkerOverride } from "../../storage/compendiumRepository";
 import { loadLocalDataSnapshot } from "../../storage/localDataRepository";
-import { getSyncViewModel, grantPrivateAccess, initializeSyncCoordinator, markForSync, mountGoogleSignIn, queueLocalSnapshot, refreshAccessGrants, removeCloudAccount, resolveConflict, revokePrivateAccess, runSync, signOut } from "../../sync/syncCoordinator";
+import { dismissSessionExpiredNotice, getSyncViewModel, grantPrivateAccess, initializeSyncCoordinator, markForSync, mountGoogleSignIn, queueLocalSnapshot, refreshAccessGrants, removeCloudAccount, resolveConflict, revokePrivateAccess, runSync, signOut } from "../../sync/syncCoordinator";
 
 export { getSyncViewModel, mountGoogleSignIn, queueLocalSnapshot };
+export { mountCloudSignInIfPresent, renderCloudSessionNotice, updateCloudSessionNotice } from "./renderCloudSessionNotice";
 
 export async function saveSyncedCharacter(character: Character): Promise<void> {
   await saveCharacter(character);
@@ -33,8 +34,12 @@ export async function saveSyncedCardMarkerOverride(definitionId: string, gameMar
 
 export function handleCloudAction(target: HTMLElement): boolean {
   if (target.closest('[data-action="sync-now"]')) void runSync();
-  else if (target.closest('[data-action="cloud-sign-out"]')) void signOut();
-  else if (target.closest('[data-action="delete-cloud-account"]')) {
+  else if (target.closest('[data-action="cloud-sign-out"]')) {
+    const confirmed = window.confirm("Desconectar a conta deste dispositivo? Seus personagens e alterações locais continuarão neste dispositivo, e os dados já enviados à nuvem não serão excluídos.");
+    if (confirmed) void signOut();
+  } else if (target.closest('[data-action="continue-cloud-offline"]')) {
+    dismissSessionExpiredNotice();
+  } else if (target.closest('[data-action="delete-cloud-account"]')) {
     if (window.confirm("Excluir permanentemente todas as fichas, criações e imagens da nuvem? Os dados deste dispositivo serão preservados.")) void removeCloudAccount();
   } else if (target.closest('[data-action="refresh-private-access"]')) {
     void refreshAccessGrants();

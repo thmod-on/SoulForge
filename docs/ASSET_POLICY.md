@@ -345,6 +345,13 @@ de imagem própria de Packs ou da pessoa usuária. Após a integração, o build
 85 entradas e 6.720,93 KiB no precache, ainda dentro da faixa saudável do Estágio
 1.
 
+Em 8 de novembro de 2026, Arrombar e Puxar e Chuva de Lâminas receberam artes
+fornecidas pela pessoa usuária para o domínio Meia-noite. Os dois WebPs opacos de
+960 × 960 totalizam 286.996 bytes, usam IDs estáveis e URLs versionadas, e não
+substituem artes próprias fornecidas por Packs ou pela pessoa usuária. Após a
+integração, o build contém 87 entradas e 7.001,37 KiB no precache, ainda dentro
+da faixa saudável do Estágio 1.
+
 ## Pendências planejadas
 
 1. Criar o manifesto e o verificador automatizado antes de ultrapassar 40 artes.

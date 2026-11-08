@@ -14,10 +14,12 @@ import type { SyncCoordinatorDependencies } from "./syncCoordinator";
 import type { CloudSession, SyncConflict, SyncEnvelope, SyncPushChange } from "./types";
 
 const cloudClient = vi.hoisted(() => ({
+  cloudSessionInvalidEvent: "soulforge:cloud-session-invalid",
   deleteCloudAccount: vi.fn(),
   downloadCloudMedia: vi.fn(),
   getCloudConfig: vi.fn(),
   getCloudSession: vi.fn(),
+  isCloudAuthenticationError: vi.fn((error: unknown) => Boolean(error && typeof error === "object" && "status" in error && error.status === 401)),
   pullCloudChanges: vi.fn(),
   pullCloudSnapshot: vi.fn(),
   pushCloudChanges: vi.fn(),
@@ -58,6 +60,22 @@ describe("local-first sync lifecycle", () => {
     expect(harness.cloud.push).toHaveBeenCalledOnce();
     expect(await listQueuedSyncChanges()).toHaveLength(0);
     expect(coordinator.getSyncViewModel().status).toBe("synced");
+    expect(coordinator.getSyncViewModel().message).toBe("1 alteração local foi enviada para a nuvem.");
+  });
+
+  it("explains an expired session when reopening after a previous login", async () => {
+    createHarness(true, { authenticated: false });
+    localStorage.setItem("soulforge.sync.user", "account-a");
+    const coordinator = await loadCoordinator();
+
+    await coordinator.initializeSyncCoordinator(createDependencies());
+
+    expect(coordinator.getSyncViewModel()).toMatchObject({
+      session: { authenticated: false },
+      status: "session-expired",
+      pendingChanges: 0,
+      message: "Sua sessão expirou. Seus dados continuam salvos neste dispositivo."
+    });
   });
 
   it("schedules synchronization when the app opens authenticated and after login", async () => {
@@ -286,6 +304,41 @@ describe("media, logout and account removal", () => {
     expect(await getLocalRecord("characters", "hero")).toEqual({ id: "hero", identity: { name: "Local Hero" } });
     expect(dependencies.deleteCharacter).not.toHaveBeenCalled();
     expect(coordinator.getSyncViewModel().status).toBe("local-only");
+    expect(localStorage.getItem("soulforge.sync.intentional-signout")).toBe("true");
+  });
+
+  it("preserves the queue, stops retries and requests a new login after a 401", async () => {
+    const harness = createHarness(true, authenticatedSession());
+    const coordinator = await loadCoordinator();
+    await coordinator.initializeSyncCoordinator(createDependencies());
+    await coordinator.markForSync("character", "hero", { id: "hero" });
+    harness.cloud.pull.mockRejectedValueOnce(Object.assign(new Error("Entre com Google para usar a nuvem."), { status: 401 }));
+
+    await coordinator.runSync();
+
+    expect(await listQueuedSyncChanges()).toHaveLength(1);
+    expect(coordinator.getSyncViewModel()).toMatchObject({
+      session: { authenticated: false },
+      status: "session-expired",
+      pendingChanges: 1,
+      sessionNoticeDismissed: false
+    });
+    expect(coordinator.getSyncViewModel().message).toContain("continua salva");
+    expect(harness.timers.every((timer) => timer.cleared)).toBe(true);
+  });
+
+  it("revalidates an authenticated session when the PWA returns to the foreground", async () => {
+    const harness = createHarness(true, authenticatedSession());
+    const coordinator = await loadCoordinator();
+    await coordinator.initializeSyncCoordinator(createDependencies());
+    await coordinator.markForSync("character", "hero", { id: "hero" });
+    harness.cloud.getSession.mockResolvedValueOnce({ authenticated: false });
+
+    harness.fireVisibility();
+    await vi.waitFor(() => expect(coordinator.getSyncViewModel().status).toBe("session-expired"));
+
+    expect(await listQueuedSyncChanges()).toHaveLength(1);
+    expect(coordinator.getSyncViewModel().pendingChanges).toBe(1);
   });
 
   it("clears sync tracking but preserves local records when cloud data is deleted", async () => {
@@ -402,7 +455,8 @@ describe("retention recovery", () => {
 
 function createHarness(initialOnline: boolean, initialSession: CloudSession) {
   let online = initialOnline;
-  const listeners: Record<"online" | "offline", Array<() => void>> = { online: [], offline: [] };
+  const listeners: Record<string, Array<() => void>> = { online: [], offline: [] };
+  const documentListeners: Record<string, Array<() => void>> = {};
   const timers: TimerEntry[] = [];
   let nextTimerId = 1;
   const timerIds = new Map<number, TimerEntry>();
@@ -422,7 +476,8 @@ function createHarness(initialOnline: boolean, initialSession: CloudSession) {
       uploadMedia: cloudClient.uploadCloudMedia
     },
     setOnline(value: boolean) { online = value; Object.defineProperty(navigator, "onLine", { configurable: true, value }); },
-    fire(type: "online" | "offline") { listeners[type].forEach((listener) => listener()); },
+    fire(type: "online" | "offline") { listeners[type]?.forEach((listener) => listener()); },
+    fireVisibility() { documentListeners.visibilitychange?.forEach((listener) => listener()); },
     runLastTimer() {
       const timer = [...timers].reverse().find((entry) => !entry.cleared);
       if (!timer) throw new Error("No active sync timer.");
@@ -433,7 +488,7 @@ function createHarness(initialOnline: boolean, initialSession: CloudSession) {
 
   vi.stubGlobal("navigator", { onLine: online });
   vi.stubGlobal("window", {
-    addEventListener(type: "online" | "offline", listener: () => void) { listeners[type].push(listener); },
+    addEventListener(type: string, listener: () => void) { (listeners[type] ??= []).push(listener); },
     clearTimeout(id: number) { const timer = timerIds.get(id); if (timer) timer.cleared = true; },
     setTimeout(listener: () => void, delay: number) {
       const timer: TimerEntry = { listener, delay, cleared: false };
@@ -442,6 +497,10 @@ function createHarness(initialOnline: boolean, initialSession: CloudSession) {
       timerIds.set(id, timer);
       return id;
     }
+  });
+  vi.stubGlobal("document", {
+    visibilityState: "visible",
+    addEventListener(type: string, listener: () => void) { (documentListeners[type] ??= []).push(listener); }
   });
 
   cloudClient.deleteCloudAccount.mockResolvedValue(undefined);

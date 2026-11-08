@@ -170,7 +170,7 @@ import {
 } from "./features/compendium/ancestries";
 import type { CompendiumSpread, CompendiumView, InventoryFilter, Page, ProgressionDraftChoice, ProgressionFlowStep, ProgressionMulticlassDraft, ProgressionPicker, ProgressionTierNumber } from "./app/types";
 import { editorNavigation as sideNavItems, getPageFromEventTarget, isEditorPage, playerNavigation as topNavItems } from "./app/navigation";
-import { deleteSyncedCharacter, deleteSyncedDefinition as deleteCustomDefinition, getSyncViewModel, handleCloudAction, initializeCloudIntegration, loadCardMarkerOverrides, loadCustomDefinitions, mountGoogleSignIn, queueLocalSnapshot, refreshCloudAppliedState, saveSyncedCardMarkerOverride as saveCardMarkerOverride, saveSyncedCharacter, saveSyncedDefinition as saveCustomDefinition } from "./features/cloud/cloudIntegration";
+import { deleteSyncedCharacter, deleteSyncedDefinition as deleteCustomDefinition, getSyncViewModel, handleCloudAction, initializeCloudIntegration, loadCardMarkerOverrides, loadCustomDefinitions, mountCloudSignInIfPresent, mountGoogleSignIn, queueLocalSnapshot, refreshCloudAppliedState, renderCloudSessionNotice, saveSyncedCardMarkerOverride as saveCardMarkerOverride, saveSyncedCharacter, saveSyncedDefinition as saveCustomDefinition, updateCloudSessionNotice } from "./features/cloud/cloudIntegration";
 import "./styles.css"; function getAppRoot(): HTMLDivElement {
   const element = document.querySelector<HTMLDivElement>("#app");
   if (!element) {
@@ -870,6 +870,7 @@ function updateGameMarkerAuthoringForm(target: HTMLSelectElement): void {
   if (!form) return;
   configureGameMarkerAuthoringForm(form);
 }
+
 function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: boolean; restoreActiveCardFocus?: boolean } = {}): void {
   if (!state.bootReady) { appRoot.innerHTML = `<div class="boot-screen sf-state sf-state--loading" role="status"><i aria-hidden="true"></i><span>Preparando dados locais...</span></div>`; return; }
   if (state.character) rememberActiveCardCarousel(appRoot, state.character.id);
@@ -887,15 +888,15 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
   const currentCharacter = state.character;
   if (state.characterSelectionOpen && isEditorPage(state.page)) {
     const editorScreen = state.page === "compendium" ? renderCompendium() : renderSettings();
-    appRoot.innerHTML = `<div class="editor-shell">${renderEditorHeaderView(getPlayerShellDependencies())}${editorScreen}</div>${renderPackManagementDialogs(getPackManagementDependencies())}${renderLocalBackupDialogs(state, escapeHtml)}${renderCharacterImportModal({ isOpen: state.characterImportOpen, character: state.pendingCharacterImport, error: state.characterImportError, escapeHtml })}${renderCardModalView(state.modalCardId, getCardFeatureDependencies())}${renderDomainModalView(getDomainFeatureDependencies())}${renderDeleteDomainModalView(getDomainFeatureDependencies())}${renderCompendiumCardFormModalView(getCardFeatureDependencies())}${renderDeleteCompendiumCardModalView(getCardFeatureDependencies())}${renderCompendiumItemFormModalView(getItemFeatureDependencies())}${renderDeleteCompendiumItemModalView(getItemFeatureDependencies())}${renderCompendiumItemPreviewModalView(getItemFeatureDependencies())}${renderCompendiumClassPreviewModalView(getClassFeatureDependencies())}${renderCompendiumClassFormModalView(getClassFeatureDependencies())}${renderDeleteCompendiumClassModalView(getClassFeatureDependencies())}${renderCompendiumAncestryFormModalView(getAncestryFeatureDependencies())}${renderDeleteCompendiumAncestryModalView(getAncestryFeatureDependencies())}`;
+    appRoot.innerHTML = `${renderCloudSessionNotice(getSyncViewModel())}<div class="editor-shell">${renderEditorHeaderView(getPlayerShellDependencies())}${editorScreen}</div>${renderPackManagementDialogs(getPackManagementDependencies())}${renderLocalBackupDialogs(state, escapeHtml)}${renderCharacterImportModal({ isOpen: state.characterImportOpen, character: state.pendingCharacterImport, error: state.characterImportError, escapeHtml })}${renderCardModalView(state.modalCardId, getCardFeatureDependencies())}${renderDomainModalView(getDomainFeatureDependencies())}${renderDeleteDomainModalView(getDomainFeatureDependencies())}${renderCompendiumCardFormModalView(getCardFeatureDependencies())}${renderDeleteCompendiumCardModalView(getCardFeatureDependencies())}${renderCompendiumItemFormModalView(getItemFeatureDependencies())}${renderDeleteCompendiumItemModalView(getItemFeatureDependencies())}${renderCompendiumItemPreviewModalView(getItemFeatureDependencies())}${renderCompendiumClassPreviewModalView(getClassFeatureDependencies())}${renderCompendiumClassFormModalView(getClassFeatureDependencies())}${renderDeleteCompendiumClassModalView(getClassFeatureDependencies())}${renderCompendiumAncestryFormModalView(getAncestryFeatureDependencies())}${renderDeleteCompendiumAncestryModalView(getAncestryFeatureDependencies())}`;
     document.body.classList.toggle("has-modal", state.packImportOpen || state.removeAllInstalledPacksOpen || state.characterImportOpen || Boolean(state.deletingInstalledPackId) || Boolean(state.modalCardId) || state.domainModalOpen || Boolean(state.deletingDomainId) || state.cardModalOpen || Boolean(state.deletingCompendiumCardId) || state.itemDefinitionModalOpen || Boolean(state.deletingCompendiumItemId) || Boolean(state.compendiumItemPreviewId) || state.classModalOpen || Boolean(state.deletingCompendiumClassId) || Boolean(state.compendiumClassPreviewId) || state.ancestryModalOpen || Boolean(state.deletingCompendiumAncestryId) || Boolean(state.compendiumAncestryPreviewId) || Boolean(state.compendiumCommunityPreviewId) || state.transformationState.transformationModalOpen || Boolean(state.transformationState.deletingCompendiumTransformationId) || Boolean(state.transformationState.compendiumTransformationPreviewId) || state.conditionState.conditionModalOpen || Boolean(state.conditionState.deletingCompendiumConditionId) || Boolean(state.conditionState.compendiumConditionPreviewId));
     if (options.preserveMainScroll) requestAnimationFrame(() => { const content = appRoot.querySelector<HTMLElement>(".content"); if (content && previousContentScrollTop !== undefined) content.scrollTop = previousContentScrollTop; if (previousDocumentScrollTop !== undefined) window.scrollTo({ top: previousDocumentScrollTop, behavior: "auto" }); });
-    if (state.page === "settings") void mountGoogleSignIn();
+    mountCloudSignInIfPresent(appRoot, mountGoogleSignIn);
     return;
   }
 
   if (state.characterSelectionOpen) {
-    appRoot.innerHTML = `${renderCharacterSelectionView(state.characters, escapeHtml)}${renderCharacterCreationModalView(getCharacterCreationRenderDependencies())}${renderDeleteCharacterModal()}${renderCharacterImportModal({ isOpen: state.characterImportOpen, character: state.pendingCharacterImport, error: state.characterImportError, escapeHtml })}`;
+    appRoot.innerHTML = `${renderCloudSessionNotice(getSyncViewModel())}${renderCharacterSelectionView(state.characters, escapeHtml)}${renderCharacterCreationModalView(getCharacterCreationRenderDependencies())}${renderDeleteCharacterModal()}${renderCharacterImportModal({ isOpen: state.characterImportOpen, character: state.pendingCharacterImport, error: state.characterImportError, escapeHtml })}`;
     document.body.classList.toggle("has-modal", state.characterCreationOpen || state.characterImportOpen || Boolean(state.deletingCharacterId));
     if (previousCharacterCreationScrollTop !== undefined) {
       requestAnimationFrame(() => {
@@ -905,11 +906,12 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
     }
     shouldAnimateCharacterCreationModal = false;
     setupCharacterCarousel(appRoot);
+    mountCloudSignInIfPresent(appRoot, mountGoogleSignIn);
     return;
   }
 
   if (!currentCharacter) {
-    appRoot.innerHTML = `<div class="boot-screen sf-state sf-state--loading" role="status"><i aria-hidden="true"></i><span>Carregando SoulForge...</span></div>`;
+    appRoot.innerHTML = `${renderCloudSessionNotice(getSyncViewModel())}<div class="boot-screen sf-state sf-state--loading" role="status"><i aria-hidden="true"></i><span>Carregando SoulForge...</span></div>`;
     return;
   }
   const characterWithSynchronizedArmor = synchronizeArmorResource(currentCharacter, getItemDefinition);
@@ -957,7 +959,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
       </div>
     `;
 
-  appRoot.innerHTML = `
+  appRoot.innerHTML = `${renderCloudSessionNotice(getSyncViewModel())}
     ${shell}
     ${renderCardModalView(state.modalCardId, getCardFeatureDependencies())}
     ${renderActivateStoredCardModal()}${renderCharacterTransformationDialogs(getCharacterTransformationDependencies())}${renderCharacterScarDialogs(getCharacterScarDependencies())}${renderCharacterConditionDialogs(getCharacterConditionDependencies())}
@@ -1031,7 +1033,7 @@ function render(options: { preserveMainScroll?: boolean; resetCreationScroll?: b
       }
     });
   }
-  if (state.page === "settings") void mountGoogleSignIn();
+  mountCloudSignInIfPresent(appRoot, mountGoogleSignIn);
 }
 
 const renderCharacterCreationInPlace = (options: { resetScroll?: boolean; revealError?: boolean } = {}): void => {
@@ -2654,7 +2656,7 @@ async function boot(): Promise<void> {
   state.character = undefined;
   state.characterSelectionOpen = true;
   const initializeBackgroundServices = async (): Promise<void> => {
-    await initializeCloudIntegration({ afterRemoteChange: async () => { const applied = await refreshCloudAppliedState(state.character?.id, refreshCatalog); state.characters = applied.characters; state.character = applied.character; if (state.bootReady) render({ preserveMainScroll: true }); }, afterAuthenticated: async () => { await refreshPrivateLibraryState(getPrivateLibraryDependencies(), true); if (state.bootReady && state.page === "settings") render({ preserveMainScroll: true }); }, stateChanged: () => { if (state.bootReady && state.page === "settings") render({ preserveMainScroll: true }); } });
+    await initializeCloudIntegration({ afterRemoteChange: async () => { const applied = await refreshCloudAppliedState(state.character?.id, refreshCatalog); state.characters = applied.characters; state.character = applied.character; if (state.bootReady) render({ preserveMainScroll: true }); }, afterAuthenticated: async () => { await refreshPrivateLibraryState(getPrivateLibraryDependencies(), true); if (state.bootReady && state.page === "settings") render({ preserveMainScroll: true }); }, stateChanged: () => { if (!state.bootReady) return; if (state.page === "settings") render({ preserveMainScroll: true }); else updateCloudSessionNotice(appRoot, getSyncViewModel(), mountGoogleSignIn); } });
   };
   const requiresInitialLibrary = navigator.onLine && !snapshot.installedPacks.length && !snapshot.characters.length && !getPrivateLibraryBootstrapComplete();
   if (requiresInitialLibrary) { await initializeBackgroundServices(); state.bootReady = true; render(); return; }

@@ -108,6 +108,41 @@ describe("Google authentication and sessions", () => {
     expect(users.results).toEqual([{ email: "renamed@example.invalid", name: "Renamed Test User" }]);
   });
 
+  it("renews an active session near expiry for another 30 days", async () => {
+    const { cookie } = await login(signingKey.privateKey);
+    const now = Date.now();
+    await env.DB.prepare("UPDATE sessions SET created_at = ?, expires_at = ?")
+      .bind(new Date(now - 25 * 24 * 60 * 60 * 1000).toISOString(), new Date(now + 24 * 60 * 60 * 1000).toISOString()).run();
+
+    const response = await request("/api/session", {}, cookie);
+    const stored = await env.DB.prepare("SELECT expires_at FROM sessions").first<{ expires_at: string }>();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Set-Cookie")).toContain("soulforge_session=");
+    expect(new Date(stored!.expires_at).getTime()).toBeGreaterThan(now + 29 * 24 * 60 * 60 * 1000);
+  });
+
+  it("caps sliding renewal at 90 days from the interactive login", async () => {
+    const { cookie } = await login(signingKey.privateKey);
+    const now = Date.now();
+    const createdAt = now - 89 * 24 * 60 * 60 * 1000;
+    const absoluteExpiry = createdAt + 90 * 24 * 60 * 60 * 1000;
+    await env.DB.prepare("UPDATE sessions SET created_at = ?, expires_at = ?")
+      .bind(new Date(createdAt).toISOString(), new Date(now + 60 * 60 * 1000).toISOString()).run();
+
+    const response = await request("/api/session", {}, cookie);
+    const stored = await env.DB.prepare("SELECT expires_at FROM sessions").first<{ expires_at: string }>();
+
+    expect(response.status).toBe(200);
+    expect(new Date(stored!.expires_at).getTime()).toBeLessThanOrEqual(absoluteExpiry);
+    expect(new Date(stored!.expires_at).getTime()).toBeGreaterThan(now + 23 * 60 * 60 * 1000);
+
+    await env.DB.prepare("UPDATE sessions SET created_at = ?, expires_at = ?")
+      .bind(new Date(now - 91 * 24 * 60 * 60 * 1000).toISOString(), new Date(now + 24 * 60 * 60 * 1000).toISOString()).run();
+    await expect((await request("/api/session", {}, cookie)).json()).resolves.toEqual({ authenticated: false });
+    expect(await env.DB.prepare("SELECT COUNT(*) AS count FROM sessions").first<{ count: number }>()).toEqual({ count: 0 });
+  });
+
   it("invalidates the server session on logout", async () => {
     const { cookie } = await login(signingKey.privateKey);
     expect((await request("/api/session", {}, cookie)).status).toBe(200);

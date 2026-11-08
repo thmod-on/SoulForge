@@ -3,6 +3,7 @@ import type { Character, PackBundle, PackManifest } from "../../domain/types";
 import { validatePackBundle } from "./packValidation";
 import { analyzePackUpdate, type PackUsageImpact } from "./packUsage";
 import { installLibraryPacks } from "../../storage/packRepository";
+import { readCloudApiError } from "../../sync/cloudClient";
 
 export type PrivateLibraryEntry = {
   id: string;
@@ -51,7 +52,7 @@ export function markPrivateLibraryBootstrapComplete(): void {
 
 export async function fetchPrivateLibraryCatalog(): Promise<PrivateLibraryCatalog> {
   const response = await fetch("/api/library/catalog", { credentials: "same-origin", cache: "no-store" });
-  if (!response.ok) throw new Error(await readApiError(response, "Não foi possível consultar a biblioteca privada."));
+  if (!response.ok) throw await readCloudApiError(response, "Não foi possível consultar a biblioteca privada.");
   return validatePrivateLibraryCatalog(await response.json());
 }
 
@@ -78,7 +79,7 @@ export function validatePrivateLibraryCatalog(value: unknown): PrivateLibraryCat
 
 export async function downloadPrivateLibraryBundle(entry: PrivateLibraryEntry): Promise<PackBundle> {
   const response = await fetch(`/api/library/packs/${encodeURIComponent(entry.id)}/${encodeURIComponent(entry.version)}`, { credentials: "same-origin", cache: "no-store" });
-  if (!response.ok) throw new Error(await readApiError(response, `Não foi possível baixar ${entry.name}.`));
+  if (!response.ok) throw await readCloudApiError(response, `Não foi possível baixar ${entry.name}.`);
   const bytes = new Uint8Array(await response.arrayBuffer());
   if (await sha256(bytes) !== entry.checksum) throw new Error(`A verificação de integridade de ${entry.name} falhou.`);
   const bundle = validatePackBundle(JSON.parse(new TextDecoder().decode(bytes)));
@@ -183,9 +184,4 @@ async function sha256(value: Uint8Array): Promise<string> {
   const copy = new Uint8Array(value).buffer;
   const digest = await crypto.subtle.digest("SHA-256", copy);
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
-async function readApiError(response: Response, fallback: string): Promise<string> {
-  const body = await response.json().catch(() => undefined) as { error?: string } | undefined;
-  return body?.error ?? fallback;
 }

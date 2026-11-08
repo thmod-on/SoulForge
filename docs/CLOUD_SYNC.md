@@ -8,7 +8,7 @@ Produção: <https://soulforge.guitojoker-cloudflare.workers.dev/>.
 
 ## Estado atual
 
-Estado revisado em **29 de outubro de 2026**, na versão **0.43.1**:
+Estado revisado em **8 de novembro de 2026**, na versão **0.44.0**:
 
 - o Worker `soulforge` entrega a PWA e atende às rotas `/api/*`;
 - o D1 `soulforge` está com a migração inicial aplicada;
@@ -110,6 +110,26 @@ para tentar novamente. O Worker devolve uma mensagem segura para credencial
 inválida, conta não autorizada ou indisponibilidade temporária; ele não grava
 o resultado do login em Workers Logs. Uma falha ao consultar a biblioteca após
 um login aceito aparece separadamente e não encerra a sessão.
+
+### Duração e recuperação da sessão
+
+A sessão própria do SoulForge usa cookie opaco, `HttpOnly`, seguro e sem token
+Google persistido. Ela vale por 30 dias sem atividade e é renovada
+silenciosamente quando faltam até sete dias para expirar. A renovação nunca
+ultrapassa 90 dias desde o login interativo; depois desse limite, a pessoa deve
+comprovar novamente sua identidade com Google.
+
+O aplicativo revalida a sessão quando a PWA volta ao primeiro plano. Uma
+resposta `401` interrompe os retries automáticos, mantém a fila no IndexedDB e
+entra no estado **Sessão expirada**. O aviso global informa quantas alterações
+aguardam envio, oferece novo login sem fechar a PWA e permite continuar
+offline. Após o login, a fila é retomada automaticamente.
+
+**Desconectar deste dispositivo** remove somente a sessão atual: personagens,
+alterações locais e dados já sincronizados não são apagados. A exclusão remota
+permanece isolada na ação **Excluir dados da nuvem**, com confirmação própria.
+Nenhuma migração é necessária para a sessão deslizante; `created_at` define o
+limite absoluto e `expires_at` registra a janela de inatividade.
 
 Os bundles não são sincronizados entre contas nem expostos por R2 público. A
 publicação local usa `pnpm run packs:publish`; ela não integra o deploy da PWA.

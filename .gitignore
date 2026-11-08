@@ -16,3 +16,5 @@ coverage/
 .vite-dev.*.log
 .codex-dev*.log
 /local-packs/
+/.library_tmp/
+/.pickpull_tmp/
