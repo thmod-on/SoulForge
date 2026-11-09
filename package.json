@@ -1,6 +1,6 @@
 {
   "name": "soulforge",
-  "version": "0.44.0",
+  "version": "0.45.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@12.11.2",
@@ -27,7 +27,6 @@
     "check:performance": "node scripts/check-performance-budget.mjs",
     "check": "pnpm run check:release && pnpm run check:architecture && tsc --noEmit && tsc -p tsconfig.worker.json --noEmit && tsc -p tsconfig.worker-test.json --noEmit && pnpm test"
   },
-  "dependencies": {},
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.63.1",
     "@cloudflare/vitest-plugin": "^1.4.0",
@@ -35,6 +34,7 @@
     "@msw/cloudflare": "^0.2.0",
     "@types/node": "^24.19.2",
     "fake-indexeddb": "^6.2.5",
+    "happy-dom": "^21.0.4",
     "msw": "3.0.3",
     "typescript": "^7.0.2",
     "vite": "^8.3.4",

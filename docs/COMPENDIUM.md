@@ -122,6 +122,10 @@ Reúne escolhas opcionais de identidade com benefício, desvantagem, perguntas
 narrativas e marcadores declarativos opcionais. O Compendium já oferece busca,
 detalhes, CRUD local e importação por Pack.
 
+Itens de Pack também podem receber um **ajuste pessoal** sem modificar sua
+fonte. O contrato, a precedência e os limites dessa camada estão documentados em
+[Mecânicas de itens](ITEM_MECHANICS.md).
+
 A ficha permite conceder, substituir e remover uma transformação, respeitando
 o limite de uma por personagem. Ela integra a herança sem consumir o limite
 normal de cartas; consultar [Transformações](TRANSFORMATIONS.md).

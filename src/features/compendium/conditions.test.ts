@@ -34,6 +34,7 @@ describe("condições no Compendium", () => {
     expect(html).toContain("limpar ao menos 1 Estresse");
     expect(html).toContain("Core - Condições");
     expect(html).toContain("assets/conditions/generic/vulnerable.jpg");
+    expect(html).toContain("data-compendium-dynamic");
   });
 
   it("explica a relação de Vulnerável com o último Estresse no capítulo", () => {

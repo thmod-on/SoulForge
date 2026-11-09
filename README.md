@@ -2,7 +2,7 @@
 
 SoulForge é uma PWA *offline-first* para acompanhar personagens de Daggerheart sem depender de servidor durante a mesa.
 
-Versão atual: `0.44.0`.
+Versão atual: `0.45.0`.
 
 ## Recursos principais
 
@@ -18,7 +18,9 @@ Versão atual: `0.44.0`.
   e a progressão permite a troca opcional de uma carta de Domínio por outra
   elegível;
 - Compendium pesquisável para cartas, domínios, itens, classes,
-  ancestralidades, comunidades, transformações e condições;
+  ancestralidades, comunidades, transformações e condições, com atualização
+  incremental das buscas para preservar foco, cursor e teclado virtual em
+  telas de toque;
 - comunidades mecânicas persistidas por ID, com compatibilidade para fichas
   legadas e indicação explícita quando o Pack de origem não está instalado;
 - conteúdo extensível por Packs locais, preservando a origem das Definitions e
@@ -28,7 +30,9 @@ Versão atual: `0.44.0`.
   Meia-noite, Osso, Sábio, Valor e Dread possuem artes originais ou fornecidas para o
   SoulForge; famílias
   convencionais de armas e armaduras também recebem artes genéricas sem
-  substituir imagens próprias;
+  substituir imagens próprias; itens podem declarar defesas derivadas de
+  atributo, Conjuração, nível ou tier, e itens de Pack podem receber ajustes
+  pessoais sincronizados sem modificar a fonte nem afetar outros usuários;
 - descansos curtos e longos com movimentos declarativos, incluindo bônus
   concedidos por Features como Transe Celestial; antes dos movimentos, o
   Loadout pode ser reorganizado gratuitamente entre Vault e as cinco cartas

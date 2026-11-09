@@ -214,6 +214,21 @@ export type FeatureActivationDefinition = {
 /** Bônus declarados por um item enquanto ele estiver em Equipados. */
 export type ItemCombatModifiers = Partial<Defense>;
 
+export type ItemDerivedDefenseSource =
+  | { kind: "attribute"; attributeId: Attribute["id"] }
+  | { kind: "spellcast-attribute" }
+  | { kind: "character-level" }
+  | { kind: "character-tier" };
+
+/** Parcela derivada de uma defesa enquanto o item estiver equipado. */
+export type ItemDerivedDefenseModifier = {
+  field: keyof Defense;
+  source: ItemDerivedDefenseSource;
+  multiplier?: number;
+  divisor?: number;
+  rounding?: "ceil" | "floor" | "round";
+};
+
 export type CharacterSkill = {
   id: string;
   name: string;
@@ -340,6 +355,7 @@ export type ItemDefinition = BaseDefinition & {
   value?: number;
   traits?: string[];
   combatModifiers?: ItemCombatModifiers;
+  derivedDefenseModifiers?: ItemDerivedDefenseModifier[];
   weaponProfile?: WeaponProfile;
   armorProfile?: ArmorProfile;
 };

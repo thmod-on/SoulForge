@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Character, Definition } from "../domain/types";
-import type { CardMarkerOverride } from "../storage/compendiumRepository";
+import type { DefinitionOverride } from "../storage/compendiumRepository";
 import {
   listQueuedSyncChanges,
   listSyncConflicts,
@@ -373,7 +373,7 @@ describe("media, logout and account removal", () => {
     const dependencies = createDependencies({
       characters: [character("kael", "Kael II"), character("hero", "Hero")],
       definitions: [definition("local-definition", "local"), definition("pack-definition", "core-pack")],
-      overrides: [{ id: "override", marker: "custom" } as unknown as CardMarkerOverride]
+      overrides: [{ id: "item-personal:item.pack", kind: "item-personal", definitionId: "item.pack", sourcePackVersion: "1.0.0", changes: { summary: "Pessoal" }, baseline: { summary: "Oficial" }, updatedAt: "2026-11-09T12:00:00.000Z" } satisfies DefinitionOverride]
     });
     const coordinator = await loadCoordinator();
     await coordinator.initializeSyncCoordinator(dependencies);
@@ -383,7 +383,7 @@ describe("media, logout and account removal", () => {
       "character:hero",
       "character:kael",
       "definition:local-definition",
-      "override:override"
+      "override:item-personal:item.pack"
     ]);
   });
 });

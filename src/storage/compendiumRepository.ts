@@ -1,4 +1,4 @@
-import type { Definition, GameMarkerDefinition } from "../domain/types";
+import type { Definition, GameMarkerDefinition, ItemCombatModifiers, ItemDefinition, ItemDerivedDefenseModifier } from "../domain/types";
 import { normalizeCardMarkerOverride, normalizeDefinitionRestTimings } from "../domain/restTimingMigration";
 import { ensureSyncStores } from "./syncRepository";
 
@@ -14,6 +14,26 @@ export type CardMarkerOverride = {
   definitionId: string;
   gameMarkers: GameMarkerDefinition[];
 };
+
+export type ItemOverrideValues = {
+  summary?: string;
+  image?: string | null;
+  combatModifiers?: ItemCombatModifiers | null;
+  derivedDefenseModifiers?: ItemDerivedDefenseModifier[] | null;
+  armorProfile?: ItemDefinition["armorProfile"] | null;
+};
+
+export type ItemPersonalOverride = {
+  id: string;
+  kind: "item-personal";
+  definitionId: string;
+  sourcePackVersion: string;
+  changes: ItemOverrideValues;
+  baseline: ItemOverrideValues;
+  updatedAt: string;
+};
+
+export type DefinitionOverride = CardMarkerOverride | ItemPersonalOverride;
 
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -41,10 +61,14 @@ function openDatabase(): Promise<IDBDatabase> {
 }
 
 export async function loadCardMarkerOverrides(): Promise<CardMarkerOverride[]> {
+  return (await loadDefinitionOverrides()).filter((entry): entry is CardMarkerOverride => entry.kind === "card-marker");
+}
+
+export async function loadDefinitionOverrides(): Promise<DefinitionOverride[]> {
   const database = await openDatabase();
-  const overrides = await new Promise<CardMarkerOverride[]>((resolve, reject) => {
+  const overrides = await new Promise<DefinitionOverride[]>((resolve, reject) => {
     const request = database.transaction(overrideStoreName, "readonly").objectStore(overrideStoreName).getAll();
-    request.onsuccess = () => resolve((request.result as CardMarkerOverride[]).filter((entry) => entry.kind === "card-marker"));
+    request.onsuccess = () => resolve((request.result as DefinitionOverride[]).filter(isDefinitionOverride));
     request.onerror = () => reject(request.error);
   });
   database.close();
@@ -56,6 +80,11 @@ export async function saveCardMarkerOverride(definitionId: string, gameMarkers: 
 }
 
 export async function putCardMarkerOverride(override: CardMarkerOverride): Promise<void> {
+  return putDefinitionOverride(override);
+}
+
+export async function putDefinitionOverride(override: DefinitionOverride): Promise<void> {
+  if (!isDefinitionOverride(override)) throw new Error("Complemento de Definition inválido.");
   const database = await openDatabase();
   await new Promise<void>((resolve, reject) => {
     const transaction = database.transaction(overrideStoreName, "readwrite");
@@ -67,6 +96,10 @@ export async function putCardMarkerOverride(override: CardMarkerOverride): Promi
 }
 
 export async function deleteCardMarkerOverride(overrideId: string): Promise<void> {
+  return deleteDefinitionOverride(overrideId);
+}
+
+export async function deleteDefinitionOverride(overrideId: string): Promise<void> {
   const database = await openDatabase();
   await new Promise<void>((resolve, reject) => {
     const transaction = database.transaction(overrideStoreName, "readwrite");
@@ -75,6 +108,31 @@ export async function deleteCardMarkerOverride(overrideId: string): Promise<void
     transaction.onerror = () => reject(transaction.error);
   });
   database.close();
+}
+
+export function isDefinitionOverride(value: unknown): value is DefinitionOverride {
+  if (!value || typeof value !== "object") return false;
+  const entry = value as Partial<DefinitionOverride>;
+  if (typeof entry.id !== "string" || typeof entry.definitionId !== "string") return false;
+  if (entry.kind === "card-marker") return entry.id === `card-marker:${entry.definitionId}` && Array.isArray(entry.gameMarkers);
+  if (entry.kind !== "item-personal" || entry.id !== `item-personal:${entry.definitionId}` || typeof entry.sourcePackVersion !== "string" || typeof entry.updatedAt !== "string") return false;
+  return isItemOverrideValues(entry.changes) && isItemOverrideValues(entry.baseline);
+}
+
+function isItemOverrideValues(value: unknown): value is ItemOverrideValues {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const entry = value as ItemOverrideValues;
+  if (entry.summary !== undefined && typeof entry.summary !== "string") return false;
+  if (entry.image !== undefined && entry.image !== null && typeof entry.image !== "string") return false;
+  if (entry.combatModifiers !== undefined && entry.combatModifiers !== null && (typeof entry.combatModifiers !== "object" || Object.entries(entry.combatModifiers).some(([key, amount]) => !["armor", "evasion", "minor", "major"].includes(key) || !Number.isFinite(amount)))) return false;
+  if (entry.armorProfile !== undefined && entry.armorProfile !== null && (!Number.isFinite(entry.armorProfile.armor) || !Number.isFinite(entry.armorProfile.minorThreshold) || !Number.isFinite(entry.armorProfile.majorThreshold))) return false;
+  return entry.derivedDefenseModifiers === undefined || entry.derivedDefenseModifiers === null || Array.isArray(entry.derivedDefenseModifiers) && entry.derivedDefenseModifiers.every((modifier) => {
+    if (!modifier || !["armor", "evasion", "minor", "major"].includes(modifier.field) || !modifier.source) return false;
+    if (modifier.multiplier !== undefined && !Number.isFinite(modifier.multiplier)) return false;
+    if (modifier.divisor !== undefined && (!Number.isFinite(modifier.divisor) || modifier.divisor <= 0)) return false;
+    if (modifier.rounding !== undefined && !["ceil", "floor", "round"].includes(modifier.rounding)) return false;
+    return modifier.source.kind === "attribute" ? ["for", "dex", "con", "int", "wil", "cha"].includes(modifier.source.attributeId) : ["spellcast-attribute", "character-level", "character-tier"].includes(modifier.source.kind);
+  });
 }
 
 export async function loadCustomDefinitions(): Promise<Definition[]> {
@@ -129,7 +187,8 @@ export async function migrateLegacyRestTimings(): Promise<void> {
     const overridesRequest = overrides.getAll();
     overridesRequest.onerror = () => reject(overridesRequest.error);
     overridesRequest.onsuccess = () => {
-      for (const override of overridesRequest.result as CardMarkerOverride[]) {
+      for (const override of overridesRequest.result as DefinitionOverride[]) {
+        if (override.kind !== "card-marker") continue;
         const normalized = normalizeCardMarkerOverride(override);
         if (normalized !== override) overrides.put(normalized);
       }

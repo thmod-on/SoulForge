@@ -114,6 +114,10 @@ continua disponível mediante confirmação reforçada; personagens, estados e
 overrides nunca são apagados. Se o mesmo ID voltar a ser instalado, a referência
 é resolvida novamente de forma automática.
 
+Ajustes pessoais de itens são patches esparsos externos ao Pack. Uma atualização
+preserva o ajuste e pede revisão somente quando a nova versão também altera um
+campo sobreposto; consulte [Mecânicas de itens](ITEM_MECHANICS.md).
+
 ### Biblioteca privada
 
 Durante o período privado de testes, os 11 Packs do grupo podem ser

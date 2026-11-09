@@ -1,5 +1,5 @@
 import type { Character, Definition, PackManifest } from "../domain/types";
-import type { CardMarkerOverride } from "./compendiumRepository";
+import { isDefinitionOverride, type CardMarkerOverride, type DefinitionOverride } from "./compendiumRepository";
 import { normalizeCardMarkerOverride, normalizeDefinitionRestTimings } from "../domain/restTimingMigration";
 import { ensureSyncStores } from "./syncRepository";
 
@@ -15,7 +15,7 @@ export type LocalDataSnapshot = {
   characters: Character[];
   installedPacks: PackManifest[];
   definitions: Definition[];
-  overrides: CardMarkerOverride[];
+  overrides: DefinitionOverride[];
 };
 
 function compatibilityIsCurrent(): boolean {
@@ -56,7 +56,7 @@ export async function loadLocalDataSnapshot(): Promise<LocalDataSnapshot> {
         characters: characters.result as Character[],
         installedPacks: installedPacks.result as PackManifest[],
         definitions: definitions.result as Definition[],
-        overrides: (overrides.result as CardMarkerOverride[]).filter((entry) => entry.kind === "card-marker")
+        overrides: (overrides.result as DefinitionOverride[]).filter(isDefinitionOverride)
       });
       transaction.onerror = () => reject(transaction.error);
       transaction.onabort = () => reject(transaction.error);
@@ -139,13 +139,15 @@ export async function applyLocalDataCompatibility(options: { force?: boolean } =
         }
       };
       overrides.getAll().onsuccess = (event) => {
-        for (const override of (event.target as IDBRequest<CardMarkerOverride[]>).result) {
+        for (const override of (event.target as IDBRequest<DefinitionOverride[]>).result) {
           if (override.definitionId.includes(".demo.")) {
             overrides.delete(override.id);
             continue;
           }
-          const normalized = normalizeCardMarkerOverride(override);
-          if (normalized !== override) overrides.put(normalized);
+          if (override.kind === "card-marker") {
+            const normalized = normalizeCardMarkerOverride(override);
+            if (normalized !== override) overrides.put(normalized);
+          }
         }
       };
       transaction.oncomplete = () => resolve();

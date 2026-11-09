@@ -14,6 +14,11 @@ const feature = {
 };
 
 describe("validação de Packs", () => {
+  it("aceita defesas derivadas declarativas e rejeita divisores inválidos", () => {
+    const item = { id: "item.test.robes", type: "item" as const, packId: manifest.id, name: "Vestes", summary: "Vestes mágicas.", category: "armadura" as const, weight: 0, derivedDefenseModifiers: [{ field: "minor" as const, source: { kind: "spellcast-attribute" as const } }] };
+    expect(validatePackBundle({ format: "soulforge-pack-v1", manifest, definitions: [item] }).definitions).toHaveLength(1);
+    expect(() => validatePackBundle({ format: "soulforge-pack-v1", manifest, definitions: [{ ...item, derivedDefenseModifiers: [{ field: "minor", source: { kind: "character-level" }, divisor: 0 }] }] })).toThrow("modificadores derivados de defesa inválidos");
+  });
   it("aceita metadados válidos de Feature ativável", () => {
     expect(validatePackBundle({ format: "soulforge-pack-v1", manifest, definitions: [feature] }).definitions).toHaveLength(1);
   });

@@ -29,6 +29,9 @@ export function validatePackBundle(value: unknown): PackBundle {
     if (feature.type === "feature" && feature.startingDomainCardBonus !== undefined && (!Number.isInteger(feature.startingDomainCardBonus) || feature.startingDomainCardBonus < 0)) throw new Error(`A Feature “${feature.name}” possui bônus inicial de cartas inválido.`);
     if (feature.type === "feature" && !isFeatureCharacterFieldsValid(feature.characterFields)) throw new Error(`A Feature “${feature.name}” possui campos de personagem inválidos.`);
   }
+  for (const item of definitions.filter((definition) => definition.type === "item")) {
+    if (!isItemDerivedDefenseModifierListValid(item.derivedDefenseModifiers)) throw new Error(`O item “${item.name}” possui modificadores derivados de defesa inválidos.`);
+  }
 
   function isGameMarkerListValid(value: unknown): boolean {
     if (value === undefined) return true;
@@ -112,6 +115,22 @@ export function validatePackBundle(value: unknown): PackBundle {
       if (!Number.isFinite(candidate.amount)) return false;
       if (candidate.kind === "defense") return typeof candidate.field === "string" && ["evasion", "armor", "minor", "major"].includes(candidate.field);
       return candidate.kind === "defense-per-proficiency" && (candidate.field === "minor" || candidate.field === "major");
+    });
+  }
+
+  function isItemDerivedDefenseModifierListValid(value: unknown): boolean {
+    if (value === undefined) return true;
+    if (!Array.isArray(value)) return false;
+    return value.every((modifier) => {
+      if (!modifier || typeof modifier !== "object") return false;
+      const candidate = modifier as { field?: unknown; source?: unknown; multiplier?: unknown; divisor?: unknown; rounding?: unknown };
+      if (!["evasion", "armor", "minor", "major"].includes(String(candidate.field)) || !candidate.source || typeof candidate.source !== "object") return false;
+      if (candidate.multiplier !== undefined && !Number.isFinite(candidate.multiplier)) return false;
+      if (candidate.divisor !== undefined && (!Number.isFinite(candidate.divisor) || Number(candidate.divisor) <= 0)) return false;
+      if (candidate.rounding !== undefined && !["ceil", "floor", "round"].includes(String(candidate.rounding))) return false;
+      const source = candidate.source as { kind?: unknown; attributeId?: unknown };
+      if (source.kind === "attribute") return ["for", "dex", "con", "int", "wil", "cha"].includes(String(source.attributeId));
+      return ["spellcast-attribute", "character-level", "character-tier"].includes(String(source.kind)) && source.attributeId === undefined;
     });
   }
 

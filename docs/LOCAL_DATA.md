@@ -68,7 +68,7 @@ O arquivo carrega referências a Definitions de Packs, mas não instala Packs au
 
 Além da ficha, a seção **Backup e compartilhamento** das Configurações oferece **Criar backup completo**, que gera um `.soulforge-backup.json` com todas as fichas, Packs instalados, Definitions locais e complementos de cartas. **Restaurar backup** valida o arquivo, baixa uma cópia de segurança automática do estado atual e substitui as quatro coleções locais em uma única transação.
 
-Para compartilhar somente criações do Compendium, **Exportar conteúdo** gera um `.soulforge-content.json`. Ele inclui apenas Definitions com origem `local` e complementos locais; não redistribui fichas nem Packs externos. Na importação, conteúdo novo é acrescentado e conflitos por ID exigem que a pessoa escolha explicitamente quais versões recebidas substituirão as locais.
+Para compartilhar somente criações do Compendium, **Exportar conteúdo** gera um `.soulforge-content.json`. Ele inclui Definitions com origem `local` e complementos compartilháveis de cartas; não redistribui fichas, Packs externos nem ajustes pessoais de itens. Estes últimos pertencem ao perfil, sincronizam entre os dispositivos da mesma conta e integram apenas o backup completo. Na importação, conteúdo novo é acrescentado e conflitos por ID exigem que a pessoa escolha explicitamente quais versões recebidas substituirão as locais.
 
 Ainda é recomendável guardar o backup completo fora do dispositivo: limpar os dados do navegador ou perder o aparelho apaga o IndexedDB local.
 

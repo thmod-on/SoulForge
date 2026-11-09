@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Catalog } from "../../domain/catalog";
 import { demoCharacter } from "../../domain/demoCharacter";
 import type { CardDefinition, DomainDefinition } from "../../domain/types";
-import { renderCardModal, type CardFeatureDependencies } from "./cards";
+import { renderCardModal, renderCompendiumCardsManager, type CardFeatureDependencies } from "./cards";
 
 const domain: DomainDefinition = {
   id: "domain.test",
@@ -59,6 +59,12 @@ function activeDependencies(definition: CardDefinition, reactivation?: "rest" | 
 }
 
 describe("renderCardModal", () => {
+  it("mantém os resultados em uma superfície separada da pesquisa", () => {
+    const html = renderCompendiumCardsManager(dependencies(card));
+    expect(html).toContain("data-compendium-card-search");
+    expect(html).toContain("data-compendium-dynamic");
+  });
+
   it("exibe somente o efeito completo quando ele está disponível", () => {
     const html = renderCardModal(card.id, dependencies(card));
 

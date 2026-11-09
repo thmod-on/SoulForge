@@ -1,7 +1,9 @@
+import type { Catalog } from "../../domain/catalog";
 import type { Character, Defense, ItemDefinition } from "../../domain/types";
+import { sumDerivedDefense } from "../items/derivedDefense";
 
 /** Calcula os valores exibidos na ficha sem alterar a defesa-base persistida. */
-export function getEffectiveDefense(character: Character, findItem: (id: string) => ItemDefinition | undefined, activeFeatureModifiers: Partial<Defense> = {}): Defense {
+export function getEffectiveDefense(character: Character, findItem: (id: string) => ItemDefinition | undefined, activeFeatureModifiers: Partial<Defense> = {}, catalog?: Pick<Catalog, "subclasses">): Defense {
   const equippedItems = character.inventory.entries
     .filter((entry) => (entry.compartmentId ?? (entry.equipped ? "equipped" : "backpack")) === "equipped");
   const hasArmor = equippedItems.some((entry) => (findItem(entry.definitionId)?.combatModifiers?.armor ?? 0) * entry.quantity > 0);
@@ -14,13 +16,15 @@ export function getEffectiveDefense(character: Character, findItem: (id: string)
   };
   const defenseWithItems = equippedItems
     .reduce<Defense>((defense, entry) => {
-      const modifiers = findItem(entry.definitionId)?.combatModifiers;
-      return modifiers
+      const item = findItem(entry.definitionId);
+      const modifiers = item?.combatModifiers;
+      const derived = sumDerivedDefense(item?.derivedDefenseModifiers, character, catalog).defense;
+      return item
         ? {
-            evasion: defense.evasion + (modifiers.evasion ?? 0) * entry.quantity,
-            armor: defense.armor + (modifiers.armor ?? 0) * entry.quantity,
-            minor: defense.minor + (modifiers.minor ?? 0) * entry.quantity,
-            major: defense.major + (modifiers.major ?? 0) * entry.quantity
+            evasion: defense.evasion + ((modifiers?.evasion ?? 0) + (derived.evasion ?? 0)) * entry.quantity,
+            armor: defense.armor + ((modifiers?.armor ?? 0) + (derived.armor ?? 0)) * entry.quantity,
+            minor: defense.minor + ((modifiers?.minor ?? 0) + (derived.minor ?? 0)) * entry.quantity,
+            major: defense.major + ((modifiers?.major ?? 0) + (derived.major ?? 0)) * entry.quantity
           }
         : defense;
     }, baseDefense);

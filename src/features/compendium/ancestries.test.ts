@@ -51,6 +51,7 @@ describe("filtro de origem das ancestralidades", () => {
     expect(html).toContain('data-compendium-ancestry-source="core"');
     expect(html).toContain('data-compendium-ancestry-source="hope-fear" aria-pressed="true"');
     expect(html).toContain('data-compendium-ancestry-source="customizado"');
+    expect(html).toContain("data-compendium-dynamic");
     expect(html).toContain("Minotauro");
     expect(html).not.toContain("Cristalino");
   });
@@ -63,5 +64,16 @@ describe("filtro de origem das ancestralidades", () => {
     expect(handleAncestryAction(filter, { state, render } as unknown as AncestryFeatureDependencies)).toBe(true);
     expect(state.compendiumAncestrySource).toBe("customizado");
     expect(render).toHaveBeenCalledWith({ preserveMainScroll: true });
+  });
+
+  it("usa a atualização incremental ao trocar a origem quando disponível", () => {
+    const filter = { closest: (selector: string) => selector === "[data-compendium-ancestry-source]" ? { dataset: { compendiumAncestrySource: "core" } } : null } as unknown as HTMLElement;
+    const state = { compendiumAncestrySearch: "", compendiumAncestrySource: "todos" as const, ancestryModalOpen: false };
+    const render = vi.fn();
+    const renderResults = vi.fn();
+
+    expect(handleAncestryAction(filter, { state, render, renderResults } as unknown as AncestryFeatureDependencies)).toBe(true);
+    expect(renderResults).toHaveBeenCalledOnce();
+    expect(render).not.toHaveBeenCalled();
   });
 });

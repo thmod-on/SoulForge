@@ -1,7 +1,7 @@
 import type { SyncConflict, SyncEnvelope, SyncPushChange, SyncResourceType } from "../sync/types";
 import { syncKey } from "../sync/types";
 import type { Character, Definition } from "../domain/types";
-import type { CardMarkerOverride } from "./compendiumRepository";
+import type { DefinitionOverride } from "./compendiumRepository";
 
 const databaseName = "soulforge";
 const databaseVersion = 6;
@@ -222,7 +222,7 @@ export async function commitSyncSnapshot(baselineCursor: number): Promise<{ chan
       requestResult(read.objectStore(conflictStore).getAll()) as Promise<SyncConflict[]>,
       requestResult(read.objectStore("characters").getAll()) as Promise<Character[]>,
       requestResult(read.objectStore("customDefinitions").getAll()) as Promise<Definition[]>,
-      requestResult(read.objectStore("definitionOverrides").getAll()) as Promise<CardMarkerOverride[]>
+      requestResult(read.objectStore("definitionOverrides").getAll()) as Promise<DefinitionOverride[]>
     ]);
     await transactionComplete(read);
     const stagedByKey = new Map(staged.map((entry) => [entry.key, entry]));

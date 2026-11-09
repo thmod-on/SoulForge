@@ -4,6 +4,37 @@ Todas as mudanças relevantes do SoulForge serão registradas neste arquivo.
 
 O formato segue, de maneira simplificada, a convenção de *Keep a Changelog* e as versões seguem o Versionamento Semântico.
 
+## [0.45.0]
+
+### Adicionado
+
+- itens podem combinar valores defensivos fixos com parcelas derivadas de
+  atributo, Conjuração, nível ou tier, usando fórmulas estruturadas e
+  validadas;
+- itens de Pack passam a oferecer **Ajustar para mim**, duplicação como
+  conteúdo customizado, restauração do padrão e revisão de conflitos após uma
+  atualização do Pack;
+- ajustes pessoais de itens sincronizam entre dispositivos da mesma conta e
+  integram o backup completo sem acompanhar personagens ou conteúdo
+  compartilhável.
+
+### Alterado
+
+- o editor de itens apresenta valores fixos e derivados separadamente, mostra
+  a fórmula em linguagem legível e preserva os demais perfis e propriedades do
+  item;
+- pesquisas de itens, cartas, ancestralidades, comunidades, transformações e
+  condições atualizam somente filtros e resultados, preservando o campo de
+  busca, foco, cursor, seleção e composição de texto.
+
+### Corrigido
+
+- a busca do Compendium deixa de recriar o campo ativo durante a digitação,
+  eliminando a causa conhecida do teclado piscar no iPad; a validação final na
+  PWA instalada permanece registrada no backlog;
+- itens equipados recalculam defesas derivadas imediatamente e apresentam um
+  aviso seguro quando o atributo de Conjuração não pode ser resolvido.
+
 ## [0.44.0]
 
 ### Adicionado

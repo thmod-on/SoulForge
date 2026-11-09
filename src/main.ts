@@ -11,7 +11,7 @@ import { getActiveGameMarkers, synchronizeGameMarkers } from "./features/game-ma
 import { handleGameMarkerAction } from "./features/game-markers/gameMarkerActions";
 import { renderGameMarkerDiceDialog } from "./features/game-markers/renderDiceDialog";
 import { handleStoredDiceAction, renderStoredDiceDialog, type StoredDiceDialogState } from "./features/game-markers/storedDice";
-import type { CardMarkerOverride } from "./storage/compendiumRepository";
+import type { CardMarkerOverride, DefinitionOverride, ItemPersonalOverride } from "./storage/compendiumRepository";
 import { loadInstalledPacks, removeAllLocalPacks } from "./storage/packRepository";
 import { cancelPrivateLibraryUpdate, confirmPrivateLibraryUpdate, getPrivateLibraryBootstrapComplete, installMissingPrivateLibrary, markPrivateLibraryBootstrapComplete, preparePrivateLibraryUpdate, refreshPrivateLibraryState, reinstallPrivateLibrary } from "./features/packs/privateLibrary";
 import type { PrivateLibraryView } from "./features/packs/privateLibrary";
@@ -141,12 +141,12 @@ import {
 } from "./features/compendium/cards";
 import { readGameMarker, renderGameMarkerFields } from "./features/compendium/gameMarkerForm";
 import {
-  removeCompendiumItem as removeCompendiumItemAction,
+  handleCompendiumItemAction,
   renderCompendiumItemFormModal as renderCompendiumItemFormModalView,
   renderCompendiumItemPreviewModal as renderCompendiumItemPreviewModalView,
   renderCompendiumItemsManager as renderCompendiumItemsManagerView,
   renderDeleteCompendiumItemModal as renderDeleteCompendiumItemModalView,
-  saveCompendiumItem as saveCompendiumItemAction,
+  updateItemDerivedModifierPreview,
   type ItemFeatureDependencies
 } from "./features/compendium/items";
 import {
@@ -168,9 +168,11 @@ import {
   type AncestryFeatureDependencies,
   type AncestrySourceFilter
 } from "./features/compendium/ancestries";
+import { renderCompendiumInPlace, shouldRefreshCompendiumSearch } from "./features/compendium/renderInPlace";
 import type { CompendiumSpread, CompendiumView, InventoryFilter, Page, ProgressionDraftChoice, ProgressionFlowStep, ProgressionMulticlassDraft, ProgressionPicker, ProgressionTierNumber } from "./app/types";
 import { editorNavigation as sideNavItems, getPageFromEventTarget, isEditorPage, playerNavigation as topNavItems } from "./app/navigation";
-import { deleteSyncedCharacter, deleteSyncedDefinition as deleteCustomDefinition, getSyncViewModel, handleCloudAction, initializeCloudIntegration, loadCardMarkerOverrides, loadCustomDefinitions, mountCloudSignInIfPresent, mountGoogleSignIn, queueLocalSnapshot, refreshCloudAppliedState, renderCloudSessionNotice, saveSyncedCardMarkerOverride as saveCardMarkerOverride, saveSyncedCharacter, saveSyncedDefinition as saveCustomDefinition, updateCloudSessionNotice } from "./features/cloud/cloudIntegration";
+import { deleteSyncedCharacter, deleteSyncedDefinition as deleteCustomDefinition, deleteSyncedDefinitionOverride, getSyncViewModel, handleCloudAction, initializeCloudIntegration, loadDefinitionOverrides, loadCustomDefinitions, mountCloudSignInIfPresent, mountGoogleSignIn, queueLocalSnapshot, refreshCloudAppliedState, renderCloudSessionNotice, saveSyncedCardMarkerOverride as saveCardMarkerOverride, saveSyncedCharacter, saveSyncedDefinition as saveCustomDefinition, saveSyncedDefinitionOverride, updateCloudSessionNotice } from "./features/cloud/cloudIntegration";
+import { applyItemPersonalOverride } from "./features/items/itemPersonalOverrides";
 import "./styles.css"; function getAppRoot(): HTMLDivElement {
   const element = document.querySelector<HTMLDivElement>("#app");
   if (!element) {
@@ -180,7 +182,10 @@ import "./styles.css"; function getAppRoot(): HTMLDivElement {
 }
 const appRoot = getAppRoot();
 let catalog = baseCatalog;
+let definitionOverrides: DefinitionOverride[] = [];
 let cardMarkerOverrides: CardMarkerOverride[] = [];
+let itemPersonalOverrides: ItemPersonalOverride[] = [];
+let canonicalItemsById = new Map<string, ItemDefinition>();
 let modalBackdropPointerDown = false;
 let shouldAnimateCharacterCreationModal = false;
 /** Centraliza a persistencia para que todo personagem salvo mantenha os marcadores sincronizados. */
@@ -253,6 +258,7 @@ const state: {
   deletingCompendiumCardId?: string;
   itemDefinitionModalOpen: boolean;
   editingCompendiumItemId?: string;
+  duplicatingCompendiumItemId?: string;
   deletingCompendiumItemId?: string;
   compendiumItemPreviewId?: string;
   compendiumClassPreviewId?: string;
@@ -447,7 +453,7 @@ function getPlayerShellDependencies(): PlayerShellDependencies {
     getEffectiveDefense: (character) => getEffectiveDefense(character, (definitionId) => {
       const definition = findDefinition(catalog, definitionId);
       return definition?.type === "item" ? definition : undefined;
-    }, getActiveFeatureEffectDefenseModifiers(character, catalog))
+    }, getActiveFeatureEffectDefenseModifiers(character, catalog), catalog)
   };
 }
 
@@ -508,6 +514,10 @@ function getItemFeatureDependencies(): ItemFeatureDependencies {
     renderItemVisual: (item, variant) => renderItemVisualView(item, variant, escapeHtml),
     saveCustomDefinition,
     deleteCustomDefinition,
+    itemPersonalOverrides,
+    getCanonicalItem: (definitionId) => canonicalItemsById.get(definitionId),
+    saveItemPersonalOverride: saveSyncedDefinitionOverride,
+    deleteItemPersonalOverride: deleteSyncedDefinitionOverride,
     refreshCatalog,
     render
   };
@@ -546,7 +556,8 @@ function getAncestryFeatureDependencies(): AncestryFeatureDependencies {
     saveCustomDefinition,
     deleteCustomDefinition,
     refreshCatalog,
-    render
+    render,
+    renderResults: refreshCompendiumResults
   };
 }
 
@@ -1042,6 +1053,24 @@ const renderCharacterCreationInPlace = (options: { resetScroll?: boolean; reveal
   }
 };
 const renderRestInPlace = (): void => { if (!renderRestModalInPlace(appRoot, state.character, state.restDialogKind, state.restChoices, state.restError, { escapeHtml, catalog }, state.restLoadoutStage, state.restLoadoutDraftIds)) render({ preserveMainScroll: true }); };
+const compendiumSearchSelector = "[data-compendium-card-search],[data-compendium-item-search],[data-compendium-ancestry-search],[data-compendium-community-search],[data-compendium-transformation-search],[data-compendium-condition-search]";
+const compendiumButtonFilterSelector = "[data-compendium-domain-filter],[data-compendium-tier-filter],[data-compendium-item-filter],[data-compendium-item-tier-filter],[data-compendium-ancestry-source]";
+
+function refreshCompendiumResults(): void {
+  if (!renderCompendiumInPlace(appRoot, renderCompendium())) render({ preserveMainScroll: true });
+}
+
+function updateCompendiumSearchState(target: HTMLInputElement): boolean {
+  if (target.matches("[data-compendium-card-search]")) state.compendiumCardSearch = target.value;
+  else if (target.matches("[data-compendium-item-search]")) state.compendiumItemSearch = target.value;
+  else if (target.matches("[data-compendium-ancestry-search]")) state.compendiumAncestrySearch = target.value;
+  else if (target.matches("[data-compendium-community-search]")) state.compendiumCommunitySearch = target.value;
+  else if (target.matches("[data-compendium-transformation-search]")) state.transformationState.compendiumTransformationSearch = target.value;
+  else if (target.matches("[data-compendium-condition-search]")) state.conditionState.compendiumConditionSearch = target.value;
+  else return false;
+  return true;
+}
+
 function focusInventorySearch(): void {
   requestAnimationFrame(() => {
     const input = document.querySelector<HTMLInputElement>("[data-inventory-search]");
@@ -1050,34 +1079,25 @@ function focusInventorySearch(): void {
   });
 }
 
-function focusCompendiumCardSearch(): void {
-  requestAnimationFrame(() => {
-    const input = document.querySelector<HTMLInputElement>("[data-compendium-card-search]");
-    input?.focus({ preventScroll: true });
-    input?.setSelectionRange(input.value.length, input.value.length);
-  });
-}
-
-function focusCompendiumAncestrySearch(): void {
-  requestAnimationFrame(() => {
-    const input = document.querySelector<HTMLInputElement>("[data-compendium-ancestry-search]");
-    input?.focus({ preventScroll: true });
-    input?.setSelectionRange(input.value.length, input.value.length);
-  });
-}
-
 async function refreshCatalog(): Promise<void> {
   const customDefinitions = await loadCustomDefinitions();
   state.installedPacks = await loadInstalledPacks();
-  cardMarkerOverrides = await loadCardMarkerOverrides();
-  applyCatalogSnapshot({ installedPacks: state.installedPacks, definitions: customDefinitions, overrides: cardMarkerOverrides });
+  definitionOverrides = await loadDefinitionOverrides();
+  applyCatalogSnapshot({ installedPacks: state.installedPacks, definitions: customDefinitions, overrides: definitionOverrides });
 }
 
 function applyCatalogSnapshot(snapshot: Pick<LocalDataSnapshot, "installedPacks" | "definitions" | "overrides">): void {
   state.installedPacks = snapshot.installedPacks;
-  cardMarkerOverrides = snapshot.overrides;
+  definitionOverrides = snapshot.overrides;
+  cardMarkerOverrides = definitionOverrides.filter((entry): entry is CardMarkerOverride => entry.kind === "card-marker");
+  itemPersonalOverrides = definitionOverrides.filter((entry): entry is ItemPersonalOverride => entry.kind === "item-personal");
   const overrideByDefinitionId = new Map(cardMarkerOverrides.map((override) => [override.definitionId, override]));
-  const definitions = [...baseCatalog.definitions, ...snapshot.definitions].map((definition) => definition.type !== "card" ? definition : applyCardContentDefaults(definition, overrideByDefinitionId.get(definition.id)?.gameMarkers));
+  const itemOverrideByDefinitionId = new Map(itemPersonalOverrides.map((override) => [override.definitionId, override]));
+  const sourceDefinitions = [...baseCatalog.definitions, ...snapshot.definitions];
+  canonicalItemsById = new Map(sourceDefinitions.filter((definition): definition is ItemDefinition => definition.type === "item").map((item) => [item.id, item]));
+  const definitions = sourceDefinitions.map((definition) => definition.type === "card"
+    ? applyCardContentDefaults(definition, overrideByDefinitionId.get(definition.id)?.gameMarkers)
+    : definition.type === "item" ? applyItemPersonalOverride(definition, itemOverrideByDefinitionId.get(definition.id)) : definition);
   catalog = createCatalog([...baseCatalog.packs, ...state.installedPacks], definitions);
 }
 async function openCharacter(characterId: string | undefined): Promise<void> {
@@ -1230,6 +1250,8 @@ function bindEvents(): void {
 
   document.addEventListener("pointerdown", (event) => {
     const target = event.target;
+    const activeSearch = document.activeElement;
+    if (target instanceof HTMLElement && activeSearch instanceof HTMLInputElement && activeSearch.matches(compendiumSearchSelector) && target.closest(compendiumButtonFilterSelector)) event.preventDefault();
     modalBackdropPointerDown = event.button === 0 && target instanceof HTMLElement && target.matches("[data-modal-backdrop]");
   });
 
@@ -1350,6 +1372,7 @@ function bindEvents(): void {
       state.deletingCompendiumCardId = undefined;
       state.itemDefinitionModalOpen = false;
       state.editingCompendiumItemId = undefined;
+      state.duplicatingCompendiumItemId = undefined;
       state.deletingCompendiumItemId = undefined;
       state.compendiumItemPreviewId = undefined;
       state.compendiumClassPreviewId = undefined;
@@ -1430,6 +1453,7 @@ function bindEvents(): void {
       state.deletingCompendiumCardId = undefined;
       state.itemDefinitionModalOpen = false;
       state.editingCompendiumItemId = undefined;
+      state.duplicatingCompendiumItemId = undefined;
       state.deletingCompendiumItemId = undefined;
       state.compendiumItemPreviewId = undefined;
       state.compendiumClassPreviewId = undefined;
@@ -1747,6 +1771,7 @@ function bindEvents(): void {
     if (target.closest('[data-action="new-compendium-item"]')) {
       state.itemDefinitionModalOpen = true;
       state.editingCompendiumItemId = undefined;
+      state.duplicatingCompendiumItemId = undefined;
       render();
       return;
     }
@@ -1827,36 +1852,7 @@ function bindEvents(): void {
       return;
     }
 
-    const editCompendiumItemButton = target.closest<HTMLElement>('[data-action="edit-compendium-item"]');
-    if (editCompendiumItemButton) {
-      state.itemDefinitionModalOpen = true;
-      state.editingCompendiumItemId = editCompendiumItemButton.dataset.itemId;
-      render();
-      return;
-    }
-
-    if (target.closest('[data-action="save-compendium-item"]')) {
-      void saveCompendiumItemAction(getItemFeatureDependencies());
-      return;
-    }
-
-    const deleteCompendiumItemButton = target.closest<HTMLElement>('[data-action="delete-compendium-item"]');
-    if (deleteCompendiumItemButton) {
-      state.deletingCompendiumItemId = deleteCompendiumItemButton.dataset.itemId;
-      render();
-      return;
-    }
-
-    if (target.closest('[data-action="cancel-delete-compendium-item"]')) {
-      state.deletingCompendiumItemId = undefined;
-      render();
-      return;
-    }
-
-    if (target.closest('[data-action="confirm-delete-compendium-item"]')) {
-      void removeCompendiumItemAction(getItemFeatureDependencies());
-      return;
-    }
+    if (handleCompendiumItemAction(target, getItemFeatureDependencies())) return;
 
     const compendiumClassPreviewButton = target.closest<HTMLElement>("[data-compendium-class-preview-id]");
     if (compendiumClassPreviewButton) {
@@ -1865,15 +1861,8 @@ function bindEvents(): void {
       return;
     }
 
-    const compendiumItemPreviewButton = target.closest<HTMLElement>("[data-compendium-item-preview-id]");
-    if (compendiumItemPreviewButton) {
-      state.compendiumItemPreviewId = compendiumItemPreviewButton.dataset.compendiumItemPreviewId;
-      render({ preserveMainScroll: true });
-      return;
-    }
-
     const compendiumItemFilterButton = target.closest<HTMLElement>("[data-compendium-item-filter],[data-compendium-item-tier-filter]");
-    if (compendiumItemFilterButton) { const tier = compendiumItemFilterButton.dataset.compendiumItemTierFilter; if (tier) state.compendiumItemTierFilter = tier; else state.compendiumItemFilter = compendiumItemFilterButton.dataset.compendiumItemFilter as InventoryFilter; render(); return; }
+    if (compendiumItemFilterButton) { const tier = compendiumItemFilterButton.dataset.compendiumItemTierFilter; if (tier) state.compendiumItemTierFilter = tier; else state.compendiumItemFilter = compendiumItemFilterButton.dataset.compendiumItemFilter as InventoryFilter; refreshCompendiumResults(); return; }
 
     const editCompendiumCardButton = target.closest<HTMLElement>('[data-action="edit-compendium-card"]');
     if (editCompendiumCardButton) {
@@ -1967,14 +1956,14 @@ function bindEvents(): void {
     const compendiumDomainFilterButton = target.closest<HTMLElement>("[data-compendium-domain-filter]");
     if (compendiumDomainFilterButton) {
       state.compendiumDomainFilter = compendiumDomainFilterButton.dataset.compendiumDomainFilter ?? "todos";
-      render();
+      refreshCompendiumResults();
       return;
     }
 
     const compendiumTierFilterButton = target.closest<HTMLElement>("[data-compendium-tier-filter]");
     if (compendiumTierFilterButton) {
       state.compendiumTierFilter = compendiumTierFilterButton.dataset.compendiumTierFilter ?? "todos";
-      render();
+      refreshCompendiumResults();
       return;
     }
 
@@ -2447,6 +2436,7 @@ function bindEvents(): void {
     if (event.key === "Escape" && (state.itemDefinitionModalOpen || state.deletingCompendiumItemId || state.compendiumItemPreviewId)) {
       state.itemDefinitionModalOpen = false;
       state.editingCompendiumItemId = undefined;
+      state.duplicatingCompendiumItemId = undefined;
       state.deletingCompendiumItemId = undefined;
       state.compendiumItemPreviewId = undefined;
       render({ preserveMainScroll: true });
@@ -2482,39 +2472,21 @@ function bindEvents(): void {
       return;
     }
 
+    if (target.closest("[data-item-derived-row]")) updateItemDerivedModifierPreview(target);
+
     if (target.matches("[data-inventory-search]")) {
       state.inventorySearch = target.value;
       render();
       focusInventorySearch();
     }
 
-    if (target.matches("[data-compendium-card-search]")) {
-      state.compendiumCardSearch = target.value;
-      render();
-      focusCompendiumCardSearch();
-    }
-
-    if (target.matches("[data-compendium-item-search]")) {
-      state.compendiumItemSearch = target.value;
-      render();
-      requestAnimationFrame(() => {
-        const input = document.querySelector<HTMLInputElement>("[data-compendium-item-search]");
-        input?.focus({ preventScroll: true });
-        input?.setSelectionRange(input.value.length, input.value.length);
-      });
+    if (updateCompendiumSearchState(target)) {
+      if (!(event instanceof InputEvent) || shouldRefreshCompendiumSearch(event.isComposing)) refreshCompendiumResults();
+      return;
     }
 
     if (target.matches("[data-add-item-catalog-search]")) { state.addItemCatalogSearch = target.value; state.addItemCatalogScrollTop = 0; render({ preserveMainScroll: true }); requestAnimationFrame(() => { const input = document.querySelector<HTMLInputElement>("[data-add-item-catalog-search]"); input?.focus({ preventScroll: true }); input?.setSelectionRange(input.value.length, input.value.length); }); }
 
-    if (target.matches("[data-compendium-ancestry-search]")) {
-      state.compendiumAncestrySearch = target.value;
-      render({ preserveMainScroll: true });
-      focusCompendiumAncestrySearch();
-    }
-
-    if (target.matches("[data-compendium-community-search]")) { state.compendiumCommunitySearch = target.value; render({ preserveMainScroll: true }); requestAnimationFrame(() => { const search = document.querySelector<HTMLInputElement>("[data-compendium-community-search]"); search?.focus({ preventScroll: true }); search?.setSelectionRange(search.value.length, search.value.length); }); }
-    if (target.matches("[data-compendium-transformation-search]")) { state.transformationState.compendiumTransformationSearch = target.value; render({ preserveMainScroll: true }); requestAnimationFrame(() => { const search = document.querySelector<HTMLInputElement>("[data-compendium-transformation-search]"); search?.focus({ preventScroll: true }); search?.setSelectionRange(search.value.length, search.value.length); }); }
-    if (target.matches("[data-compendium-condition-search]")) { state.conditionState.compendiumConditionSearch = target.value; render({ preserveMainScroll: true }); requestAnimationFrame(() => { const search = document.querySelector<HTMLInputElement>("[data-compendium-condition-search]"); search?.focus({ preventScroll: true }); search?.setSelectionRange(search.value.length, search.value.length); }); }
     if (target.matches("[data-character-condition-search]")) { state.characterConditionPickerSearch = target.value; render({ preserveMainScroll: true }); requestAnimationFrame(() => { const search = document.querySelector<HTMLInputElement>("[data-character-condition-search]"); search?.focus({ preventScroll: true }); search?.setSelectionRange(search.value.length, search.value.length); }); }
 
     if (target.matches("[data-character-ancestry-search]")) {
@@ -2530,8 +2502,14 @@ function bindEvents(): void {
     if (target.matches("[data-character-community-search]")) { state.characterCreationCommunitySearch = target.value; renderCharacterCreationInPlace(); requestAnimationFrame(() => { const search = document.querySelector<HTMLInputElement>("[data-character-community-search]"); search?.focus({ preventScroll: true }); search?.setSelectionRange(search.value.length, search.value.length); }); }
   });
 
+  document.addEventListener("compositionend", (event) => {
+    const target = event.target;
+    if (target instanceof HTMLInputElement && updateCompendiumSearchState(target)) refreshCompendiumResults();
+  });
+
   document.addEventListener("change", (event) => {
     const target = event.target;
+    if (target instanceof HTMLElement && target.closest("[data-item-derived-row]")) updateItemDerivedModifierPreview(target);
     if (target instanceof HTMLInputElement && target.matches("[data-recall-swap-card]")) {
       syncCardActivationDialog(appRoot);
       return;
@@ -2543,7 +2521,7 @@ function bindEvents(): void {
     if (target instanceof HTMLSelectElement && target.matches("[data-rest-definition-choice-index]")) { handleRestDefinitionChoiceInput(target, state, catalog); renderRestInPlace(); return; }
     if (target instanceof HTMLSelectElement && target.matches("[data-compendium-community-pack-filter]")) {
       state.compendiumCommunityPackId = target.value;
-      render({ preserveMainScroll: true });
+      refreshCompendiumResults();
       return;
     }
     if (target instanceof HTMLSelectElement && target.matches("[data-character-community-pack-filter]")) {

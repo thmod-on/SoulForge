@@ -1,16 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { demoCharacter } from "../../domain/demoCharacter";
 import { backupFormat, buildBackupBundle, buildContentBundle, contentFormat, parseBackupBundle, parseContentBundle, previewContentImport, selectContentImport } from "./localBackup";
+import type { DefinitionOverride } from "../../storage/compendiumRepository";
 
 const localDomain = { id: "domain.local.fog", type: "domain" as const, packId: "local", name: "Névoa", summary: "Domínio local.", color: "#7652a8" };
 
 describe("backup e conteúdo local", () => {
   it("separa backup completo do conteúdo compartilhável", () => {
+    const personalOverride: DefinitionOverride = { id: "item-personal:item.private", kind: "item-personal", definitionId: "item.private", sourcePackVersion: "1.0.0", changes: { summary: "Minha leitura" }, baseline: { summary: "Original" }, updatedAt: "2026-11-09T12:00:00.000Z" };
     const snapshot = {
       characters: [demoCharacter],
       installedPacks: [{ id: "pack.private", name: "Privado", version: "1.0.0", description: "Pack importado." }],
       definitions: [{ ...localDomain }, { ...localDomain, id: "domain.private.fog", packId: "pack.private" }],
-      overrides: []
+      overrides: [personalOverride]
     };
 
     const backup = buildBackupBundle(snapshot, "0.35.0");
@@ -19,8 +21,10 @@ describe("backup e conteúdo local", () => {
     expect(backup.format).toBe(backupFormat);
     expect(backup.packs).toHaveLength(1);
     expect(backup.localDefinitions).toEqual([localDomain]);
+    expect(backup.overrides).toEqual([personalOverride]);
     expect(content.format).toBe(contentFormat);
     expect(content.definitions).toEqual([localDomain]);
+    expect(content.overrides).toEqual([]);
   });
 
   it("valida backup e preserva a ficha para restauração", () => {

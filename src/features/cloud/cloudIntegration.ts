@@ -1,6 +1,6 @@
 import type { Character, Definition, GameMarkerDefinition } from "../../domain/types";
 import { deleteCharacter, listCharacters, loadCharacter, saveCharacter } from "../../storage/characterRepository";
-import { deleteCardMarkerOverride, deleteCustomDefinition, loadCardMarkerOverrides, loadCustomDefinitions, putCardMarkerOverride, saveCardMarkerOverride, saveCustomDefinition, type CardMarkerOverride } from "../../storage/compendiumRepository";
+import { deleteDefinitionOverride, deleteCustomDefinition, loadCardMarkerOverrides, loadDefinitionOverrides, loadCustomDefinitions, putDefinitionOverride, saveCardMarkerOverride, saveCustomDefinition, type CardMarkerOverride, type DefinitionOverride } from "../../storage/compendiumRepository";
 import { loadLocalDataSnapshot } from "../../storage/localDataRepository";
 import { dismissSessionExpiredNotice, getSyncViewModel, grantPrivateAccess, initializeSyncCoordinator, markForSync, mountGoogleSignIn, queueLocalSnapshot, refreshAccessGrants, removeCloudAccount, resolveConflict, revokePrivateAccess, runSync, signOut } from "../../sync/syncCoordinator";
 
@@ -30,6 +30,16 @@ export async function deleteSyncedDefinition(id: string): Promise<void> {
 export async function saveSyncedCardMarkerOverride(definitionId: string, gameMarkers: GameMarkerDefinition[]): Promise<void> {
   await saveCardMarkerOverride(definitionId, gameMarkers);
   await markForSync("override", `card-marker:${definitionId}`, { id: `card-marker:${definitionId}`, kind: "card-marker", definitionId, gameMarkers } satisfies CardMarkerOverride);
+}
+
+export async function saveSyncedDefinitionOverride(override: DefinitionOverride): Promise<void> {
+  await putDefinitionOverride(override);
+  await markForSync("override", override.id, override);
+}
+
+export async function deleteSyncedDefinitionOverride(id: string): Promise<void> {
+  await deleteDefinitionOverride(id);
+  await markForSync("override", id, undefined, true);
 }
 
 export function handleCloudAction(target: HTMLElement): boolean {
@@ -72,8 +82,8 @@ export async function initializeCloudIntegration(options: { afterRemoteChange():
     deleteCharacter,
     saveDefinition: saveCustomDefinition,
     deleteDefinition: deleteCustomDefinition,
-    saveOverride: putCardMarkerOverride,
-    deleteOverride: deleteCardMarkerOverride,
+    saveOverride: putDefinitionOverride,
+    deleteOverride: deleteDefinitionOverride,
     afterRemoteChange: options.afterRemoteChange,
     afterAuthenticated: options.afterAuthenticated,
     stateChanged: options.stateChanged
@@ -86,4 +96,4 @@ export async function refreshCloudAppliedState(activeCharacterId: string | undef
 }
 
 export { deleteCharacter as deleteLocalCharacter, saveCharacter as saveLocalCharacter };
-export { deleteCustomDefinition as deleteLocalDefinition, loadCardMarkerOverrides, loadCustomDefinitions, putCardMarkerOverride, saveCustomDefinition as saveLocalDefinition };
+export { deleteCustomDefinition as deleteLocalDefinition, loadCardMarkerOverrides, loadDefinitionOverrides, loadCustomDefinitions, putDefinitionOverride, saveCustomDefinition as saveLocalDefinition };

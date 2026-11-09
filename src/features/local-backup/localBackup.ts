@@ -1,7 +1,7 @@
 import type { Character, Definition, PackBundle, PackManifest } from "../../domain/types";
 import { parseCharacterImport } from "../character-transfer/characterTransfer";
 import { validatePackBundle } from "../packs/packValidation";
-import type { CardMarkerOverride } from "../../storage/compendiumRepository";
+import { isDefinitionOverride, type CardMarkerOverride, type DefinitionOverride } from "../../storage/compendiumRepository";
 import { normalizeCardMarkerOverride } from "../../domain/restTimingMigration";
 import { loadLocalDataSnapshot, mergeLocalContent, purgeLegacyDemoContent, replaceLocalDataSnapshot, type LocalDataSnapshot } from "../../storage/localDataRepository";
 
@@ -15,7 +15,7 @@ export type SoulforgeBackupBundle = {
   characters: Character[];
   packs: PackBundle[];
   localDefinitions: Definition[];
-  overrides: CardMarkerOverride[];
+  overrides: DefinitionOverride[];
 };
 
 export type SoulforgeContentBundle = {
@@ -87,7 +87,7 @@ export function buildContentBundle(snapshot: LocalDataSnapshot, appVersion: stri
     exportedAt: new Date().toISOString(),
     appVersion,
     definitions: structuredClone(snapshot.definitions.filter((definition) => definition.packId === "local")),
-    overrides: structuredClone(snapshot.overrides)
+    overrides: structuredClone(snapshot.overrides.filter((entry): entry is CardMarkerOverride => entry.kind === "card-marker"))
   };
 }
 
@@ -126,8 +126,9 @@ export function parseContentBundle(serialized: string): SoulforgeContentBundle {
   }
   const definitions = validateLocalDefinitions(parsed.definitions);
   const overrides = validateOverrides(parsed.overrides);
+  if (overrides.some((entry) => entry.kind !== "card-marker")) throw new Error("Conteúdo compartilhável não pode conter ajustes pessoais de itens.");
   assertUniqueIds(definitions, "id", "O arquivo possui Definitions com o mesmo identificador.");
-  return { format: contentFormat, exportedAt: parsed.exportedAt, appVersion: parsed.appVersion, definitions, overrides };
+  return { format: contentFormat, exportedAt: parsed.exportedAt, appVersion: parsed.appVersion, definitions, overrides: overrides as CardMarkerOverride[] };
 }
 
 export function snapshotFromBackup(bundle: SoulforgeBackupBundle): LocalDataSnapshot {
@@ -367,10 +368,10 @@ function validateLocalDefinitions(entries: unknown[]): Definition[] {
   }
 }
 
-function validateOverrides(entries: unknown[]): CardMarkerOverride[] {
-  if (entries.some((entry) => !isValidOverride(entry))) throw new Error("O arquivo contém complementos locais inválidos.");
+function validateOverrides(entries: unknown[]): DefinitionOverride[] {
+  if (entries.some((entry) => !isDefinitionOverride(entry) || entry.kind === "card-marker" && !isValidOverride(entry))) throw new Error("O arquivo contém complementos locais inválidos.");
   assertUniqueIds(entries as Array<{ id: string }>, "id", "O arquivo possui complementos com o mesmo identificador.");
-  return (structuredClone(entries) as CardMarkerOverride[]).map(normalizeCardMarkerOverride);
+  return (structuredClone(entries) as DefinitionOverride[]).map((entry) => entry.kind === "card-marker" ? normalizeCardMarkerOverride(entry) : entry);
 }
 
 function isValidOverride(value: unknown): value is CardMarkerOverride {

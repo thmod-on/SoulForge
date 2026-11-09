@@ -47,6 +47,7 @@ describe("transformações no Compendium", () => {
 
     expect(html).toContain("Forma de Lobo concede +1d10");
     expect(html).toContain("Rolar com Esperança marca 1 Estresse");
+    expect(html).toContain("data-compendium-dynamic");
     for (const question of transformation.narrativeQuestions) expect(html).toContain(question);
   });
 });

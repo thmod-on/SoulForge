@@ -1,5 +1,5 @@
 import type { Character, Definition } from "../domain/types";
-import type { CardMarkerOverride } from "../storage/compendiumRepository";
+import type { DefinitionOverride } from "../storage/compendiumRepository";
 import {
   acceptAppliedSync,
   applyRemoteSyncPage,
@@ -36,12 +36,12 @@ import { replaceDataUrlsWithMedia, replaceMediaWithDataUrls } from "./mediaTrans
 import type { CloudAccessGrant, CloudSession, SyncConflict, SyncEnvelope, SyncPushChange, SyncResourceType, SyncStatus } from "./types";
 
 export type SyncCoordinatorDependencies = {
-  snapshot(): Promise<{ characters: Character[]; definitions: Definition[]; overrides: CardMarkerOverride[] }>;
+  snapshot(): Promise<{ characters: Character[]; definitions: Definition[]; overrides: DefinitionOverride[] }>;
   saveCharacter(character: Character): Promise<void>;
   deleteCharacter(id: string): Promise<void>;
   saveDefinition(definition: Definition): Promise<void>;
   deleteDefinition(id: string): Promise<void>;
-  saveOverride(override: CardMarkerOverride): Promise<void>;
+  saveOverride(override: DefinitionOverride): Promise<void>;
   deleteOverride(id: string): Promise<void>;
   afterRemoteChange(): Promise<void>;
   /** Executado quando uma sessão autorizada fica disponível no boot ou após login. */
@@ -261,7 +261,7 @@ async function applyRemoteEnvelope(envelope: SyncEnvelope): Promise<void> {
   const payload = await replaceMediaWithDataUrls(envelope.payload, downloadCloudMedia);
   if (envelope.type === "character") await dependencies.saveCharacter(payload as Character);
   if (envelope.type === "definition") await dependencies.saveDefinition(payload as Definition);
-  if (envelope.type === "override") await dependencies.saveOverride(payload as CardMarkerOverride);
+  if (envelope.type === "override") await dependencies.saveOverride(payload as DefinitionOverride);
 }
 
 export async function signIn(credential: string): Promise<void> {
